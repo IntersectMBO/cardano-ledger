@@ -1,0 +1,66 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Babbage.State.CertState</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.Era.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier">BabbageEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.State.Account.html"><span class="hs-identifier">Cardano.Ledger.Babbage.State.Account</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.html"><span class="hs-identifier">Cardano.Ledger.Shelley.State</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier hs-type">EraCertState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="CertState"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#CertState"><span class="hs-identifier hs-var">CertState</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.CertState.html#ShelleyCertState"><span class="hs-identifier hs-type">ShelleyCertState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>  </span><span id="local-6989586621679378617"><span class="annot"><span class="annottext">certDStateL :: Lens' (CertState BabbageEra) (DState BabbageEra)
+</span><a href="#local-6989586621679378617"><span class="hs-identifier hs-var hs-var hs-var hs-var">certDStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DState BabbageEra -&gt; f (DState BabbageEra))
+-&gt; CertState BabbageEra -&gt; f (CertState BabbageEra)
+(DState BabbageEra -&gt; f (DState BabbageEra))
+-&gt; ShelleyCertState BabbageEra -&gt; f (ShelleyCertState BabbageEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(DState era -&gt; f (DState era))
+-&gt; ShelleyCertState era -&gt; f (ShelleyCertState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.CertState.html#shelleyCertDStateL"><span class="hs-identifier hs-var">shelleyCertDStateL</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#certDStateL"><span class="hs-pragma hs-type">certDStateL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>  </span><span id="local-6989586621679378622"><span class="annot"><span class="annottext">certPStateL :: Lens' (CertState BabbageEra) (PState BabbageEra)
+</span><a href="#local-6989586621679378622"><span class="hs-identifier hs-var hs-var hs-var hs-var">certPStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PState BabbageEra -&gt; f (PState BabbageEra))
+-&gt; CertState BabbageEra -&gt; f (CertState BabbageEra)
+(PState BabbageEra -&gt; f (PState BabbageEra))
+-&gt; ShelleyCertState BabbageEra -&gt; f (ShelleyCertState BabbageEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(PState era -&gt; f (PState era))
+-&gt; ShelleyCertState era -&gt; f (ShelleyCertState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.CertState.html#shelleyCertPStateL"><span class="hs-identifier hs-var">shelleyCertPStateL</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#certPStateL"><span class="hs-pragma hs-type">certPStateL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>  </span><span id="local-6989586621679378626"><span class="annot"><span class="annottext">obligationCertState :: CertState BabbageEra -&gt; Obligations
+</span><a href="#local-6989586621679378626"><span class="hs-identifier hs-var hs-var hs-var hs-var">obligationCertState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CertState BabbageEra -&gt; Obligations
+forall era. EraCertState era =&gt; CertState era -&gt; Obligations
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.CertState.html#shelleyObligationCertState"><span class="hs-identifier hs-var">shelleyObligationCertState</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>  </span><span id="local-6989586621679378631"><span class="annot"><span class="annottext">certsTotalDepositsTxBody :: EraTxBody BabbageEra =&gt;
+PParams BabbageEra
+-&gt; CertState BabbageEra -&gt; TxBody BabbageEra -&gt; Coin
+</span><a href="#local-6989586621679378631"><span class="hs-identifier hs-var hs-var hs-var hs-var">certsTotalDepositsTxBody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams BabbageEra
+-&gt; CertState BabbageEra -&gt; TxBody BabbageEra -&gt; Coin
+PParams BabbageEra
+-&gt; ShelleyCertState BabbageEra -&gt; TxBody BabbageEra -&gt; Coin
+forall era.
+EraTxBody era =&gt;
+PParams era -&gt; ShelleyCertState era -&gt; TxBody era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.CertState.html#shelleyCertsTotalDepositsTxBody"><span class="hs-identifier hs-var">shelleyCertsTotalDepositsTxBody</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>  </span><span id="local-6989586621679378637"><span class="annot"><span class="annottext">certsTotalRefundsTxBody :: EraTxBody BabbageEra =&gt;
+PParams BabbageEra
+-&gt; CertState BabbageEra -&gt; TxBody BabbageEra -&gt; Coin
+</span><a href="#local-6989586621679378637"><span class="hs-identifier hs-var hs-var hs-var hs-var">certsTotalRefundsTxBody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams BabbageEra
+-&gt; CertState BabbageEra -&gt; TxBody BabbageEra -&gt; Coin
+PParams BabbageEra
+-&gt; ShelleyCertState BabbageEra -&gt; TxBody BabbageEra -&gt; Coin
+forall era.
+(EraTxBody era, EraAccounts era) =&gt;
+PParams era -&gt; ShelleyCertState era -&gt; TxBody era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.CertState.html#shelleyCertsTotalRefundsTxBody"><span class="hs-identifier hs-var">shelleyCertsTotalRefundsTxBody</span></a></span><span>
+</span><span id="line-25"></span></pre></body></html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE EmptyDataDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Protocol.TPraos.Rules.Tickn</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TICKN"><span class="hs-identifier">TICKN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknEnv"><span class="hs-identifier">TicknEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier">TicknState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknPredicateFailure"><span class="hs-identifier">TicknPredicateFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier">PredicateFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html"><span class="hs-identifier">Cardano.Ledger.Binary.Plain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html#decodeRecordNamed"><span class="hs-identifier">decodeRecordNamed</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#encodeListLen"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">data</span><span> </span><span id="TICKN"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TICKN"><span class="hs-identifier hs-var">TICKN</span></a></span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">data</span><span> </span><span id="TicknEnv"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknEnv"><span class="hs-identifier hs-var">TicknEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TicknEnv"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknEnv"><span class="hs-identifier hs-var">TicknEnv</span></a></span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="ticknEnvExtraEntropy"><span class="annot"><span class="annottext">TicknEnv -&gt; Nonce
+</span><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#ticknEnvExtraEntropy"><span class="hs-identifier hs-var hs-var">ticknEnvExtraEntropy</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier hs-type">Nonce</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ticknEnvCandidateNonce"><span class="annot"><span class="annottext">TicknEnv -&gt; Nonce
+</span><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#ticknEnvCandidateNonce"><span class="hs-identifier hs-var hs-var">ticknEnvCandidateNonce</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier hs-type">Nonce</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ticknEnvHashHeaderNonce"><span class="annot"><span class="annottext">TicknEnv -&gt; Nonce
+</span><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#ticknEnvHashHeaderNonce"><span class="hs-identifier hs-var hs-var">ticknEnvHashHeaderNonce</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier hs-type">Nonce</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Hash of the last header of the previous epoch as a nonce.</span></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="TicknState"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-var">TicknState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TicknState"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-var">TicknState</span></a></span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="ticknStateEpochNonce"><span class="annot"><span class="annottext">TicknState -&gt; Nonce
+</span><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#ticknStateEpochNonce"><span class="hs-identifier hs-var hs-var">ticknStateEpochNonce</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier hs-type">Nonce</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ticknStatePrevHashNonce"><span class="annot"><span class="annottext">TicknState -&gt; Nonce
+</span><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#ticknStatePrevHashNonce"><span class="hs-identifier hs-var hs-var">ticknStatePrevHashNonce</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier hs-type">Nonce</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679308893"><span id="local-6989586621679308900"><span id="local-6989586621679308904"><span class="annot"><span class="annottext">Int -&gt; TicknState -&gt; ShowS
+[TicknState] -&gt; ShowS
+TicknState -&gt; String
+(Int -&gt; TicknState -&gt; ShowS)
+-&gt; (TicknState -&gt; String)
+-&gt; ([TicknState] -&gt; ShowS)
+-&gt; Show TicknState
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TicknState -&gt; ShowS
+showsPrec :: Int -&gt; TicknState -&gt; ShowS
+$cshow :: TicknState -&gt; String
+show :: TicknState -&gt; String
+$cshowList :: [TicknState] -&gt; ShowS
+showList :: [TicknState] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679308908"><span id="local-6989586621679308913"><span class="annot"><span class="annottext">TicknState -&gt; TicknState -&gt; Bool
+(TicknState -&gt; TicknState -&gt; Bool)
+-&gt; (TicknState -&gt; TicknState -&gt; Bool) -&gt; Eq TicknState
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TicknState -&gt; TicknState -&gt; Bool
+== :: TicknState -&gt; TicknState -&gt; Bool
+$c/= :: TicknState -&gt; TicknState -&gt; Bool
+/= :: TicknState -&gt; TicknState -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679308918"><span id="local-6989586621679308920"><span class="annot"><span class="annottext">(forall x. TicknState -&gt; Rep TicknState x)
+-&gt; (forall x. Rep TicknState x -&gt; TicknState) -&gt; Generic TicknState
+forall x. Rep TicknState x -&gt; TicknState
+forall x. TicknState -&gt; Rep TicknState x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. TicknState -&gt; Rep TicknState x
+from :: forall x. TicknState -&gt; Rep TicknState x
+$cto :: forall x. Rep TicknState x -&gt; TicknState
+to :: forall x. Rep TicknState x -&gt; TicknState
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679308924"><span id="local-6989586621679308928"><span id="local-6989586621679308934"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-type">TicknState</span></a></span></span></span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679308969"><span id="local-6989586621679308975"><span id="local-6989586621679308978"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-type">TicknState</span></a></span></span></span></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679308985"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-type">TicknState</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679308999"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s TicknState
+</span><a href="#local-6989586621679308999"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="annottext">Text
+-&gt; (TicknState -&gt; Int)
+-&gt; Decoder s TicknState
+-&gt; Decoder s TicknState
+forall a s. Text -&gt; (a -&gt; Int) -&gt; Decoder s a -&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html#decodeRecordNamed"><span class="hs-identifier hs-var">decodeRecordNamed</span></a></span><span>
+</span><span id="line-44"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TicknState&quot;</span></span><span>
+</span><span id="line-45"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; TicknState -&gt; Int
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Nonce -&gt; Nonce -&gt; TicknState
+</span><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-var">TicknState</span></a></span><span>
+</span><span id="line-47"></span><span>          </span><span class="annot"><span class="annottext">(Nonce -&gt; Nonce -&gt; TicknState)
+-&gt; Decoder s Nonce -&gt; Decoder s (Nonce -&gt; TicknState)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Nonce
+forall s. Decoder s Nonce
+forall a s. FromCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var">fromCBOR</span></a></span><span>
+</span><span id="line-48"></span><span>          </span><span class="annot"><span class="annottext">Decoder s (Nonce -&gt; TicknState)
+-&gt; Decoder s Nonce -&gt; Decoder s TicknState
+forall a b. Decoder s (a -&gt; b) -&gt; Decoder s a -&gt; Decoder s b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Nonce
+forall s. Decoder s Nonce
+forall a s. FromCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var">fromCBOR</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679309006"><span id="local-6989586621679309012"><span id="local-6989586621679309015"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-type">TicknState</span></a></span></span></span></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679309022"><span id="local-6989586621679309025"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-type">TicknState</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679309033"><span class="annot"><span class="annottext">toCBOR :: TicknState -&gt; Encoding
+</span><a href="#local-6989586621679309033"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-type">TicknState</span></a></span><span>
+</span><span id="line-56"></span><span>        </span><span id="local-6989586621679309035"><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309035"><span class="hs-identifier hs-var">&#951;v</span></a></span></span><span>
+</span><span id="line-57"></span><span>        </span><span id="local-6989586621679309036"><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309036"><span class="hs-identifier hs-var">&#951;c</span></a></span></span><span>
+</span><span id="line-58"></span><span>      </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">[Encoding] -&gt; Encoding
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-60"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#encodeListLen"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-61"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Nonce -&gt; Encoding
+forall a. ToCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#toCBOR"><span class="hs-identifier hs-var">toCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309035"><span class="hs-identifier hs-var">&#951;v</span></a></span><span>
+</span><span id="line-62"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Nonce -&gt; Encoding
+forall a. ToCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#toCBOR"><span class="hs-identifier hs-var">toCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309036"><span class="hs-identifier hs-var">&#951;c</span></a></span><span>
+</span><span id="line-63"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">data</span><span> </span><span id="TicknPredicateFailure"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknPredicateFailure"><span class="hs-identifier hs-var">TicknPredicateFailure</span></a></span></span><span> </span><span class="hs-comment">-- No predicate failures</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679309038"><span id="local-6989586621679309040"><span class="annot"><span class="annottext">(forall x. TicknPredicateFailure -&gt; Rep TicknPredicateFailure x)
+-&gt; (forall x. Rep TicknPredicateFailure x -&gt; TicknPredicateFailure)
+-&gt; Generic TicknPredicateFailure
+forall x. Rep TicknPredicateFailure x -&gt; TicknPredicateFailure
+forall x. TicknPredicateFailure -&gt; Rep TicknPredicateFailure x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. TicknPredicateFailure -&gt; Rep TicknPredicateFailure x
+from :: forall x. TicknPredicateFailure -&gt; Rep TicknPredicateFailure x
+$cto :: forall x. Rep TicknPredicateFailure x -&gt; TicknPredicateFailure
+to :: forall x. Rep TicknPredicateFailure x -&gt; TicknPredicateFailure
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679309043"><span id="local-6989586621679309045"><span id="local-6989586621679309049"><span class="annot"><span class="annottext">Int -&gt; TicknPredicateFailure -&gt; ShowS
+[TicknPredicateFailure] -&gt; ShowS
+TicknPredicateFailure -&gt; String
+(Int -&gt; TicknPredicateFailure -&gt; ShowS)
+-&gt; (TicknPredicateFailure -&gt; String)
+-&gt; ([TicknPredicateFailure] -&gt; ShowS)
+-&gt; Show TicknPredicateFailure
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TicknPredicateFailure -&gt; ShowS
+showsPrec :: Int -&gt; TicknPredicateFailure -&gt; ShowS
+$cshow :: TicknPredicateFailure -&gt; String
+show :: TicknPredicateFailure -&gt; String
+$cshowList :: [TicknPredicateFailure] -&gt; ShowS
+showList :: [TicknPredicateFailure] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679309052"><span id="local-6989586621679309054"><span class="annot"><span class="annottext">TicknPredicateFailure -&gt; TicknPredicateFailure -&gt; Bool
+(TicknPredicateFailure -&gt; TicknPredicateFailure -&gt; Bool)
+-&gt; (TicknPredicateFailure -&gt; TicknPredicateFailure -&gt; Bool)
+-&gt; Eq TicknPredicateFailure
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TicknPredicateFailure -&gt; TicknPredicateFailure -&gt; Bool
+== :: TicknPredicateFailure -&gt; TicknPredicateFailure -&gt; Bool
+$c/= :: TicknPredicateFailure -&gt; TicknPredicateFailure -&gt; Bool
+/= :: TicknPredicateFailure -&gt; TicknPredicateFailure -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679309058"><span id="local-6989586621679309062"><span id="local-6989586621679309068"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknPredicateFailure"><span class="hs-identifier hs-type">TicknPredicateFailure</span></a></span></span></span></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679309094"><span id="local-6989586621679309098"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TICKN"><span class="hs-identifier hs-type">TICKN</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="State"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TICKN"><span class="hs-identifier hs-type">TICKN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-type">TicknState</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signal"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-var">Signal</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TICKN"><span class="hs-identifier hs-type">TICKN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-comment">-- Marker indicating whether we are in a new epoch</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Environment"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TICKN"><span class="hs-identifier hs-type">TICKN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknEnv"><span class="hs-identifier hs-type">TicknEnv</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="BaseM"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#BaseM"><span class="hs-identifier hs-var">BaseM</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TICKN"><span class="hs-identifier hs-type">TICKN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier hs-type">ShelleyBase</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="PredicateFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-var">PredicateFailure</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TICKN"><span class="hs-identifier hs-type">TICKN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknPredicateFailure"><span class="hs-identifier hs-type">TicknPredicateFailure</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679309105"><span class="annot"><span class="annottext">initialRules :: [InitialRule TICKN]
+</span><a href="#local-6989586621679309105"><span class="hs-identifier hs-var hs-var hs-var hs-var">initialRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TicknState -&gt; F (Clause TICKN 'Initial) TicknState
+forall a. a -&gt; F (Clause TICKN 'Initial) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Nonce -&gt; Nonce -&gt; TicknState
+</span><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-var">TicknState</span></a></span><span>
+</span><span id="line-80"></span><span>            </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309107"><span class="hs-identifier hs-var">initialNonce</span></a></span><span>
+</span><span id="line-81"></span><span>            </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309107"><span class="hs-identifier hs-var">initialNonce</span></a></span><span>
+</span><span id="line-82"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>      </span><span id="local-6989586621679309107"><span class="annot"><span class="annottext">initialNonce :: Nonce
+</span><a href="#local-6989586621679309107"><span class="hs-identifier hs-var hs-var">initialNonce</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Nonce
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkNonceFromNumber"><span class="hs-identifier hs-var">mkNonceFromNumber</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679309111"><span class="annot"><span class="annottext">transitionRules :: [TransitionRule TICKN]
+</span><a href="#local-6989586621679309111"><span class="hs-identifier hs-var hs-var hs-var hs-var">transitionRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TransitionRule TICKN
+</span><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#tickTransition"><span class="hs-identifier hs-var">tickTransition</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#tickTransition"><span class="hs-identifier hs-type">tickTransition</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TransitionRule"><span class="hs-identifier hs-type">TransitionRule</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TICKN"><span class="hs-identifier hs-type">TICKN</span></a></span><span>
+</span><span id="line-89"></span><span id="tickTransition"><span class="annot"><span class="annottext">tickTransition :: TransitionRule TICKN
+</span><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#tickTransition"><span class="hs-identifier hs-var hs-var">tickTransition</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknEnv"><span class="hs-identifier hs-type">TicknEnv</span></a></span><span> </span><span id="local-6989586621679309115"><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309115"><span class="hs-identifier hs-var">extraEntropy</span></a></span></span><span> </span><span id="local-6989586621679309116"><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309116"><span class="hs-identifier hs-var">&#951;c</span></a></span></span><span> </span><span id="local-6989586621679309117"><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309117"><span class="hs-identifier hs-var">&#951;ph</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679309118"><span class="annot"><span class="annottext">st :: State TICKN
+</span><a href="#local-6989586621679309118"><span class="hs-identifier hs-var">st</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-type">TicknState</span></a></span><span> </span><span class="annot"><span class="annottext">Nonce
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679309119"><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309119"><span class="hs-identifier hs-var">&#951;h</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679309120"><span class="annot"><span class="annottext">Signal TICKN
+</span><a href="#local-6989586621679309120"><span class="hs-identifier hs-var">newEpoch</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Rule TICKN 'Transition (RuleContext 'Transition TICKN)
+F (Clause TICKN 'Transition) (TRC TICKN)
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><span class="annottext">TicknState -&gt; F (Clause TICKN 'Transition) TicknState
+forall a. a -&gt; F (Clause TICKN 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(TicknState -&gt; F (Clause TICKN 'Transition) TicknState)
+-&gt; TicknState -&gt; F (Clause TICKN 'Transition) TicknState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+Signal TICKN
+</span><a href="#local-6989586621679309120"><span class="hs-identifier hs-var">newEpoch</span></a></span><span>
+</span><span id="line-93"></span><span>      </span><span class="hs-keyword">then</span><span>
+</span><span id="line-94"></span><span>        </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#TicknState"><span class="hs-identifier hs-type">TicknState</span></a></span><span>
+</span><span id="line-95"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ticknStateEpochNonce :: Nonce
+</span><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#ticknStateEpochNonce"><span class="hs-identifier hs-var">ticknStateEpochNonce</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309116"><span class="hs-identifier hs-var">&#951;c</span></a></span><span> </span><span class="annot"><span class="annottext">Nonce -&gt; Nonce -&gt; Nonce
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#%2B52"><span class="hs-operator hs-var">&#11090;</span></a></span><span> </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309119"><span class="hs-identifier hs-var">&#951;h</span></a></span><span> </span><span class="annot"><span class="annottext">Nonce -&gt; Nonce -&gt; Nonce
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#%2B52"><span class="hs-operator hs-var">&#11090;</span></a></span><span> </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309115"><span class="hs-identifier hs-var">extraEntropy</span></a></span><span>
+</span><span id="line-96"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ticknStatePrevHashNonce :: Nonce
+</span><a href="Cardano.Protocol.TPraos.Rules.Tickn.html#ticknStatePrevHashNonce"><span class="hs-identifier hs-var">ticknStatePrevHashNonce</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309117"><span class="hs-identifier hs-var">&#951;ph</span></a></span><span>
+</span><span id="line-97"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-98"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">State TICKN
+TicknState
+</span><a href="#local-6989586621679309118"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-99"></span></pre></body></html>

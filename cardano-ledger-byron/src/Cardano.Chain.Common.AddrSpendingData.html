@@ -1,0 +1,457 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Common.AddrSpendingData</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrSpendingData"><span class="hs-identifier">AddrSpendingData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrType"><span class="hs-identifier">AddrType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#addrSpendingDataToType"><span class="hs-identifier">addrSpendingDataToType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.html"><span class="hs-identifier">Cardano.Crypto.Signing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.Redeem.VerificationKey.html#RedeemVerificationKey"><span class="hs-identifier">RedeemVerificationKey</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier">VerificationKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/heapwords-0.1.0.2-b6417b7556a8e92d841bb3a7d489e50a628754cd86fcb83441bde6481e83fe38/share/doc/html/src/Cardano.HeapWords.html"><span class="hs-identifier">Cardano.HeapWords</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#Case"><span class="hs-identifier">Case</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier">DecoderError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#cborError"><span class="hs-identifier">cborError</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeListLenCanonical"><span class="hs-identifier">decodeListLenCanonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeWord8Canonical"><span class="hs-identifier">decodeWord8Canonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeListLen"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#matchSize"><span class="hs-identifier">matchSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#szCases"><span class="hs-identifier">szCases</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Error.html#cborError"><span class="hs-identifier">cborError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.html"><span class="hs-identifier">Formatting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier">bprint</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Formatters.html#build"><span class="hs-identifier">build</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | Data which is bound to an address and must be revealed in order to spend</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--   lovelace belonging to this address.</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">data</span><span> </span><span id="AddrSpendingData"><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrSpendingData"><span class="hs-identifier hs-var">AddrSpendingData</span></a></span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- | Funds can be spent by revealing a 'VerificationKey' and providing a valid</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-comment">--   signature</span><span>
+</span><span id="line-43"></span><span>    </span><span id="VerKeyASD"><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#VerKeyASD"><span class="hs-identifier hs-var">VerKeyASD</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Funds can be spent by revealing a 'RedeemVerificationKey' and providing a</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-comment">--   valid signature</span><span>
+</span><span id="line-46"></span><span>    </span><span id="RedeemASD"><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#RedeemASD"><span class="hs-identifier hs-var">RedeemASD</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.Redeem.VerificationKey.html#RedeemVerificationKey"><span class="hs-identifier hs-type">RedeemVerificationKey</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679555475"><span id="local-6989586621679555481"><span class="annot"><span class="annottext">AddrSpendingData -&gt; AddrSpendingData -&gt; Bool
+(AddrSpendingData -&gt; AddrSpendingData -&gt; Bool)
+-&gt; (AddrSpendingData -&gt; AddrSpendingData -&gt; Bool)
+-&gt; Eq AddrSpendingData
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: AddrSpendingData -&gt; AddrSpendingData -&gt; Bool
+== :: AddrSpendingData -&gt; AddrSpendingData -&gt; Bool
+$c/= :: AddrSpendingData -&gt; AddrSpendingData -&gt; Bool
+/= :: AddrSpendingData -&gt; AddrSpendingData -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679555486"><span id="local-6989586621679555488"><span class="annot"><span class="annottext">(forall x. AddrSpendingData -&gt; Rep AddrSpendingData x)
+-&gt; (forall x. Rep AddrSpendingData x -&gt; AddrSpendingData)
+-&gt; Generic AddrSpendingData
+forall x. Rep AddrSpendingData x -&gt; AddrSpendingData
+forall x. AddrSpendingData -&gt; Rep AddrSpendingData x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. AddrSpendingData -&gt; Rep AddrSpendingData x
+from :: forall x. AddrSpendingData -&gt; Rep AddrSpendingData x
+$cto :: forall x. Rep AddrSpendingData x -&gt; AddrSpendingData
+to :: forall x. Rep AddrSpendingData x -&gt; AddrSpendingData
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679555492"><span id="local-6989586621679555501"><span id="local-6989586621679555505"><span class="annot"><span class="annottext">Int -&gt; AddrSpendingData -&gt; ShowS
+[AddrSpendingData] -&gt; ShowS
+AddrSpendingData -&gt; String
+(Int -&gt; AddrSpendingData -&gt; ShowS)
+-&gt; (AddrSpendingData -&gt; String)
+-&gt; ([AddrSpendingData] -&gt; ShowS)
+-&gt; Show AddrSpendingData
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; AddrSpendingData -&gt; ShowS
+showsPrec :: Int -&gt; AddrSpendingData -&gt; ShowS
+$cshow :: AddrSpendingData -&gt; String
+show :: AddrSpendingData -&gt; String
+$cshowList :: [AddrSpendingData] -&gt; ShowS
+showList :: [AddrSpendingData] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679555509"><span class="annot"><span class="annottext">AddrSpendingData -&gt; ()
+(AddrSpendingData -&gt; ()) -&gt; NFData AddrSpendingData
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: AddrSpendingData -&gt; ()
+rnf :: AddrSpendingData -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier hs-type">B.Buildable</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrSpendingData"><span class="hs-identifier hs-type">AddrSpendingData</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679555545"><span class="annot"><span class="annottext">build :: AddrSpendingData -&gt; Builder
+</span><a href="#local-6989586621679555545"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#VerKeyASD"><span class="hs-identifier hs-type">VerKeyASD</span></a></span><span> </span><span id="local-6989586621679555547"><span class="annot"><span class="annottext">VerificationKey
+</span><a href="#local-6989586621679555547"><span class="hs-identifier hs-var">vk</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Format Builder (VerificationKey -&gt; Builder)
+-&gt; VerificationKey -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier hs-var">bprint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (VerificationKey -&gt; Builder) (VerificationKey -&gt; Builder)
+</span><span class="hs-string">&quot;VerKeyASD &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (VerificationKey -&gt; Builder) (VerificationKey -&gt; Builder)
+-&gt; Format Builder (VerificationKey -&gt; Builder)
+-&gt; Format Builder (VerificationKey -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format Builder (VerificationKey -&gt; Builder)
+forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Formatters.html#build"><span class="hs-identifier hs-var">build</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">VerificationKey
+</span><a href="#local-6989586621679555547"><span class="hs-identifier hs-var">vk</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#RedeemASD"><span class="hs-identifier hs-type">RedeemASD</span></a></span><span> </span><span id="local-6989586621679555549"><span class="annot"><span class="annottext">RedeemVerificationKey
+</span><a href="#local-6989586621679555549"><span class="hs-identifier hs-var">rvk</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Format Builder (RedeemVerificationKey -&gt; Builder)
+-&gt; RedeemVerificationKey -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier hs-var">bprint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format
+  (RedeemVerificationKey -&gt; Builder)
+  (RedeemVerificationKey -&gt; Builder)
+</span><span class="hs-string">&quot;RedeemASD &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format
+  (RedeemVerificationKey -&gt; Builder)
+  (RedeemVerificationKey -&gt; Builder)
+-&gt; Format Builder (RedeemVerificationKey -&gt; Builder)
+-&gt; Format Builder (RedeemVerificationKey -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format Builder (RedeemVerificationKey -&gt; Builder)
+forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Formatters.html#build"><span class="hs-identifier hs-var">build</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">RedeemVerificationKey
+</span><a href="#local-6989586621679555549"><span class="hs-identifier hs-var">rvk</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679555554"><span id="local-6989586621679555558"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrSpendingData"><span class="hs-identifier hs-type">AddrSpendingData</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679555563"><span class="annot"><span class="annottext">toCBOR :: AddrSpendingData -&gt; Encoding
+</span><a href="#local-6989586621679555563"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AddrSpendingData -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679555569"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrSpendingData"><span class="hs-identifier hs-type">AddrSpendingData</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679555575"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s AddrSpendingData
+</span><a href="#local-6989586621679555575"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s AddrSpendingData
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- Tag 1 was previously used for scripts, but never appeared on the chain</span><span>
+</span><span id="line-62"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679555582"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrSpendingData"><span class="hs-identifier hs-type">AddrSpendingData</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679555600"><span class="annot"><span class="annottext">encCBOR :: AddrSpendingData -&gt; Encoding
+</span><a href="#local-6989586621679555600"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#VerKeyASD"><span class="hs-identifier hs-type">VerKeyASD</span></a></span><span> </span><span id="local-6989586621679555602"><span class="annot"><span class="annottext">VerificationKey
+</span><a href="#local-6989586621679555602"><span class="hs-identifier hs-var">vk</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeListLen"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">VerificationKey -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">VerificationKey
+</span><a href="#local-6989586621679555602"><span class="hs-identifier hs-var">vk</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#RedeemASD"><span class="hs-identifier hs-type">RedeemASD</span></a></span><span> </span><span id="local-6989586621679555603"><span class="annot"><span class="annottext">RedeemVerificationKey
+</span><a href="#local-6989586621679555603"><span class="hs-identifier hs-var">redeemVK</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeListLen"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">RedeemVerificationKey -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">RedeemVerificationKey
+</span><a href="#local-6989586621679555603"><span class="hs-identifier hs-var">redeemVK</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679555613"><span class="annot"><span class="annottext">encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy AddrSpendingData -&gt; Size
+</span><a href="#local-6989586621679555613"><span class="hs-identifier hs-var hs-var hs-var hs-var">encodedSizeExpr</span></a></span></span><span> </span><span id="local-6989586621679555615"><span class="annot"><span class="annottext">forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><a href="#local-6989586621679555615"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy AddrSpendingData
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">[Case Size] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#szCases"><span class="hs-identifier hs-var">szCases</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Size -&gt; Case Size
+forall t. Text -&gt; t -&gt; Case t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#Case"><span class="hs-identifier hs-var">Case</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;VerKeyASD&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Size -&gt; Case Size) -&gt; Size -&gt; Case Size
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Proxy (Word8, VerificationKey) -&gt; Size
+forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><a href="#local-6989586621679555615"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">(Proxy (Word8, VerificationKey) -&gt; Size)
+-&gt; Proxy (Word8, VerificationKey) -&gt; Size
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Size -&gt; Case Size
+forall t. Text -&gt; t -&gt; Case t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#Case"><span class="hs-identifier hs-var">Case</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;RedeemASD&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Size -&gt; Case Size) -&gt; Size -&gt; Case Size
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Proxy (Word8, RedeemVerificationKey) -&gt; Size
+forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><a href="#local-6989586621679555615"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">(Proxy (Word8, RedeemVerificationKey) -&gt; Size)
+-&gt; Proxy (Word8, RedeemVerificationKey) -&gt; Size
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.Redeem.VerificationKey.html#RedeemVerificationKey"><span class="hs-identifier hs-type">RedeemVerificationKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679555622"><span id="local-6989586621679555625"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrSpendingData"><span class="hs-identifier hs-type">AddrSpendingData</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679555650"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s AddrSpendingData
+</span><a href="#local-6989586621679555650"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-76"></span><span>    </span><span id="local-6989586621679555652"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679555652"><span class="hs-identifier hs-var">len</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s Int
+forall s. Decoder s Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeListLenCanonical"><span class="hs-identifier hs-var">decodeListLenCanonical</span></a></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; Int -&gt; Decoder s ()
+forall s. Text -&gt; Int -&gt; Int -&gt; Decoder s ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#matchSize"><span class="hs-identifier hs-var">matchSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;AddrSpendingData&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679555652"><span class="hs-identifier hs-var">len</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="annottext">Decoder s Word8
+forall s. Decoder s Word8
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeWord8Canonical"><span class="hs-identifier hs-var">decodeWord8Canonical</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s Word8
+-&gt; (Word8 -&gt; Decoder s AddrSpendingData)
+-&gt; Decoder s AddrSpendingData
+forall a b. Decoder s a -&gt; (a -&gt; Decoder s b) -&gt; Decoder s b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-79"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">VerificationKey -&gt; AddrSpendingData
+</span><a href="Cardano.Chain.Common.AddrSpendingData.html#VerKeyASD"><span class="hs-identifier hs-var">VerKeyASD</span></a></span><span> </span><span class="annot"><span class="annottext">(VerificationKey -&gt; AddrSpendingData)
+-&gt; Decoder s VerificationKey -&gt; Decoder s AddrSpendingData
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s VerificationKey
+forall s. Decoder s VerificationKey
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-80"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RedeemVerificationKey -&gt; AddrSpendingData
+</span><a href="Cardano.Chain.Common.AddrSpendingData.html#RedeemASD"><span class="hs-identifier hs-var">RedeemASD</span></a></span><span> </span><span class="annot"><span class="annottext">(RedeemVerificationKey -&gt; AddrSpendingData)
+-&gt; Decoder s RedeemVerificationKey -&gt; Decoder s AddrSpendingData
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s RedeemVerificationKey
+forall s. Decoder s RedeemVerificationKey
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-81"></span><span>      </span><span id="local-6989586621679555654"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679555654"><span class="hs-identifier hs-var">tag</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; Decoder s AddrSpendingData
+forall (m :: * -&gt; *) e a. (MonadFail m, Buildable e) =&gt; e -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#cborError"><span class="hs-identifier hs-var">cborError</span></a></span><span> </span><span class="annot"><span class="annottext">(DecoderError -&gt; Decoder s AddrSpendingData)
+-&gt; DecoderError -&gt; Decoder s AddrSpendingData
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Word8 -&gt; DecoderError
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderErrorUnknownTag"><span class="hs-identifier hs-var">DecoderErrorUnknownTag</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;AddrSpendingData&quot;</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679555654"><span class="hs-identifier hs-var">tag</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- | Type of an address. It corresponds to constructors of 'AddrSpendingData'.</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--   It's separated, because 'Address' doesn't store 'AddrSpendingData', but we</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--   want to know its type.</span><span>
+</span><span id="line-86"></span><span class="hs-keyword">data</span><span> </span><span id="AddrType"><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrType"><span class="hs-identifier hs-var">AddrType</span></a></span></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="ATVerKey"><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#ATVerKey"><span class="hs-identifier hs-var">ATVerKey</span></a></span></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ATRedeem"><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#ATRedeem"><span class="hs-identifier hs-var">ATRedeem</span></a></span></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679555659"><span id="local-6989586621679555661"><span class="annot"><span class="annottext">AddrType -&gt; AddrType -&gt; Bool
+(AddrType -&gt; AddrType -&gt; Bool)
+-&gt; (AddrType -&gt; AddrType -&gt; Bool) -&gt; Eq AddrType
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: AddrType -&gt; AddrType -&gt; Bool
+== :: AddrType -&gt; AddrType -&gt; Bool
+$c/= :: AddrType -&gt; AddrType -&gt; Bool
+/= :: AddrType -&gt; AddrType -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679555667"><span id="local-6989586621679555669"><span id="local-6989586621679555671"><span id="local-6989586621679555675"><span id="local-6989586621679555678"><span id="local-6989586621679555681"><span id="local-6989586621679555684"><span class="annot"><span class="annottext">Eq AddrType
+Eq AddrType =&gt;
+(AddrType -&gt; AddrType -&gt; Ordering)
+-&gt; (AddrType -&gt; AddrType -&gt; Bool)
+-&gt; (AddrType -&gt; AddrType -&gt; Bool)
+-&gt; (AddrType -&gt; AddrType -&gt; Bool)
+-&gt; (AddrType -&gt; AddrType -&gt; Bool)
+-&gt; (AddrType -&gt; AddrType -&gt; AddrType)
+-&gt; (AddrType -&gt; AddrType -&gt; AddrType)
+-&gt; Ord AddrType
+AddrType -&gt; AddrType -&gt; Bool
+AddrType -&gt; AddrType -&gt; Ordering
+AddrType -&gt; AddrType -&gt; AddrType
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: AddrType -&gt; AddrType -&gt; Ordering
+compare :: AddrType -&gt; AddrType -&gt; Ordering
+$c&lt; :: AddrType -&gt; AddrType -&gt; Bool
+&lt; :: AddrType -&gt; AddrType -&gt; Bool
+$c&lt;= :: AddrType -&gt; AddrType -&gt; Bool
+&lt;= :: AddrType -&gt; AddrType -&gt; Bool
+$c&gt; :: AddrType -&gt; AddrType -&gt; Bool
+&gt; :: AddrType -&gt; AddrType -&gt; Bool
+$c&gt;= :: AddrType -&gt; AddrType -&gt; Bool
+&gt;= :: AddrType -&gt; AddrType -&gt; Bool
+$cmax :: AddrType -&gt; AddrType -&gt; AddrType
+max :: AddrType -&gt; AddrType -&gt; AddrType
+$cmin :: AddrType -&gt; AddrType -&gt; AddrType
+min :: AddrType -&gt; AddrType -&gt; AddrType
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679555688"><span id="local-6989586621679555690"><span class="annot"><span class="annottext">(forall x. AddrType -&gt; Rep AddrType x)
+-&gt; (forall x. Rep AddrType x -&gt; AddrType) -&gt; Generic AddrType
+forall x. Rep AddrType x -&gt; AddrType
+forall x. AddrType -&gt; Rep AddrType x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. AddrType -&gt; Rep AddrType x
+from :: forall x. AddrType -&gt; Rep AddrType x
+$cto :: forall x. Rep AddrType x -&gt; AddrType
+to :: forall x. Rep AddrType x -&gt; AddrType
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679555693"><span id="local-6989586621679555695"><span id="local-6989586621679555699"><span class="annot"><span class="annottext">Int -&gt; AddrType -&gt; ShowS
+[AddrType] -&gt; ShowS
+AddrType -&gt; String
+(Int -&gt; AddrType -&gt; ShowS)
+-&gt; (AddrType -&gt; String) -&gt; ([AddrType] -&gt; ShowS) -&gt; Show AddrType
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; AddrType -&gt; ShowS
+showsPrec :: Int -&gt; AddrType -&gt; ShowS
+$cshow :: AddrType -&gt; String
+show :: AddrType -&gt; String
+$cshowList :: [AddrType] -&gt; ShowS
+showList :: [AddrType] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679555702"><span class="annot"><span class="annottext">AddrType -&gt; ()
+(AddrType -&gt; ()) -&gt; NFData AddrType
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: AddrType -&gt; ()
+rnf :: AddrType -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679555714"><span id="local-6989586621679555718"><span id="local-6989586621679555724"><span class="annot"><span class="annottext">Context -&gt; AddrType -&gt; IO (Maybe ThunkInfo)
+Proxy AddrType -&gt; String
+(Context -&gt; AddrType -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; AddrType -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy AddrType -&gt; String)
+-&gt; NoThunks AddrType
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; AddrType -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; AddrType -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; AddrType -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; AddrType -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy AddrType -&gt; String
+showTypeOf :: Proxy AddrType -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- Used for debugging purposes only</span><span>
+</span><span id="line-93"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679555747"><span id="local-6989586621679555754"><span id="local-6989586621679555757"><span id="local-6989586621679555760"><span id="local-6989586621679555763"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrType"><span class="hs-identifier hs-type">AddrType</span></a></span></span></span></span></span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679555845"><span id="local-6989586621679555849"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrType"><span class="hs-identifier hs-type">AddrType</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679555853"><span class="annot"><span class="annottext">toCBOR :: AddrType -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#toCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AddrType -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679555858"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrType"><span class="hs-identifier hs-type">AddrType</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-99"></span><span>  </span><span id="local-6989586621679555863"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s AddrType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s AddrType
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- Tag 1 was previously used for scripts, but never appeared on the chain</span><span>
+</span><span id="line-102"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679555869"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrType"><span class="hs-identifier hs-type">AddrType</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>  </span><span id="local-6989586621679555876"><span class="annot"><span class="annottext">encCBOR :: AddrType -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-104"></span><span>    </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Encoding) -&gt; (AddrType -&gt; Word8) -&gt; AddrType -&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-105"></span><span>      </span><span class="annot"><span class="annottext">AddrType
+</span><a href="Cardano.Chain.Common.AddrSpendingData.html#ATVerKey"><span class="hs-identifier hs-var">ATVerKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-106"></span><span>      </span><span class="annot"><span class="annottext">AddrType
+</span><a href="Cardano.Chain.Common.AddrSpendingData.html#ATRedeem"><span class="hs-identifier hs-var">ATRedeem</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621679555878"><span class="annot"><span class="annottext">encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy AddrType -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encodedSizeExpr"><span class="hs-identifier hs-var hs-var hs-var hs-var">encodedSizeExpr</span></a></span></span><span> </span><span id="local-6989586621679555879"><span class="annot"><span class="annottext">forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><a href="#local-6989586621679555879"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy AddrType
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Word8 -&gt; Size
+forall a.
+EncCBOR a =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encodedSizeExpr"><span class="hs-identifier hs-var">encodedSizeExpr</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy t -&gt; Size
+forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><a href="#local-6989586621679555879"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679555886"><span id="local-6989586621679555889"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrType"><span class="hs-identifier hs-type">AddrType</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621679555902"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s AddrType
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">Decoder s Word8
+forall s. Decoder s Word8
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeWord8Canonical"><span class="hs-identifier hs-var">decodeWord8Canonical</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s Word8
+-&gt; (Word8 -&gt; Decoder s AddrType) -&gt; Decoder s AddrType
+forall a b. Decoder s a -&gt; (a -&gt; Decoder s b) -&gt; Decoder s b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-113"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AddrType -&gt; Decoder s AddrType
+forall a. a -&gt; Decoder s a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">AddrType
+</span><a href="Cardano.Chain.Common.AddrSpendingData.html#ATVerKey"><span class="hs-identifier hs-var">ATVerKey</span></a></span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AddrType -&gt; Decoder s AddrType
+forall a. a -&gt; Decoder s a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">AddrType
+</span><a href="Cardano.Chain.Common.AddrSpendingData.html#ATRedeem"><span class="hs-identifier hs-var">ATRedeem</span></a></span><span>
+</span><span id="line-115"></span><span>      </span><span id="local-6989586621679555903"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679555903"><span class="hs-identifier hs-var">tag</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; Decoder s AddrType
+forall (m :: * -&gt; *) e a. (MonadFail m, Buildable e) =&gt; e -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#cborError"><span class="hs-identifier hs-var">cborError</span></a></span><span> </span><span class="annot"><span class="annottext">(DecoderError -&gt; Decoder s AddrType)
+-&gt; DecoderError -&gt; Decoder s AddrType
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Word8 -&gt; DecoderError
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderErrorUnknownTag"><span class="hs-identifier hs-var">DecoderErrorUnknownTag</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;AddrType&quot;</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679555903"><span class="hs-identifier hs-var">tag</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/heapwords-0.1.0.2-b6417b7556a8e92d841bb3a7d489e50a628754cd86fcb83441bde6481e83fe38/share/doc/html/src/Cardano.HeapWords.html#HeapWords"><span class="hs-identifier hs-type">HeapWords</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrType"><span class="hs-identifier hs-type">AddrType</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-118"></span><span>  </span><span id="local-6989586621679555907"><span class="annot"><span class="annottext">heapWords :: AddrType -&gt; Int
+</span><a href="#local-6989586621679555907"><span class="hs-identifier hs-var hs-var hs-var hs-var">heapWords</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">AddrType
+</span><a href="Cardano.Chain.Common.AddrSpendingData.html#ATVerKey"><span class="hs-identifier hs-var">ATVerKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-120"></span><span>    </span><span class="annot"><span class="annottext">AddrType
+</span><a href="Cardano.Chain.Common.AddrSpendingData.html#ATRedeem"><span class="hs-identifier hs-var">ATRedeem</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="annot"><span class="hs-comment">-- | Convert 'AddrSpendingData' to the corresponding 'AddrType'</span></span><span>
+</span><span id="line-123"></span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#addrSpendingDataToType"><span class="hs-identifier hs-type">addrSpendingDataToType</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrSpendingData"><span class="hs-identifier hs-type">AddrSpendingData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#AddrType"><span class="hs-identifier hs-type">AddrType</span></a></span><span>
+</span><span id="line-124"></span><span id="addrSpendingDataToType"><span class="annot"><span class="annottext">addrSpendingDataToType :: AddrSpendingData -&gt; AddrType
+</span><a href="Cardano.Chain.Common.AddrSpendingData.html#addrSpendingDataToType"><span class="hs-identifier hs-var hs-var">addrSpendingDataToType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#VerKeyASD"><span class="hs-identifier hs-type">VerKeyASD</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AddrType
+</span><a href="Cardano.Chain.Common.AddrSpendingData.html#ATVerKey"><span class="hs-identifier hs-var">ATVerKey</span></a></span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.AddrSpendingData.html#RedeemASD"><span class="hs-identifier hs-type">RedeemASD</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AddrType
+</span><a href="Cardano.Chain.Common.AddrSpendingData.html#ATRedeem"><span class="hs-identifier hs-var">ATRedeem</span></a></span><span>
+</span><span id="line-127"></span></pre></body></html>

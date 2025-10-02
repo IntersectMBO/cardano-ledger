@@ -1,0 +1,164 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Shelley.SafeHash</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#safeHashTest"><span class="hs-identifier">safeHashTest</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Short</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ShortByteString</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">toShort</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.html"><span class="hs-identifier">Test.Tasty</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html"><span class="hs-identifier">Test.Tasty.HUnit</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">data</span><span> </span><span id="FooI"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#FooI"><span class="hs-identifier hs-var">FooI</span></a></span></span><span> </span><span class="hs-comment">-- HashAnnotated indexes which are analogs of our EraIndependentXXX</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#long"><span class="hs-identifier hs-type">long</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-22"></span><span id="long"><span class="annot"><span class="annottext">long :: ByteString
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#long"><span class="hs-identifier hs-var hs-var">long</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; ByteString
+forall a. IsString a =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">fromString</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;abc&quot;</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#short"><span class="hs-identifier hs-type">short</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ShortByteString</span></span><span>
+</span><span id="line-25"></span><span id="short"><span class="annot"><span class="annottext">short :: ShortByteString
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#short"><span class="hs-identifier hs-var hs-var">short</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ShortByteString
+</span><span class="hs-identifier hs-var">toShort</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#long"><span class="hs-identifier hs-var">long</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- Any newtype over some type that is SafeToHash can easily</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- derive SafeToHash and also assign its HashAnnotated type, and</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- thus become a client of 'hashAnnotated'</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">newtype</span><span> </span><span id="Foo"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#Foo"><span class="hs-identifier hs-var">Foo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Foo"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#Foo"><span class="hs-identifier hs-var">Foo</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ShortByteString</span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679371979"><span id="local-6989586621679371985"><span id="local-6989586621679371989"><span class="annot"><span class="annottext">Int -&gt; Foo -&gt; ShowS
+[Foo] -&gt; ShowS
+Foo -&gt; String
+(Int -&gt; Foo -&gt; ShowS)
+-&gt; (Foo -&gt; String) -&gt; ([Foo] -&gt; ShowS) -&gt; Show Foo
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Foo -&gt; ShowS
+showsPrec :: Int -&gt; Foo -&gt; ShowS
+$cshow :: Foo -&gt; String
+show :: Foo -&gt; String
+$cshowList :: [Foo] -&gt; ShowS
+showList :: [Foo] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679371993"><span id="local-6989586621679371997"><span id="local-6989586621679372001"><span class="annot"><span class="annottext">Foo -&gt; Int
+Foo -&gt; ByteString
+(Foo -&gt; ByteString)
+-&gt; (Foo -&gt; Int)
+-&gt; (forall i. Proxy i -&gt; Foo -&gt; SafeHash i)
+-&gt; SafeToHash Foo
+forall i. Proxy i -&gt; Foo -&gt; SafeHash i
+forall t.
+(t -&gt; ByteString)
+-&gt; (t -&gt; Int)
+-&gt; (forall i. Proxy i -&gt; t -&gt; SafeHash i)
+-&gt; SafeToHash t
+$coriginalBytes :: Foo -&gt; ByteString
+originalBytes :: Foo -&gt; ByteString
+$coriginalBytesSize :: Foo -&gt; Int
+originalBytesSize :: Foo -&gt; Int
+$cmakeHashWithExplicitProxys :: forall i. Proxy i -&gt; Foo -&gt; SafeHash i
+makeHashWithExplicitProxys :: forall i. Proxy i -&gt; Foo -&gt; SafeHash i
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#SafeToHash"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">SafeToHash</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679372009"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#HashAnnotated"><span class="hs-identifier hs-type">HashAnnotated</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#Foo"><span class="hs-identifier hs-type">Foo</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#FooI"><span class="hs-identifier hs-type">FooI</span></a></span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#foo"><span class="hs-identifier hs-type">foo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#Foo"><span class="hs-identifier hs-type">Foo</span></a></span><span>
+</span><span id="line-37"></span><span id="foo"><span class="annot"><span class="annottext">foo :: Foo
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#foo"><span class="hs-identifier hs-var hs-var">foo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; Foo
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#Foo"><span class="hs-identifier hs-var">Foo</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#short"><span class="hs-identifier hs-var">short</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- ===================================</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- Lets run some examples, we'll need some concrete Crypto</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#foohash"><span class="hs-identifier hs-type">foohash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#SafeHash"><span class="hs-identifier hs-type">SafeHash</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#FooI"><span class="hs-identifier hs-type">FooI</span></a></span><span>
+</span><span id="line-43"></span><span id="foohash"><span class="annot"><span class="annottext">foohash :: SafeHash FooI
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#foohash"><span class="hs-identifier hs-var hs-var">foohash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Foo -&gt; SafeHash FooI
+forall x i. HashAnnotated x i =&gt; x -&gt; SafeHash i
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#hashAnnotated"><span class="hs-identifier hs-var">hashAnnotated</span></a></span><span> </span><span class="annot"><span class="annottext">Foo
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#foo"><span class="hs-identifier hs-var">foo</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#shorthash"><span class="hs-identifier hs-type">shorthash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#SafeHash"><span class="hs-identifier hs-type">SafeHash</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ShortByteString</span></span><span>
+</span><span id="line-46"></span><span id="shorthash"><span class="annot"><span class="annottext">shorthash :: SafeHash ShortByteString
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#shorthash"><span class="hs-identifier hs-var hs-var">shorthash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy ShortByteString
+-&gt; ShortByteString -&gt; SafeHash ShortByteString
+forall i. Proxy i -&gt; ShortByteString -&gt; SafeHash i
+forall t i. SafeToHash t =&gt; Proxy i -&gt; t -&gt; SafeHash i
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#makeHashWithExplicitProxys"><span class="hs-identifier hs-var">makeHashWithExplicitProxys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">ShortByteString</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#short"><span class="hs-identifier hs-var">short</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#longhash"><span class="hs-identifier hs-type">longhash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#SafeHash"><span class="hs-identifier hs-type">SafeHash</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-49"></span><span id="longhash"><span class="annot"><span class="annottext">longhash :: SafeHash ByteString
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#longhash"><span class="hs-identifier hs-var hs-var">longhash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy ByteString -&gt; ByteString -&gt; SafeHash ByteString
+forall i. Proxy i -&gt; ByteString -&gt; SafeHash i
+forall t i. SafeToHash t =&gt; Proxy i -&gt; t -&gt; SafeHash i
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#makeHashWithExplicitProxys"><span class="hs-identifier hs-var">makeHashWithExplicitProxys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#long"><span class="hs-identifier hs-var">long</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#test1"><span class="hs-identifier hs-type">test1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#test2"><span class="hs-identifier hs-type">test2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-52"></span><span id="test1"><span class="annot"><span class="annottext">test1 :: TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#test1"><span class="hs-identifier hs-var hs-var">test1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;short==long&quot;</span></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+-&gt; SafeHash ShortByteString
+-&gt; SafeHash ShortByteString
+-&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ShortByteString and ByteString don't hash the same&quot;</span></span><span> </span><span class="annot"><span class="annottext">SafeHash ShortByteString
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#shorthash"><span class="hs-identifier hs-var">shorthash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SafeHash ByteString -&gt; SafeHash ShortByteString
+forall i j. SafeHash i -&gt; SafeHash j
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#castSafeHash"><span class="hs-identifier hs-var">castSafeHash</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash ByteString
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#longhash"><span class="hs-identifier hs-var">longhash</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span id="test2"><span class="annot"><span class="annottext">test2 :: TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#test2"><span class="hs-identifier hs-var hs-var">test2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;newtype==underlyingtype&quot;</span></span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+-&gt; SafeHash ShortByteString
+-&gt; SafeHash ShortByteString
+-&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;A newtype and its underlying type dont hash the same&quot;</span></span><span> </span><span class="annot"><span class="annottext">SafeHash ShortByteString
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#shorthash"><span class="hs-identifier hs-var">shorthash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SafeHash FooI -&gt; SafeHash ShortByteString
+forall i j. SafeHash i -&gt; SafeHash j
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#castSafeHash"><span class="hs-identifier hs-var">castSafeHash</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash FooI
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#foohash"><span class="hs-identifier hs-var">foohash</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#safeHashTest"><span class="hs-identifier hs-type">safeHashTest</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-62"></span><span id="safeHashTest"><span class="annot"><span class="annottext">safeHashTest :: TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#safeHashTest"><span class="hs-identifier hs-var hs-var">safeHashTest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;SafeHash&quot;</span></span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;StandardCrypto&quot;</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#test1"><span class="hs-identifier hs-var">test1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.SafeHash.html#test2"><span class="hs-identifier hs-var">test2</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-67"></span></pre></body></html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Binary.Encoding</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Running decoders</span></span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier">serialize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#serialize%27"><span class="hs-identifier">serialize'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#serializeBuilder"><span class="hs-identifier">serializeBuilder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Hash</span></span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#hashWithEncoder"><span class="hs-identifier">hashWithEncoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#hashEncCBOR"><span class="hs-identifier">hashEncCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Version.html"><span class="hs-identifier">Cardano.Ledger.Binary.Version</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.Encoder.html"><span class="hs-identifier">Cardano.Ledger.Binary.Encoding.Encoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html"><span class="hs-identifier">Cardano.Ledger.Binary.Encoding.EncCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Nested CBOR-in-CBOR</span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#encodeNestedCbor"><span class="hs-identifier">encodeNestedCbor</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#encodeNestedCborBytes"><span class="hs-identifier">encodeNestedCborBytes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#nestedCborSizeExpr"><span class="hs-identifier">nestedCborSizeExpr</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#nestedCborBytesSizeExpr"><span class="hs-identifier">nestedCborBytesSizeExpr</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Tools</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#runByteBuilder"><span class="hs-identifier">runByteBuilder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#encodeMemPack"><span class="hs-identifier">encodeMemPack</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html"><span class="hs-identifier">Cardano.Crypto.Hash.Class</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html"><span class="hs-identifier">Cardano.Ledger.Binary.Encoding.EncCBOR</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.Encoder.html"><span class="hs-identifier">Cardano.Ledger.Binary.Encoding.Encoder</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Version.html"><span class="hs-identifier">Cardano.Ledger.Binary.Version</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.ByteArray.Sliced.html"><span class="hs-identifier">Codec.CBOR.ByteArray.Sliced</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.ByteArray.Sliced.html#fromByteArray"><span class="hs-identifier">fromByteArray</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Builder</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Builder</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Builder.Extra</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">safeStrategy</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">toLazyByteStringWith</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html"><span class="hs-identifier">Data.MemPack</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">MP</span></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- | Serialize a Haskell value with a 'EncCBOR' instance to an external binary</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--   representation.</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--   The output is represented as a lazy 'BSL.ByteString' and is constructed</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--   incrementally.</span><span>
+</span><span id="line-46"></span><span id="local-6989586621679251115"><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-type">serialize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251115"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679251115"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span></span><span>
+</span><span id="line-47"></span><span id="serialize"><span class="annot"><span class="annottext">serialize :: forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var hs-var">serialize</span></a></span></span><span> </span><span id="local-6989586621679251195"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251195"><span class="hs-identifier hs-var">version</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">AllocationStrategy -&gt; ByteString -&gt; Builder -&gt; ByteString
+</span><span class="hs-identifier hs-var">toLazyByteStringWith</span></span><span> </span><span class="annot"><span class="annottext">AllocationStrategy
+</span><a href="#local-6989586621679251196"><span class="hs-identifier hs-var">strategy</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; ByteString) -&gt; (a -&gt; Builder) -&gt; a -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; Builder
+</span><a href="Cardano.Ledger.Binary.Encoding.Encoder.html#toBuilder"><span class="hs-identifier hs-var">toBuilder</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251195"><span class="hs-identifier hs-var">version</span></a></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; Builder) -&gt; (a -&gt; Encoding) -&gt; a -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-comment">-- 1024 is the size of the first buffer, 4096 is the size of subsequent</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-comment">-- buffers. Chosen because they seem to give good performance. They are not</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-comment">-- sacred.</span><span>
+</span><span id="line-53"></span><span>    </span><span id="local-6989586621679251196"><span class="annot"><span class="annottext">strategy :: AllocationStrategy
+</span><a href="#local-6989586621679251196"><span class="hs-identifier hs-var hs-var">strategy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; AllocationStrategy
+</span><span class="hs-identifier hs-var">safeStrategy</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1024</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4096</span></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- | Serialize a Haskell value to an external binary representation.</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--   The output is represented as a strict 'ByteString'.</span><span>
+</span><span id="line-58"></span><span id="local-6989586621679251125"><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#serialize%27"><span class="hs-identifier hs-type">serialize'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251125"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679251125"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span></span><span>
+</span><span id="line-59"></span><span id="serialize%27"><span class="annot"><span class="annottext">serialize' :: forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="Cardano.Ledger.Binary.Encoding.html#serialize%27"><span class="hs-identifier hs-var hs-var">serialize'</span></a></span></span><span> </span><span id="local-6989586621679251202"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251202"><span class="hs-identifier hs-var">version</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">BSL.toStrict</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString) -&gt; (a -&gt; ByteString) -&gt; a -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Version -&gt; a -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251202"><span class="hs-identifier hs-var">version</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- | Serialize into a Builder. Useful if you want to throw other ByteStrings</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--   around it.</span><span>
+</span><span id="line-63"></span><span id="local-6989586621679251128"><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#serializeBuilder"><span class="hs-identifier hs-type">serializeBuilder</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251128"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679251128"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Builder</span></span></span><span>
+</span><span id="line-64"></span><span id="serializeBuilder"><span class="annot"><span class="annottext">serializeBuilder :: forall a. EncCBOR a =&gt; Version -&gt; a -&gt; Builder
+</span><a href="Cardano.Ledger.Binary.Encoding.html#serializeBuilder"><span class="hs-identifier hs-var hs-var">serializeBuilder</span></a></span></span><span> </span><span id="local-6989586621679251206"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251206"><span class="hs-identifier hs-var">version</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; Builder
+</span><a href="Cardano.Ledger.Binary.Encoding.Encoder.html#toBuilder"><span class="hs-identifier hs-var">toBuilder</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251206"><span class="hs-identifier hs-var">version</span></a></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; Builder) -&gt; (a -&gt; Encoding) -&gt; a -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- Hashing</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#hashWithEncoder"><span class="hs-identifier hs-type">hashWithEncoder</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679251130"><span class="annot"><a href="#local-6989586621679251130"><span class="hs-identifier hs-type">h</span></a></span></span><span> </span><span id="local-6989586621679251132"><span class="annot"><a href="#local-6989586621679251132"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#HashAlgorithm"><span class="hs-identifier hs-type">C.HashAlgorithm</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251130"><span class="hs-identifier hs-type">h</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679251132"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679251132"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">C.Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251130"><span class="hs-identifier hs-type">h</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251132"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-71"></span><span id="hashWithEncoder"><span class="annot"><span class="annottext">hashWithEncoder :: forall h a.
+HashAlgorithm h =&gt;
+Version -&gt; (a -&gt; Encoding) -&gt; a -&gt; Hash h a
+</span><a href="Cardano.Ledger.Binary.Encoding.html#hashWithEncoder"><span class="hs-identifier hs-var hs-var">hashWithEncoder</span></a></span></span><span> </span><span id="local-6989586621679251211"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251211"><span class="hs-identifier hs-var">version</span></a></span></span><span> </span><span id="local-6989586621679251212"><span class="annot"><span class="annottext">a -&gt; Encoding
+</span><a href="#local-6989586621679251212"><span class="hs-identifier hs-var">toEnc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; ByteString) -&gt; a -&gt; Hash h a
+forall h a. HashAlgorithm h =&gt; (a -&gt; ByteString) -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashWith"><span class="hs-identifier hs-var">C.hashWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="Cardano.Ledger.Binary.Encoding.html#serialize%27"><span class="hs-identifier hs-var">serialize'</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251211"><span class="hs-identifier hs-var">version</span></a></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; ByteString) -&gt; (a -&gt; Encoding) -&gt; a -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Encoding
+</span><a href="#local-6989586621679251212"><span class="hs-identifier hs-var">toEnc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#hashEncCBOR"><span class="hs-identifier hs-type">hashEncCBOR</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679251138"><span class="annot"><a href="#local-6989586621679251138"><span class="hs-identifier hs-type">h</span></a></span></span><span> </span><span id="local-6989586621679251139"><span class="annot"><a href="#local-6989586621679251139"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#HashAlgorithm"><span class="hs-identifier hs-type">C.HashAlgorithm</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251138"><span class="hs-identifier hs-type">h</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251139"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679251139"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">C.Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251138"><span class="hs-identifier hs-type">h</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251139"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-74"></span><span id="hashEncCBOR"><span class="annot"><span class="annottext">hashEncCBOR :: forall h a.
+(HashAlgorithm h, EncCBOR a) =&gt;
+Version -&gt; a -&gt; Hash h a
+</span><a href="Cardano.Ledger.Binary.Encoding.html#hashEncCBOR"><span class="hs-identifier hs-var hs-var">hashEncCBOR</span></a></span></span><span> </span><span id="local-6989586621679251218"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251218"><span class="hs-identifier hs-var">version</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; (a -&gt; Encoding) -&gt; a -&gt; Hash h a
+forall h a.
+HashAlgorithm h =&gt;
+Version -&gt; (a -&gt; Encoding) -&gt; a -&gt; Hash h a
+</span><a href="Cardano.Ledger.Binary.Encoding.html#hashWithEncoder"><span class="hs-identifier hs-var">hashWithEncoder</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251218"><span class="hs-identifier hs-var">version</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- Nested CBOR-in-CBOR</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- https://tools.ietf.org/html/rfc7049#section-2.4.4.1</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- | Encode and serialise the given `a` and surround it with the semantic tag 24</span><span>
+</span><span id="line-82"></span><span class="hs-comment">--   In CBOR diagnostic notation:</span><span>
+</span><span id="line-83"></span><span class="hs-comment">--   &gt; 24(h'DEADBEEF')</span><span>
+</span><span id="line-84"></span><span id="local-6989586621679251219"><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#encodeNestedCbor"><span class="hs-identifier hs-type">encodeNestedCbor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251219"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679251219"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span></span><span>
+</span><span id="line-85"></span><span id="encodeNestedCbor"><span class="annot"><span class="annottext">encodeNestedCbor :: forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.html#encodeNestedCbor"><span class="hs-identifier hs-var hs-var">encodeNestedCbor</span></a></span></span><span> </span><span id="local-6989586621679251224"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679251224"><span class="hs-identifier hs-var">value</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.Encoder.html#encodeTag"><span class="hs-identifier hs-var">encodeTag</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">24</span></span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">(Version -&gt; Encoding) -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.Encoder.html#withCurrentEncodingVersion"><span class="hs-identifier hs-var">withCurrentEncodingVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679251227"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251227"><span class="hs-identifier hs-var">version</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; a -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679251227"><span class="hs-identifier hs-var">version</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679251224"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- | Like `encodeNestedCbor`, but assumes nothing about the shape of</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--   input object, so that it must be passed as a binary `ByteString` blob. It's</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--   the caller responsibility to ensure the input `ByteString` correspond</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--   indeed to valid, previously-serialised CBOR data.</span><span>
+</span><span id="line-93"></span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#encodeNestedCborBytes"><span class="hs-identifier hs-type">encodeNestedCborBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span>
+</span><span id="line-94"></span><span id="encodeNestedCborBytes"><span class="annot"><span class="annottext">encodeNestedCborBytes :: ByteString -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.html#encodeNestedCborBytes"><span class="hs-identifier hs-var hs-var">encodeNestedCborBytes</span></a></span></span><span> </span><span id="local-6989586621679251228"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679251228"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.Encoder.html#encodeTag"><span class="hs-identifier hs-var">encodeTag</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">24</span></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679251228"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#nestedCborSizeExpr"><span class="hs-identifier hs-type">nestedCborSizeExpr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span>
+</span><span id="line-97"></span><span id="nestedCborSizeExpr"><span class="annot"><span class="annottext">nestedCborSizeExpr :: Size -&gt; Size
+</span><a href="Cardano.Ledger.Binary.Encoding.html#nestedCborSizeExpr"><span class="hs-identifier hs-var hs-var">nestedCborSizeExpr</span></a></span></span><span> </span><span id="local-6989586621679251229"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679251229"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Natural -&gt; Natural) -&gt; Size -&gt; Size
+</span><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#apMono"><span class="hs-identifier hs-var">apMono</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;withWordSize&quot;</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural
+forall s a. (Integral s, Integral a) =&gt; s -&gt; a
+</span><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#withWordSize"><span class="hs-identifier hs-var">withWordSize</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679251229"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679251229"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#nestedCborBytesSizeExpr"><span class="hs-identifier hs-type">nestedCborBytesSizeExpr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#Size"><span class="hs-identifier hs-type">Size</span></a></span><span>
+</span><span id="line-100"></span><span id="nestedCborBytesSizeExpr"><span class="annot"><span class="annottext">nestedCborBytesSizeExpr :: Size -&gt; Size
+</span><a href="Cardano.Ledger.Binary.Encoding.html#nestedCborBytesSizeExpr"><span class="hs-identifier hs-var hs-var">nestedCborBytesSizeExpr</span></a></span></span><span> </span><span id="local-6989586621679251233"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679251233"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; (Natural -&gt; Natural) -&gt; Size -&gt; Size
+</span><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#apMono"><span class="hs-identifier hs-var">apMono</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;withWordSize&quot;</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural
+forall s a. (Integral s, Integral a) =&gt; s -&gt; a
+</span><a href="Cardano.Ledger.Binary.Encoding.EncCBOR.html#withWordSize"><span class="hs-identifier hs-var">withWordSize</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679251233"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679251233"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- Tools</span><span>
+</span><span id="line-104"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- | Run a ByteString 'Builder' using a strategy aimed at making smaller</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- things efficiently.</span><span>
+</span><span id="line-108"></span><span class="hs-comment">--</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- It takes a size hint and produces a strict 'ByteString'. This will be fast</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- when the size hint is the same or slightly bigger than the true size.</span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#runByteBuilder"><span class="hs-identifier hs-type">runByteBuilder</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Builder</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span>
+</span><span id="line-112"></span><span id="runByteBuilder"><span class="annot"><span class="annottext">runByteBuilder :: Int -&gt; Builder -&gt; ByteString
+</span><a href="Cardano.Ledger.Binary.Encoding.html#runByteBuilder"><span class="hs-identifier hs-var hs-var">runByteBuilder</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679251234"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679251234"><span class="hs-identifier hs-var">sizeHint</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-113"></span><span>  </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">BSL.toStrict</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; (Builder -&gt; ByteString) -&gt; Builder -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">AllocationStrategy -&gt; ByteString -&gt; Builder -&gt; ByteString
+</span><span class="hs-identifier hs-var">toLazyByteStringWith</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; AllocationStrategy
+</span><span class="hs-identifier hs-var">safeStrategy</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679251234"><span class="hs-identifier hs-var">sizeHint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679251234"><span class="hs-identifier hs-var">sizeHint</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-114"></span><span class="hs-pragma">{-# NOINLINE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#runByteBuilder"><span class="hs-pragma hs-type">runByteBuilder</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="annot"><span class="hs-comment">-- | Encode as bytes using `MP.MemPack` and then encode those bytes as CBOR</span></span><span>
+</span><span id="line-117"></span><span id="local-6989586621679251147"><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.html#encodeMemPack"><span class="hs-identifier hs-type">encodeMemPack</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#MemPack"><span class="hs-identifier hs-type">MP.MemPack</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679251147"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679251147"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span></span><span>
+</span><span id="line-118"></span><span id="encodeMemPack"><span class="annot"><span class="annottext">encodeMemPack :: forall a. MemPack a =&gt; a -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.html#encodeMemPack"><span class="hs-identifier hs-var hs-var">encodeMemPack</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlicedByteArray -&gt; Encoding
+</span><a href="Cardano.Ledger.Binary.Encoding.Encoder.html#encodeByteArray"><span class="hs-identifier hs-var">encodeByteArray</span></a></span><span> </span><span class="annot"><span class="annottext">(SlicedByteArray -&gt; Encoding)
+-&gt; (a -&gt; SlicedByteArray) -&gt; a -&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteArray -&gt; SlicedByteArray
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.ByteArray.Sliced.html#fromByteArray"><span class="hs-identifier hs-var">fromByteArray</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteArray -&gt; SlicedByteArray)
+-&gt; (a -&gt; ByteArray) -&gt; a -&gt; SlicedByteArray
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; ByteArray
+forall a. (MemPack a, HasCallStack) =&gt; a -&gt; ByteArray
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#pack"><span class="hs-identifier hs-var">MP.pack</span></a></span><span>
+</span><span id="line-119"></span></pre></body></html>

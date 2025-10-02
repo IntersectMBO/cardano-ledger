@@ -1,0 +1,465 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Examples.Chain</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#CHAINExample"><span class="hs-identifier">CHAINExample</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#testCHAINExample"><span class="hs-identifier">testCHAINExample</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Block.html"><span class="hs-identifier">Cardano.Ledger.Block</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Block.html#Block"><span class="hs-identifier">Block</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.html"><span class="hs-identifier">Cardano.Ledger.Shelley</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesPdL"><span class="hs-identifier">nesPdL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.html"><span class="hs-identifier">Cardano.Ledger.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.PoolDistr.html#individualTotalPoolStakeL"><span class="hs-identifier">individualTotalPoolStakeL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.PoolDistr.html#poolDistrDistrL"><span class="hs-identifier">poolDistrDistrL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.PoolDistr.html#poolDistrTotalL"><span class="hs-identifier">poolDistrTotalL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/doc/html/cardano-protocol-tpraos/src/Cardano.Protocol.TPraos.BHeader.html"><span class="hs-identifier">Cardano.Protocol.TPraos.BHeader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/doc/html/cardano-protocol-tpraos/src/Cardano.Protocol.TPraos.BHeader.html#BHeader"><span class="hs-identifier">BHeader</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html"><span class="hs-identifier">Control.State.Transition.Extended</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Assertion"><span class="hs-identifier">Assertion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.List.NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NonEmpty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Stack</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes.html#MockCrypto"><span class="hs-identifier">MockCrypto</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Rules.Chain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#CHAIN"><span class="hs-identifier">CHAIN</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#ChainState"><span class="hs-identifier">ChainState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#chainStateNesL"><span class="hs-identifier">chainStateNesL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#totalAda"><span class="hs-identifier">totalAda</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.TreeDiff.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.TreeDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#expectExprEqual"><span class="hs-identifier">expectExprEqual</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Utils</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#applySTSTest"><span class="hs-identifier">applySTSTest</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#maxLLSupply"><span class="hs-identifier">maxLLSupply</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#runShelleyBase"><span class="hs-identifier">runShelleyBase</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html"><span class="hs-identifier">Test.Control.State.Transition.Trace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#checkTrace"><span class="hs-identifier">checkTrace</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator">(.-)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E%3E"><span class="hs-operator">(.-&gt;&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html"><span class="hs-identifier">Test.Tasty.HUnit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier">Assertion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#%40%3F%3D"><span class="hs-operator">(@?=)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">data</span><span> </span><span id="CHAINExample"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#CHAINExample"><span class="hs-identifier hs-var">CHAINExample</span></a></span></span><span> </span><span id="local-6989586621679361534"><span class="annot"><a href="#local-6989586621679361534"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CHAINExample"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#CHAINExample"><span class="hs-identifier hs-var">CHAINExample</span></a></span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="startState"><span class="annot"><span class="annottext">forall era. CHAINExample era -&gt; ChainState era
+</span><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#startState"><span class="hs-identifier hs-var hs-var">startState</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#ChainState"><span class="hs-identifier hs-type">ChainState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679361534"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ State to start testing with</span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="newBlock"><span class="annot"><span class="annottext">forall era. CHAINExample era -&gt; Block (BHeader MockCrypto) era
+</span><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#newBlock"><span class="hs-identifier hs-var hs-var">newBlock</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Block.html#Block"><span class="hs-identifier hs-type">Block</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/doc/html/cardano-protocol-tpraos/src/Cardano.Protocol.TPraos.BHeader.html#BHeader"><span class="hs-identifier hs-type">BHeader</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes.html#MockCrypto"><span class="hs-identifier hs-type">MockCrypto</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679361534"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Block to run chain state transition system on</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="intendedResult"><span class="annot"><span class="annottext">forall era.
+CHAINExample era
+-&gt; Either
+     (NonEmpty (PredicateFailure (CHAIN era))) (ChainState era)
+</span><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#intendedResult"><span class="hs-identifier hs-var hs-var">intendedResult</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#CHAIN"><span class="hs-identifier hs-type">CHAIN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679361534"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#ChainState"><span class="hs-identifier hs-type">ChainState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679361534"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ type of fatal error, if failure expected and final chain state if success expected</span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- | Runs example, applies chain state transition system rule (STS),</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--   and checks that trace ends with expected state or expected error.</span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#testCHAINExample"><span class="hs-identifier hs-type">testCHAINExample</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#CHAINExample"><span class="hs-identifier hs-type">CHAINExample</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span><span>
+</span><span id="line-37"></span><span id="testCHAINExample"><span class="annot"><span class="annottext">testCHAINExample :: HasCallStack =&gt; CHAINExample ShelleyEra -&gt; Assertion
+</span><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#testCHAINExample"><span class="hs-identifier hs-var hs-var">testCHAINExample</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#CHAINExample"><span class="hs-identifier hs-type">CHAINExample</span></a></span><span> </span><span id="local-6989586621679362503"><span class="annot"><span class="annottext">ChainState ShelleyEra
+</span><a href="#local-6989586621679362503"><span class="hs-identifier hs-var">initSt</span></a></span></span><span> </span><span id="local-6989586621679362504"><span class="annot"><span class="annottext">Block (BHeader MockCrypto) ShelleyEra
+</span><a href="#local-6989586621679362504"><span class="hs-identifier hs-var">block</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679362505"><span class="annot"><span class="annottext">ChainState ShelleyEra
+</span><a href="#local-6989586621679362505"><span class="hs-identifier hs-var">expectedSt</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *).
+(STS s, BaseM s ~ m) =&gt;
+(forall a. m a -&gt; a)
+-&gt; Environment s
+-&gt; ReaderT
+     (State s
+      -&gt; Signal s -&gt; Either (NonEmpty (PredicateFailure s)) (State s))
+     IO
+     (State s)
+-&gt; Assertion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#checkTrace"><span class="hs-identifier hs-var">checkTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#CHAIN"><span class="hs-identifier hs-type">CHAIN</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ShelleyBase a -&gt; a
+forall a. ShelleyBase a -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#runShelleyBase"><span class="hs-identifier hs-var">runShelleyBase</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ReaderT
+   (State (CHAIN ShelleyEra)
+    -&gt; Signal (CHAIN ShelleyEra)
+    -&gt; Either
+         (NonEmpty (PredicateFailure (CHAIN ShelleyEra)))
+         (State (CHAIN ShelleyEra)))
+   IO
+   (State (CHAIN ShelleyEra))
+ -&gt; Assertion)
+-&gt; ReaderT
+     (State (CHAIN ShelleyEra)
+      -&gt; Signal (CHAIN ShelleyEra)
+      -&gt; Either
+           (NonEmpty (PredicateFailure (CHAIN ShelleyEra)))
+           (State (CHAIN ShelleyEra)))
+     IO
+     (State (CHAIN ShelleyEra))
+-&gt; Assertion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-39"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">ChainState ShelleyEra
+-&gt; ReaderT
+     (ChainState ShelleyEra
+      -&gt; Block (BHeader MockCrypto) ShelleyEra
+      -&gt; Either
+           (NonEmpty (TestChainPredicateFailure ShelleyEra))
+           (ChainState ShelleyEra))
+     IO
+     (ChainState ShelleyEra)
+forall a.
+a
+-&gt; ReaderT
+     (ChainState ShelleyEra
+      -&gt; Block (BHeader MockCrypto) ShelleyEra
+      -&gt; Either
+           (NonEmpty (TestChainPredicateFailure ShelleyEra))
+           (ChainState ShelleyEra))
+     IO
+     a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">ChainState ShelleyEra
+</span><a href="#local-6989586621679362503"><span class="hs-identifier hs-var">initSt</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT
+  (ChainState ShelleyEra
+   -&gt; Block (BHeader MockCrypto) ShelleyEra
+   -&gt; Either
+        (NonEmpty (TestChainPredicateFailure ShelleyEra))
+        (ChainState ShelleyEra))
+  IO
+  (ChainState ShelleyEra)
+-&gt; Block (BHeader MockCrypto) ShelleyEra
+-&gt; ReaderT
+     (ChainState ShelleyEra
+      -&gt; Block (BHeader MockCrypto) ShelleyEra
+      -&gt; Either
+           (NonEmpty (TestChainPredicateFailure ShelleyEra))
+           (ChainState ShelleyEra))
+     IO
+     (ChainState ShelleyEra)
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="annot"><span class="annottext">Block (BHeader MockCrypto) ShelleyEra
+</span><a href="#local-6989586621679362504"><span class="hs-identifier hs-var">block</span></a></span><span>
+</span><span id="line-40"></span><span>          </span><span class="annot"><span class="annottext">ReaderT
+  (ChainState ShelleyEra
+   -&gt; Block (BHeader MockCrypto) ShelleyEra
+   -&gt; Either
+        (NonEmpty (TestChainPredicateFailure ShelleyEra))
+        (ChainState ShelleyEra))
+  IO
+  (ChainState ShelleyEra)
+-&gt; (ChainState ShelleyEra -&gt; ChainState ShelleyEra)
+-&gt; ReaderT
+     (ChainState ShelleyEra
+      -&gt; Block (BHeader MockCrypto) ShelleyEra
+      -&gt; Either
+           (NonEmpty (TestChainPredicateFailure ShelleyEra))
+           (ChainState ShelleyEra))
+     IO
+     (ChainState ShelleyEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><span class="hs-operator hs-var">&lt;&amp;&gt;</span></span><span> </span><span class="annot"><span class="annottext">(NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(NewEpochState era -&gt; f (NewEpochState era))
+-&gt; ChainState era -&gt; f (ChainState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#chainStateNesL"><span class="hs-identifier hs-var">chainStateNesL</span></a></span><span> </span><span class="annot"><span class="annottext">((NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+ -&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra))
+-&gt; ((CompactForm Coin -&gt; Identity (CompactForm Coin))
+    -&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; (CompactForm Coin -&gt; Identity (CompactForm Coin))
+-&gt; ChainState ShelleyEra
+-&gt; Identity (ChainState ShelleyEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(PoolDistr -&gt; Identity PoolDistr)
+-&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(PoolDistr -&gt; f PoolDistr)
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesPdL"><span class="hs-identifier hs-var">nesPdL</span></a></span><span> </span><span class="annot"><span class="annottext">((PoolDistr -&gt; Identity PoolDistr)
+ -&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; ((CompactForm Coin -&gt; Identity (CompactForm Coin))
+    -&gt; PoolDistr -&gt; Identity PoolDistr)
+-&gt; (CompactForm Coin -&gt; Identity (CompactForm Coin))
+-&gt; NewEpochState ShelleyEra
+-&gt; Identity (NewEpochState ShelleyEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(CompactForm Coin -&gt; Identity (CompactForm Coin))
+-&gt; PoolDistr -&gt; Identity PoolDistr
+Lens' PoolDistr (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.PoolDistr.html#poolDistrTotalL"><span class="hs-identifier hs-var">poolDistrTotalL</span></a></span><span> </span><span class="annot"><span class="annottext">((CompactForm Coin -&gt; Identity (CompactForm Coin))
+ -&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra))
+-&gt; CompactForm Coin
+-&gt; ChainState ShelleyEra
+-&gt; ChainState ShelleyEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-41"></span><span>          </span><span class="annot"><span class="annottext">ReaderT
+  (ChainState ShelleyEra
+   -&gt; Block (BHeader MockCrypto) ShelleyEra
+   -&gt; Either
+        (NonEmpty (TestChainPredicateFailure ShelleyEra))
+        (ChainState ShelleyEra))
+  IO
+  (ChainState ShelleyEra)
+-&gt; (ChainState ShelleyEra -&gt; ChainState ShelleyEra)
+-&gt; ReaderT
+     (ChainState ShelleyEra
+      -&gt; Block (BHeader MockCrypto) ShelleyEra
+      -&gt; Either
+           (NonEmpty (TestChainPredicateFailure ShelleyEra))
+           (ChainState ShelleyEra))
+     IO
+     (ChainState ShelleyEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><span class="hs-operator hs-var">&lt;&amp;&gt;</span></span><span> </span><span class="annot"><span class="annottext">(NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(NewEpochState era -&gt; f (NewEpochState era))
+-&gt; ChainState era -&gt; f (ChainState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#chainStateNesL"><span class="hs-identifier hs-var">chainStateNesL</span></a></span><span> </span><span class="annot"><span class="annottext">((NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+ -&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra))
+-&gt; ((Map (KeyHash 'StakePool) IndividualPoolStake
+     -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+    -&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; (Map (KeyHash 'StakePool) IndividualPoolStake
+    -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+-&gt; ChainState ShelleyEra
+-&gt; Identity (ChainState ShelleyEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(PoolDistr -&gt; Identity PoolDistr)
+-&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(PoolDistr -&gt; f PoolDistr)
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesPdL"><span class="hs-identifier hs-var">nesPdL</span></a></span><span> </span><span class="annot"><span class="annottext">((PoolDistr -&gt; Identity PoolDistr)
+ -&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; ((Map (KeyHash 'StakePool) IndividualPoolStake
+     -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+    -&gt; PoolDistr -&gt; Identity PoolDistr)
+-&gt; (Map (KeyHash 'StakePool) IndividualPoolStake
+    -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+-&gt; NewEpochState ShelleyEra
+-&gt; Identity (NewEpochState ShelleyEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Map (KeyHash 'StakePool) IndividualPoolStake
+ -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+-&gt; PoolDistr -&gt; Identity PoolDistr
+Lens' PoolDistr (Map (KeyHash 'StakePool) IndividualPoolStake)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.PoolDistr.html#poolDistrDistrL"><span class="hs-identifier hs-var">poolDistrDistrL</span></a></span><span> </span><span class="annot"><span class="annottext">((Map (KeyHash 'StakePool) IndividualPoolStake
+  -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+ -&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra))
+-&gt; (Map (KeyHash 'StakePool) IndividualPoolStake
+    -&gt; Map (KeyHash 'StakePool) IndividualPoolStake)
+-&gt; ChainState ShelleyEra
+-&gt; ChainState ShelleyEra
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%25~"><span class="hs-operator hs-var">%~</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) IndividualPoolStake
+-&gt; (IndividualPoolStake -&gt; IndividualPoolStake)
+-&gt; Map (KeyHash 'StakePool) IndividualPoolStake
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><span class="hs-operator hs-var">&lt;&amp;&gt;</span></span><span> </span><span class="annot"><span class="annottext">(CompactForm Coin -&gt; Identity (CompactForm Coin))
+-&gt; IndividualPoolStake -&gt; Identity IndividualPoolStake
+Lens' IndividualPoolStake (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.PoolDistr.html#individualTotalPoolStakeL"><span class="hs-identifier hs-var">individualTotalPoolStakeL</span></a></span><span> </span><span class="annot"><span class="annottext">((CompactForm Coin -&gt; Identity (CompactForm Coin))
+ -&gt; IndividualPoolStake -&gt; Identity IndividualPoolStake)
+-&gt; CompactForm Coin -&gt; IndividualPoolStake -&gt; IndividualPoolStake
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><span class="annottext">ReaderT
+  (ChainState ShelleyEra
+   -&gt; Block (BHeader MockCrypto) ShelleyEra
+   -&gt; Either
+        (NonEmpty (TestChainPredicateFailure ShelleyEra))
+        (ChainState ShelleyEra))
+  IO
+  (ChainState ShelleyEra)
+-&gt; ChainState ShelleyEra
+-&gt; ReaderT
+     (ChainState ShelleyEra
+      -&gt; Block (BHeader MockCrypto) ShelleyEra
+      -&gt; Either
+           (NonEmpty (TestChainPredicateFailure ShelleyEra))
+           (ChainState ShelleyEra))
+     IO
+     (ChainState ShelleyEra)
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, ToExpr st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E%3E"><span class="hs-operator hs-var">.-&gt;&gt;</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">ChainState ShelleyEra
+</span><a href="#local-6989586621679362505"><span class="hs-identifier hs-var">expectedSt</span></a></span><span>
+</span><span id="line-44"></span><span>                 </span><span class="annot"><span class="annottext">ChainState ShelleyEra
+-&gt; (ChainState ShelleyEra -&gt; ChainState ShelleyEra)
+-&gt; ChainState ShelleyEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(NewEpochState era -&gt; f (NewEpochState era))
+-&gt; ChainState era -&gt; f (ChainState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#chainStateNesL"><span class="hs-identifier hs-var">chainStateNesL</span></a></span><span> </span><span class="annot"><span class="annottext">((NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+ -&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra))
+-&gt; ((CompactForm Coin -&gt; Identity (CompactForm Coin))
+    -&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; (CompactForm Coin -&gt; Identity (CompactForm Coin))
+-&gt; ChainState ShelleyEra
+-&gt; Identity (ChainState ShelleyEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(PoolDistr -&gt; Identity PoolDistr)
+-&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(PoolDistr -&gt; f PoolDistr)
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesPdL"><span class="hs-identifier hs-var">nesPdL</span></a></span><span> </span><span class="annot"><span class="annottext">((PoolDistr -&gt; Identity PoolDistr)
+ -&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; ((CompactForm Coin -&gt; Identity (CompactForm Coin))
+    -&gt; PoolDistr -&gt; Identity PoolDistr)
+-&gt; (CompactForm Coin -&gt; Identity (CompactForm Coin))
+-&gt; NewEpochState ShelleyEra
+-&gt; Identity (NewEpochState ShelleyEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(CompactForm Coin -&gt; Identity (CompactForm Coin))
+-&gt; PoolDistr -&gt; Identity PoolDistr
+Lens' PoolDistr (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.PoolDistr.html#poolDistrTotalL"><span class="hs-identifier hs-var">poolDistrTotalL</span></a></span><span> </span><span class="annot"><span class="annottext">((CompactForm Coin -&gt; Identity (CompactForm Coin))
+ -&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra))
+-&gt; CompactForm Coin
+-&gt; ChainState ShelleyEra
+-&gt; ChainState ShelleyEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-45"></span><span>                 </span><span class="annot"><span class="annottext">ChainState ShelleyEra
+-&gt; (ChainState ShelleyEra -&gt; ChainState ShelleyEra)
+-&gt; ChainState ShelleyEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(NewEpochState era -&gt; f (NewEpochState era))
+-&gt; ChainState era -&gt; f (ChainState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#chainStateNesL"><span class="hs-identifier hs-var">chainStateNesL</span></a></span><span> </span><span class="annot"><span class="annottext">((NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+ -&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra))
+-&gt; ((Map (KeyHash 'StakePool) IndividualPoolStake
+     -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+    -&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; (Map (KeyHash 'StakePool) IndividualPoolStake
+    -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+-&gt; ChainState ShelleyEra
+-&gt; Identity (ChainState ShelleyEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(PoolDistr -&gt; Identity PoolDistr)
+-&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(PoolDistr -&gt; f PoolDistr)
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesPdL"><span class="hs-identifier hs-var">nesPdL</span></a></span><span> </span><span class="annot"><span class="annottext">((PoolDistr -&gt; Identity PoolDistr)
+ -&gt; NewEpochState ShelleyEra -&gt; Identity (NewEpochState ShelleyEra))
+-&gt; ((Map (KeyHash 'StakePool) IndividualPoolStake
+     -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+    -&gt; PoolDistr -&gt; Identity PoolDistr)
+-&gt; (Map (KeyHash 'StakePool) IndividualPoolStake
+    -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+-&gt; NewEpochState ShelleyEra
+-&gt; Identity (NewEpochState ShelleyEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Map (KeyHash 'StakePool) IndividualPoolStake
+ -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+-&gt; PoolDistr -&gt; Identity PoolDistr
+Lens' PoolDistr (Map (KeyHash 'StakePool) IndividualPoolStake)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.PoolDistr.html#poolDistrDistrL"><span class="hs-identifier hs-var">poolDistrDistrL</span></a></span><span> </span><span class="annot"><span class="annottext">((Map (KeyHash 'StakePool) IndividualPoolStake
+  -&gt; Identity (Map (KeyHash 'StakePool) IndividualPoolStake))
+ -&gt; ChainState ShelleyEra -&gt; Identity (ChainState ShelleyEra))
+-&gt; (Map (KeyHash 'StakePool) IndividualPoolStake
+    -&gt; Map (KeyHash 'StakePool) IndividualPoolStake)
+-&gt; ChainState ShelleyEra
+-&gt; ChainState ShelleyEra
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%25~"><span class="hs-operator hs-var">%~</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) IndividualPoolStake
+-&gt; (IndividualPoolStake -&gt; IndividualPoolStake)
+-&gt; Map (KeyHash 'StakePool) IndividualPoolStake
+forall (f :: * -&gt; *) a b. Functor f =&gt; f a -&gt; (a -&gt; b) -&gt; f b
+</span><span class="hs-operator hs-var">&lt;&amp;&gt;</span></span><span> </span><span class="annot"><span class="annottext">(CompactForm Coin -&gt; Identity (CompactForm Coin))
+-&gt; IndividualPoolStake -&gt; Identity IndividualPoolStake
+Lens' IndividualPoolStake (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.PoolDistr.html#individualTotalPoolStakeL"><span class="hs-identifier hs-var">individualTotalPoolStakeL</span></a></span><span> </span><span class="annot"><span class="annottext">((CompactForm Coin -&gt; Identity (CompactForm Coin))
+ -&gt; IndividualPoolStake -&gt; Identity IndividualPoolStake)
+-&gt; CompactForm Coin -&gt; IndividualPoolStake -&gt; IndividualPoolStake
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>             </span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><span class="annottext">Assertion -&gt; Assertion -&gt; Assertion
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Coin -&gt; Assertion
+forall a. (Eq a, ToExpr a) =&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#expectExprEqual"><span class="hs-identifier hs-var">expectExprEqual</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChainState ShelleyEra -&gt; Coin
+forall era.
+(EraTxOut era, EraGov era, EraCertState era) =&gt;
+ChainState era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#totalAda"><span class="hs-identifier hs-var">totalAda</span></a></span><span> </span><span class="annot"><span class="annottext">ChainState ShelleyEra
+</span><a href="#local-6989586621679362505"><span class="hs-identifier hs-var">expectedSt</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#maxLLSupply"><span class="hs-identifier hs-var">maxLLSupply</span></a></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#testCHAINExample"><span class="hs-identifier hs-var">testCHAINExample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Examples.Chain.html#CHAINExample"><span class="hs-identifier hs-type">CHAINExample</span></a></span><span> </span><span id="local-6989586621679362511"><span class="annot"><span class="annottext">ChainState ShelleyEra
+</span><a href="#local-6989586621679362511"><span class="hs-identifier hs-var">initSt</span></a></span></span><span> </span><span id="local-6989586621679362512"><span class="annot"><span class="annottext">Block (BHeader MockCrypto) ShelleyEra
+</span><a href="#local-6989586621679362512"><span class="hs-identifier hs-var">block</span></a></span></span><span> </span><span id="local-6989586621679362513"><span class="annot"><span class="annottext">predicateFailure :: Either
+  (NonEmpty (PredicateFailure (CHAIN ShelleyEra)))
+  (ChainState ShelleyEra)
+</span><a href="#local-6989586621679362513"><span class="hs-identifier hs-var">predicateFailure</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="annot"><span class="annottext">NonEmpty (PredicateFailure (CHAIN ShelleyEra))
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679362821"><span class="annot"><span class="annottext">st :: Either
+  (NonEmpty (TestChainPredicateFailure ShelleyEra))
+  (ChainState ShelleyEra)
+</span><a href="#local-6989586621679362821"><span class="hs-identifier hs-var hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyBase
+  (Either
+     (NonEmpty (TestChainPredicateFailure ShelleyEra))
+     (ChainState ShelleyEra))
+-&gt; Either
+     (NonEmpty (TestChainPredicateFailure ShelleyEra))
+     (ChainState ShelleyEra)
+forall a. ShelleyBase a -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#runShelleyBase"><span class="hs-identifier hs-var">runShelleyBase</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyBase
+   (Either
+      (NonEmpty (TestChainPredicateFailure ShelleyEra))
+      (ChainState ShelleyEra))
+ -&gt; Either
+      (NonEmpty (TestChainPredicateFailure ShelleyEra))
+      (ChainState ShelleyEra))
+-&gt; ShelleyBase
+     (Either
+        (NonEmpty (TestChainPredicateFailure ShelleyEra))
+        (ChainState ShelleyEra))
+-&gt; Either
+     (NonEmpty (TestChainPredicateFailure ShelleyEra))
+     (ChainState ShelleyEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *) (rtype :: RuleType).
+(STS s, RuleTypeRep rtype, m ~ BaseM s) =&gt;
+RuleContext rtype s
+-&gt; m (Either (NonEmpty (PredicateFailure s)) (State s))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#applySTSTest"><span class="hs-identifier hs-var">applySTSTest</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Rules.Chain.html#CHAIN"><span class="hs-identifier hs-type">CHAIN</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Environment (CHAIN ShelleyEra), State (CHAIN ShelleyEra),
+ Signal (CHAIN ShelleyEra))
+-&gt; TRC (CHAIN ShelleyEra)
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State (CHAIN ShelleyEra)
+ChainState ShelleyEra
+</span><a href="#local-6989586621679362511"><span class="hs-identifier hs-var">initSt</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Block (BHeader MockCrypto) ShelleyEra
+Signal (CHAIN ShelleyEra)
+</span><a href="#local-6989586621679362512"><span class="hs-identifier hs-var">block</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="annottext">Either
+  (NonEmpty (TestChainPredicateFailure ShelleyEra))
+  (ChainState ShelleyEra)
+</span><a href="#local-6989586621679362821"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">Either
+  (NonEmpty (TestChainPredicateFailure ShelleyEra))
+  (ChainState ShelleyEra)
+-&gt; Either
+     (NonEmpty (TestChainPredicateFailure ShelleyEra))
+     (ChainState ShelleyEra)
+-&gt; Assertion
+forall a. (Eq a, Show a, HasCallStack) =&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#%40%3F%3D"><span class="hs-operator hs-var">@?=</span></a></span><span> </span><span class="annot"><span class="annottext">Either
+  (NonEmpty (PredicateFailure (CHAIN ShelleyEra)))
+  (ChainState ShelleyEra)
+Either
+  (NonEmpty (TestChainPredicateFailure ShelleyEra))
+  (ChainState ShelleyEra)
+</span><a href="#local-6989586621679362513"><span class="hs-identifier hs-var">predicateFailure</span></a></span><span>
+</span><span id="line-52"></span></pre></body></html>

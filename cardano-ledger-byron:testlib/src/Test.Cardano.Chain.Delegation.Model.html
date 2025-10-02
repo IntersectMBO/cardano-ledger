@@ -1,0 +1,540 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE KindSignatures #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Chain.Delegation.Model</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#tests"><span class="hs-identifier">tests</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html"><span class="hs-identifier">Byron.Spec.Ledger.Delegation</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DELEG"><span class="hs-identifier">DELEG</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#SDELEG"><span class="hs-identifier">SDELEG</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html"><span class="hs-identifier">Byron.Spec.Ledger.Delegation</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Abstract</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Delegation.Validation.Scheduling.html"><span class="hs-identifier">Cardano.Chain.Delegation.Validation.Scheduling</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Scheduling</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Arrow</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">left</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Coerce</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.IORef</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Gen.html"><span class="hs-identifier">Hedgehog.Gen</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Gen</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Range.html"><span class="hs-identifier">Hedgehog.Range</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Range</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Delegation.html"><span class="hs-identifier">Test.Cardano.Chain.Elaboration.Delegation</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">E</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Dummy.html"><span class="hs-identifier">Test.Cardano.Crypto.Dummy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Dummy</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html"><span class="hs-identifier">Test.Control.State.Transition.Generator</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prelude</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">id</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- SDELEG Property</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#prop_commandSDELEG"><span class="hs-identifier hs-type">prop_commandSDELEG</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-33"></span><span id="prop_commandSDELEG"><span class="annot"><span class="annottext">prop_commandSDELEG :: Property
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#prop_commandSDELEG"><span class="hs-identifier hs-var hs-var">prop_commandSDELEG</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestLimit -&gt; Property -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#withTests"><span class="hs-identifier hs-var">withTests</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">25</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Property)
+-&gt; (PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; Property
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+PropertyT IO () -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679375053"><span class="annot"><span class="annottext">IORef State
+</span><a href="#local-6989586621679375053"><span class="hs-identifier hs-var">concreteRef</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (IORef State) -&gt; PropertyT IO (IORef State)
+forall a. IO a -&gt; PropertyT IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><span class="hs-identifier hs-var">liftIO</span></span><span> </span><span class="annot"><span class="annottext">(IO (IORef State) -&gt; PropertyT IO (IORef State))
+-&gt; IO (IORef State) -&gt; PropertyT IO (IORef State)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">State -&gt; IO (IORef State)
+forall a. a -&gt; IO (IORef a)
+</span><span class="hs-identifier hs-var">newIORef</span></span><span> </span><span class="annot"><span class="annottext">State
+</span><a href="#local-6989586621679375056"><span class="hs-identifier hs-var">initialConcreteState</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679375059"><span class="annot"><span class="annottext">traceLength :: Word64
+</span><a href="#local-6989586621679375059"><span class="hs-identifier hs-var hs-var">traceLength</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">20</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679375060"><span class="annot"><span class="annottext">DIEnv
+</span><a href="#local-6989586621679375060"><span class="hs-identifier hs-var">abstractEnv</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (Environment DELEG) -&gt; PropertyT IO (Environment DELEG)
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen (Environment DELEG) -&gt; PropertyT IO (Environment DELEG))
+-&gt; Gen (Environment DELEG) -&gt; PropertyT IO (Environment DELEG)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall s. HasTrace s =&gt; Word64 -&gt; Gen (Environment s)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#envGen"><span class="hs-identifier hs-var">STS.envGen</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DELEG"><span class="hs-identifier hs-type">DELEG</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679375059"><span class="hs-identifier hs-var">traceLength</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679375063"><span class="annot"><span class="annottext">Sequential (PropertyT IO) StateSDELEG
+</span><a href="#local-6989586621679375063"><span class="hs-identifier hs-var">actions</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><span class="annottext">Gen (Sequential (PropertyT IO) StateSDELEG)
+-&gt; PropertyT IO (Sequential (PropertyT IO) StateSDELEG)
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><span class="annottext">(Gen (Sequential (PropertyT IO) StateSDELEG)
+ -&gt; PropertyT IO (Sequential (PropertyT IO) StateSDELEG))
+-&gt; Gen (Sequential (PropertyT IO) StateSDELEG)
+-&gt; PropertyT IO (Sequential (PropertyT IO) StateSDELEG)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Range Int
+-&gt; (forall (v :: * -&gt; *). StateSDELEG v)
+-&gt; [Command (GenT Identity) (PropertyT IO) StateSDELEG]
+-&gt; Gen (Sequential (PropertyT IO) StateSDELEG)
+forall (gen :: * -&gt; *) (m :: * -&gt; *) (state :: (* -&gt; *) -&gt; *).
+(MonadGen gen, MonadTest m) =&gt;
+Range Int
+-&gt; (forall (v :: * -&gt; *). state v)
+-&gt; [Command gen m state]
+-&gt; gen (Sequential m state)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.State.html#sequential"><span class="hs-identifier hs-var">Gen.sequential</span></a></span><span>
+</span><span id="line-43"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#linear"><span class="hs-identifier hs-var">Range.linear</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679375059"><span class="hs-identifier hs-var">traceLength</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>        </span><span class="annot"><span class="annottext">StateSDELEG v
+forall (v :: * -&gt; *). StateSDELEG v
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#initialState"><span class="hs-identifier hs-var">initialState</span></a></span><span>
+</span><span id="line-45"></span><span>        </span><span class="hs-special">[</span><span class="annot"><span class="annottext">IORef State
+-&gt; Environment SDELEG
+-&gt; Command (GenT Identity) (PropertyT IO) StateSDELEG
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+IORef State
+-&gt; Environment SDELEG -&gt; Command (GenT Identity) m StateSDELEG
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#commandSDELEG"><span class="hs-identifier hs-var">commandSDELEG</span></a></span><span> </span><span class="annot"><span class="annottext">IORef State
+</span><a href="#local-6989586621679375053"><span class="hs-identifier hs-var">concreteRef</span></a></span><span> </span><span class="annot"><span class="annottext">DIEnv
+Environment SDELEG
+</span><a href="#local-6989586621679375060"><span class="hs-identifier hs-var">abstractEnv</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">IORef State -&gt; PropertyT IO ()
+</span><a href="#local-6989586621679375068"><span class="hs-identifier hs-var">cleanup</span></a></span><span> </span><span class="annot"><span class="annottext">IORef State
+</span><a href="#local-6989586621679375053"><span class="hs-identifier hs-var">concreteRef</span></a></span><span> </span><span class="annot"><span class="annottext">PropertyT IO () -&gt; PropertyT IO () -&gt; PropertyT IO ()
+forall a b. PropertyT IO a -&gt; PropertyT IO b -&gt; PropertyT IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">(forall (v :: * -&gt; *). StateSDELEG v)
+-&gt; Sequential (PropertyT IO) StateSDELEG -&gt; PropertyT IO ()
+forall (m :: * -&gt; *) (state :: (* -&gt; *) -&gt; *).
+(MonadTest m, MonadCatch m, HasCallStack) =&gt;
+(forall (v :: * -&gt; *). state v) -&gt; Sequential m state -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.State.html#executeSequential"><span class="hs-identifier hs-var">executeSequential</span></a></span><span> </span><span class="annot"><span class="annottext">StateSDELEG v
+forall (v :: * -&gt; *). StateSDELEG v
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#initialState"><span class="hs-identifier hs-var">initialState</span></a></span><span> </span><span class="annot"><span class="annottext">Sequential (PropertyT IO) StateSDELEG
+</span><a href="#local-6989586621679375063"><span class="hs-identifier hs-var">actions</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>    </span><span id="local-6989586621679375056"><span class="annot"><span class="annottext">initialConcreteState :: State
+</span><a href="#local-6989586621679375056"><span class="hs-identifier hs-var hs-var">initialConcreteState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq ScheduledDelegation -&gt; Set (EpochNumber, KeyHash) -&gt; State
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Delegation.Validation.Scheduling.html#State"><span class="hs-identifier hs-var">Scheduling.State</span></a></span><span> </span><span class="annot"><span class="annottext">Seq ScheduledDelegation
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">Set (EpochNumber, KeyHash)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><a href="#local-6989586621679375068"><span class="hs-identifier hs-type">cleanup</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IORef</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Delegation.Validation.Scheduling.html#State"><span class="hs-identifier hs-type">Scheduling.State</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#PropertyT"><span class="hs-identifier hs-type">PropertyT</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>    </span><span id="local-6989586621679375068"><span class="annot"><span class="annottext">cleanup :: IORef State -&gt; PropertyT IO ()
+</span><a href="#local-6989586621679375068"><span class="hs-identifier hs-var hs-var">cleanup</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; PropertyT IO ()
+forall a. IO a -&gt; PropertyT IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><span class="hs-identifier hs-var">liftIO</span></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; PropertyT IO ())
+-&gt; (IORef State -&gt; IO ()) -&gt; IORef State -&gt; PropertyT IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(IORef State -&gt; State -&gt; IO ()) -&gt; State -&gt; IORef State -&gt; IO ()
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><span class="hs-identifier hs-var">flip</span></span><span> </span><span class="annot"><span class="annottext">IORef State -&gt; State -&gt; IO ()
+forall a. IORef a -&gt; a -&gt; IO ()
+</span><span class="hs-identifier hs-var">writeIORef</span></span><span> </span><span class="annot"><span class="annottext">State
+</span><a href="#local-6989586621679375056"><span class="hs-identifier hs-var">initialConcreteState</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- SDELEG State</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">data</span><span> </span><span id="StateSDELEG"><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#StateSDELEG"><span class="hs-identifier hs-var">StateSDELEG</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679374875"><span class="annot"><a href="#local-6989586621679374875"><span class="hs-identifier hs-type">v</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span id="StateSDELEG"><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#StateSDELEG"><span class="hs-identifier hs-var">StateSDELEG</span></a></span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="abstractState"><span class="annot"><span class="annottext">forall (v :: * -&gt; *). StateSDELEG v -&gt; DSState
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#abstractState"><span class="hs-identifier hs-var hs-var">abstractState</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSState"><span class="hs-identifier hs-type">Abstract.DSState</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="lastAbstractResult"><span class="annot"><span class="annottext">forall (v :: * -&gt; *).
+StateSDELEG v
+-&gt; Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG)
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#lastAbstractResult"><span class="hs-identifier hs-var hs-var">lastAbstractResult</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">STS.PredicateFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#SDELEG"><span class="hs-identifier hs-type">SDELEG</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-type">STS.State</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#SDELEG"><span class="hs-identifier hs-type">SDELEG</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span id="local-6989586621679375086"><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#initialState"><span class="hs-identifier hs-type">initialState</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#StateSDELEG"><span class="hs-identifier hs-type">StateSDELEG</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679375086"><span class="hs-identifier hs-type">v</span></a></span></span><span>
+</span><span id="line-64"></span><span id="initialState"><span class="annot"><span class="annottext">initialState :: forall (v :: * -&gt; *). StateSDELEG v
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#initialState"><span class="hs-identifier hs-var hs-var">initialState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DSState
+-&gt; Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG)
+-&gt; StateSDELEG v
+forall (v :: * -&gt; *).
+DSState
+-&gt; Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG)
+-&gt; StateSDELEG v
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#StateSDELEG"><span class="hs-identifier hs-var">StateSDELEG</span></a></span><span> </span><span class="annot"><span class="annottext">DSState
+</span><a href="#local-6989586621679375087"><span class="hs-identifier hs-var">initialAbstractState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DSState -&gt; Either (NonEmpty SdelegPredicateFailure) DSState
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">DSState
+</span><a href="#local-6989586621679375087"><span class="hs-identifier hs-var">initialAbstractState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679375087"><span class="annot"><span class="annottext">initialAbstractState :: DSState
+</span><a href="#local-6989586621679375087"><span class="hs-identifier hs-var hs-var">initialAbstractState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Slot, (VKeyGenesis, VKey))]
+-&gt; Set (Epoch, VKeyGenesis) -&gt; DSState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSState"><span class="hs-identifier hs-var">Abstract.DSState</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Set (Epoch, VKeyGenesis)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- SDELEG Signal</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">newtype</span><span> </span><span id="SignalSDELEG"><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#SignalSDELEG"><span class="hs-identifier hs-var">SignalSDELEG</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679374943"><span class="annot"><a href="#local-6989586621679374943"><span class="hs-identifier hs-type">v</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="SignalSDELEG"><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#SignalSDELEG"><span class="hs-identifier hs-var">SignalSDELEG</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-type">STS.Signal</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#SDELEG"><span class="hs-identifier hs-type">SDELEG</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679375097"><span id="local-6989586621679375103"><span id="local-6989586621679375107"><span class="annot"><span class="annottext">Int -&gt; SignalSDELEG v -&gt; ShowS
+[SignalSDELEG v] -&gt; ShowS
+SignalSDELEG v -&gt; String
+(Int -&gt; SignalSDELEG v -&gt; ShowS)
+-&gt; (SignalSDELEG v -&gt; String)
+-&gt; ([SignalSDELEG v] -&gt; ShowS)
+-&gt; Show (SignalSDELEG v)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall (v :: * -&gt; *). Int -&gt; SignalSDELEG v -&gt; ShowS
+forall (v :: * -&gt; *). [SignalSDELEG v] -&gt; ShowS
+forall (v :: * -&gt; *). SignalSDELEG v -&gt; String
+$cshowsPrec :: forall (v :: * -&gt; *). Int -&gt; SignalSDELEG v -&gt; ShowS
+showsPrec :: Int -&gt; SignalSDELEG v -&gt; ShowS
+$cshow :: forall (v :: * -&gt; *). SignalSDELEG v -&gt; String
+show :: SignalSDELEG v -&gt; String
+$cshowList :: forall (v :: * -&gt; *). [SignalSDELEG v] -&gt; ShowS
+showList :: [SignalSDELEG v] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/barbies-2.1.1.0-aff1591170ed41cde92431cf5eca9bef8f607dd75d385f94f71ea6bff29bc665/share/doc/html/src/Barbies.Internal.FunctorB.html#FunctorB"><span class="hs-identifier hs-type">FunctorB</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#SignalSDELEG"><span class="hs-identifier hs-type">SignalSDELEG</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679375114"><span class="annot"><span class="annottext">bmap :: forall (f :: * -&gt; *) (g :: * -&gt; *).
+(forall a. f a -&gt; g a) -&gt; SignalSDELEG f -&gt; SignalSDELEG g
+</span><a href="#local-6989586621679375114"><span class="hs-identifier hs-var hs-var hs-var hs-var">bmap</span></a></span></span><span> </span><span class="annot"><span class="annottext">forall a. f a -&gt; g a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SignalSDELEG f -&gt; SignalSDELEG g
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/barbies-2.1.1.0-aff1591170ed41cde92431cf5eca9bef8f607dd75d385f94f71ea6bff29bc665/share/doc/html/src/Barbies.Internal.TraversableB.html#TraversableB"><span class="hs-identifier hs-type">TraversableB</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#SignalSDELEG"><span class="hs-identifier hs-type">SignalSDELEG</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679375124"><span class="annot"><span class="annottext">btraverse :: forall (e :: * -&gt; *) (f :: * -&gt; *) (g :: * -&gt; *).
+Applicative e =&gt;
+(forall a. f a -&gt; e (g a)) -&gt; SignalSDELEG f -&gt; e (SignalSDELEG g)
+</span><a href="#local-6989586621679375124"><span class="hs-identifier hs-var hs-var hs-var hs-var">btraverse</span></a></span></span><span> </span><span class="annot"><span class="annottext">forall a. f a -&gt; e (g a)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679375126"><span class="annot"><span class="annottext">SignalSDELEG f
+</span><a href="#local-6989586621679375126"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SignalSDELEG g -&gt; e (SignalSDELEG g)
+forall a. a -&gt; e a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SignalSDELEG f -&gt; SignalSDELEG g
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">SignalSDELEG f
+</span><a href="#local-6989586621679375126"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- SDELEG Command</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- TODO: Change dcertGen to use 'MonadGen'</span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#commandSDELEG"><span class="hs-identifier hs-type">commandSDELEG</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679374853"><span class="annot"><a href="#local-6989586621679374853"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">MonadIO</span></span><span> </span><span class="annot"><a href="#local-6989586621679374853"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">IORef</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Delegation.Validation.Scheduling.html#State"><span class="hs-identifier hs-type">Scheduling.State</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">STS.Environment</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#SDELEG"><span class="hs-identifier hs-type">SDELEG</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.State.html#Command"><span class="hs-identifier hs-type">Command</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679374853"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#StateSDELEG"><span class="hs-identifier hs-type">StateSDELEG</span></a></span><span>
+</span><span id="line-93"></span><span id="commandSDELEG"><span class="annot"><span class="annottext">commandSDELEG :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+IORef State
+-&gt; Environment SDELEG -&gt; Command (GenT Identity) m StateSDELEG
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#commandSDELEG"><span class="hs-identifier hs-var hs-var">commandSDELEG</span></a></span></span><span> </span><span id="local-6989586621679375170"><span class="annot"><span class="annottext">IORef State
+</span><a href="#local-6989586621679375170"><span class="hs-identifier hs-var">concreteRef</span></a></span></span><span> </span><span id="local-6989586621679375171"><span class="annot"><span class="annottext">Environment SDELEG
+</span><a href="#local-6989586621679375171"><span class="hs-identifier hs-var">abstractEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(StateSDELEG Symbolic -&gt; Maybe (Gen (SignalSDELEG Symbolic)))
+-&gt; (SignalSDELEG Concrete -&gt; m (Either Error State))
+-&gt; [Callback SignalSDELEG (Either Error State) StateSDELEG]
+-&gt; Command (GenT Identity) m StateSDELEG
+forall (gen :: * -&gt; *) (m :: * -&gt; *) (state :: (* -&gt; *) -&gt; *)
+       (input :: (* -&gt; *) -&gt; *) output.
+(TraversableB input, Show (input Symbolic), Show output,
+ Typeable output) =&gt;
+(state Symbolic -&gt; Maybe (gen (input Symbolic)))
+-&gt; (input Concrete -&gt; m output)
+-&gt; [Callback input output state]
+-&gt; Command gen m state
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.State.html#Command"><span class="hs-identifier hs-var">Command</span></a></span><span> </span><span class="annot"><span class="annottext">StateSDELEG Symbolic -&gt; Maybe (Gen (SignalSDELEG Symbolic))
+forall (v :: * -&gt; *). StateSDELEG v -&gt; Maybe (Gen (SignalSDELEG v))
+</span><a href="#local-6989586621679375173"><span class="hs-identifier hs-var">gen</span></a></span><span> </span><span class="annot"><span class="annottext">SignalSDELEG Concrete -&gt; m (Either Error State)
+forall (v :: * -&gt; *). SignalSDELEG v -&gt; m (Either Error State)
+</span><a href="#local-6989586621679375174"><span class="hs-identifier hs-var">execute</span></a></span><span> </span><span class="annot"><span class="annottext">[Callback SignalSDELEG (Either Error State) StateSDELEG]
+</span><a href="#local-6989586621679375175"><span class="hs-identifier hs-var">callbacks</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-95"></span><span>    </span><span id="local-6989586621679374934"><span class="annot"><a href="#local-6989586621679375173"><span class="hs-identifier hs-type">gen</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#StateSDELEG"><span class="hs-identifier hs-type">StateSDELEG</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679374934"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#SignalSDELEG"><span class="hs-identifier hs-type">SignalSDELEG</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679374934"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-96"></span><span>    </span><span id="local-6989586621679375173"><span class="annot"><span class="annottext">gen :: forall (v :: * -&gt; *). StateSDELEG v -&gt; Maybe (Gen (SignalSDELEG v))
+</span><a href="#local-6989586621679375173"><span class="hs-identifier hs-var hs-var">gen</span></a></span></span><span> </span><span id="local-6989586621679375186"><span class="annot"><span class="annottext">StateSDELEG v
+</span><a href="#local-6989586621679375186"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>      </span><span class="annot"><span class="annottext">Gen (SignalSDELEG v) -&gt; Maybe (Gen (SignalSDELEG v))
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span>
+</span><span id="line-98"></span><span>        </span><span class="annot"><span class="annottext">(Gen (SignalSDELEG v) -&gt; Maybe (Gen (SignalSDELEG v)))
+-&gt; Gen (SignalSDELEG v) -&gt; Maybe (Gen (SignalSDELEG v))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">DCert -&gt; SignalSDELEG v
+Signal SDELEG -&gt; SignalSDELEG v
+forall (v :: * -&gt; *). Signal SDELEG -&gt; SignalSDELEG v
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#SignalSDELEG"><span class="hs-identifier hs-var">SignalSDELEG</span></a></span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><span class="annottext">(DCert -&gt; SignalSDELEG v)
+-&gt; GenT Identity DCert -&gt; Gen (SignalSDELEG v)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-100"></span><span>          </span><span id="local-6989586621679375188"><span class="annot"><span class="annottext">Maybe DCert
+</span><a href="#local-6989586621679375188"><span class="hs-identifier hs-var">mDCert</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">DIEnv -&gt; Set (Epoch, VKeyGenesis) -&gt; Gen (Maybe DCert)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#dcertGen"><span class="hs-identifier hs-var">Abstract.dcertGen</span></a></span><span> </span><span class="annot"><span class="annottext">DIEnv
+Environment SDELEG
+</span><a href="#local-6989586621679375171"><span class="hs-identifier hs-var">abstractEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Epoch, VKeyGenesis)
+</span><a href="#local-6989586621679375190"><span class="hs-identifier hs-var">keyEpochDelegations</span></a></span><span>
+</span><span id="line-101"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe DCert
+</span><a href="#local-6989586621679375188"><span class="hs-identifier hs-var">mDCert</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-102"></span><span>            </span><span class="annot"><span class="annottext">Maybe DCert
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">GenT Identity DCert
+forall a. GenT Identity a
+forall (m :: * -&gt; *) a. MonadPlus m =&gt; m a
+</span><span class="hs-identifier hs-var">mzero</span></span><span>
+</span><span id="line-103"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679375192"><span class="annot"><span class="annottext">DCert
+</span><a href="#local-6989586621679375192"><span class="hs-identifier hs-var">dCert</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DCert -&gt; GenT Identity DCert
+forall a. a -&gt; GenT Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(DCert -&gt; GenT Identity DCert) -&gt; DCert -&gt; GenT Identity DCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="annot"><span class="annottext">DCert
+</span><a href="#local-6989586621679375192"><span class="hs-identifier hs-var">dCert</span></a></span><span>
+</span><span id="line-104"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>        </span><span id="local-6989586621679375190"><span class="annot"><span class="annottext">keyEpochDelegations :: Set (Epoch, VKeyGenesis)
+</span><a href="#local-6989586621679375190"><span class="hs-identifier hs-var hs-var">keyEpochDelegations</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DSState -&gt; Set (Epoch, VKeyGenesis)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSStateKeyEpochDelegations"><span class="hs-identifier hs-var">Abstract._dSStateKeyEpochDelegations</span></a></span><span> </span><span class="annot"><span class="annottext">(DSState -&gt; Set (Epoch, VKeyGenesis))
+-&gt; DSState -&gt; Set (Epoch, VKeyGenesis)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StateSDELEG v -&gt; DSState
+forall (v :: * -&gt; *). StateSDELEG v -&gt; DSState
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#abstractState"><span class="hs-identifier hs-var">abstractState</span></a></span><span> </span><span class="annot"><span class="annottext">(StateSDELEG v -&gt; DSState) -&gt; StateSDELEG v -&gt; DSState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StateSDELEG v
+</span><a href="#local-6989586621679375186"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621679374935"><span class="annot"><a href="#local-6989586621679375174"><span class="hs-identifier hs-type">execute</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-108"></span><span>      </span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#SignalSDELEG"><span class="hs-identifier hs-type">SignalSDELEG</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679374935"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-109"></span><span>      </span><span class="annot"><a href="#local-6989586621679374853"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Delegation.Validation.Scheduling.html#Error"><span class="hs-identifier hs-type">Scheduling.Error</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Delegation.Validation.Scheduling.html#State"><span class="hs-identifier hs-type">Scheduling.State</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-110"></span><span>    </span><span id="local-6989586621679375174"><span class="annot"><span class="annottext">execute :: forall (v :: * -&gt; *). SignalSDELEG v -&gt; m (Either Error State)
+</span><a href="#local-6989586621679375174"><span class="hs-identifier hs-var hs-var">execute</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#SignalSDELEG"><span class="hs-identifier hs-type">SignalSDELEG</span></a></span><span> </span><span id="local-6989586621679375203"><span class="annot"><span class="annottext">Signal SDELEG
+</span><a href="#local-6989586621679375203"><span class="hs-identifier hs-var">cert</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-111"></span><span>      </span><span id="local-6989586621679375204"><span class="annot"><span class="annottext">State
+</span><a href="#local-6989586621679375204"><span class="hs-identifier hs-var">concreteState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO State -&gt; m State
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><span class="hs-identifier hs-var">liftIO</span></span><span> </span><span class="annot"><span class="annottext">(IO State -&gt; m State) -&gt; IO State -&gt; m State
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">IORef State -&gt; IO State
+forall a. IORef a -&gt; IO a
+</span><span class="hs-identifier hs-var">readIORef</span></span><span> </span><span class="annot"><span class="annottext">IORef State
+</span><a href="#local-6989586621679375170"><span class="hs-identifier hs-var">concreteRef</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679375206"><span class="hs-identifier hs-type">result</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Delegation.Validation.Scheduling.html#Error"><span class="hs-identifier hs-type">Scheduling.Error</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Delegation.Validation.Scheduling.html#State"><span class="hs-identifier hs-type">Scheduling.State</span></a></span><span>
+</span><span id="line-114"></span><span>          </span><span id="local-6989586621679375206"><span class="annot"><span class="annottext">result :: Either Error State
+</span><a href="#local-6989586621679375206"><span class="hs-identifier hs-var hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>            </span><span class="annot"><span class="annottext">Environment
+-&gt; State -&gt; ACertificate ByteString -&gt; Either Error State
+forall (m :: * -&gt; *).
+MonadError Error m =&gt;
+Environment -&gt; State -&gt; ACertificate ByteString -&gt; m State
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Delegation.Validation.Scheduling.html#scheduleCertificate"><span class="hs-identifier hs-var">Scheduling.scheduleCertificate</span></a></span><span>
+</span><span id="line-116"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DIEnv -&gt; Environment
+</span><a href="Test.Cardano.Chain.Elaboration.Delegation.html#elaborateDSEnv"><span class="hs-identifier hs-var">E.elaborateDSEnv</span></a></span><span> </span><span class="annot"><span class="annottext">DIEnv
+Environment SDELEG
+</span><a href="#local-6989586621679375171"><span class="hs-identifier hs-var">abstractEnv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>              </span><span class="annot"><span class="annottext">State
+</span><a href="#local-6989586621679375204"><span class="hs-identifier hs-var">concreteState</span></a></span><span>
+</span><span id="line-118"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; DCert -&gt; ACertificate ByteString
+</span><a href="Test.Cardano.Chain.Elaboration.Delegation.html#elaborateDCertAnnotated"><span class="hs-identifier hs-var">E.elaborateDCertAnnotated</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Dummy.html#protocolMagicId"><span class="hs-identifier hs-var">Dummy.protocolMagicId</span></a></span><span> </span><span class="annot"><span class="annottext">DCert
+Signal SDELEG
+</span><a href="#local-6989586621679375203"><span class="hs-identifier hs-var">cert</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><span class="hs-identifier hs-var">liftIO</span></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; (State -&gt; IO ()) -&gt; State -&gt; m ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">IORef State -&gt; State -&gt; IO ()
+forall a. IORef a -&gt; a -&gt; IO ()
+</span><span class="hs-identifier hs-var">writeIORef</span></span><span> </span><span class="annot"><span class="annottext">IORef State
+</span><a href="#local-6989586621679375170"><span class="hs-identifier hs-var">concreteRef</span></a></span><span> </span><span class="annot"><span class="annottext">(State -&gt; m ()) -&gt; State -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">State -&gt; Either Error State -&gt; State
+forall b a. b -&gt; Either a b -&gt; b
+</span><span class="hs-identifier hs-var">fromRight</span></span><span> </span><span class="annot"><span class="annottext">State
+</span><a href="#local-6989586621679375204"><span class="hs-identifier hs-var">concreteState</span></a></span><span> </span><span class="annot"><span class="annottext">Either Error State
+</span><a href="#local-6989586621679375206"><span class="hs-identifier hs-var">result</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span>      </span><span class="annot"><span class="annottext">Either Error State -&gt; m (Either Error State)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Either Error State
+</span><a href="#local-6989586621679375206"><span class="hs-identifier hs-var">result</span></a></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><a href="#local-6989586621679375175"><span class="hs-identifier hs-type">callbacks</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-125"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.State.html#Callback"><span class="hs-identifier hs-type">Callback</span></a></span><span>
+</span><span id="line-126"></span><span>          </span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#SignalSDELEG"><span class="hs-identifier hs-type">SignalSDELEG</span></a></span><span>
+</span><span id="line-127"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Delegation.Validation.Scheduling.html#Error"><span class="hs-identifier hs-type">Scheduling.Error</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Delegation.Validation.Scheduling.html#State"><span class="hs-identifier hs-type">Scheduling.State</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>          </span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#StateSDELEG"><span class="hs-identifier hs-type">StateSDELEG</span></a></span><span>
+</span><span id="line-129"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-130"></span><span>    </span><span id="local-6989586621679375175"><span class="annot"><span class="annottext">callbacks :: [Callback SignalSDELEG (Either Error State) StateSDELEG]
+</span><a href="#local-6989586621679375175"><span class="hs-identifier hs-var hs-var">callbacks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-131"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">(forall (v :: * -&gt; *).
+ Ord1 v =&gt;
+ StateSDELEG v
+ -&gt; SignalSDELEG v -&gt; Var (Either Error State) v -&gt; StateSDELEG v)
+-&gt; Callback SignalSDELEG (Either Error State) StateSDELEG
+forall (input :: (* -&gt; *) -&gt; *) output (state :: (* -&gt; *) -&gt; *).
+(forall (v :: * -&gt; *).
+ Ord1 v =&gt;
+ state v -&gt; input v -&gt; Var output v -&gt; state v)
+-&gt; Callback input output state
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.State.html#Update"><span class="hs-identifier hs-var">Update</span></a></span><span> </span><span class="annot"><span class="annottext">((forall (v :: * -&gt; *).
+  Ord1 v =&gt;
+  StateSDELEG v
+  -&gt; SignalSDELEG v -&gt; Var (Either Error State) v -&gt; StateSDELEG v)
+ -&gt; Callback SignalSDELEG (Either Error State) StateSDELEG)
+-&gt; (forall (v :: * -&gt; *).
+    Ord1 v =&gt;
+    StateSDELEG v
+    -&gt; SignalSDELEG v -&gt; Var (Either Error State) v -&gt; StateSDELEG v)
+-&gt; Callback SignalSDELEG (Either Error State) StateSDELEG
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#StateSDELEG"><span class="hs-identifier hs-type">StateSDELEG</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679375216"><span class="annot"><span class="annottext">DSState
+abstractState :: forall (v :: * -&gt; *). StateSDELEG v -&gt; DSState
+abstractState :: DSState
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#abstractState"><span class="hs-identifier hs-var hs-var">abstractState</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#SignalSDELEG"><span class="hs-identifier hs-type">SignalSDELEG</span></a></span><span> </span><span id="local-6989586621679375217"><span class="annot"><span class="annottext">Signal SDELEG
+</span><a href="#local-6989586621679375217"><span class="hs-identifier hs-var">cert</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Var (Either Error State) v
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-132"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679375224"><span class="annot"><span class="annottext">result :: Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG)
+</span><a href="#local-6989586621679375224"><span class="hs-identifier hs-var hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-133"></span><span>                </span><span class="annot"><span class="annottext">forall s (rtype :: RuleType).
+(STS s, RuleTypeRep rtype, BaseM s ~ Identity) =&gt;
+RuleContext rtype s
+-&gt; Either (NonEmpty (PredicateFailure s)) (State s)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Simple.html#applySTS"><span class="hs-identifier hs-var">STS.applySTS</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#SDELEG"><span class="hs-identifier hs-type">SDELEG</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Environment SDELEG, State SDELEG, Signal SDELEG) -&gt; TRC SDELEG
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">STS.TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Environment SDELEG
+</span><a href="#local-6989586621679375171"><span class="hs-identifier hs-var">abstractEnv</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DSState
+State SDELEG
+</span><a href="#local-6989586621679375216"><span class="hs-identifier hs-var">abstractState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Signal SDELEG
+</span><a href="#local-6989586621679375217"><span class="hs-identifier hs-var">cert</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>           </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">DSState
+-&gt; Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG)
+-&gt; StateSDELEG v
+forall (v :: * -&gt; *).
+DSState
+-&gt; Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG)
+-&gt; StateSDELEG v
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#StateSDELEG"><span class="hs-identifier hs-var">StateSDELEG</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DSState
+-&gt; Either (NonEmpty SdelegPredicateFailure) DSState -&gt; DSState
+forall b a. b -&gt; Either a b -&gt; b
+</span><span class="hs-identifier hs-var">fromRight</span></span><span> </span><span class="annot"><span class="annottext">DSState
+</span><a href="#local-6989586621679375216"><span class="hs-identifier hs-var">abstractState</span></a></span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty SdelegPredicateFailure) DSState
+</span><a href="#local-6989586621679375224"><span class="hs-identifier hs-var">result</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(NonEmpty SdelegPredicateFailure
+ -&gt; NonEmpty SdelegPredicateFailure)
+-&gt; Either (NonEmpty SdelegPredicateFailure) DSState
+-&gt; Either (NonEmpty SdelegPredicateFailure) DSState
+forall b c d. (b -&gt; c) -&gt; Either b d -&gt; Either c d
+forall (a :: * -&gt; * -&gt; *) b c d.
+ArrowChoice a =&gt;
+a b c -&gt; a (Either b d) (Either c d)
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">NonEmpty SdelegPredicateFailure -&gt; NonEmpty SdelegPredicateFailure
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">Prelude.id</span></span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty SdelegPredicateFailure) DSState
+</span><a href="#local-6989586621679375224"><span class="hs-identifier hs-var">result</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(StateSDELEG Concrete
+ -&gt; StateSDELEG Concrete
+ -&gt; SignalSDELEG Concrete
+ -&gt; Either Error State
+ -&gt; Test ())
+-&gt; Callback SignalSDELEG (Either Error State) StateSDELEG
+forall (input :: (* -&gt; *) -&gt; *) output (state :: (* -&gt; *) -&gt; *).
+(state Concrete
+ -&gt; state Concrete -&gt; input Concrete -&gt; output -&gt; Test ())
+-&gt; Callback input output state
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.State.html#Ensure"><span class="hs-identifier hs-var">Ensure</span></a></span><span> </span><span class="annot"><span class="annottext">((StateSDELEG Concrete
+  -&gt; StateSDELEG Concrete
+  -&gt; SignalSDELEG Concrete
+  -&gt; Either Error State
+  -&gt; Test ())
+ -&gt; Callback SignalSDELEG (Either Error State) StateSDELEG)
+-&gt; (StateSDELEG Concrete
+    -&gt; StateSDELEG Concrete
+    -&gt; SignalSDELEG Concrete
+    -&gt; Either Error State
+    -&gt; Test ())
+-&gt; Callback SignalSDELEG (Either Error State) StateSDELEG
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">StateSDELEG Concrete
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#StateSDELEG"><span class="hs-identifier hs-type">StateSDELEG</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679375228"><span class="annot"><span class="annottext">Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG)
+lastAbstractResult :: forall (v :: * -&gt; *).
+StateSDELEG v
+-&gt; Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG)
+lastAbstractResult :: Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG)
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#lastAbstractResult"><span class="hs-identifier hs-var hs-var">lastAbstractResult</span></a></span></span><span class="hs-special">}</span><span> </span><span class="annot"><span class="annottext">SignalSDELEG Concrete
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679375229"><span class="annot"><span class="annottext">Either Error State
+</span><a href="#local-6989586621679375229"><span class="hs-identifier hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-136"></span><span>          </span><span class="annot"><span class="annottext">Either (NonEmpty SdelegPredicateFailure) DSState -&gt; Test ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#annotateShow"><span class="hs-identifier hs-var">annotateShow</span></a></span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG)
+Either (NonEmpty SdelegPredicateFailure) DSState
+</span><a href="#local-6989586621679375228"><span class="hs-identifier hs-var">lastAbstractResult</span></a></span><span>
+</span><span id="line-137"></span><span>          </span><span class="annot"><span class="annottext">Either Error State -&gt; Test ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#annotateShow"><span class="hs-identifier hs-var">annotateShow</span></a></span><span> </span><span class="annot"><span class="annottext">Either Error State
+</span><a href="#local-6989586621679375229"><span class="hs-identifier hs-var">result</span></a></span><span>
+</span><span id="line-138"></span><span>          </span><span class="annot"><span class="annottext">Either (NonEmpty SdelegPredicateFailure) DSState -&gt; Bool
+forall a b. Either a b -&gt; Bool
+</span><span class="hs-identifier hs-var">isRight</span></span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG)
+Either (NonEmpty SdelegPredicateFailure) DSState
+</span><a href="#local-6989586621679375228"><span class="hs-identifier hs-var">lastAbstractResult</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Test ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, Eq a, Show a, HasCallStack) =&gt;
+a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Either Error State -&gt; Bool
+forall a b. Either a b -&gt; Bool
+</span><span class="hs-identifier hs-var">isRight</span></span><span> </span><span class="annot"><span class="annottext">Either Error State
+</span><a href="#local-6989586621679375229"><span class="hs-identifier hs-var">result</span></a></span><span>
+</span><span id="line-139"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- Main Test Export</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Model.html#tests"><span class="hs-identifier hs-type">tests</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Group"><span class="hs-identifier hs-type">Group</span></a></span><span>
+</span><span id="line-146"></span><span id="tests"><span class="annot"><span class="annottext">tests :: Group
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#tests"><span class="hs-identifier hs-var hs-var">tests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">$$</span><span class="annot"><span class="annottext">String
+[(PropertyName, Property)]
+Property
+String -&gt; GroupName
+String -&gt; PropertyName
+GroupName -&gt; [(PropertyName, Property)] -&gt; Group
+</span><a href="Test.Cardano.Chain.Delegation.Model.html#prop_commandSDELEG"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">discover</span></a></span><span>
+</span><span id="line-147"></span></pre></body></html>

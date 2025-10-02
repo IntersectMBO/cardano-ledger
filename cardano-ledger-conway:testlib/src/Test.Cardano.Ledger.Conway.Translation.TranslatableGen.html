@@ -1,0 +1,940 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conway.Translation.TranslatableGen</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Plutus.Context</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#SupportedLanguage"><span class="hs-identifier">SupportedLanguage</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AlonzoEraScript"><span class="hs-identifier">AlonzoEraScript</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AsIx"><span class="hs-identifier">AsIx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#PlutusPurpose"><span class="hs-identifier">PlutusPurpose</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.TxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html#Redeemers"><span class="hs-identifier">Redeemers</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sized.html#mkSized"><span class="hs-identifier">mkSized</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier">Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedures"><span class="hs-identifier">VotingProcedures</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Conway.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Scripts.html#ConwayPlutusPurpose"><span class="hs-identifier">ConwayPlutusPurpose</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxBody.html"><span class="hs-identifier">Cardano.Ledger.Conway.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier">TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxBody.html#ConwayTxBody"><span class="hs-identifier">ConwayTxBody</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html"><span class="hs-identifier">Cardano.Ledger.Conway.TxCert</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.html"><span class="hs-identifier">Cardano.Ledger.Plutus</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier">ExUnits</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier">Language</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#plutusLanguage"><span class="hs-identifier">plutusLanguage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html"><span class="hs-identifier">Cardano.Ledger.TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier">TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier">fromList</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Data.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.Arbitrary.html#genOSet"><span class="hs-identifier">genOSet</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/l/testlib/doc/html/cardano-ledger-alonzo/src/Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen.html"><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/l/testlib/doc/html/cardano-ledger-alonzo/src/Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen.html#TranslatableGen"><span class="hs-identifier">TranslatableGen</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/l/testlib/doc/html/cardano-ledger-babbage/src/Test.Cardano.Ledger.Babbage.Translation.TranslatableGen.html"><span class="hs-identifier">Test.Cardano.Ledger.Babbage.Translation.TranslatableGen</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BabbageTranslatableGen</span></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/l/testlib/doc/html/cardano-ledger-babbage/src/Test.Cardano.Ledger.Babbage.Translation.TranslatableGen.html#genTx"><span class="hs-identifier">genTx</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/l/testlib/doc/html/cardano-ledger-babbage/src/Test.Cardano.Ledger.Babbage.Translation.TranslatableGen.html#genTxOut"><span class="hs-identifier">genTxOut</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/l/testlib/doc/html/cardano-ledger-babbage/src/Test.Cardano.Ledger.Babbage.Translation.TranslatableGen.html#utxoWithTx"><span class="hs-identifier">utxoWithTx</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/l/testlib/doc/html/cardano-ledger-alonzo/src/Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen.html#TranslatableGen"><span class="hs-identifier hs-type">TranslatableGen</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621686845489"><span class="annot"><span class="annottext">tgRedeemers :: Gen (Redeemers ConwayEra)
+</span><a href="#local-6989586621686845489"><span class="hs-identifier hs-var hs-var hs-var hs-var">tgRedeemers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen (Redeemers ConwayEra)
+forall era.
+(AlonzoEraScript era,
+ PlutusPurpose AsIx era ~ ConwayPlutusPurpose AsIx era) =&gt;
+Gen (Redeemers era)
+</span><a href="Test.Cardano.Ledger.Conway.Translation.TranslatableGen.html#genRedeemers"><span class="hs-identifier hs-var">genRedeemers</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621686845511"><span class="annot"><span class="annottext">tgTx :: SupportedLanguage ConwayEra -&gt; Gen (Tx ConwayEra)
+</span><a href="#local-6989586621686845511"><span class="hs-identifier hs-var hs-var hs-var hs-var">tgTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AlonzoTx ConwayEra -&gt; Tx ConwayEra)
+-&gt; Gen (AlonzoTx ConwayEra) -&gt; Gen (Tx ConwayEra)
+forall a b. (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">AlonzoTx ConwayEra -&gt; Tx ConwayEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Tx.html#MkConwayTx"><span class="hs-identifier hs-var">MkConwayTx</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen (AlonzoTx ConwayEra) -&gt; Gen (Tx ConwayEra))
+-&gt; (SupportedLanguage ConwayEra -&gt; Gen (AlonzoTx ConwayEra))
+-&gt; SupportedLanguage ConwayEra
+-&gt; Gen (Tx ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">forall era.
+(TranslatableGen era, Arbitrary (TxAuxData era),
+ AlonzoTxWits era ~ TxWits era) =&gt;
+Gen (TxBody era) -&gt; Gen (AlonzoTx era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/l/testlib/doc/html/cardano-ledger-babbage/src/Test.Cardano.Ledger.Babbage.Translation.TranslatableGen.html#genTx"><span class="hs-identifier hs-var">BabbageTranslatableGen.genTx</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen (TxBody ConwayEra) -&gt; Gen (AlonzoTx ConwayEra))
+-&gt; (SupportedLanguage ConwayEra -&gt; Gen (TxBody ConwayEra))
+-&gt; SupportedLanguage ConwayEra
+-&gt; Gen (AlonzoTx ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">SupportedLanguage ConwayEra -&gt; Gen (TxBody ConwayEra)
+</span><a href="Test.Cardano.Ledger.Conway.Translation.TranslatableGen.html#genTxBody"><span class="hs-identifier hs-var">genTxBody</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621686845532"><span class="annot"><span class="annottext">tgUtxo :: SupportedLanguage ConwayEra -&gt; Tx ConwayEra -&gt; Gen (UTxO ConwayEra)
+</span><a href="#local-6989586621686845532"><span class="hs-identifier hs-var hs-var hs-var hs-var">tgUtxo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era.
+(EraTx era, Arbitrary (Value era), Arbitrary (Script era),
+ TxOut era ~ BabbageTxOut era) =&gt;
+SupportedLanguage era -&gt; Tx era -&gt; Gen (UTxO era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/l/testlib/doc/html/cardano-ledger-babbage/src/Test.Cardano.Ledger.Babbage.Translation.TranslatableGen.html#utxoWithTx"><span class="hs-identifier hs-var">BabbageTranslatableGen.utxoWithTx</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Translation.TranslatableGen.html#genTxBody"><span class="hs-identifier hs-type">genTxBody</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#SupportedLanguage"><span class="hs-identifier hs-type">SupportedLanguage</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span id="genTxBody"><span class="annot"><span class="annottext">genTxBody :: SupportedLanguage ConwayEra -&gt; Gen (TxBody ConwayEra)
+</span><a href="Test.Cardano.Ledger.Conway.Translation.TranslatableGen.html#genTxBody"><span class="hs-identifier hs-var hs-var">genTxBody</span></a></span></span><span> </span><span id="local-6989586621686845534"><span class="annot"><span class="annottext">l :: SupportedLanguage ConwayEra
+</span><a href="#local-6989586621686845534"><span class="hs-identifier hs-var">l</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#SupportedLanguage"><span class="hs-identifier hs-type">SupportedLanguage</span></a></span><span> </span><span id="local-6989586621686845712"><span class="annot"><span class="annottext">SLanguage l
+</span><a href="#local-6989586621686845712"><span class="hs-identifier hs-var">slang</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621686845713"><span class="annot"><span class="annottext">lang :: Language
+</span><a href="#local-6989586621686845713"><span class="hs-identifier hs-var hs-var">lang</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SLanguage l -&gt; Language
+forall (l :: Language) (proxy :: Language -&gt; *).
+PlutusLanguage l =&gt;
+proxy l -&gt; Language
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#plutusLanguage"><span class="hs-identifier hs-var">plutusLanguage</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage l
+</span><a href="#local-6989586621686845712"><span class="hs-identifier hs-var">slang</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span id="local-6989586621686845714"><span class="annot"><span class="annottext">genTxOuts :: Gen (StrictSeq (Sized (BabbageTxOut ConwayEra)))
+</span><a href="#local-6989586621686845714"><span class="hs-identifier hs-var hs-var">genTxOuts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-44"></span><span>        </span><span class="annot"><span class="annottext">[Sized (BabbageTxOut ConwayEra)]
+-&gt; StrictSeq (Sized (BabbageTxOut ConwayEra))
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span>
+</span><span id="line-45"></span><span>          </span><span class="annot"><span class="annottext">([Sized (BabbageTxOut ConwayEra)]
+ -&gt; StrictSeq (Sized (BabbageTxOut ConwayEra)))
+-&gt; Gen [Sized (BabbageTxOut ConwayEra)]
+-&gt; Gen (StrictSeq (Sized (BabbageTxOut ConwayEra)))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Sized (BabbageTxOut ConwayEra))
+-&gt; Gen [Sized (BabbageTxOut ConwayEra)]
+forall a. Gen a -&gt; Gen [a]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#listOf1"><span class="hs-identifier hs-var">listOf1</span></a></span><span>
+</span><span id="line-46"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Version -&gt; BabbageTxOut ConwayEra -&gt; Sized (BabbageTxOut ConwayEra)
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; Sized a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sized.html#mkSized"><span class="hs-identifier hs-var">mkSized</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerLow"><span class="hs-identifier hs-var">eraProtVerLow</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>                </span><span class="annot"><span class="annottext">(BabbageTxOut ConwayEra -&gt; Sized (BabbageTxOut ConwayEra))
+-&gt; Gen (BabbageTxOut ConwayEra)
+-&gt; Gen (Sized (BabbageTxOut ConwayEra))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall era.
+(EraTxOut era, Arbitrary (Value era), Arbitrary (Script era)) =&gt;
+SupportedLanguage era -&gt; Gen (BabbageTxOut era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/l/testlib/doc/html/cardano-ledger-babbage/src/Test.Cardano.Ledger.Babbage.Translation.TranslatableGen.html#genTxOut"><span class="hs-identifier hs-var">BabbageTranslatableGen.genTxOut</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">SupportedLanguage ConwayEra
+</span><a href="#local-6989586621686845534"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-48"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>      </span><span id="local-6989586621686845721"><span class="annot"><span class="annottext">genTxIns :: Gen (Set TxIn)
+</span><a href="#local-6989586621686845721"><span class="hs-identifier hs-var hs-var">genTxIns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[TxIn] -&gt; Set TxIn
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="annot"><span class="annottext">([TxIn] -&gt; Set TxIn) -&gt; Gen [TxIn] -&gt; Gen (Set TxIn)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen TxIn -&gt; Gen [TxIn]
+forall a. Gen a -&gt; Gen [a]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#listOf1"><span class="hs-identifier hs-var">listOf1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Gen TxIn
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>      </span><span id="local-6989586621686845724"><span class="annot"><span class="annottext">offPrePlutusV3 :: Int -&gt; Int
+</span><a href="#local-6989586621686845724"><span class="hs-identifier hs-var hs-var">offPrePlutusV3</span></a></span></span><span> </span><span id="local-6989586621686845725"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621686845725"><span class="hs-identifier hs-var">freq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621686845713"><span class="hs-identifier hs-var">lang</span></a></span><span> </span><span class="annot"><span class="annottext">Language -&gt; Language -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Language
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#PlutusV3"><span class="hs-identifier hs-var">PlutusV3</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621686845725"><span class="hs-identifier hs-var">freq</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-51"></span><span>      </span><span id="local-6989586621686845727"><span class="annot"><span class="annottext">genDelegatee :: Gen Delegatee
+</span><a href="#local-6989586621686845727"><span class="hs-identifier hs-var hs-var">genDelegatee</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><span class="annottext">[(Int, Gen Delegatee)] -&gt; Gen Delegatee
+forall a. HasCallStack =&gt; [(Int, Gen a)] -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#frequency"><span class="hs-identifier hs-var">frequency</span></a></span><span>
+</span><span id="line-53"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">33</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool -&gt; Delegatee
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#DelegStake"><span class="hs-identifier hs-var">DelegStake</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyHash 'StakePool -&gt; Delegatee)
+-&gt; Gen (KeyHash 'StakePool) -&gt; Gen Delegatee
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (KeyHash 'StakePool)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621686845724"><span class="hs-identifier hs-var">offPrePlutusV3</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">33</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DRep -&gt; Delegatee
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#DelegVote"><span class="hs-identifier hs-var">DelegVote</span></a></span><span> </span><span class="annot"><span class="annottext">(DRep -&gt; Delegatee) -&gt; Gen DRep -&gt; Gen Delegatee
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen DRep
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621686845724"><span class="hs-identifier hs-var">offPrePlutusV3</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">33</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool -&gt; DRep -&gt; Delegatee
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#DelegStakeVote"><span class="hs-identifier hs-var">DelegStakeVote</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyHash 'StakePool -&gt; DRep -&gt; Delegatee)
+-&gt; Gen (KeyHash 'StakePool) -&gt; Gen (DRep -&gt; Delegatee)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (KeyHash 'StakePool)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen (DRep -&gt; Delegatee) -&gt; Gen DRep -&gt; Gen Delegatee
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen DRep
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-57"></span><span>      </span><span id="local-6989586621686845732"><span class="annot"><span class="annottext">genDelegCert :: Gen ConwayDelegCert
+</span><a href="#local-6989586621686845732"><span class="hs-identifier hs-var hs-var">genDelegCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><span class="annottext">[(Int, Gen ConwayDelegCert)] -&gt; Gen ConwayDelegCert
+forall a. HasCallStack =&gt; [(Int, Gen a)] -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#frequency"><span class="hs-identifier hs-var">frequency</span></a></span><span>
+</span><span id="line-59"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">25</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayRegCert"><span class="hs-identifier hs-var">ConwayRegCert</span></a></span><span> </span><span class="annot"><span class="annottext">(StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert)
+-&gt; Gen StakeCredential -&gt; Gen (StrictMaybe Coin -&gt; ConwayDelegCert)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen StakeCredential
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin -&gt; ConwayDelegCert)
+-&gt; Gen (StrictMaybe Coin) -&gt; Gen ConwayDelegCert
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">25</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayUnRegCert"><span class="hs-identifier hs-var">ConwayUnRegCert</span></a></span><span> </span><span class="annot"><span class="annottext">(StakeCredential -&gt; StrictMaybe Coin -&gt; ConwayDelegCert)
+-&gt; Gen StakeCredential -&gt; Gen (StrictMaybe Coin -&gt; ConwayDelegCert)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen StakeCredential
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin -&gt; ConwayDelegCert)
+-&gt; Gen (StrictMaybe Coin) -&gt; Gen ConwayDelegCert
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">25</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; Delegatee -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayDelegCert"><span class="hs-identifier hs-var">ConwayDelegCert</span></a></span><span> </span><span class="annot"><span class="annottext">(StakeCredential -&gt; Delegatee -&gt; ConwayDelegCert)
+-&gt; Gen StakeCredential -&gt; Gen (Delegatee -&gt; ConwayDelegCert)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen StakeCredential
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen (Delegatee -&gt; ConwayDelegCert)
+-&gt; Gen Delegatee -&gt; Gen ConwayDelegCert
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Delegatee
+</span><a href="#local-6989586621686845727"><span class="hs-identifier hs-var">genDelegatee</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621686845724"><span class="hs-identifier hs-var">offPrePlutusV3</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">25</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; Delegatee -&gt; Coin -&gt; ConwayDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayRegDelegCert"><span class="hs-identifier hs-var">ConwayRegDelegCert</span></a></span><span> </span><span class="annot"><span class="annottext">(StakeCredential -&gt; Delegatee -&gt; Coin -&gt; ConwayDelegCert)
+-&gt; Gen StakeCredential
+-&gt; Gen (Delegatee -&gt; Coin -&gt; ConwayDelegCert)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen StakeCredential
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen (Delegatee -&gt; Coin -&gt; ConwayDelegCert)
+-&gt; Gen Delegatee -&gt; Gen (Coin -&gt; ConwayDelegCert)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Delegatee
+</span><a href="#local-6989586621686845727"><span class="hs-identifier hs-var">genDelegatee</span></a></span><span> </span><span class="annot"><span class="annottext">Gen (Coin -&gt; ConwayDelegCert) -&gt; Gen Coin -&gt; Gen ConwayDelegCert
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Coin
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>      </span><span id="local-6989586621686845737"><span class="annot"><span class="annottext">genTxCerts :: Gen (OSet (ConwayTxCert ConwayEra))
+</span><a href="#local-6989586621686845737"><span class="hs-identifier hs-var hs-var">genTxCerts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>        </span><span class="annot"><span class="annottext">Gen (ConwayTxCert ConwayEra) -&gt; Gen (OSet (ConwayTxCert ConwayEra))
+forall a. Ord a =&gt; Gen a -&gt; Gen (OSet a)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.Arbitrary.html#genOSet"><span class="hs-identifier hs-var">genOSet</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen (ConwayTxCert ConwayEra)
+ -&gt; Gen (OSet (ConwayTxCert ConwayEra)))
+-&gt; Gen (ConwayTxCert ConwayEra)
+-&gt; Gen (OSet (ConwayTxCert ConwayEra))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-66"></span><span>          </span><span class="annot"><span class="annottext">[(Int, Gen (ConwayTxCert ConwayEra))]
+-&gt; Gen (ConwayTxCert ConwayEra)
+forall a. HasCallStack =&gt; [(Int, Gen a)] -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#frequency"><span class="hs-identifier hs-var">frequency</span></a></span><span>
+</span><span id="line-67"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">33</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ConwayDelegCert -&gt; ConwayTxCert ConwayEra
+forall era. ConwayDelegCert -&gt; ConwayTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCertDeleg"><span class="hs-identifier hs-var">ConwayTxCertDeleg</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayDelegCert -&gt; ConwayTxCert ConwayEra)
+-&gt; Gen ConwayDelegCert -&gt; Gen (ConwayTxCert ConwayEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen ConwayDelegCert
+</span><a href="#local-6989586621686845732"><span class="hs-identifier hs-var">genDelegCert</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">33</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PoolCert -&gt; ConwayTxCert ConwayEra
+forall era. PoolCert -&gt; ConwayTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCertPool"><span class="hs-identifier hs-var">ConwayTxCertPool</span></a></span><span> </span><span class="annot"><span class="annottext">(PoolCert -&gt; ConwayTxCert ConwayEra)
+-&gt; Gen PoolCert -&gt; Gen (ConwayTxCert ConwayEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen PoolCert
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int
+</span><a href="#local-6989586621686845724"><span class="hs-identifier hs-var">offPrePlutusV3</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">33</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ConwayGovCert -&gt; ConwayTxCert ConwayEra
+forall era. ConwayGovCert -&gt; ConwayTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCertGov"><span class="hs-identifier hs-var">ConwayTxCertGov</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayGovCert -&gt; ConwayTxCert ConwayEra)
+-&gt; Gen ConwayGovCert -&gt; Gen (ConwayTxCert ConwayEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen ConwayGovCert
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span><span>      </span><span id="local-6989586621686845430"><span class="annot"><a href="#local-6989586621686845741"><span class="hs-identifier hs-type">genForPlutusV3</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686845430"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621686845430"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686845430"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-72"></span><span>      </span><span id="local-6989586621686845741"><span class="annot"><span class="annottext">genForPlutusV3 :: forall a. Arbitrary a =&gt; a -&gt; Gen a
+</span><a href="#local-6989586621686845741"><span class="hs-identifier hs-var hs-var">genForPlutusV3</span></a></span></span><span> </span><span id="local-6989586621686845745"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621686845745"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-73"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621686845713"><span class="hs-identifier hs-var">lang</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-74"></span><span>          </span><span class="annot"><span class="annottext">Language
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#PlutusV3"><span class="hs-identifier hs-var">PlutusV3</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Gen a
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-75"></span><span>          </span><span class="annot"><span class="annottext">Language
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; Gen a
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621686845745"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="annottext">Set TxIn
+-&gt; Set TxIn
+-&gt; Set TxIn
+-&gt; StrictSeq (Sized (TxOut ConwayEra))
+-&gt; StrictMaybe (Sized (TxOut ConwayEra))
+-&gt; StrictMaybe Coin
+-&gt; OSet (TxCert ConwayEra)
+-&gt; Withdrawals
+-&gt; Coin
+-&gt; ValidityInterval
+-&gt; Set (KeyHash 'Witness)
+-&gt; MultiAsset
+-&gt; StrictMaybe ScriptIntegrityHash
+-&gt; StrictMaybe TxAuxDataHash
+-&gt; StrictMaybe Network
+-&gt; VotingProcedures ConwayEra
+-&gt; OSet (ProposalProcedure ConwayEra)
+-&gt; StrictMaybe Coin
+-&gt; Coin
+-&gt; TxBody ConwayEra
+Set TxIn
+-&gt; Set TxIn
+-&gt; Set TxIn
+-&gt; StrictSeq (Sized (BabbageTxOut ConwayEra))
+-&gt; StrictMaybe (Sized (BabbageTxOut ConwayEra))
+-&gt; StrictMaybe Coin
+-&gt; OSet (ConwayTxCert ConwayEra)
+-&gt; Withdrawals
+-&gt; Coin
+-&gt; ValidityInterval
+-&gt; Set (KeyHash 'Witness)
+-&gt; MultiAsset
+-&gt; StrictMaybe ScriptIntegrityHash
+-&gt; StrictMaybe TxAuxDataHash
+-&gt; StrictMaybe Network
+-&gt; VotingProcedures ConwayEra
+-&gt; OSet (ProposalProcedure ConwayEra)
+-&gt; StrictMaybe Coin
+-&gt; Coin
+-&gt; TxBody ConwayEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxBody.html#ConwayTxBody"><span class="hs-identifier hs-var">ConwayTxBody</span></a></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">(Set TxIn
+ -&gt; Set TxIn
+ -&gt; Set TxIn
+ -&gt; StrictSeq (Sized (BabbageTxOut ConwayEra))
+ -&gt; StrictMaybe (Sized (BabbageTxOut ConwayEra))
+ -&gt; StrictMaybe Coin
+ -&gt; OSet (ConwayTxCert ConwayEra)
+ -&gt; Withdrawals
+ -&gt; Coin
+ -&gt; ValidityInterval
+ -&gt; Set (KeyHash 'Witness)
+ -&gt; MultiAsset
+ -&gt; StrictMaybe ScriptIntegrityHash
+ -&gt; StrictMaybe TxAuxDataHash
+ -&gt; StrictMaybe Network
+ -&gt; VotingProcedures ConwayEra
+ -&gt; OSet (ProposalProcedure ConwayEra)
+ -&gt; StrictMaybe Coin
+ -&gt; Coin
+ -&gt; TxBody ConwayEra)
+-&gt; Gen (Set TxIn)
+-&gt; Gen
+     (Set TxIn
+      -&gt; Set TxIn
+      -&gt; StrictSeq (Sized (BabbageTxOut ConwayEra))
+      -&gt; StrictMaybe (Sized (BabbageTxOut ConwayEra))
+      -&gt; StrictMaybe Coin
+      -&gt; OSet (ConwayTxCert ConwayEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Set TxIn)
+</span><a href="#local-6989586621686845721"><span class="hs-identifier hs-var">genTxIns</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (Set TxIn
+   -&gt; Set TxIn
+   -&gt; StrictSeq (Sized (BabbageTxOut ConwayEra))
+   -&gt; StrictMaybe (Sized (BabbageTxOut ConwayEra))
+   -&gt; StrictMaybe Coin
+   -&gt; OSet (ConwayTxCert ConwayEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen (Set TxIn)
+-&gt; Gen
+     (Set TxIn
+      -&gt; StrictSeq (Sized (BabbageTxOut ConwayEra))
+      -&gt; StrictMaybe (Sized (BabbageTxOut ConwayEra))
+      -&gt; StrictMaybe Coin
+      -&gt; OSet (ConwayTxCert ConwayEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Set TxIn)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (Set TxIn
+   -&gt; StrictSeq (Sized (BabbageTxOut ConwayEra))
+   -&gt; StrictMaybe (Sized (BabbageTxOut ConwayEra))
+   -&gt; StrictMaybe Coin
+   -&gt; OSet (ConwayTxCert ConwayEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen (Set TxIn)
+-&gt; Gen
+     (StrictSeq (Sized (BabbageTxOut ConwayEra))
+      -&gt; StrictMaybe (Sized (BabbageTxOut ConwayEra))
+      -&gt; StrictMaybe Coin
+      -&gt; OSet (ConwayTxCert ConwayEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Set TxIn)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (StrictSeq (Sized (BabbageTxOut ConwayEra))
+   -&gt; StrictMaybe (Sized (BabbageTxOut ConwayEra))
+   -&gt; StrictMaybe Coin
+   -&gt; OSet (ConwayTxCert ConwayEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen (StrictSeq (Sized (BabbageTxOut ConwayEra)))
+-&gt; Gen
+     (StrictMaybe (Sized (BabbageTxOut ConwayEra))
+      -&gt; StrictMaybe Coin
+      -&gt; OSet (ConwayTxCert ConwayEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictSeq (Sized (BabbageTxOut ConwayEra)))
+</span><a href="#local-6989586621686845714"><span class="hs-identifier hs-var">genTxOuts</span></a></span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe (Sized (BabbageTxOut ConwayEra))
+   -&gt; StrictMaybe Coin
+   -&gt; OSet (ConwayTxCert ConwayEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen (StrictMaybe (Sized (BabbageTxOut ConwayEra)))
+-&gt; Gen
+     (StrictMaybe Coin
+      -&gt; OSet (ConwayTxCert ConwayEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe (Sized (BabbageTxOut ConwayEra)))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Coin
+   -&gt; OSet (ConwayTxCert ConwayEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen (StrictMaybe Coin)
+-&gt; Gen
+     (OSet (ConwayTxCert ConwayEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (OSet (ConwayTxCert ConwayEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen (OSet (ConwayTxCert ConwayEra))
+-&gt; Gen
+     (Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (OSet (ConwayTxCert ConwayEra))
+</span><a href="#local-6989586621686845737"><span class="hs-identifier hs-var">genTxCerts</span></a></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen Withdrawals
+-&gt; Gen
+     (Coin
+      -&gt; ValidityInterval
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Withdrawals
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (Coin
+   -&gt; ValidityInterval
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen Coin
+-&gt; Gen
+     (ValidityInterval
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Coin
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (ValidityInterval
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen ValidityInterval
+-&gt; Gen
+     (Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; Gen ValidityInterval -&gt; Gen ValidityInterval
+forall a. (Int -&gt; Int) -&gt; Gen a -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#scale"><span class="hs-identifier hs-var">scale</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">15</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Gen ValidityInterval
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen (Set (KeyHash 'Witness))
+-&gt; Gen
+     (MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Set (KeyHash 'Witness))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen MultiAsset
+-&gt; Gen
+     (StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; Gen MultiAsset -&gt; Gen MultiAsset
+forall a. (Int -&gt; Int) -&gt; Gen a -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#scale"><span class="hs-identifier hs-var">scale</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">15</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Gen MultiAsset
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen (StrictMaybe ScriptIntegrityHash)
+-&gt; Gen
+     (StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe ScriptIntegrityHash)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen (StrictMaybe TxAuxDataHash)
+-&gt; Gen
+     (StrictMaybe Network
+      -&gt; VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe TxAuxDataHash)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Network
+   -&gt; VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen (StrictMaybe Network)
+-&gt; Gen
+     (VotingProcedures ConwayEra
+      -&gt; OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Network)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (VotingProcedures ConwayEra
+   -&gt; OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody ConwayEra)
+-&gt; Gen (VotingProcedures ConwayEra)
+-&gt; Gen
+     (OSet (ProposalProcedure ConwayEra)
+      -&gt; StrictMaybe Coin -&gt; Coin -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">VotingProcedures ConwayEra -&gt; Gen (VotingProcedures ConwayEra)
+forall a. Arbitrary a =&gt; a -&gt; Gen a
+</span><a href="#local-6989586621686845741"><span class="hs-identifier hs-var">genForPlutusV3</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Voter (Map GovActionId (VotingProcedure ConwayEra))
+-&gt; VotingProcedures ConwayEra
+forall era.
+Map Voter (Map GovActionId (VotingProcedure era))
+-&gt; VotingProcedures era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedures"><span class="hs-identifier hs-var">VotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">Map Voter (Map GovActionId (VotingProcedure ConwayEra))
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">Gen
+  (OSet (ProposalProcedure ConwayEra)
+   -&gt; StrictMaybe Coin -&gt; Coin -&gt; TxBody ConwayEra)
+-&gt; Gen (OSet (ProposalProcedure ConwayEra))
+-&gt; Gen (StrictMaybe Coin -&gt; Coin -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">OSet (ProposalProcedure ConwayEra)
+-&gt; Gen (OSet (ProposalProcedure ConwayEra))
+forall a. Arbitrary a =&gt; a -&gt; Gen a
+</span><a href="#local-6989586621686845741"><span class="hs-identifier hs-var">genForPlutusV3</span></a></span><span> </span><span class="annot"><span class="annottext">OSet (ProposalProcedure ConwayEra)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin -&gt; Coin -&gt; TxBody ConwayEra)
+-&gt; Gen (StrictMaybe Coin) -&gt; Gen (Coin -&gt; TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Coin -&gt; Gen (StrictMaybe Coin)
+forall a. Arbitrary a =&gt; a -&gt; Gen a
+</span><a href="#local-6989586621686845741"><span class="hs-identifier hs-var">genForPlutusV3</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="annottext">Gen (Coin -&gt; TxBody ConwayEra)
+-&gt; Gen Coin -&gt; Gen (TxBody ConwayEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Gen Coin
+forall a. Arbitrary a =&gt; a -&gt; Gen a
+</span><a href="#local-6989586621686845741"><span class="hs-identifier hs-var">genForPlutusV3</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Translation.TranslatableGen.html#genRedeemers"><span class="hs-identifier hs-type">genRedeemers</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621686845314"><span class="annot"><a href="#local-6989586621686845314"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AlonzoEraScript"><span class="hs-identifier hs-type">AlonzoEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686845314"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#PlutusPurpose"><span class="hs-identifier hs-type">PlutusPurpose</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AsIx"><span class="hs-identifier hs-type">AsIx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686845314"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Scripts.html#ConwayPlutusPurpose"><span class="hs-identifier hs-type">ConwayPlutusPurpose</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AsIx"><span class="hs-identifier hs-type">AsIx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686845314"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html#Redeemers"><span class="hs-identifier hs-type">Redeemers</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686845314"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span id="genRedeemers"><span class="annot"><span class="annottext">genRedeemers :: forall era.
+(AlonzoEraScript era,
+ PlutusPurpose AsIx era ~ ConwayPlutusPurpose AsIx era) =&gt;
+Gen (Redeemers era)
+</span><a href="Test.Cardano.Ledger.Conway.Translation.TranslatableGen.html#genRedeemers"><span class="hs-identifier hs-var hs-var">genRedeemers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-102"></span><span>  </span><span id="local-6989586621686845767"><span class="annot"><span class="annottext">Data era
+</span><a href="#local-6989586621686845767"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (Data era)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686845314"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>  </span><span id="local-6989586621686845768"><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621686845768"><span class="hs-identifier hs-var">eu</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen ExUnits
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">ExUnits</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-comment">-- We provide `RdrmPtr Spend 0` as the only valid reedemer, because</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-comment">-- for any other redeemer type, we would have to modify the body of the transaction</span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-comment">-- in order for the translation to succeed</span><span>
+</span><span id="line-107"></span><span>  </span><span class="annot"><span class="annottext">Map (PlutusPurpose AsIx era) (Data era, ExUnits) -&gt; Redeemers era
+Map (ConwayPlutusPurpose AsIx era) (Data era, ExUnits)
+-&gt; Redeemers era
+forall era.
+AlonzoEraScript era =&gt;
+Map (PlutusPurpose AsIx era) (Data era, ExUnits) -&gt; Redeemers era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html#Redeemers"><span class="hs-identifier hs-var">Redeemers</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (ConwayPlutusPurpose AsIx era) (Data era, ExUnits)
+ -&gt; Redeemers era)
+-&gt; Gen (Map (ConwayPlutusPurpose AsIx era) (Data era, ExUnits))
+-&gt; Gen (Redeemers era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[Map (ConwayPlutusPurpose AsIx era) (Data era, ExUnits)]
+-&gt; Gen (Map (ConwayPlutusPurpose AsIx era) (Data era, ExUnits))
+forall a. HasCallStack =&gt; [a] -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#elements"><span class="hs-identifier hs-var">elements</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ConwayPlutusPurpose AsIx era
+-&gt; (Data era, ExUnits)
+-&gt; Map (ConwayPlutusPurpose AsIx era) (Data era, ExUnits)
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AsIx Word32 TxIn -&gt; ConwayPlutusPurpose AsIx era
+forall (f :: * -&gt; * -&gt; *) era.
+f Word32 TxIn -&gt; ConwayPlutusPurpose f era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Scripts.html#ConwaySpending"><span class="hs-identifier hs-var">ConwaySpending</span></a></span><span> </span><span class="annot"><span class="annottext">(AsIx Word32 TxIn -&gt; ConwayPlutusPurpose AsIx era)
+-&gt; AsIx Word32 TxIn -&gt; ConwayPlutusPurpose AsIx era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; AsIx Word32 TxIn
+forall ix it. ix -&gt; AsIx ix it
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AsIx"><span class="hs-identifier hs-var">AsIx</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Data era
+</span><a href="#local-6989586621686845767"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621686845768"><span class="hs-identifier hs-var">eu</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map (ConwayPlutusPurpose AsIx era) (Data era, ExUnits)
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span class="hs-special">]</span><span>
+</span><span id="line-108"></span></pre></body></html>

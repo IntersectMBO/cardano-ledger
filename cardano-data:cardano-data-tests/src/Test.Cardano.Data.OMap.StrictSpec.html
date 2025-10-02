@@ -1,0 +1,1006 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ImportQualifiedPost #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Data.OMap.StrictSpec</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html"><span class="hs-identifier">Data.OMap.Strict</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proxy</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SSeq</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#set"><span class="hs-identifier">set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Data.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.RoundTrip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#roundTripCborSpec"><span class="hs-identifier">roundTripCborSpec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.html"><span class="hs-identifier">Test.Hspec</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html"><span class="hs-identifier">Test.Hspec.QuickCheck</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.html"><span class="hs-identifier">Test.QuickCheck</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier">Arbitrary</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html"><span class="hs-identifier">Test.QuickCheck.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier">arbitrary</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-0.6.5.0-93d953419cb1c92a619e6b41c8dfd419c15e4e8719454ba5605130782609f930/share/doc/html/src/Test.QuickCheck.Classes.html"><span class="hs-identifier">Test.QuickCheck.Classes</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prelude</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">elem</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">filter</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">lookup</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">null</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-26"></span><span id="spec"><span class="annot"><span class="annottext">spec :: Spec
+</span><a href="Test.Cardano.Data.OMap.StrictSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;OMap.Strict&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;membership checks work&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-29"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (OMap Int Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;unconsed&quot;</span></span><span> </span><span class="annot"><span class="annottext">((OMap Int Int -&gt; IO ()) -&gt; Spec)
+-&gt; (OMap Int Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-30"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679218535"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218535"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218535"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-31"></span><span>          </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>          </span><span id="local-6989586621679218537"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218537"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-type">:&lt;|:</span></a></span><span> </span><span id="local-6989586621679218539"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218539"><span class="hs-identifier hs-var">_kv</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218537"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Getting Int Int Int -&gt; Int
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Int Int Int
+forall k v. HasOKey k v =&gt; Lens' v k
+Lens' Int Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#okeyL"><span class="hs-identifier hs-var">okeyL</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; (Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; OMap Int Int -&gt; Bool
+forall k v. Ord k =&gt; k -&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#member"><span class="hs-operator hs-var">`member`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218535"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (OMap Int Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;unsnoced&quot;</span></span><span> </span><span class="annot"><span class="annottext">((OMap Int Int -&gt; IO ()) -&gt; Spec)
+-&gt; (OMap Int Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-34"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679218544"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218544"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218544"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-35"></span><span>          </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>          </span><span id="local-6989586621679218545"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218545"><span class="hs-identifier hs-var">_kv</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-type">:|&gt;:</span></a></span><span> </span><span id="local-6989586621679218547"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218547"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218547"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Getting Int Int Int -&gt; Int
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Int Int Int
+forall k v. HasOKey k v =&gt; Lens' v k
+Lens' Int Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#okeyL"><span class="hs-identifier hs-var">okeyL</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; (Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; OMap Int Int -&gt; Bool
+forall k v. Ord k =&gt; k -&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#member"><span class="hs-operator hs-var">`member`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218544"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;when cons-ing&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (OMap Int Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;adding a duplicate results in a no-op&quot;</span></span><span> </span><span class="annot"><span class="annottext">((OMap Int Int -&gt; IO ()) -&gt; Spec)
+-&gt; (OMap Int Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-39"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679218548"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218548"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-40"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218548"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-41"></span><span>            </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>            </span><span id="local-6989586621679218549"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218549"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-type">:&lt;|:</span></a></span><span> </span><span id="local-6989586621679218550"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218550"><span class="hs-identifier hs-var">_kv</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218548"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218549"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218548"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-43"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218548"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-44"></span><span>            </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>            </span><span id="local-6989586621679218553"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218553"><span class="hs-identifier hs-var">_kv</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-type">:|&gt;:</span></a></span><span> </span><span id="local-6989586621679218554"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218554"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218548"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218554"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218548"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ((OMap Int Int, Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;new values get added&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OMap Int Int, Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OMap Int Int, Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-47"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679218555"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218555"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679218556"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218556"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-48"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218556"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OMap Int Int -&gt; Bool
+forall k v. (HasOKey k v, Eq v) =&gt; v -&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218555"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-49"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218556"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218555"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218555"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-50"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218556"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218555"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218556"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. (HasOKey k v, Ord k) =&gt; v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-var">:&lt;|:</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218555"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;when snoc-ing&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (OMap Int Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;adding a duplicate results in a no-op&quot;</span></span><span> </span><span class="annot"><span class="annottext">((OMap Int Int -&gt; IO ()) -&gt; Spec)
+-&gt; (OMap Int Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-53"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679218558"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218558"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-54"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218558"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-55"></span><span>            </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>            </span><span id="local-6989586621679218559"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218559"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-type">:&lt;|:</span></a></span><span> </span><span id="local-6989586621679218560"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218560"><span class="hs-identifier hs-var">_kv</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218558"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218558"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218559"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-57"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218558"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-58"></span><span>            </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>            </span><span id="local-6989586621679218562"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218562"><span class="hs-identifier hs-var">_kv</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-type">:|&gt;:</span></a></span><span> </span><span id="local-6989586621679218563"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218563"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218558"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218558"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218563"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ((OMap Int Int, Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;new values get added&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OMap Int Int, Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OMap Int Int, Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-61"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679218564"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218564"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679218565"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218565"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-62"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218565"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OMap Int Int -&gt; Bool
+forall k v. (HasOKey k v, Eq v) =&gt; v -&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218564"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-63"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218564"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218565"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218564"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-64"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218564"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218565"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218564"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Int -&gt; OMap Int Int
+forall k v. (HasOKey k v, Ord k) =&gt; OMap k v -&gt; v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-var">:|&gt;:</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218565"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mappend preserves uniqueness&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (OMap Int Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mappending with itself should be a no-op&quot;</span></span><span> </span><span class="annot"><span class="annottext">((OMap Int Int -&gt; IO ()) -&gt; Spec)
+-&gt; (OMap Int Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-67"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679218566"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218566"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-68"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679218568"><span class="annot"><span class="annottext">il :: OMap Int Int
+</span><a href="#local-6989586621679218568"><span class="hs-identifier hs-var hs-var">il</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218566"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var">|&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218566"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-69"></span><span>              </span><span id="local-6989586621679218571"><span class="annot"><span class="annottext">ir :: OMap Int Int
+</span><a href="#local-6989586621679218571"><span class="hs-identifier hs-var hs-var">ir</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218566"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3E%3C%7C"><span class="hs-operator hs-var">&gt;&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218566"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-70"></span><span>          </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218568"><span class="hs-identifier hs-var">il</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218566"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-71"></span><span>          </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218571"><span class="hs-identifier hs-var">ir</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218566"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-72"></span><span>          </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218568"><span class="hs-identifier hs-var">il</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; (OMap Int Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Bool
+forall k v. Ord k =&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-73"></span><span>          </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218571"><span class="hs-identifier hs-var">ir</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; (OMap Int Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Bool
+forall k v. Ord k =&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ((OMap Int Int, OMap Int Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mappending with duplicates: left-preserving&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OMap Int Int, OMap Int Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OMap Int Int, OMap Int Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-75"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679218574"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218574"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679218575"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218575"><span class="hs-identifier hs-var">j</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-76"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218575"><span class="hs-identifier hs-var">j</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-77"></span><span>            </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218574"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218574"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var">|&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218575"><span class="hs-identifier hs-var">j</span></a></span><span>
+</span><span id="line-78"></span><span>            </span><span id="local-6989586621679218576"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218576"><span class="hs-identifier hs-var">j'</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-type">:&lt;|:</span></a></span><span> </span><span id="local-6989586621679218577"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218577"><span class="hs-identifier hs-var">_js</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-79"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679218579"><span class="annot"><span class="annottext">result :: OMap Int Int
+</span><a href="#local-6989586621679218579"><span class="hs-identifier hs-var hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218574"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var">|&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218575"><span class="hs-identifier hs-var">j</span></a></span><span>
+</span><span id="line-80"></span><span>              </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218579"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218574"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218576"><span class="hs-identifier hs-var">j'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var">|&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218575"><span class="hs-identifier hs-var">j</span></a></span><span>
+</span><span id="line-81"></span><span>              </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218579"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; (OMap Int Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Bool
+forall k v. Ord k =&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ((OMap Int Int, OMap Int Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mappending with duplicates: right-preserving&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OMap Int Int, OMap Int Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OMap Int Int, OMap Int Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-83"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679218580"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218580"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679218581"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218581"><span class="hs-identifier hs-var">j</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-84"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218580"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-85"></span><span>            </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218580"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3E%3C%7C"><span class="hs-operator hs-var">&gt;&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218581"><span class="hs-identifier hs-var">j</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218581"><span class="hs-identifier hs-var">j</span></a></span><span>
+</span><span id="line-86"></span><span>            </span><span id="local-6989586621679218582"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218582"><span class="hs-identifier hs-var">_is</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-type">:|&gt;:</span></a></span><span> </span><span id="local-6989586621679218583"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218583"><span class="hs-identifier hs-var">i'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-87"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679218585"><span class="annot"><span class="annottext">result :: OMap Int Int
+</span><a href="#local-6989586621679218585"><span class="hs-identifier hs-var hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218580"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3E%3C%7C"><span class="hs-operator hs-var">&gt;&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218581"><span class="hs-identifier hs-var">j</span></a></span><span>
+</span><span id="line-88"></span><span>              </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218585"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218580"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; OMap k v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3E%3C%7C"><span class="hs-operator hs-var">&gt;&lt;|</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218583"><span class="hs-identifier hs-var">i'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. HasOKey k v =&gt; v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218581"><span class="hs-identifier hs-var">j</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>              </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218585"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; (OMap Int Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Bool
+forall k v. Ord k =&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; ((OMap Int Int, Set Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;extractKeys should satisfy membership&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OMap Int Int, Set Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OMap Int Int, Set Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-91"></span><span>      </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679218586"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218586"><span class="hs-identifier hs-var">omap</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679218587"><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679218587"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679218589"><span class="annot"><span class="annottext">result :: (OMap Int Int, Map Int Int)
+</span><a href="#local-6989586621679218589"><span class="hs-identifier hs-var hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Int -&gt; OMap Int Int -&gt; (OMap Int Int, Map Int Int)
+forall k v. Ord k =&gt; Set k -&gt; OMap k v -&gt; (OMap k v, Map k v)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#extractKeys"><span class="hs-identifier hs-var">extractKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679218587"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218586"><span class="hs-identifier hs-var">omap</span></a></span><span>
+</span><span id="line-93"></span><span>        </span><span class="annot"><span class="annottext">(OMap Int Int, Map Int Int)
+</span><a href="#local-6989586621679218589"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">(OMap Int Int, Map Int Int)
+-&gt; ((OMap Int Int, Map Int Int) -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; Bool) -&gt; OMap Int Int -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">all</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Set Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Bool
+</span><span class="hs-operator hs-var">`Set.notMember`</span></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679218587"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(OMap Int Int -&gt; Bool)
+-&gt; ((OMap Int Int, Map Int Int) -&gt; OMap Int Int)
+-&gt; (OMap Int Int, Map Int Int)
+-&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(OMap Int Int, Map Int Int) -&gt; OMap Int Int
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>        </span><span class="annot"><span class="annottext">(OMap Int Int, Map Int Int)
+</span><a href="#local-6989586621679218589"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">(OMap Int Int, Map Int Int)
+-&gt; ((OMap Int Int, Map Int Int) -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; Bool) -&gt; Map Int Int -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">all</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Set Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Bool
+</span><span class="hs-operator hs-var">`Set.member`</span></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679218587"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Map Int Int -&gt; Bool)
+-&gt; ((OMap Int Int, Map Int Int) -&gt; Map Int Int)
+-&gt; (OMap Int Int, Map Int Int)
+-&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(OMap Int Int, Map Int Int) -&gt; Map Int Int
+forall a b. (a, b) -&gt; b
+</span><span class="hs-identifier hs-var">snd</span></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>        </span><span class="annot"><span class="annottext">(OMap Int Int, Map Int Int)
+</span><a href="#local-6989586621679218589"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">(OMap Int Int, Map Int Int)
+-&gt; ((OMap Int Int, Map Int Int) -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Bool
+forall k v. Ord k =&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span> </span><span class="annot"><span class="annottext">(OMap Int Int -&gt; Bool)
+-&gt; ((OMap Int Int, Map Int Int) -&gt; OMap Int Int)
+-&gt; (OMap Int Int, Map Int Int)
+-&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(OMap Int Int, Map Int Int) -&gt; OMap Int Int
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span>
+</span><span id="line-96"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; ((OMap Int Int, Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;filter&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OMap Int Int, Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OMap Int Int, Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-97"></span><span>      </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679218597"><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218597"><span class="hs-identifier hs-var">omap</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679218598"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218598"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-98"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679218601"><span class="annot"><span class="annottext">result :: OMap Int Int
+</span><a href="#local-6989586621679218601"><span class="hs-identifier hs-var hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Bool) -&gt; OMap Int Int -&gt; OMap Int Int
+forall k v. Ord k =&gt; (v -&gt; Bool) -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218598"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218597"><span class="hs-identifier hs-var">omap</span></a></span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218601"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; (OMap Int Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Bool) -&gt; OMap Int Int -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">all</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218598"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>        </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218601"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; (OMap Int Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Bool
+forall k v. Ord k =&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; ((OMap Int OMapTest, Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;adjust&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OMap Int OMapTest, Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OMap Int OMapTest, Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679218604"><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218604"><span class="hs-identifier hs-var">omap</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679218605"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218605"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-type">OMapTest</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-103"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679218609"><span class="annot"><span class="annottext">adjustingFn :: OMapTest -&gt; OMapTest
+</span><a href="#local-6989586621679218609"><span class="hs-identifier hs-var hs-var">adjustingFn</span></a></span></span><span> </span><span id="local-6989586621679218610"><span class="annot"><span class="annottext">omt :: OMapTest
+</span><a href="#local-6989586621679218610"><span class="hs-identifier hs-var">omt</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-type">OMapTest</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679218612"><span class="annot"><span class="annottext">Int
+omSnd :: Int
+omSnd :: OMapTest -&gt; Int
+</span><a href="#local-6989586621679218612"><span class="hs-identifier hs-var hs-var">omSnd</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218610"><span class="hs-identifier hs-var">omt</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#omSnd"><span class="hs-identifier hs-var">omSnd</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679218612"><span class="hs-identifier hs-type">omSnd</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">+</span></span><span> </span><span class="annot"><span class="hs-number">1</span></span><span class="hs-special">}</span><span>
+</span><span id="line-104"></span><span>            </span><span id="local-6989586621679218617"><span class="annot"><span class="annottext">overwritingAdjustingFn :: OMapTest -&gt; OMapTest
+</span><a href="#local-6989586621679218617"><span class="hs-identifier hs-var hs-var">overwritingAdjustingFn</span></a></span></span><span> </span><span id="local-6989586621679218618"><span class="annot"><span class="annottext">omt :: OMapTest
+</span><a href="#local-6989586621679218618"><span class="hs-identifier hs-var">omt</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-type">OMapTest</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679218619"><span class="annot"><span class="annottext">Int
+omFst :: Int
+omFst :: OMapTest -&gt; Int
+</span><a href="#local-6989586621679218619"><span class="hs-identifier hs-var hs-var">omFst</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218618"><span class="hs-identifier hs-var">omt</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#omFst"><span class="hs-identifier hs-var">omFst</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679218619"><span class="hs-identifier hs-type">omFst</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">+</span></span><span> </span><span class="annot"><span class="hs-number">1</span></span><span class="hs-special">}</span><span> </span><span class="hs-comment">-- Changes the `okeyL`.</span><span>
+</span><span id="line-105"></span><span>        </span><span class="annot"><span class="annottext">(OMapTest -&gt; OMapTest)
+-&gt; Int -&gt; OMap Int OMapTest -&gt; OMap Int OMapTest
+forall k v. HasOKey k v =&gt; (v -&gt; v) -&gt; k -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#adjust"><span class="hs-identifier hs-var">adjust</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest -&gt; OMapTest
+</span><a href="#local-6989586621679218609"><span class="hs-identifier hs-var">adjustingFn</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218605"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218604"><span class="hs-identifier hs-var">omap</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest -&gt; (OMap Int OMapTest -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest -&gt; Bool
+forall k v. Ord k =&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><span class="annottext">(OMapTest -&gt; OMapTest)
+-&gt; Int -&gt; OMap Int OMapTest -&gt; OMap Int OMapTest
+forall k v. HasOKey k v =&gt; (v -&gt; v) -&gt; k -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#adjust"><span class="hs-identifier hs-var">adjust</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest -&gt; OMapTest
+</span><a href="#local-6989586621679218617"><span class="hs-identifier hs-var">overwritingAdjustingFn</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218605"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218604"><span class="hs-identifier hs-var">omap</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest -&gt; (OMap Int OMapTest -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest -&gt; Bool
+forall k v. Ord k =&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;overwriting&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-108"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ((OMap Int OMapTest, OMapTest) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cons' - (&lt;||)&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OMap Int OMapTest, OMapTest) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OMap Int OMapTest, OMapTest) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-109"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679218622"><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218622"><span class="hs-identifier hs-var">omap</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679218623"><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218623"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-type">OMapTest</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-type">OMapTest</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-110"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679218625"><span class="annot"><span class="annottext">consed :: OMap Int OMapTest
+</span><a href="#local-6989586621679218625"><span class="hs-identifier hs-var hs-var">consed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218623"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest -&gt; OMap Int OMapTest -&gt; OMap Int OMapTest
+forall k v. HasOKey k v =&gt; v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3C%7C%7C"><span class="hs-operator hs-var">&lt;||</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218622"><span class="hs-identifier hs-var">omap</span></a></span><span>
+</span><span id="line-111"></span><span>              </span><span id="local-6989586621679218629"><span class="annot"><span class="annottext">k :: Int
+</span><a href="#local-6989586621679218629"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218623"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest -&gt; Getting Int OMapTest Int -&gt; Int
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Int OMapTest Int
+forall k v. HasOKey k v =&gt; Lens' v k
+Lens' OMapTest Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#okeyL"><span class="hs-identifier hs-var">okeyL</span></a></span><span>
+</span><span id="line-112"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218629"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OMap Int OMapTest -&gt; Bool
+forall k v. Ord k =&gt; k -&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#member"><span class="hs-operator hs-var">`member`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218622"><span class="hs-identifier hs-var">omap</span></a></span><span>
+</span><span id="line-113"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218625"><span class="hs-identifier hs-var">consed</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest -&gt; OMap Int OMapTest -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">(OMapTest -&gt; OMapTest)
+-&gt; Int -&gt; OMap Int OMapTest -&gt; OMap Int OMapTest
+forall k v. HasOKey k v =&gt; (v -&gt; v) -&gt; k -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#adjust"><span class="hs-identifier hs-var">adjust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OMapTest -&gt; OMapTest -&gt; OMapTest
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218623"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218623"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest -&gt; Getting Int OMapTest Int -&gt; Int
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Int OMapTest Int
+forall k v. HasOKey k v =&gt; Lens' v k
+Lens' OMapTest Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#okeyL"><span class="hs-identifier hs-var">okeyL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218622"><span class="hs-identifier hs-var">omap</span></a></span><span>
+</span><span id="line-114"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218625"><span class="hs-identifier hs-var">consed</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest -&gt; OMap Int OMapTest -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218623"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest -&gt; OMap Int OMapTest -&gt; OMap Int OMapTest
+forall k v. HasOKey k v =&gt; v -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218622"><span class="hs-identifier hs-var">omap</span></a></span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ((OMap Int OMapTest, OMapTest) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;snoc' - (||&gt;)&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OMap Int OMapTest, OMapTest) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OMap Int OMapTest, OMapTest) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-116"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679218631"><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218631"><span class="hs-identifier hs-var">omap</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679218632"><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218632"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-type">OMapTest</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-type">OMapTest</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-117"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679218634"><span class="annot"><span class="annottext">snoced :: OMap Int OMapTest
+</span><a href="#local-6989586621679218634"><span class="hs-identifier hs-var hs-var">snoced</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218631"><span class="hs-identifier hs-var">omap</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest -&gt; OMapTest -&gt; OMap Int OMapTest
+forall k v. HasOKey k v =&gt; OMap k v -&gt; v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%7C%7C%3E"><span class="hs-operator hs-var">||&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218632"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-118"></span><span>              </span><span id="local-6989586621679218638"><span class="annot"><span class="annottext">k :: Int
+</span><a href="#local-6989586621679218638"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218632"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest -&gt; Getting Int OMapTest Int -&gt; Int
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Int OMapTest Int
+forall k v. HasOKey k v =&gt; Lens' v k
+Lens' OMapTest Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#okeyL"><span class="hs-identifier hs-var">okeyL</span></a></span><span>
+</span><span id="line-119"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218638"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OMap Int OMapTest -&gt; Bool
+forall k v. Ord k =&gt; k -&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#member"><span class="hs-operator hs-var">`member`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218631"><span class="hs-identifier hs-var">omap</span></a></span><span>
+</span><span id="line-120"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218634"><span class="hs-identifier hs-var">snoced</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest -&gt; OMap Int OMapTest -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">(OMapTest -&gt; OMapTest)
+-&gt; Int -&gt; OMap Int OMapTest -&gt; OMap Int OMapTest
+forall k v. HasOKey k v =&gt; (v -&gt; v) -&gt; k -&gt; OMap k v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#adjust"><span class="hs-identifier hs-var">adjust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OMapTest -&gt; OMapTest -&gt; OMapTest
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218632"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218632"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest -&gt; Getting Int OMapTest Int -&gt; Int
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Int OMapTest Int
+forall k v. HasOKey k v =&gt; Lens' v k
+Lens' OMapTest Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#okeyL"><span class="hs-identifier hs-var">okeyL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218631"><span class="hs-identifier hs-var">omap</span></a></span><span>
+</span><span id="line-121"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218634"><span class="hs-identifier hs-var">snoced</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest -&gt; OMap Int OMapTest -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest
+</span><a href="#local-6989586621679218631"><span class="hs-identifier hs-var">omap</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int OMapTest -&gt; OMapTest -&gt; OMap Int OMapTest
+forall k v. HasOKey k v =&gt; OMap k v -&gt; v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218632"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-122"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fromFoldable preserves order&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Set Int -&gt; IO ()) -&gt; Spec) -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-123"></span><span>      </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679218639"><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679218639"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-124"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679218640"><span class="annot"><span class="annottext">sseq :: StrictSeq Int
+</span><a href="#local-6989586621679218640"><span class="hs-identifier hs-var hs-var">sseq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; StrictSeq Int
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">SSeq.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; StrictSeq Int) -&gt; [Int] -&gt; StrictSeq Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set Int -&gt; [Int]
+forall a. Set a -&gt; [a]
+</span><span class="hs-identifier hs-var">Set.elems</span></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679218639"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-125"></span><span>            </span><span id="local-6989586621679218646"><span class="annot"><span class="annottext">omap :: OMap Int Int
+</span><a href="#local-6989586621679218646"><span class="hs-identifier hs-var hs-var">omap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; OMap Int Int
+forall (f :: * -&gt; *) k v.
+(Foldable f, HasOKey k v) =&gt;
+f v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#fromFoldable"><span class="hs-identifier hs-var">fromFoldable</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679218640"><span class="hs-identifier hs-var">sseq</span></a></span><span>
+</span><span id="line-126"></span><span>        </span><span class="annot"><span class="annottext">OMap Int Int -&gt; StrictSeq Int
+forall k v. Ord k =&gt; OMap k v -&gt; StrictSeq v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#toStrictSeq"><span class="hs-identifier hs-var">toStrictSeq</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218646"><span class="hs-identifier hs-var">omap</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; StrictSeq Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679218640"><span class="hs-identifier hs-var">sseq</span></a></span><span>
+</span><span id="line-127"></span><span>        </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218646"><span class="hs-identifier hs-var">omap</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; (OMap Int Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Bool
+forall k v. Ord k =&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fromFoldableDuplicates preserves order&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;with duplicates&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Set Int -&gt; IO ()) -&gt; Spec) -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-130"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679218649"><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679218649"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-131"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679218650"><span class="annot"><span class="annottext">sseq :: StrictSeq Int
+</span><a href="#local-6989586621679218650"><span class="hs-identifier hs-var hs-var">sseq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; StrictSeq Int
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">SSeq.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; StrictSeq Int) -&gt; [Int] -&gt; StrictSeq Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set Int -&gt; [Int]
+forall a. Set a -&gt; [a]
+</span><span class="hs-identifier hs-var">Set.elems</span></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679218649"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-132"></span><span>              </span><span id="local-6989586621679218653"><span class="annot"><span class="annottext">omap :: OMap Int Int
+</span><a href="#local-6989586621679218653"><span class="hs-identifier hs-var hs-var">omap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; OMap Int Int
+forall (f :: * -&gt; *) k v.
+(Foldable f, HasOKey k v) =&gt;
+f v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#fromFoldable"><span class="hs-identifier hs-var">fromFoldable</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679218650"><span class="hs-identifier hs-var">sseq</span></a></span><span>
+</span><span id="line-133"></span><span>              </span><span id="local-6989586621679218657"><span class="annot"><span class="annottext">result :: (Set Int, OMap Int Int)
+</span><a href="#local-6989586621679218657"><span class="hs-identifier hs-var hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; (Set Int, OMap Int Int)
+forall (f :: * -&gt; *) k v.
+(Foldable f, HasOKey k v, Ord v) =&gt;
+f v -&gt; (Set v, OMap k v)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#fromFoldableDuplicates"><span class="hs-identifier hs-var">fromFoldableDuplicates</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679218650"><span class="hs-identifier hs-var">sseq</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; StrictSeq Int -&gt; StrictSeq Int
+forall a. StrictSeq a -&gt; StrictSeq a -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#%3E%3C"><span class="hs-operator hs-var">SSeq.&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679218650"><span class="hs-identifier hs-var">sseq</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>          </span><span class="annot"><span class="annottext">OMap Int Int -&gt; StrictSeq Int
+forall k v. Ord k =&gt; OMap k v -&gt; StrictSeq v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#toStrictSeq"><span class="hs-identifier hs-var">toStrictSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Set Int, OMap Int Int) -&gt; OMap Int Int
+forall a b. (a, b) -&gt; b
+</span><span class="hs-identifier hs-var">snd</span></span><span> </span><span class="annot"><span class="annottext">(Set Int, OMap Int Int)
+</span><a href="#local-6989586621679218657"><span class="hs-identifier hs-var">result</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; StrictSeq Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679218650"><span class="hs-identifier hs-var">sseq</span></a></span><span>
+</span><span id="line-135"></span><span>          </span><span class="annot"><span class="annottext">(Set Int, OMap Int Int)
+</span><a href="#local-6989586621679218657"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">(Set Int, OMap Int Int) -&gt; (Set Int, OMap Int Int) -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679218649"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218653"><span class="hs-identifier hs-var">omap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>          </span><span class="annot"><span class="annottext">(Set Int, OMap Int Int) -&gt; OMap Int Int
+forall a b. (a, b) -&gt; b
+</span><span class="hs-identifier hs-var">snd</span></span><span> </span><span class="annot"><span class="annottext">(Set Int, OMap Int Int)
+</span><a href="#local-6989586621679218657"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; (OMap Int Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Bool
+forall k v. Ord k =&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-137"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;without duplicates&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Set Int -&gt; IO ()) -&gt; Spec) -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-138"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679218660"><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679218660"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-139"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679218661"><span class="annot"><span class="annottext">sseq :: StrictSeq Int
+</span><a href="#local-6989586621679218661"><span class="hs-identifier hs-var hs-var">sseq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; StrictSeq Int
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">SSeq.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; StrictSeq Int) -&gt; [Int] -&gt; StrictSeq Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set Int -&gt; [Int]
+forall a. Set a -&gt; [a]
+</span><span class="hs-identifier hs-var">Set.elems</span></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679218660"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-140"></span><span>              </span><span id="local-6989586621679218664"><span class="annot"><span class="annottext">omap :: OMap Int Int
+</span><a href="#local-6989586621679218664"><span class="hs-identifier hs-var hs-var">omap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; OMap Int Int
+forall (f :: * -&gt; *) k v.
+(Foldable f, HasOKey k v) =&gt;
+f v -&gt; OMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#fromFoldable"><span class="hs-identifier hs-var">fromFoldable</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679218661"><span class="hs-identifier hs-var">sseq</span></a></span><span>
+</span><span id="line-141"></span><span>              </span><span id="local-6989586621679218668"><span class="annot"><span class="annottext">result :: (Set Int, OMap Int Int)
+</span><a href="#local-6989586621679218668"><span class="hs-identifier hs-var hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; (Set Int, OMap Int Int)
+forall (f :: * -&gt; *) k v.
+(Foldable f, HasOKey k v, Ord v) =&gt;
+f v -&gt; (Set v, OMap k v)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#fromFoldableDuplicates"><span class="hs-identifier hs-var">fromFoldableDuplicates</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679218661"><span class="hs-identifier hs-var">sseq</span></a></span><span>
+</span><span id="line-142"></span><span>          </span><span class="annot"><span class="annottext">OMap Int Int -&gt; StrictSeq Int
+forall k v. Ord k =&gt; OMap k v -&gt; StrictSeq v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#toStrictSeq"><span class="hs-identifier hs-var">toStrictSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Set Int, OMap Int Int) -&gt; OMap Int Int
+forall a b. (a, b) -&gt; b
+</span><span class="hs-identifier hs-var">snd</span></span><span> </span><span class="annot"><span class="annottext">(Set Int, OMap Int Int)
+</span><a href="#local-6989586621679218668"><span class="hs-identifier hs-var">result</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; StrictSeq Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679218661"><span class="hs-identifier hs-var">sseq</span></a></span><span>
+</span><span id="line-143"></span><span>          </span><span class="annot"><span class="annottext">(Set Int, OMap Int Int)
+</span><a href="#local-6989586621679218668"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">(Set Int, OMap Int Int) -&gt; (Set Int, OMap Int Int) -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set Int
+forall a. Set a
+</span><span class="hs-identifier hs-var">Set.empty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OMap Int Int
+</span><a href="#local-6989586621679218664"><span class="hs-identifier hs-var">omap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>          </span><span class="annot"><span class="annottext">(Set Int, OMap Int Int) -&gt; OMap Int Int
+forall a b. (a, b) -&gt; b
+</span><span class="hs-identifier hs-var">snd</span></span><span> </span><span class="annot"><span class="annottext">(Set Int, OMap Int Int)
+</span><a href="#local-6989586621679218668"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; (OMap Int Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OMap Int Int -&gt; Bool
+forall k v. Ord k =&gt; OMap k v -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CBOR round-trip&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><span class="annottext">forall t. (Show t, Eq t, Arbitrary t, EncCBOR t, DecCBOR t) =&gt; Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#roundTripCborSpec"><span class="hs-identifier hs-var">roundTripCborSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Typeclass laws&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; IO () -&gt; SpecM (Arg (IO ())) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Type&quot;</span></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; SpecM (Arg (IO ())) ())
+-&gt; IO () -&gt; SpecM (Arg (IO ())) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-149"></span><span>        </span><span class="annot"><span class="annottext">Proxy (OMap Int Int) -&gt; [Proxy (OMap Int Int) -&gt; Laws] -&gt; IO ()
+forall a. Proxy a -&gt; [Proxy a -&gt; Laws] -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Base.html#lawsCheckOne"><span class="hs-identifier hs-var">lawsCheckOne</span></a></span><span>
+</span><span id="line-150"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy (OMap Int Int)
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#OMap"><span class="hs-identifier hs-type">OMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Proxy (OMap Int Int) -&gt; Laws
+forall a. (Eq a, Arbitrary a, Show a) =&gt; Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Eq.html#eqLaws"><span class="hs-identifier hs-var">eqLaws</span></a></span><span>
+</span><span id="line-152"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy (OMap Int Int) -&gt; Laws
+forall a.
+(IsList a, Show a, Show (Item a), Arbitrary a, Arbitrary (Item a),
+ Eq a) =&gt;
+Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Base.IsList.html#isListLaws"><span class="hs-identifier hs-var">isListLaws</span></a></span><span>
+</span><span id="line-153"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy (OMap Int Int) -&gt; Laws
+forall a.
+(Semigroup a, Eq a, Arbitrary a, Show a) =&gt;
+Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Semigroup.html#semigroupLaws"><span class="hs-identifier hs-var">semigroupLaws</span></a></span><span>
+</span><span id="line-154"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy (OMap Int Int) -&gt; Laws
+forall a. (Monoid a, Eq a, Arbitrary a, Show a) =&gt; Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Monoid.html#monoidLaws"><span class="hs-identifier hs-var">monoidLaws</span></a></span><span>
+</span><span id="line-155"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy (OMap Int Int) -&gt; Laws
+forall a.
+(Semigroup a, Monoid a, Eq a, Arbitrary a, Show a) =&gt;
+Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Monoid.html#semigroupMonoidLaws"><span class="hs-identifier hs-var">semigroupMonoidLaws</span></a></span><span>
+</span><span id="line-156"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#HasOKey"><span class="hs-identifier hs-type">HasOKey</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621679218683"><span class="annot"><span class="annottext">okeyL :: Lens' Int Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#okeyL"><span class="hs-identifier hs-var hs-var hs-var hs-var">okeyL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; (Int -&gt; Int -&gt; Int) -&gt; Lens' Int Int
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="hs-keyword">data</span><span> </span><span id="OMapTest"><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-var">OMapTest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="OMapTest"><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-var">OMapTest</span></a></span></span><span> </span><span class="hs-special">{</span><span id="omFst"><span class="annot"><span class="annottext">OMapTest -&gt; Int
+</span><a href="Test.Cardano.Data.OMap.StrictSpec.html#omFst"><span class="hs-identifier hs-var hs-var">omFst</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span id="omSnd"><span class="annot"><span class="annottext">OMapTest -&gt; Int
+</span><a href="Test.Cardano.Data.OMap.StrictSpec.html#omSnd"><span class="hs-identifier hs-var hs-var">omSnd</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">}</span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679218687"><span id="local-6989586621679218691"><span class="annot"><span class="annottext">OMapTest -&gt; OMapTest -&gt; Bool
+(OMapTest -&gt; OMapTest -&gt; Bool)
+-&gt; (OMapTest -&gt; OMapTest -&gt; Bool) -&gt; Eq OMapTest
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: OMapTest -&gt; OMapTest -&gt; Bool
+== :: OMapTest -&gt; OMapTest -&gt; Bool
+$c/= :: OMapTest -&gt; OMapTest -&gt; Bool
+/= :: OMapTest -&gt; OMapTest -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679218695"><span id="local-6989586621679218700"><span id="local-6989586621679218703"><span class="annot"><span class="annottext">Int -&gt; OMapTest -&gt; ShowS
+[OMapTest] -&gt; ShowS
+OMapTest -&gt; String
+(Int -&gt; OMapTest -&gt; ShowS)
+-&gt; (OMapTest -&gt; String) -&gt; ([OMapTest] -&gt; ShowS) -&gt; Show OMapTest
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; OMapTest -&gt; ShowS
+showsPrec :: Int -&gt; OMapTest -&gt; ShowS
+$cshow :: OMapTest -&gt; String
+show :: OMapTest -&gt; String
+$cshowList :: [OMapTest] -&gt; ShowS
+showList :: [OMapTest] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679218709"><span id="local-6989586621679218713"><span id="local-6989586621679218717"><span id="local-6989586621679218720"><span id="local-6989586621679218723"><span id="local-6989586621679218726"><span id="local-6989586621679218729"><span class="annot"><span class="annottext">Eq OMapTest
+Eq OMapTest =&gt;
+(OMapTest -&gt; OMapTest -&gt; Ordering)
+-&gt; (OMapTest -&gt; OMapTest -&gt; Bool)
+-&gt; (OMapTest -&gt; OMapTest -&gt; Bool)
+-&gt; (OMapTest -&gt; OMapTest -&gt; Bool)
+-&gt; (OMapTest -&gt; OMapTest -&gt; Bool)
+-&gt; (OMapTest -&gt; OMapTest -&gt; OMapTest)
+-&gt; (OMapTest -&gt; OMapTest -&gt; OMapTest)
+-&gt; Ord OMapTest
+OMapTest -&gt; OMapTest -&gt; Bool
+OMapTest -&gt; OMapTest -&gt; Ordering
+OMapTest -&gt; OMapTest -&gt; OMapTest
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: OMapTest -&gt; OMapTest -&gt; Ordering
+compare :: OMapTest -&gt; OMapTest -&gt; Ordering
+$c&lt; :: OMapTest -&gt; OMapTest -&gt; Bool
+&lt; :: OMapTest -&gt; OMapTest -&gt; Bool
+$c&lt;= :: OMapTest -&gt; OMapTest -&gt; Bool
+&lt;= :: OMapTest -&gt; OMapTest -&gt; Bool
+$c&gt; :: OMapTest -&gt; OMapTest -&gt; Bool
+&gt; :: OMapTest -&gt; OMapTest -&gt; Bool
+$c&gt;= :: OMapTest -&gt; OMapTest -&gt; Bool
+&gt;= :: OMapTest -&gt; OMapTest -&gt; Bool
+$cmax :: OMapTest -&gt; OMapTest -&gt; OMapTest
+max :: OMapTest -&gt; OMapTest -&gt; OMapTest
+$cmin :: OMapTest -&gt; OMapTest -&gt; OMapTest
+min :: OMapTest -&gt; OMapTest -&gt; OMapTest
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#HasOKey"><span class="hs-identifier hs-type">HasOKey</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-type">OMapTest</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-165"></span><span>  </span><span id="local-6989586621679218737"><span class="annot"><span class="annottext">okeyL :: Lens' OMapTest Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OMap.Strict.html#okeyL"><span class="hs-identifier hs-var hs-var hs-var hs-var">okeyL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(OMapTest -&gt; Int)
+-&gt; (OMapTest -&gt; Int -&gt; OMapTest) -&gt; Lens' OMapTest Int
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">OMapTest -&gt; Int
+</span><a href="Test.Cardano.Data.OMap.StrictSpec.html#omFst"><span class="hs-identifier hs-var">omFst</span></a></span><span> </span><span class="annot"><span class="annottext">((OMapTest -&gt; Int -&gt; OMapTest) -&gt; Lens' OMapTest Int)
+-&gt; (OMapTest -&gt; Int -&gt; OMapTest) -&gt; Lens' OMapTest Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679218738"><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218738"><span class="hs-identifier hs-var">om</span></a></span></span><span> </span><span id="local-6989586621679218739"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679218739"><span class="hs-identifier hs-var">u</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OMapTest
+</span><a href="#local-6989586621679218738"><span class="hs-identifier hs-var">om</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#omFst"><span class="hs-identifier hs-var">omFst</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679218739"><span class="hs-identifier hs-type">u</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679218742"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-type">OMapTest</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-168"></span><span>  </span><span id="local-6989586621679218751"><span class="annot"><span class="annottext">arbitrary :: Gen OMapTest
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; OMapTest
+</span><a href="Test.Cardano.Data.OMap.StrictSpec.html#OMapTest"><span class="hs-identifier hs-var">OMapTest</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; OMapTest) -&gt; Gen Int -&gt; Gen (Int -&gt; OMapTest)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Int
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen (Int -&gt; OMapTest) -&gt; Gen Int -&gt; Gen OMapTest
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Int
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-169"></span></pre></body></html>

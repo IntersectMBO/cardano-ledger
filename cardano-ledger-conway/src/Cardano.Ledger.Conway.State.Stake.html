@@ -1,0 +1,718 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Conway.State.Stake</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier">ConwayInstantStake</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#conwayInstantStakeCredentialsL"><span class="hs-identifier">conwayInstantStakeCredentialsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#addConwayInstantStake"><span class="hs-identifier">addConwayInstantStake</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#deleteConwayInstantStake"><span class="hs-identifier">deleteConwayInstantStake</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#resolveConwayInstantStake"><span class="hs-identifier">resolveConwayInstantStake</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html"><span class="hs-identifier">Cardano.Ledger.Address</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#KeyValuePairs"><span class="hs-identifier">KeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ToKeyValuePairs"><span class="hs-identifier">ToKeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#DecShareCBOR"><span class="hs-identifier">DecShareCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#Interns"><span class="hs-identifier">Interns</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TokenType"><span class="hs-identifier">TokenType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#peekTokenType"><span class="hs-identifier">peekTokenType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier">CompactForm</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html"><span class="hs-identifier">Cardano.Ledger.Conway.Era</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Account.html"><span class="hs-identifier">Cardano.Ledger.Conway.State.Account</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.TxOut.html"><span class="hs-identifier">Cardano.Ledger.Conway.TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.html"><span class="hs-identifier">Cardano.Ledger.Shelley.State</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator">(.=)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Coerce</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.html"><span class="hs-identifier">Data.Default</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#Default"><span class="hs-identifier">Default</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html"><span class="hs-identifier">Data.VMap</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">VMap</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">newtype</span><span> </span><span id="ConwayInstantStake"><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-var">ConwayInstantStake</span></a></span></span><span> </span><span id="local-6989586621679624210"><span class="annot"><a href="#local-6989586621679624210"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ConwayInstantStake"><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-var">ConwayInstantStake</span></a></span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="cisCredentialStake"><span class="annot"><span class="annottext">forall era.
+ConwayInstantStake era
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#cisCredentialStake"><span class="hs-identifier hs-var hs-var">cisCredentialStake</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier hs-type">CompactForm</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679624427"><span id="local-6989586621679624429"><span class="annot"><span class="annottext">(forall x.
+ ConwayInstantStake era -&gt; Rep (ConwayInstantStake era) x)
+-&gt; (forall x.
+    Rep (ConwayInstantStake era) x -&gt; ConwayInstantStake era)
+-&gt; Generic (ConwayInstantStake era)
+forall x. Rep (ConwayInstantStake era) x -&gt; ConwayInstantStake era
+forall x. ConwayInstantStake era -&gt; Rep (ConwayInstantStake era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x.
+Rep (ConwayInstantStake era) x -&gt; ConwayInstantStake era
+forall era x.
+ConwayInstantStake era -&gt; Rep (ConwayInstantStake era) x
+$cfrom :: forall era x.
+ConwayInstantStake era -&gt; Rep (ConwayInstantStake era) x
+from :: forall x. ConwayInstantStake era -&gt; Rep (ConwayInstantStake era) x
+$cto :: forall era x.
+Rep (ConwayInstantStake era) x -&gt; ConwayInstantStake era
+to :: forall x. Rep (ConwayInstantStake era) x -&gt; ConwayInstantStake era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624433"><span id="local-6989586621679624441"><span id="local-6989586621679624445"><span class="annot"><span class="annottext">Int -&gt; ConwayInstantStake era -&gt; ShowS
+[ConwayInstantStake era] -&gt; ShowS
+ConwayInstantStake era -&gt; String
+(Int -&gt; ConwayInstantStake era -&gt; ShowS)
+-&gt; (ConwayInstantStake era -&gt; String)
+-&gt; ([ConwayInstantStake era] -&gt; ShowS)
+-&gt; Show (ConwayInstantStake era)
+forall era. Int -&gt; ConwayInstantStake era -&gt; ShowS
+forall era. [ConwayInstantStake era] -&gt; ShowS
+forall era. ConwayInstantStake era -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall era. Int -&gt; ConwayInstantStake era -&gt; ShowS
+showsPrec :: Int -&gt; ConwayInstantStake era -&gt; ShowS
+$cshow :: forall era. ConwayInstantStake era -&gt; String
+show :: ConwayInstantStake era -&gt; String
+$cshowList :: forall era. [ConwayInstantStake era] -&gt; ShowS
+showList :: [ConwayInstantStake era] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624451"><span id="local-6989586621679624458"><span class="annot"><span class="annottext">ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+(ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool)
+-&gt; (ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool)
+-&gt; Eq (ConwayInstantStake era)
+forall era.
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era.
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+== :: ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+$c/= :: forall era.
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+/= :: ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624470"><span id="local-6989586621679624477"><span id="local-6989586621679624483"><span id="local-6989586621679624489"><span id="local-6989586621679624495"><span id="local-6989586621679624501"><span id="local-6989586621679624507"><span class="annot"><span class="annottext">Eq (ConwayInstantStake era)
+Eq (ConwayInstantStake era) =&gt;
+(ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Ordering)
+-&gt; (ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool)
+-&gt; (ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool)
+-&gt; (ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool)
+-&gt; (ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool)
+-&gt; (ConwayInstantStake era
+    -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era)
+-&gt; (ConwayInstantStake era
+    -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era)
+-&gt; Ord (ConwayInstantStake era)
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Ordering
+ConwayInstantStake era
+-&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+forall era. Eq (ConwayInstantStake era)
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall era.
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+forall era.
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Ordering
+forall era.
+ConwayInstantStake era
+-&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+$ccompare :: forall era.
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Ordering
+compare :: ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Ordering
+$c&lt; :: forall era.
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+&lt; :: ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+$c&lt;= :: forall era.
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+&lt;= :: ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+$c&gt; :: forall era.
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+&gt; :: ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+$c&gt;= :: forall era.
+ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+&gt;= :: ConwayInstantStake era -&gt; ConwayInstantStake era -&gt; Bool
+$cmax :: forall era.
+ConwayInstantStake era
+-&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+max :: ConwayInstantStake era
+-&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+$cmin :: forall era.
+ConwayInstantStake era
+-&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+min :: ConwayInstantStake era
+-&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624521"><span id="local-6989586621679624531"><span id="local-6989586621679624540"><span class="annot"><span class="annottext">Typeable (ConwayInstantStake era)
+Typeable (ConwayInstantStake era) =&gt;
+(ConwayInstantStake era -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy (ConwayInstantStake era) -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [ConwayInstantStake era] -&gt; Size)
+-&gt; EncCBOR (ConwayInstantStake era)
+ConwayInstantStake era -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ConwayInstantStake era] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (ConwayInstantStake era) -&gt; Size
+forall era. Typeable era =&gt; Typeable (ConwayInstantStake era)
+forall era. Typeable era =&gt; ConwayInstantStake era -&gt; Encoding
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+forall era.
+Typeable era =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ConwayInstantStake era] -&gt; Size
+forall era.
+Typeable era =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (ConwayInstantStake era) -&gt; Size
+$cencCBOR :: forall era. Typeable era =&gt; ConwayInstantStake era -&gt; Encoding
+encCBOR :: ConwayInstantStake era -&gt; Encoding
+$cencodedSizeExpr :: forall era.
+Typeable era =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (ConwayInstantStake era) -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (ConwayInstantStake era) -&gt; Size
+$cencodedListSizeExpr :: forall era.
+Typeable era =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ConwayInstantStake era] -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ConwayInstantStake era] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624554"><span class="annot"><span class="annottext">ConwayInstantStake era -&gt; ()
+(ConwayInstantStake era -&gt; ()) -&gt; NFData (ConwayInstantStake era)
+forall era. ConwayInstantStake era -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: forall era. ConwayInstantStake era -&gt; ()
+rnf :: ConwayInstantStake era -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624565"><span id="local-6989586621679624572"><span id="local-6989586621679624578"><span class="annot"><span class="annottext">Context -&gt; ConwayInstantStake era -&gt; IO (Maybe ThunkInfo)
+Proxy (ConwayInstantStake era) -&gt; String
+(Context -&gt; ConwayInstantStake era -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; ConwayInstantStake era -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (ConwayInstantStake era) -&gt; String)
+-&gt; NoThunks (ConwayInstantStake era)
+forall era.
+Context -&gt; ConwayInstantStake era -&gt; IO (Maybe ThunkInfo)
+forall era. Proxy (ConwayInstantStake era) -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: forall era.
+Context -&gt; ConwayInstantStake era -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; ConwayInstantStake era -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall era.
+Context -&gt; ConwayInstantStake era -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; ConwayInstantStake era -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: forall era. Proxy (ConwayInstantStake era) -&gt; String
+showTypeOf :: Proxy (ConwayInstantStake era) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624588"><span class="annot"><span class="annottext">ConwayInstantStake era
+ConwayInstantStake era -&gt; Default (ConwayInstantStake era)
+forall era. ConwayInstantStake era
+forall a. a -&gt; Default a
+$cdef :: forall era. ConwayInstantStake era
+def :: ConwayInstantStake era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#Default"><span class="hs-identifier hs-var hs-var hs-var hs-var">Default</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679624598"><span id="local-6989586621679624604"><span id="local-6989586621679624609"><span class="annot"><span class="annottext">Semigroup (ConwayInstantStake era)
+ConwayInstantStake era
+Semigroup (ConwayInstantStake era) =&gt;
+ConwayInstantStake era
+-&gt; (ConwayInstantStake era
+    -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era)
+-&gt; ([ConwayInstantStake era] -&gt; ConwayInstantStake era)
+-&gt; Monoid (ConwayInstantStake era)
+[ConwayInstantStake era] -&gt; ConwayInstantStake era
+ConwayInstantStake era
+-&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+forall era. Semigroup (ConwayInstantStake era)
+forall era. ConwayInstantStake era
+forall a.
+Semigroup a =&gt;
+a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+forall era. [ConwayInstantStake era] -&gt; ConwayInstantStake era
+forall era.
+ConwayInstantStake era
+-&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+$cmempty :: forall era. ConwayInstantStake era
+mempty :: ConwayInstantStake era
+$cmappend :: forall era.
+ConwayInstantStake era
+-&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+mappend :: ConwayInstantStake era
+-&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+$cmconcat :: forall era. [ConwayInstantStake era] -&gt; ConwayInstantStake era
+mconcat :: [ConwayInstantStake era] -&gt; ConwayInstantStake era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679624616"><span id="local-6989586621679624622"><span id="local-6989586621679624627"><span id="local-6989586621679624632"><span id="local-6989586621679624637"><span class="annot"><span class="annottext">[ConwayInstantStake era] -&gt; Value
+[ConwayInstantStake era] -&gt; Encoding
+ConwayInstantStake era -&gt; Bool
+ConwayInstantStake era -&gt; Value
+ConwayInstantStake era -&gt; Encoding
+(ConwayInstantStake era -&gt; Value)
+-&gt; (ConwayInstantStake era -&gt; Encoding)
+-&gt; ([ConwayInstantStake era] -&gt; Value)
+-&gt; ([ConwayInstantStake era] -&gt; Encoding)
+-&gt; (ConwayInstantStake era -&gt; Bool)
+-&gt; ToJSON (ConwayInstantStake era)
+forall era. [ConwayInstantStake era] -&gt; Value
+forall era. [ConwayInstantStake era] -&gt; Encoding
+forall era. ConwayInstantStake era -&gt; Bool
+forall era. ConwayInstantStake era -&gt; Value
+forall era. ConwayInstantStake era -&gt; Encoding
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: forall era. ConwayInstantStake era -&gt; Value
+toJSON :: ConwayInstantStake era -&gt; Value
+$ctoEncoding :: forall era. ConwayInstantStake era -&gt; Encoding
+toEncoding :: ConwayInstantStake era -&gt; Encoding
+$ctoJSONList :: forall era. [ConwayInstantStake era] -&gt; Value
+toJSONList :: [ConwayInstantStake era] -&gt; Value
+$ctoEncodingList :: forall era. [ConwayInstantStake era] -&gt; Encoding
+toEncodingList :: [ConwayInstantStake era] -&gt; Encoding
+$comitField :: forall era. ConwayInstantStake era -&gt; Bool
+omitField :: ConwayInstantStake era -&gt; Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#KeyValuePairs"><span class="hs-identifier hs-type">KeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624210"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679624305"><span id="local-6989586621679624648"><span id="local-6989586621679624653"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#DecShareCBOR"><span class="hs-identifier hs-type">DecShareCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624305"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Share"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#Share"><span class="hs-identifier hs-var">Share</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624305"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#Interns"><span class="hs-identifier hs-type">Interns</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621679624677"><span class="annot"><span class="annottext">decShareCBOR :: forall s.
+Share (ConwayInstantStake era)
+-&gt; Decoder s (ConwayInstantStake era)
+</span><a href="#local-6989586621679624677"><span class="hs-identifier hs-var hs-var hs-var hs-var">decShareCBOR</span></a></span></span><span> </span><span id="local-6989586621679624679"><span class="annot"><span class="annottext">Share (ConwayInstantStake era)
+</span><a href="#local-6989586621679624679"><span class="hs-identifier hs-var">credInterns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">Decoder s TokenType
+forall s. Decoder s TokenType
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#peekTokenType"><span class="hs-identifier hs-var">peekTokenType</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s TokenType
+-&gt; (TokenType -&gt; Decoder s (ConwayInstantStake era))
+-&gt; Decoder s (ConwayInstantStake era)
+forall a b. Decoder s a -&gt; (a -&gt; Decoder s b) -&gt; Decoder s b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeListLen"><span class="hs-identifier hs-var">TypeListLen</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyInstantStake era -&gt; ConwayInstantStake era
+forall era. ShelleyInstantStake era -&gt; ConwayInstantStake era
+</span><a href="#local-6989586621679624681"><span class="hs-identifier hs-var">toConwayInstantStake</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyInstantStake era -&gt; ConwayInstantStake era)
+-&gt; Decoder s (ShelleyInstantStake era)
+-&gt; Decoder s (ConwayInstantStake era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Share (ShelleyInstantStake era)
+-&gt; Decoder s (ShelleyInstantStake era)
+forall a s. DecShareCBOR a =&gt; Share a -&gt; Decoder s a
+forall s.
+Share (ShelleyInstantStake era)
+-&gt; Decoder s (ShelleyInstantStake era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#decShareCBOR"><span class="hs-identifier hs-var">decShareCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Share (ShelleyInstantStake era)
+Share (ConwayInstantStake era)
+</span><a href="#local-6989586621679624679"><span class="hs-identifier hs-var">credInterns</span></a></span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeListLen64"><span class="hs-identifier hs-var">TypeListLen64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyInstantStake era -&gt; ConwayInstantStake era
+forall era. ShelleyInstantStake era -&gt; ConwayInstantStake era
+</span><a href="#local-6989586621679624681"><span class="hs-identifier hs-var">toConwayInstantStake</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyInstantStake era -&gt; ConwayInstantStake era)
+-&gt; Decoder s (ShelleyInstantStake era)
+-&gt; Decoder s (ConwayInstantStake era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Share (ShelleyInstantStake era)
+-&gt; Decoder s (ShelleyInstantStake era)
+forall a s. DecShareCBOR a =&gt; Share a -&gt; Decoder s a
+forall s.
+Share (ShelleyInstantStake era)
+-&gt; Decoder s (ShelleyInstantStake era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#decShareCBOR"><span class="hs-identifier hs-var">decShareCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Share (ShelleyInstantStake era)
+Share (ConwayInstantStake era)
+</span><a href="#local-6989586621679624679"><span class="hs-identifier hs-var">credInterns</span></a></span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeListLenIndef"><span class="hs-identifier hs-var">TypeListLenIndef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyInstantStake era -&gt; ConwayInstantStake era
+forall era. ShelleyInstantStake era -&gt; ConwayInstantStake era
+</span><a href="#local-6989586621679624681"><span class="hs-identifier hs-var">toConwayInstantStake</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyInstantStake era -&gt; ConwayInstantStake era)
+-&gt; Decoder s (ShelleyInstantStake era)
+-&gt; Decoder s (ConwayInstantStake era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Share (ShelleyInstantStake era)
+-&gt; Decoder s (ShelleyInstantStake era)
+forall a s. DecShareCBOR a =&gt; Share a -&gt; Decoder s a
+forall s.
+Share (ShelleyInstantStake era)
+-&gt; Decoder s (ShelleyInstantStake era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#decShareCBOR"><span class="hs-identifier hs-var">decShareCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Share (ShelleyInstantStake era)
+Share (ConwayInstantStake era)
+</span><a href="#local-6989586621679624679"><span class="hs-identifier hs-var">credInterns</span></a></span><span>
+</span><span id="line-62"></span><span>      </span><span class="annot"><span class="annottext">TokenType
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+-&gt; ConwayInstantStake era
+forall era.
+Map (Credential 'Staking) (CompactForm Coin)
+-&gt; ConwayInstantStake era
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-var">ConwayInstantStake</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'Staking) (CompactForm Coin)
+ -&gt; ConwayInstantStake era)
+-&gt; Decoder s (Map (Credential 'Staking) (CompactForm Coin))
+-&gt; Decoder s (ConwayInstantStake era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Share (Map (Credential 'Staking) (CompactForm Coin))
+-&gt; Decoder s (Map (Credential 'Staking) (CompactForm Coin))
+forall a s. DecShareCBOR a =&gt; Share a -&gt; Decoder s a
+forall s.
+Share (Map (Credential 'Staking) (CompactForm Coin))
+-&gt; Decoder s (Map (Credential 'Staking) (CompactForm Coin))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#decShareCBOR"><span class="hs-identifier hs-var">decShareCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Share (ConwayInstantStake era)
+Interns (Credential 'Staking)
+</span><a href="#local-6989586621679624679"><span class="hs-identifier hs-var">credInterns</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Interns (CompactForm Coin)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>      </span><span id="local-6989586621679624320"><span class="annot"><a href="#local-6989586621679624681"><span class="hs-identifier hs-type">toConwayInstantStake</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#ShelleyInstantStake"><span class="hs-identifier hs-type">ShelleyInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624320"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624320"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-65"></span><span>      </span><span id="local-6989586621679624681"><span class="annot"><span class="annottext">toConwayInstantStake :: forall era. ShelleyInstantStake era -&gt; ConwayInstantStake era
+</span><a href="#local-6989586621679624681"><span class="hs-identifier hs-var hs-var">toConwayInstantStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+-&gt; ConwayInstantStake era
+forall era.
+Map (Credential 'Staking) (CompactForm Coin)
+-&gt; ConwayInstantStake era
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-var">ConwayInstantStake</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'Staking) (CompactForm Coin)
+ -&gt; ConwayInstantStake era)
+-&gt; (ShelleyInstantStake era
+    -&gt; Map (Credential 'Staking) (CompactForm Coin))
+-&gt; ShelleyInstantStake era
+-&gt; ConwayInstantStake era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyInstantStake era
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+forall era.
+ShelleyInstantStake era
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#sisCredentialStake"><span class="hs-identifier hs-var">sisCredentialStake</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679624687"><span id="local-6989586621679624690"><span id="local-6989586621679624693"><span class="annot"><span class="hs-identifier hs-type">Semigroup</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624687"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span id="local-6989586621679624701"><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="#local-6989586621679624701"><span class="hs-identifier hs-var">cs1</span></a></span></span><span> </span><span id="local-6989586621679624702"><span class="annot"><span class="annottext">&lt;&gt; :: ConwayInstantStake era
+-&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+</span><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span id="local-6989586621679624703"><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="#local-6989586621679624703"><span class="hs-identifier hs-var">cs2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+-&gt; ConwayInstantStake era
+forall era.
+Map (Credential 'Staking) (CompactForm Coin)
+-&gt; ConwayInstantStake era
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-var">ConwayInstantStake</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin)
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.unionWith</span></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">(&lt;&gt;)</span></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="#local-6989586621679624701"><span class="hs-identifier hs-var">cs1</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="#local-6989586621679624703"><span class="hs-identifier hs-var">cs2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679624293"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ToKeyValuePairs"><span class="hs-identifier hs-type">ToKeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624293"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621679624717"><span class="annot"><span class="annottext">toKeyValuePairs :: forall e kv. KeyValue e kv =&gt; ConwayInstantStake era -&gt; [kv]
+</span><a href="#local-6989586621679624717"><span class="hs-identifier hs-var hs-var hs-var hs-var">toKeyValuePairs</span></a></span></span><span> </span><span id="local-6989586621679624719"><span class="annot"><span class="annottext">iStake :: ConwayInstantStake era
+</span><a href="#local-6989586621679624719"><span class="hs-identifier hs-var">iStake</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679624720"><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+cisCredentialStake :: forall era.
+ConwayInstantStake era
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+cisCredentialStake :: Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#cisCredentialStake"><span class="hs-glyph hs-var hs-var">..</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConwayInstantStake era
+</span><a href="#local-6989586621679624719"><span class="hs-identifier hs-var">iStake</span></a></span><span> </span><span class="hs-comment">-- guard against addition or removal of fields</span><span>
+</span><span id="line-74"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;credentials&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Map (Credential 'Staking) (CompactForm Coin) -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="#local-6989586621679624720"><span class="hs-identifier hs-var">cisCredentialStake</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Stake.html#EraStake"><span class="hs-identifier hs-type">EraStake</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="InstantStake"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-var">InstantStake</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span id="local-6989586621679624763"><span class="annot"><span class="annottext">instantStakeCredentialsL :: Lens'
+  (InstantStake ConwayEra)
+  (Map (Credential 'Staking) (CompactForm Coin))
+</span><a href="#local-6989586621679624763"><span class="hs-identifier hs-var hs-var hs-var hs-var">instantStakeCredentialsL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'Staking) (CompactForm Coin)
+ -&gt; f (Map (Credential 'Staking) (CompactForm Coin)))
+-&gt; InstantStake ConwayEra -&gt; f (InstantStake ConwayEra)
+(Map (Credential 'Staking) (CompactForm Coin)
+ -&gt; f (Map (Credential 'Staking) (CompactForm Coin)))
+-&gt; ConwayInstantStake ConwayEra -&gt; f (ConwayInstantStake ConwayEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Map (Credential 'Staking) (CompactForm Coin)
+ -&gt; f (Map (Credential 'Staking) (CompactForm Coin)))
+-&gt; ConwayInstantStake era -&gt; f (ConwayInstantStake era)
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#conwayInstantStakeCredentialsL"><span class="hs-identifier hs-var">conwayInstantStakeCredentialsL</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679624767"><span class="annot"><span class="annottext">addInstantStake :: UTxO ConwayEra -&gt; InstantStake ConwayEra -&gt; InstantStake ConwayEra
+</span><a href="#local-6989586621679624767"><span class="hs-identifier hs-var hs-var hs-var hs-var">addInstantStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO ConwayEra -&gt; InstantStake ConwayEra -&gt; InstantStake ConwayEra
+UTxO ConwayEra
+-&gt; ConwayInstantStake ConwayEra -&gt; ConwayInstantStake ConwayEra
+forall era.
+EraTxOut era =&gt;
+UTxO era -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#addConwayInstantStake"><span class="hs-identifier hs-var">addConwayInstantStake</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679624770"><span class="annot"><span class="annottext">deleteInstantStake :: UTxO ConwayEra -&gt; InstantStake ConwayEra -&gt; InstantStake ConwayEra
+</span><a href="#local-6989586621679624770"><span class="hs-identifier hs-var hs-var hs-var hs-var">deleteInstantStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO ConwayEra -&gt; InstantStake ConwayEra -&gt; InstantStake ConwayEra
+UTxO ConwayEra
+-&gt; ConwayInstantStake ConwayEra -&gt; ConwayInstantStake ConwayEra
+forall era.
+EraTxOut era =&gt;
+UTxO era -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#deleteConwayInstantStake"><span class="hs-identifier hs-var">deleteConwayInstantStake</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679624774"><span class="annot"><span class="annottext">resolveInstantStake :: InstantStake ConwayEra -&gt; Accounts ConwayEra -&gt; Stake
+</span><a href="#local-6989586621679624774"><span class="hs-identifier hs-var hs-var hs-var hs-var">resolveInstantStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InstantStake ConwayEra -&gt; Accounts ConwayEra -&gt; Stake
+ConwayInstantStake ConwayEra -&gt; Accounts ConwayEra -&gt; Stake
+forall era.
+(EraStake era, InstantStake era ~ ConwayInstantStake era) =&gt;
+ConwayInstantStake era -&gt; Accounts era -&gt; Stake
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#resolveConwayInstantStake"><span class="hs-identifier hs-var">resolveConwayInstantStake</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span id="local-6989586621679624361"><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#conwayInstantStakeCredentialsL"><span class="hs-identifier hs-type">conwayInstantStakeCredentialsL</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier hs-type">Lens'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624361"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier hs-type">CompactForm</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-85"></span><span id="conwayInstantStakeCredentialsL"><span class="annot"><span class="annottext">conwayInstantStakeCredentialsL :: forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Map (Credential 'Staking) (CompactForm Coin)
+ -&gt; f (Map (Credential 'Staking) (CompactForm Coin)))
+-&gt; ConwayInstantStake era -&gt; f (ConwayInstantStake era)
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#conwayInstantStakeCredentialsL"><span class="hs-identifier hs-var hs-var">conwayInstantStakeCredentialsL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ConwayInstantStake era
+ -&gt; Map (Credential 'Staking) (CompactForm Coin))
+-&gt; (ConwayInstantStake era
+    -&gt; Map (Credential 'Staking) (CompactForm Coin)
+    -&gt; ConwayInstantStake era)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (Map (Credential 'Staking) (CompactForm Coin)
+    -&gt; f (Map (Credential 'Staking) (CompactForm Coin)))
+   -&gt; ConwayInstantStake era -&gt; f (ConwayInstantStake era)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayInstantStake era
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+forall era.
+ConwayInstantStake era
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#cisCredentialStake"><span class="hs-identifier hs-var">cisCredentialStake</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayInstantStake era
+  -&gt; Map (Credential 'Staking) (CompactForm Coin)
+  -&gt; ConwayInstantStake era)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (Map (Credential 'Staking) (CompactForm Coin)
+     -&gt; f (Map (Credential 'Staking) (CompactForm Coin)))
+    -&gt; ConwayInstantStake era -&gt; f (ConwayInstantStake era))
+-&gt; (ConwayInstantStake era
+    -&gt; Map (Credential 'Staking) (CompactForm Coin)
+    -&gt; ConwayInstantStake era)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (Map (Credential 'Staking) (CompactForm Coin)
+    -&gt; f (Map (Credential 'Staking) (CompactForm Coin)))
+   -&gt; ConwayInstantStake era -&gt; f (ConwayInstantStake era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679624779"><span class="annot"><span class="annottext">ConwayInstantStake era
+</span><a href="#local-6989586621679624779"><span class="hs-identifier hs-var">is</span></a></span></span><span> </span><span id="local-6989586621679624780"><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="#local-6989586621679624780"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ConwayInstantStake era
+</span><a href="#local-6989586621679624779"><span class="hs-identifier hs-var">is</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#cisCredentialStake"><span class="hs-identifier hs-var">cisCredentialStake</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679624780"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span id="local-6989586621679624363"><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#addConwayInstantStake"><span class="hs-identifier hs-type">addConwayInstantStake</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxOut"><span class="hs-identifier hs-type">EraTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624363"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624363"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624363"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624363"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-89"></span><span id="addConwayInstantStake"><span class="annot"><span class="annottext">addConwayInstantStake :: forall era.
+EraTxOut era =&gt;
+UTxO era -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#addConwayInstantStake"><span class="hs-identifier hs-var hs-var">addConwayInstantStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin)
+-&gt; UTxO era -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+forall era.
+EraTxOut era =&gt;
+(CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin)
+-&gt; UTxO era -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#applyUTxOConwayInstantStake"><span class="hs-identifier hs-var">applyUTxOConwayInstantStake</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Word64 -&gt; Word64 -&gt; Word64)
+-&gt; CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">(+)</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span id="local-6989586621679624788"><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#deleteConwayInstantStake"><span class="hs-identifier hs-type">deleteConwayInstantStake</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxOut"><span class="hs-identifier hs-type">EraTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624788"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624788"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624788"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624788"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-93"></span><span id="deleteConwayInstantStake"><span class="annot"><span class="annottext">deleteConwayInstantStake :: forall era.
+EraTxOut era =&gt;
+UTxO era -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#deleteConwayInstantStake"><span class="hs-identifier hs-var hs-var">deleteConwayInstantStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin)
+-&gt; UTxO era -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+forall era.
+EraTxOut era =&gt;
+(CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin)
+-&gt; UTxO era -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#applyUTxOConwayInstantStake"><span class="hs-identifier hs-var">applyUTxOConwayInstantStake</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Word64 -&gt; Word64 -&gt; Word64)
+-&gt; CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span id="local-6989586621679624377"><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#applyUTxOConwayInstantStake"><span class="hs-identifier hs-type">applyUTxOConwayInstantStake</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxOut"><span class="hs-identifier hs-type">EraTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624377"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier hs-type">CompactForm</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier hs-type">CompactForm</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier hs-type">CompactForm</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624377"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624377"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624377"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-101"></span><span id="applyUTxOConwayInstantStake"><span class="annot"><span class="annottext">applyUTxOConwayInstantStake :: forall era.
+EraTxOut era =&gt;
+(CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin)
+-&gt; UTxO era -&gt; ConwayInstantStake era -&gt; ConwayInstantStake era
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#applyUTxOConwayInstantStake"><span class="hs-identifier hs-var hs-var">applyUTxOConwayInstantStake</span></a></span></span><span> </span><span id="local-6989586621679624807"><span class="annot"><span class="annottext">CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin
+</span><a href="#local-6989586621679624807"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span id="local-6989586621679624809"><span class="annot"><span class="annottext">Map TxIn (TxOut era)
+</span><a href="#local-6989586621679624809"><span class="hs-identifier hs-var">u</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679624810"><span class="annot"><span class="annottext">ConwayInstantStake era
+</span><a href="#local-6989586621679624810"><span class="hs-identifier hs-var">instantInstantStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><span class="annottext">(ConwayInstantStake era -&gt; TxOut era -&gt; ConwayInstantStake era)
+-&gt; ConwayInstantStake era
+-&gt; Map TxIn (TxOut era)
+-&gt; ConwayInstantStake era
+forall a b k. (a -&gt; b -&gt; a) -&gt; a -&gt; Map k b -&gt; a
+</span><span class="hs-identifier hs-var">Map.foldl'</span></span><span> </span><span class="annot"><span class="annottext">ConwayInstantStake era -&gt; TxOut era -&gt; ConwayInstantStake era
+</span><a href="#local-6989586621679624812"><span class="hs-identifier hs-var">accum</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayInstantStake era
+</span><a href="#local-6989586621679624810"><span class="hs-identifier hs-var">instantInstantStake</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut era)
+</span><a href="#local-6989586621679624809"><span class="hs-identifier hs-var">u</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>    </span><span id="local-6989586621679624813"><span class="annot"><span class="annottext">keepOrDeleteCompact :: CompactForm Coin
+-&gt; Maybe (CompactForm Coin) -&gt; Maybe (CompactForm Coin)
+</span><a href="#local-6989586621679624813"><span class="hs-identifier hs-var hs-var">keepOrDeleteCompact</span></a></span></span><span> </span><span id="local-6989586621679624814"><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679624814"><span class="hs-identifier hs-var">new</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-105"></span><span>      </span><span class="annot"><span class="annottext">Maybe (CompactForm Coin)
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-106"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679624814"><span class="hs-identifier hs-var">new</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-107"></span><span>          </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#CompactCoin"><span class="hs-identifier hs-type">CompactCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (CompactForm Coin)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-108"></span><span>          </span><span id="local-6989586621679624816"><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679624816"><span class="hs-identifier hs-var">final</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">CompactForm Coin -&gt; Maybe (CompactForm Coin)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679624816"><span class="hs-identifier hs-var">final</span></a></span><span>
+</span><span id="line-109"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679624817"><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679624817"><span class="hs-identifier hs-var">old</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-110"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679624817"><span class="hs-identifier hs-var">old</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin
+</span><a href="#local-6989586621679624807"><span class="hs-operator hs-var">`f`</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679624814"><span class="hs-identifier hs-var">new</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-111"></span><span>          </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#CompactCoin"><span class="hs-identifier hs-type">CompactCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (CompactForm Coin)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-112"></span><span>          </span><span id="local-6989586621679624818"><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679624818"><span class="hs-identifier hs-var">final</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">CompactForm Coin -&gt; Maybe (CompactForm Coin)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679624818"><span class="hs-identifier hs-var">final</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span id="local-6989586621679624812"><span class="annot"><span class="annottext">accum :: ConwayInstantStake era -&gt; TxOut era -&gt; ConwayInstantStake era
+</span><a href="#local-6989586621679624812"><span class="hs-identifier hs-var hs-var">accum</span></a></span></span><span> </span><span id="local-6989586621679624819"><span class="annot"><span class="annottext">ans :: ConwayInstantStake era
+</span><a href="#local-6989586621679624819"><span class="hs-identifier hs-var">ans</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679624820"><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+cisCredentialStake :: forall era.
+ConwayInstantStake era
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+cisCredentialStake :: Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#cisCredentialStake"><span class="hs-identifier hs-var hs-var">cisCredentialStake</span></a></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679624821"><span class="annot"><span class="annottext">TxOut era
+</span><a href="#local-6989586621679624821"><span class="hs-identifier hs-var">out</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-114"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679624822"><span class="annot"><span class="annottext">cc :: CompactForm Coin
+</span><a href="#local-6989586621679624822"><span class="hs-identifier hs-var hs-var">cc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxOut era
+</span><a href="#local-6989586621679624821"><span class="hs-identifier hs-var">out</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut era
+-&gt; Getting (CompactForm Coin) (TxOut era) (CompactForm Coin)
+-&gt; CompactForm Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (CompactForm Coin) (TxOut era) (CompactForm Coin)
+forall era.
+(HasCallStack, EraTxOut era) =&gt;
+Lens' (TxOut era) (CompactForm Coin)
+Lens' (TxOut era) (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#compactCoinTxOutL"><span class="hs-identifier hs-var">compactCoinTxOutL</span></a></span><span>
+</span><span id="line-115"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TxOut era
+</span><a href="#local-6989586621679624821"><span class="hs-identifier hs-var">out</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut era -&gt; Getting Addr (TxOut era) Addr -&gt; Addr
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Addr (TxOut era) Addr
+forall era. EraTxOut era =&gt; Lens' (TxOut era) Addr
+Lens' (TxOut era) Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#addrTxOutL"><span class="hs-identifier hs-var">addrTxOutL</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-116"></span><span>            </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefBase"><span class="hs-identifier hs-type">StakeRefBase</span></a></span><span> </span><span id="local-6989586621679624828"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679624828"><span class="hs-identifier hs-var">stakingKeyHash</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-117"></span><span>              </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span>
+</span><span id="line-118"></span><span>                </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">cisCredentialStake :: Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#cisCredentialStake"><span class="hs-identifier hs-var">cisCredentialStake</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Maybe (CompactForm Coin) -&gt; Maybe (CompactForm Coin))
+-&gt; Credential 'Staking
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+forall k a.
+Ord k =&gt;
+(Maybe a -&gt; Maybe a) -&gt; k -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.alter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CompactForm Coin
+-&gt; Maybe (CompactForm Coin) -&gt; Maybe (CompactForm Coin)
+</span><a href="#local-6989586621679624813"><span class="hs-identifier hs-var">keepOrDeleteCompact</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679624822"><span class="hs-identifier hs-var">cc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679624828"><span class="hs-identifier hs-var">stakingKeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="#local-6989586621679624820"><span class="hs-identifier hs-var">cisCredentialStake</span></a></span><span>
+</span><span id="line-119"></span><span>                </span><span class="hs-special">}</span><span>
+</span><span id="line-120"></span><span>            </span><span id="local-6989586621679624830"><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679624830"><span class="hs-identifier hs-var">_other</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ConwayInstantStake era
+</span><a href="#local-6989586621679624819"><span class="hs-identifier hs-var">ans</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- The invariant in `InstantStake` is that stake is never zero.</span><span>
+</span><span id="line-123"></span><span id="local-6989586621679624364"><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#resolveConwayInstantStake"><span class="hs-identifier hs-type">resolveConwayInstantStake</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Stake.html#EraStake"><span class="hs-identifier hs-type">EraStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624364"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624364"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624364"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#ConwayInstantStake"><span class="hs-identifier hs-type">ConwayInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624364"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#Accounts"><span class="hs-identifier hs-type">Accounts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624364"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-127"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#Stake"><span class="hs-identifier hs-type">Stake</span></a></span></span><span>
+</span><span id="line-128"></span><span id="resolveConwayInstantStake"><span class="annot"><span class="annottext">resolveConwayInstantStake :: forall era.
+(EraStake era, InstantStake era ~ ConwayInstantStake era) =&gt;
+ConwayInstantStake era -&gt; Accounts era -&gt; Stake
+</span><a href="Cardano.Ledger.Conway.State.Stake.html#resolveConwayInstantStake"><span class="hs-identifier hs-var hs-var">resolveConwayInstantStake</span></a></span></span><span> </span><span id="local-6989586621679624841"><span class="annot"><span class="annottext">ConwayInstantStake era
+</span><a href="#local-6989586621679624841"><span class="hs-identifier hs-var">instantStake</span></a></span></span><span> </span><span id="local-6989586621679624842"><span class="annot"><span class="annottext">Accounts era
+</span><a href="#local-6989586621679624842"><span class="hs-identifier hs-var">accounts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><span class="annottext">VMap VB VP (Credential 'Staking) (CompactForm Coin) -&gt; Stake
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#Stake"><span class="hs-identifier hs-var">Stake</span></a></span><span> </span><span class="annot"><span class="annottext">(VMap VB VP (Credential 'Staking) (CompactForm Coin) -&gt; Stake)
+-&gt; VMap VB VP (Credential 'Staking) (CompactForm Coin) -&gt; Stake
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin)
+-&gt; VMap VB VP (Credential 'Staking) (CompactForm Coin)
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+Map k v -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromMap"><span class="hs-identifier hs-var">VMap.fromMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'Staking) (CompactForm Coin)
+ -&gt; VMap VB VP (Credential 'Staking) (CompactForm Coin))
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+-&gt; VMap VB VP (Credential 'Staking) (CompactForm Coin)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">InstantStake era
+-&gt; Accounts era -&gt; Map (Credential 'Staking) (CompactForm Coin)
+forall era.
+EraStake era =&gt;
+InstantStake era
+-&gt; Accounts era -&gt; Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Stake.html#resolveActiveInstantStakeCredentials"><span class="hs-identifier hs-var">resolveActiveInstantStakeCredentials</span></a></span><span> </span><span class="annot"><span class="annottext">InstantStake era
+ConwayInstantStake era
+</span><a href="#local-6989586621679624841"><span class="hs-identifier hs-var">instantStake</span></a></span><span> </span><span class="annot"><span class="annottext">Accounts era
+</span><a href="#local-6989586621679624842"><span class="hs-identifier hs-var">accounts</span></a></span><span>
+</span><span id="line-130"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.State.Stake.html#resolveConwayInstantStake"><span class="hs-pragma hs-type">resolveConwayInstantStake</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-131"></span></pre></body></html>

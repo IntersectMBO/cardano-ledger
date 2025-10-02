@@ -1,0 +1,460 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html"><span class="hs-identifier">Cardano.Ledger.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier">Addr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.html"><span class="hs-identifier">Cardano.Ledger.Alonzo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier">AlonzoEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Core.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Core</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier">EraTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxBody"><span class="hs-identifier">EraTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxOut"><span class="hs-identifier">EraTxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Plutus.Context</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#EraPlutusTxInfo"><span class="hs-identifier">EraPlutusTxInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#LedgerTxInfo"><span class="hs-identifier">LedgerTxInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.html"><span class="hs-identifier">Cardano.Ledger.Plutus</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SLanguage"><span class="hs-identifier">SLanguage</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SSeq</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(&amp;)</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator">(.~)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-mtl-0.2.1.0-0d9d0bb15333296047ba4b93a576c67cb2d2f407b8b7ffd0ab1ce8097b524420/share/doc/html/src/Lens.Micro.Mtl.html"><span class="hs-identifier">Lens.Micro.Mtl</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-mtl-0.2.1.0-0d9d0bb15333296047ba4b93a576c67cb2d2f407b8b7ffd0ab1ce8097b524420/share/doc/html/src/Lens.Micro.Mtl.html#use"><span class="hs-identifier">use</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/l/testlib/doc/html/cardano-ledger-alonzo/src/Test.Cardano.Ledger.Alonzo.ImpTest.html"><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.ImpTest</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Imp.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Imp.Common</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-25"></span><span id="spec"><span class="annot"><span class="annottext">spec :: Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall t. ImpSpec t =&gt; SpecWith (ImpInit t) -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Internal.html#withImpInit"><span class="hs-identifier hs-var">withImpInit</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#LedgerSpec"><span class="hs-identifier hs-type">LedgerSpec</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(SpecWith (ImpInit (LedgerSpec AlonzoEra)) -&gt; Spec)
+-&gt; SpecWith (ImpInit (LedgerSpec AlonzoEra)) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String
+-&gt; SpecWith (ImpInit (LedgerSpec AlonzoEra))
+-&gt; SpecWith (ImpInit (LedgerSpec AlonzoEra))
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;TxInfo&quot;</span></span><span> </span><span class="annot"><span class="annottext">(SpecWith (ImpInit (LedgerSpec AlonzoEra))
+ -&gt; SpecWith (ImpInit (LedgerSpec AlonzoEra)))
+-&gt; SpecWith (ImpInit (LedgerSpec AlonzoEra))
+-&gt; SpecWith (ImpInit (LedgerSpec AlonzoEra))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><span class="annottext">String
+-&gt; SpecWith (ImpInit (LedgerSpec AlonzoEra))
+-&gt; SpecWith (ImpInit (LedgerSpec AlonzoEra))
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;PlutusV1&quot;</span></span><span> </span><span class="annot"><span class="annottext">(SpecWith (ImpInit (LedgerSpec AlonzoEra))
+ -&gt; SpecWith (ImpInit (LedgerSpec AlonzoEra)))
+-&gt; SpecWith (ImpInit (LedgerSpec AlonzoEra))
+-&gt; SpecWith (ImpInit (LedgerSpec AlonzoEra))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">String
+-&gt; ImpM (LedgerSpec AlonzoEra) ()
+-&gt; SpecWith (Arg (ImpM (LedgerSpec AlonzoEra) ()))
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;toPlutusTxInfo does not fail when Byron scripts are present in TxOuts&quot;</span></span><span> </span><span class="annot"><span class="annottext">(ImpM (LedgerSpec AlonzoEra) ()
+ -&gt; SpecWith (Arg (ImpM (LedgerSpec AlonzoEra) ())))
+-&gt; ImpM (LedgerSpec AlonzoEra) ()
+-&gt; SpecWith (Arg (ImpM (LedgerSpec AlonzoEra) ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-28"></span><span>      </span><span id="local-6989586621679196718"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679196718"><span class="hs-identifier hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ImpTestM AlonzoEra ProtVer
+forall era. EraGov era =&gt; ImpTestM era ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#getProtVer"><span class="hs-identifier hs-var">getProtVer</span></a></span><span>
+</span><span id="line-29"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Globals"><span class="hs-identifier hs-type">Globals</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679196721"><span class="annot"><span class="annottext">EpochInfo (Either Text)
+epochInfo :: EpochInfo (Either Text)
+epochInfo :: Globals -&gt; EpochInfo (Either Text)
+</span><a href="#local-6989586621679196721"><span class="hs-identifier hs-var hs-var">epochInfo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679196723"><span class="annot"><span class="annottext">SystemStart
+systemStart :: SystemStart
+systemStart :: Globals -&gt; SystemStart
+</span><a href="#local-6989586621679196723"><span class="hs-identifier hs-var hs-var">systemStart</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Getting Globals (ImpTestState AlonzoEra) Globals
+-&gt; ImpM (LedgerSpec AlonzoEra) Globals
+forall s (m :: * -&gt; *) a. MonadState s m =&gt; Getting a s a -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-mtl-0.2.1.0-0d9d0bb15333296047ba4b93a576c67cb2d2f407b8b7ffd0ab1ce8097b524420/share/doc/html/src/Lens.Micro.Mtl.html#use"><span class="hs-identifier hs-var">use</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Globals (ImpTestState AlonzoEra) Globals
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Globals -&gt; f Globals) -&gt; ImpTestState era -&gt; f (ImpTestState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#impGlobalsL"><span class="hs-identifier hs-var">impGlobalsL</span></a></span><span>
+</span><span id="line-30"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyHash 'Payment
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679196726"><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679196726"><span class="hs-identifier hs-var">shelleyAddr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ImpM (LedgerSpec AlonzoEra) (KeyHash 'Payment, Addr)
+forall s (m :: * -&gt; *) g.
+(HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) =&gt;
+m (KeyHash 'Payment, Addr)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#freshKeyAddr"><span class="hs-identifier hs-var">freshKeyAddr</span></a></span><span>
+</span><span id="line-31"></span><span>      </span><span id="local-6989586621679196728"><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679196728"><span class="hs-identifier hs-var">byronAddr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BootstrapAddress -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#AddrBootstrap"><span class="hs-identifier hs-var">AddrBootstrap</span></a></span><span> </span><span class="annot"><span class="annottext">(BootstrapAddress -&gt; Addr)
+-&gt; ImpM (LedgerSpec AlonzoEra) BootstrapAddress
+-&gt; ImpM (LedgerSpec AlonzoEra) Addr
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">ImpM (LedgerSpec AlonzoEra) BootstrapAddress
+forall s (m :: * -&gt; *) g.
+(HasKeyPairs s, MonadState s m, HasStatefulGen g m) =&gt;
+m BootstrapAddress
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#freshBootstapAddress"><span class="hs-identifier hs-var">freshBootstapAddress</span></a></span><span>
+</span><span id="line-32"></span><span>      </span><span id="local-6989586621679196732"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679196732"><span class="hs-identifier hs-var">shelleyTxIn</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Coin -&gt; ImpTestM AlonzoEra TxIn
+forall era.
+(ShelleyEraImp era, HasCallStack) =&gt;
+Addr -&gt; Coin -&gt; ImpTestM era TxIn
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#sendCoinTo"><span class="hs-identifier hs-var">sendCoinTo</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679196726"><span class="hs-identifier hs-var">shelleyAddr</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-33"></span><span>      </span><span id="local-6989586621679196734"><span class="annot"><span class="annottext">UTxO AlonzoEra
+</span><a href="#local-6989586621679196734"><span class="hs-identifier hs-var">utxo</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ImpTestM AlonzoEra (UTxO AlonzoEra)
+forall era. ImpTestM era (UTxO era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#getUTxO"><span class="hs-identifier hs-var">getUTxO</span></a></span><span>
+</span><span id="line-34"></span><span>      </span><span class="hs-keyword">let</span><span>
+</span><span id="line-35"></span><span>        </span><span id="local-6989586621679196917"><span class="annot"><span class="annottext">byronTxOut :: TxOut AlonzoEra
+</span><a href="#local-6989586621679196917"><span class="hs-identifier hs-var hs-var">byronTxOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Value AlonzoEra -&gt; TxOut AlonzoEra
+forall era.
+(EraTxOut era, HasCallStack) =&gt;
+Addr -&gt; Value era -&gt; TxOut era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxOut"><span class="hs-identifier hs-var">mkBasicTxOut</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679196728"><span class="hs-identifier hs-var">byronAddr</span></a></span><span> </span><span class="annot"><span class="annottext">(Value AlonzoEra -&gt; TxOut AlonzoEra)
+-&gt; (Coin -&gt; Value AlonzoEra) -&gt; Coin -&gt; TxOut AlonzoEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Value AlonzoEra
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">inject</span></a></span><span> </span><span class="annot"><span class="annottext">(Coin -&gt; TxOut AlonzoEra) -&gt; Coin -&gt; TxOut AlonzoEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-36"></span><span>        </span><span id="local-6989586621679196935"><span class="annot"><span class="annottext">tx :: Tx AlonzoEra
+</span><a href="#local-6989586621679196935"><span class="hs-identifier hs-var hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-37"></span><span>          </span><span class="annot"><span class="annottext">forall era. EraTx era =&gt; TxBody era -&gt; Tx era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTx"><span class="hs-identifier hs-var">mkBasicTx</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody AlonzoEra
+forall era. EraTxBody era =&gt; TxBody era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxBody"><span class="hs-identifier hs-var">mkBasicTxBody</span></a></span><span>
+</span><span id="line-38"></span><span>            </span><span class="annot"><span class="annottext">Tx AlonzoEra -&gt; (Tx AlonzoEra -&gt; Tx AlonzoEra) -&gt; Tx AlonzoEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+-&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx AlonzoEra) (TxBody AlonzoEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">bodyTxL</span></a></span><span>
+</span><span id="line-39"></span><span>              </span><span class="annot"><span class="annottext">((TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+ -&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra))
+-&gt; ((Set TxIn -&gt; Identity (Set TxIn))
+    -&gt; TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+-&gt; (Set TxIn -&gt; Identity (Set TxIn))
+-&gt; Tx AlonzoEra
+-&gt; Identity (Tx AlonzoEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Set TxIn -&gt; Identity (Set TxIn))
+-&gt; TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra)
+forall era. EraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody AlonzoEra) (Set TxIn)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#inputsTxBodyL"><span class="hs-identifier hs-var">inputsTxBodyL</span></a></span><span>
+</span><span id="line-40"></span><span>              </span><span class="annot"><span class="annottext">((Set TxIn -&gt; Identity (Set TxIn))
+ -&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra))
+-&gt; Set TxIn -&gt; Tx AlonzoEra -&gt; Tx AlonzoEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Set TxIn
+forall a. a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.singleton</span></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679196732"><span class="hs-identifier hs-var">shelleyTxIn</span></a></span><span>
+</span><span id="line-41"></span><span>            </span><span class="annot"><span class="annottext">Tx AlonzoEra -&gt; (Tx AlonzoEra -&gt; Tx AlonzoEra) -&gt; Tx AlonzoEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+-&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx AlonzoEra) (TxBody AlonzoEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">bodyTxL</span></a></span><span>
+</span><span id="line-42"></span><span>              </span><span class="annot"><span class="annottext">((TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+ -&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra))
+-&gt; ((StrictSeq (AlonzoTxOut AlonzoEra)
+     -&gt; Identity (StrictSeq (AlonzoTxOut AlonzoEra)))
+    -&gt; TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+-&gt; (StrictSeq (AlonzoTxOut AlonzoEra)
+    -&gt; Identity (StrictSeq (AlonzoTxOut AlonzoEra)))
+-&gt; Tx AlonzoEra
+-&gt; Identity (Tx AlonzoEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (TxOut AlonzoEra)
+ -&gt; Identity (StrictSeq (TxOut AlonzoEra)))
+-&gt; TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra)
+(StrictSeq (AlonzoTxOut AlonzoEra)
+ -&gt; Identity (StrictSeq (AlonzoTxOut AlonzoEra)))
+-&gt; TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra)
+forall era.
+EraTxBody era =&gt;
+Lens' (TxBody era) (StrictSeq (TxOut era))
+Lens' (TxBody AlonzoEra) (StrictSeq (TxOut AlonzoEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#outputsTxBodyL"><span class="hs-identifier hs-var">outputsTxBodyL</span></a></span><span>
+</span><span id="line-43"></span><span>              </span><span class="annot"><span class="annottext">((StrictSeq (AlonzoTxOut AlonzoEra)
+  -&gt; Identity (StrictSeq (AlonzoTxOut AlonzoEra)))
+ -&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra))
+-&gt; StrictSeq (AlonzoTxOut AlonzoEra)
+-&gt; Tx AlonzoEra
+-&gt; Tx AlonzoEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoTxOut AlonzoEra -&gt; StrictSeq (AlonzoTxOut AlonzoEra)
+forall a. a -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#singleton"><span class="hs-identifier hs-var">SSeq.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut AlonzoEra
+AlonzoTxOut AlonzoEra
+</span><a href="#local-6989586621679196917"><span class="hs-identifier hs-var">byronTxOut</span></a></span><span>
+</span><span id="line-44"></span><span>        </span><span id="local-6989586621679196943"><span class="annot"><span class="annottext">lti :: LedgerTxInfo AlonzoEra
+</span><a href="#local-6989586621679196943"><span class="hs-identifier hs-var hs-var">lti</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-45"></span><span>          </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#LedgerTxInfo"><span class="hs-identifier hs-type">LedgerTxInfo</span></a></span><span>
+</span><span id="line-46"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ltiProtVer :: ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#ltiProtVer"><span class="hs-identifier hs-var">ltiProtVer</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679196718"><span class="hs-identifier hs-var">pv</span></a></span><span>
+</span><span id="line-47"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ltiEpochInfo :: EpochInfo (Either Text)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#ltiEpochInfo"><span class="hs-identifier hs-var">ltiEpochInfo</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochInfo (Either Text)
+</span><a href="#local-6989586621679196721"><span class="hs-identifier hs-var">epochInfo</span></a></span><span>
+</span><span id="line-48"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ltiSystemStart :: SystemStart
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#ltiSystemStart"><span class="hs-identifier hs-var">ltiSystemStart</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SystemStart
+</span><a href="#local-6989586621679196723"><span class="hs-identifier hs-var">systemStart</span></a></span><span>
+</span><span id="line-49"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ltiUTxO :: UTxO AlonzoEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#ltiUTxO"><span class="hs-identifier hs-var">ltiUTxO</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO AlonzoEra
+</span><a href="#local-6989586621679196734"><span class="hs-identifier hs-var">utxo</span></a></span><span>
+</span><span id="line-50"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ltiTx :: Tx AlonzoEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#ltiTx"><span class="hs-identifier hs-var">ltiTx</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx AlonzoEra
+</span><a href="#local-6989586621679196935"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-51"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">ImpM (LedgerSpec AlonzoEra) TxInfo
+-&gt; ImpM (LedgerSpec AlonzoEra) ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><span class="hs-identifier hs-var">void</span></span><span> </span><span class="annot"><span class="annottext">(ImpM (LedgerSpec AlonzoEra) TxInfo
+ -&gt; ImpM (LedgerSpec AlonzoEra) ())
+-&gt; ImpM (LedgerSpec AlonzoEra) TxInfo
+-&gt; ImpM (LedgerSpec AlonzoEra) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Either (AlonzoContextError AlonzoEra) TxInfo
+-&gt; ImpM (LedgerSpec AlonzoEra) TxInfo
+forall a (m :: * -&gt; *) b.
+(HasCallStack, Show a, MonadIO m) =&gt;
+Either a b -&gt; m b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Expectations.Lifted.html#expectRight"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">(Either (AlonzoContextError AlonzoEra) TxInfo
+ -&gt; ImpM (LedgerSpec AlonzoEra) TxInfo)
+-&gt; Either (AlonzoContextError AlonzoEra) TxInfo
+-&gt; ImpM (LedgerSpec AlonzoEra) TxInfo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">SLanguage 'PlutusV1
+-&gt; LedgerTxInfo AlonzoEra
+-&gt; Either (ContextError AlonzoEra) (PlutusTxInfo 'PlutusV1)
+forall (l :: Language) era (proxy :: Language -&gt; *).
+EraPlutusTxInfo l era =&gt;
+proxy l
+-&gt; LedgerTxInfo era -&gt; Either (ContextError era) (PlutusTxInfo l)
+forall (proxy :: Language -&gt; *).
+proxy 'PlutusV1
+-&gt; LedgerTxInfo AlonzoEra
+-&gt; Either (ContextError AlonzoEra) (PlutusTxInfo 'PlutusV1)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#toPlutusTxInfo"><span class="hs-identifier hs-var">toPlutusTxInfo</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage 'PlutusV1
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SPlutusV1"><span class="hs-identifier hs-var">SPlutusV1</span></a></span><span> </span><span class="annot"><span class="annottext">LedgerTxInfo AlonzoEra
+</span><a href="#local-6989586621679196943"><span class="hs-identifier hs-var">lti</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="annottext">String
+-&gt; ImpM (LedgerSpec AlonzoEra) ()
+-&gt; SpecWith (Arg (ImpM (LedgerSpec AlonzoEra) ()))
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;toPlutusTxInfo does not fail when Byron scripts are present in TxIns&quot;</span></span><span> </span><span class="annot"><span class="annottext">(ImpM (LedgerSpec AlonzoEra) ()
+ -&gt; SpecWith (Arg (ImpM (LedgerSpec AlonzoEra) ())))
+-&gt; ImpM (LedgerSpec AlonzoEra) ()
+-&gt; SpecWith (Arg (ImpM (LedgerSpec AlonzoEra) ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-54"></span><span>      </span><span id="local-6989586621679196954"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679196954"><span class="hs-identifier hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ImpTestM AlonzoEra ProtVer
+forall era. EraGov era =&gt; ImpTestM era ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#getProtVer"><span class="hs-identifier hs-var">getProtVer</span></a></span><span>
+</span><span id="line-55"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Globals"><span class="hs-identifier hs-type">Globals</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679196955"><span class="annot"><span class="annottext">EpochInfo (Either Text)
+epochInfo :: Globals -&gt; EpochInfo (Either Text)
+epochInfo :: EpochInfo (Either Text)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#epochInfo"><span class="hs-identifier hs-var hs-var">epochInfo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679196956"><span class="annot"><span class="annottext">SystemStart
+systemStart :: Globals -&gt; SystemStart
+systemStart :: SystemStart
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#systemStart"><span class="hs-identifier hs-var hs-var">systemStart</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Getting Globals (ImpTestState AlonzoEra) Globals
+-&gt; ImpM (LedgerSpec AlonzoEra) Globals
+forall s (m :: * -&gt; *) a. MonadState s m =&gt; Getting a s a -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-mtl-0.2.1.0-0d9d0bb15333296047ba4b93a576c67cb2d2f407b8b7ffd0ab1ce8097b524420/share/doc/html/src/Lens.Micro.Mtl.html#use"><span class="hs-identifier hs-var">use</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Globals (ImpTestState AlonzoEra) Globals
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Globals -&gt; f Globals) -&gt; ImpTestState era -&gt; f (ImpTestState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#impGlobalsL"><span class="hs-identifier hs-var">impGlobalsL</span></a></span><span>
+</span><span id="line-56"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyHash 'Payment
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679196957"><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679196957"><span class="hs-identifier hs-var">shelleyAddr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ImpM (LedgerSpec AlonzoEra) (KeyHash 'Payment, Addr)
+forall s (m :: * -&gt; *) g.
+(HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) =&gt;
+m (KeyHash 'Payment, Addr)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#freshKeyAddr"><span class="hs-identifier hs-var">freshKeyAddr</span></a></span><span>
+</span><span id="line-57"></span><span>      </span><span id="local-6989586621679196958"><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679196958"><span class="hs-identifier hs-var">byronAddr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BootstrapAddress -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#AddrBootstrap"><span class="hs-identifier hs-var">AddrBootstrap</span></a></span><span> </span><span class="annot"><span class="annottext">(BootstrapAddress -&gt; Addr)
+-&gt; ImpM (LedgerSpec AlonzoEra) BootstrapAddress
+-&gt; ImpM (LedgerSpec AlonzoEra) Addr
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">ImpM (LedgerSpec AlonzoEra) BootstrapAddress
+forall s (m :: * -&gt; *) g.
+(HasKeyPairs s, MonadState s m, HasStatefulGen g m) =&gt;
+m BootstrapAddress
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#freshBootstapAddress"><span class="hs-identifier hs-var">freshBootstapAddress</span></a></span><span>
+</span><span id="line-58"></span><span>      </span><span id="local-6989586621679196959"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679196959"><span class="hs-identifier hs-var">byronTxIn</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Coin -&gt; ImpTestM AlonzoEra TxIn
+forall era.
+(ShelleyEraImp era, HasCallStack) =&gt;
+Addr -&gt; Coin -&gt; ImpTestM era TxIn
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#sendCoinTo"><span class="hs-identifier hs-var">sendCoinTo</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679196958"><span class="hs-identifier hs-var">byronAddr</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-59"></span><span>      </span><span id="local-6989586621679196960"><span class="annot"><span class="annottext">UTxO AlonzoEra
+</span><a href="#local-6989586621679196960"><span class="hs-identifier hs-var">utxo</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ImpTestM AlonzoEra (UTxO AlonzoEra)
+forall era. ImpTestM era (UTxO era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#getUTxO"><span class="hs-identifier hs-var">getUTxO</span></a></span><span>
+</span><span id="line-60"></span><span>      </span><span class="hs-keyword">let</span><span>
+</span><span id="line-61"></span><span>        </span><span id="local-6989586621679197098"><span class="annot"><span class="annottext">shelleyTxOut :: TxOut AlonzoEra
+</span><a href="#local-6989586621679197098"><span class="hs-identifier hs-var hs-var">shelleyTxOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Value AlonzoEra -&gt; TxOut AlonzoEra
+forall era.
+(EraTxOut era, HasCallStack) =&gt;
+Addr -&gt; Value era -&gt; TxOut era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxOut"><span class="hs-identifier hs-var">mkBasicTxOut</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679196957"><span class="hs-identifier hs-var">shelleyAddr</span></a></span><span> </span><span class="annot"><span class="annottext">(Value AlonzoEra -&gt; TxOut AlonzoEra)
+-&gt; (Coin -&gt; Value AlonzoEra) -&gt; Coin -&gt; TxOut AlonzoEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Value AlonzoEra
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">inject</span></a></span><span> </span><span class="annot"><span class="annottext">(Coin -&gt; TxOut AlonzoEra) -&gt; Coin -&gt; TxOut AlonzoEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-62"></span><span>        </span><span id="local-6989586621679197109"><span class="annot"><span class="annottext">tx :: Tx AlonzoEra
+</span><a href="#local-6989586621679197109"><span class="hs-identifier hs-var hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-63"></span><span>          </span><span class="annot"><span class="annottext">forall era. EraTx era =&gt; TxBody era -&gt; Tx era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTx"><span class="hs-identifier hs-var">mkBasicTx</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody AlonzoEra
+forall era. EraTxBody era =&gt; TxBody era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxBody"><span class="hs-identifier hs-var">mkBasicTxBody</span></a></span><span>
+</span><span id="line-64"></span><span>            </span><span class="annot"><span class="annottext">Tx AlonzoEra -&gt; (Tx AlonzoEra -&gt; Tx AlonzoEra) -&gt; Tx AlonzoEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+-&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx AlonzoEra) (TxBody AlonzoEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">bodyTxL</span></a></span><span>
+</span><span id="line-65"></span><span>              </span><span class="annot"><span class="annottext">((TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+ -&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra))
+-&gt; ((Set TxIn -&gt; Identity (Set TxIn))
+    -&gt; TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+-&gt; (Set TxIn -&gt; Identity (Set TxIn))
+-&gt; Tx AlonzoEra
+-&gt; Identity (Tx AlonzoEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Set TxIn -&gt; Identity (Set TxIn))
+-&gt; TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra)
+forall era. EraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody AlonzoEra) (Set TxIn)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#inputsTxBodyL"><span class="hs-identifier hs-var">inputsTxBodyL</span></a></span><span>
+</span><span id="line-66"></span><span>              </span><span class="annot"><span class="annottext">((Set TxIn -&gt; Identity (Set TxIn))
+ -&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra))
+-&gt; Set TxIn -&gt; Tx AlonzoEra -&gt; Tx AlonzoEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Set TxIn
+forall a. a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.singleton</span></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679196959"><span class="hs-identifier hs-var">byronTxIn</span></a></span><span>
+</span><span id="line-67"></span><span>            </span><span class="annot"><span class="annottext">Tx AlonzoEra -&gt; (Tx AlonzoEra -&gt; Tx AlonzoEra) -&gt; Tx AlonzoEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+-&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx AlonzoEra) (TxBody AlonzoEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">bodyTxL</span></a></span><span>
+</span><span id="line-68"></span><span>              </span><span class="annot"><span class="annottext">((TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+ -&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra))
+-&gt; ((StrictSeq (AlonzoTxOut AlonzoEra)
+     -&gt; Identity (StrictSeq (AlonzoTxOut AlonzoEra)))
+    -&gt; TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra))
+-&gt; (StrictSeq (AlonzoTxOut AlonzoEra)
+    -&gt; Identity (StrictSeq (AlonzoTxOut AlonzoEra)))
+-&gt; Tx AlonzoEra
+-&gt; Identity (Tx AlonzoEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (TxOut AlonzoEra)
+ -&gt; Identity (StrictSeq (TxOut AlonzoEra)))
+-&gt; TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra)
+(StrictSeq (AlonzoTxOut AlonzoEra)
+ -&gt; Identity (StrictSeq (AlonzoTxOut AlonzoEra)))
+-&gt; TxBody AlonzoEra -&gt; Identity (TxBody AlonzoEra)
+forall era.
+EraTxBody era =&gt;
+Lens' (TxBody era) (StrictSeq (TxOut era))
+Lens' (TxBody AlonzoEra) (StrictSeq (TxOut AlonzoEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#outputsTxBodyL"><span class="hs-identifier hs-var">outputsTxBodyL</span></a></span><span>
+</span><span id="line-69"></span><span>              </span><span class="annot"><span class="annottext">((StrictSeq (AlonzoTxOut AlonzoEra)
+  -&gt; Identity (StrictSeq (AlonzoTxOut AlonzoEra)))
+ -&gt; Tx AlonzoEra -&gt; Identity (Tx AlonzoEra))
+-&gt; StrictSeq (AlonzoTxOut AlonzoEra)
+-&gt; Tx AlonzoEra
+-&gt; Tx AlonzoEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoTxOut AlonzoEra -&gt; StrictSeq (AlonzoTxOut AlonzoEra)
+forall a. a -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#singleton"><span class="hs-identifier hs-var">SSeq.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut AlonzoEra
+AlonzoTxOut AlonzoEra
+</span><a href="#local-6989586621679197098"><span class="hs-identifier hs-var">shelleyTxOut</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span id="local-6989586621679197110"><span class="annot"><span class="annottext">lti :: LedgerTxInfo AlonzoEra
+</span><a href="#local-6989586621679197110"><span class="hs-identifier hs-var hs-var">lti</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>          </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#LedgerTxInfo"><span class="hs-identifier hs-type">LedgerTxInfo</span></a></span><span>
+</span><span id="line-72"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ltiProtVer :: ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#ltiProtVer"><span class="hs-identifier hs-var">ltiProtVer</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679196954"><span class="hs-identifier hs-var">pv</span></a></span><span>
+</span><span id="line-73"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ltiEpochInfo :: EpochInfo (Either Text)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#ltiEpochInfo"><span class="hs-identifier hs-var">ltiEpochInfo</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochInfo (Either Text)
+</span><a href="#local-6989586621679196955"><span class="hs-identifier hs-var">epochInfo</span></a></span><span>
+</span><span id="line-74"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ltiSystemStart :: SystemStart
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#ltiSystemStart"><span class="hs-identifier hs-var">ltiSystemStart</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SystemStart
+</span><a href="#local-6989586621679196956"><span class="hs-identifier hs-var">systemStart</span></a></span><span>
+</span><span id="line-75"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ltiUTxO :: UTxO AlonzoEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#ltiUTxO"><span class="hs-identifier hs-var">ltiUTxO</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO AlonzoEra
+</span><a href="#local-6989586621679196960"><span class="hs-identifier hs-var">utxo</span></a></span><span>
+</span><span id="line-76"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ltiTx :: Tx AlonzoEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#ltiTx"><span class="hs-identifier hs-var">ltiTx</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx AlonzoEra
+</span><a href="#local-6989586621679197109"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-77"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">ImpM (LedgerSpec AlonzoEra) TxInfo
+-&gt; ImpM (LedgerSpec AlonzoEra) ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><span class="hs-identifier hs-var">void</span></span><span> </span><span class="annot"><span class="annottext">(ImpM (LedgerSpec AlonzoEra) TxInfo
+ -&gt; ImpM (LedgerSpec AlonzoEra) ())
+-&gt; ImpM (LedgerSpec AlonzoEra) TxInfo
+-&gt; ImpM (LedgerSpec AlonzoEra) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Either (AlonzoContextError AlonzoEra) TxInfo
+-&gt; ImpM (LedgerSpec AlonzoEra) TxInfo
+forall a (m :: * -&gt; *) b.
+(HasCallStack, Show a, MonadIO m) =&gt;
+Either a b -&gt; m b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Expectations.Lifted.html#expectRight"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">(Either (AlonzoContextError AlonzoEra) TxInfo
+ -&gt; ImpM (LedgerSpec AlonzoEra) TxInfo)
+-&gt; Either (AlonzoContextError AlonzoEra) TxInfo
+-&gt; ImpM (LedgerSpec AlonzoEra) TxInfo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">SLanguage 'PlutusV1
+-&gt; LedgerTxInfo AlonzoEra
+-&gt; Either (ContextError AlonzoEra) (PlutusTxInfo 'PlutusV1)
+forall (l :: Language) era (proxy :: Language -&gt; *).
+EraPlutusTxInfo l era =&gt;
+proxy l
+-&gt; LedgerTxInfo era -&gt; Either (ContextError era) (PlutusTxInfo l)
+forall (proxy :: Language -&gt; *).
+proxy 'PlutusV1
+-&gt; LedgerTxInfo AlonzoEra
+-&gt; Either (ContextError AlonzoEra) (PlutusTxInfo 'PlutusV1)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#toPlutusTxInfo"><span class="hs-identifier hs-var">toPlutusTxInfo</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage 'PlutusV1
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SPlutusV1"><span class="hs-identifier hs-var">SPlutusV1</span></a></span><span> </span><span class="annot"><span class="annottext">LedgerTxInfo AlonzoEra
+</span><a href="#local-6989586621679197110"><span class="hs-identifier hs-var">lti</span></a></span><span>
+</span><span id="line-79"></span></pre></body></html>

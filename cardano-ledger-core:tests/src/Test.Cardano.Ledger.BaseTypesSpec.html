@@ -1,0 +1,423 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.BaseTypesSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.BaseTypesSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Either</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/genvalidity-1.1.1.0-e4bdda86e46bf928accdb611748e281771c131d7c89cc6ac3fb4d95bb53c7487/share/doc/html/src/Data.GenValidity.html"><span class="hs-identifier">Data.GenValidity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/genvalidity-1.1.1.0-e4bdda86e46bf928accdb611748e281771c131d7c89cc6ac3fb4d95bb53c7487/share/doc/html/src/Data.GenValidity.html#GenValid"><span class="hs-identifier">GenValid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/genvalidity-1.1.1.0-e4bdda86e46bf928accdb611748e281771c131d7c89cc6ac3fb4d95bb53c7487/share/doc/html/src/Data.GenValidity.html#genValid"><span class="hs-identifier">genValid</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/genvalidity-scientific-1.0.0.0-24ddc5f99cf618a0e5b1bc5c11a00a3064bb2419a56554c3cb3952c25b88d856/share/doc/html/src/Data.GenValidity.Scientific.html"><span class="hs-identifier">Data.GenValidity.Scientific</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/scientific-0.3.8.0-5f850c777594318470c53a2050ab57cb8900a456ca5a9e00fd1403e4733337d0/share/doc/html/src/Data.Scientific.html"><span class="hs-identifier">Data.Scientific</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Typeable</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.RoundTrip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#roundTripCborExpectation"><span class="hs-identifier">roundTripCborExpectation</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Core.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="annot"><a href="Test.Cardano.Ledger.BaseTypesSpec.html#boundedRationalTests"><span class="hs-identifier hs-type">boundedRationalTests</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679160250"><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BoundedRational"><span class="hs-identifier hs-type">BoundedRational</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/genvalidity-1.1.1.0-e4bdda86e46bf928accdb611748e281771c131d7c89cc6ac3fb4d95bb53c7487/share/doc/html/src/Data.GenValidity.html#GenValid"><span class="hs-identifier hs-type">GenValid</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-35"></span><span id="boundedRationalTests"><span class="annot"><span class="annottext">boundedRationalTests :: forall a.
+(BoundedRational a, ToJSON a, FromJSON a, EncCBOR a, DecCBOR a,
+ Arbitrary a, GenValid a, Show a, Ord a) =&gt;
+[(String, ByteString)] -&gt; Spec
+</span><a href="Test.Cardano.Ledger.BaseTypesSpec.html#boundedRationalTests"><span class="hs-identifier hs-var hs-var">boundedRationalTests</span></a></span></span><span> </span><span id="local-6989586621679160565"><span class="annot"><span class="annottext">[(String, ByteString)]
+</span><a href="#local-6989586621679160565"><span class="hs-identifier hs-var">badJSONValues</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TypeRep -&gt; ShowS
+</span><span class="hs-identifier hs-var">showsTypeRep</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy a -&gt; TypeRep
+forall {k} (proxy :: k -&gt; *) (a :: k).
+Typeable a =&gt;
+proxy a -&gt; TypeRep
+</span><span class="hs-identifier hs-var">typeRep</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy a
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Rational roundtrip&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (a -&gt; Property) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;(boundRational . unboundRational)&quot;</span></span><span> </span><span class="annot"><span class="annottext">((a -&gt; Property) -&gt; Spec) -&gt; (a -&gt; Property) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679160571"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160571"><span class="hs-identifier hs-var">bi</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-39"></span><span>        </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160571"><span class="hs-identifier hs-var">bi</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; Maybe a -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Maybe a
+forall r. BoundedRational r =&gt; Rational -&gt; Maybe r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#boundRational"><span class="hs-identifier hs-var">boundRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160571"><span class="hs-identifier hs-var">bi</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;(unboundRational . boundRational)&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Spec) -&gt; Property -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-41"></span><span>        </span><span class="annot"><span class="annottext">Gen Rational -&gt; (Rational -&gt; Property) -&gt; Property
+forall a prop.
+(Show a, Testable prop) =&gt;
+Gen a -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Gen Rational
+forall a. GenValid a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/genvalidity-1.1.1.0-e4bdda86e46bf928accdb611748e281771c131d7c89cc6ac3fb4d95bb53c7487/share/doc/html/src/Data.GenValidity.html#genValid"><span class="hs-identifier hs-var">genValid</span></a></span><span> </span><span class="annot"><span class="annottext">((Rational -&gt; Property) -&gt; Property)
+-&gt; (Rational -&gt; Property) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679160576"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679160576"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-42"></span><span>          </span><span class="annot"><span class="annottext">Property -&gt; (a -&gt; Property) -&gt; Maybe a -&gt; Property
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><span class="hs-identifier hs-var">maybe</span></span><span>
+</span><span id="line-43"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Property
+forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>            </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679160576"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Property) -&gt; (a -&gt; Rational) -&gt; a -&gt; Property
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; Maybe a
+forall r. BoundedRational r =&gt; Rational -&gt; Maybe r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#boundRational"><span class="hs-identifier hs-var">boundRational</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679160576"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;bounding produces valid values within bounds&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Spec) -&gt; Property -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-47"></span><span>        </span><span class="annot"><span class="annottext">Gen Rational -&gt; (Rational -&gt; Property) -&gt; Property
+forall a prop.
+(Show a, Testable prop) =&gt;
+Gen a -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Gen Rational
+forall a. GenValid a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/genvalidity-1.1.1.0-e4bdda86e46bf928accdb611748e281771c131d7c89cc6ac3fb4d95bb53c7487/share/doc/html/src/Data.GenValidity.html#genValid"><span class="hs-identifier hs-var">genValid</span></a></span><span> </span><span class="annot"><span class="annottext">((Rational -&gt; Property) -&gt; Property)
+-&gt; (Rational -&gt; Property) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679160580"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679160580"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-48"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Maybe a
+forall r. BoundedRational r =&gt; Rational -&gt; Maybe r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#boundRational"><span class="hs-identifier hs-var">boundRational</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679160580"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-49"></span><span>            </span><span class="annot"><span class="annottext">Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Property
+forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-50"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679160581"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160581"><span class="hs-identifier hs-var">br</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-51"></span><span>              </span><span class="annot"><span class="annottext">[Bool] -&gt; Property
+forall prop. Testable prop =&gt; [prop] -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#conjoin"><span class="hs-identifier hs-var">conjoin</span></a></span><span>
+</span><span id="line-52"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">a
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">minBound</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160581"><span class="hs-identifier hs-var">br</span></a></span><span>
+</span><span id="line-53"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160581"><span class="hs-identifier hs-var">br</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">a
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span>
+</span><span id="line-54"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">minBound</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679160580"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-55"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679160580"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;JSON&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ToJSON/FromJSON roundtrip&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Spec) -&gt; Property -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-59"></span><span>        </span><span class="annot"><span class="annottext">Gen a -&gt; (a -&gt; Property) -&gt; Property
+forall a prop.
+(Show a, Testable prop) =&gt;
+Gen a -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Gen a
+forall a. GenValid a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/genvalidity-1.1.1.0-e4bdda86e46bf928accdb611748e281771c131d7c89cc6ac3fb4d95bb53c7487/share/doc/html/src/Data.GenValidity.html#genValid"><span class="hs-identifier hs-var">genValid</span></a></span><span> </span><span class="annot"><span class="annottext">((a -&gt; Property) -&gt; Property) -&gt; (a -&gt; Property) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679160586"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160586"><span class="hs-identifier hs-var">br</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-60"></span><span>          </span><span class="annot"><span class="annottext">Int -&gt; Property -&gt; Property
+forall prop. Testable prop =&gt; Int -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#within"><span class="hs-identifier hs-var">within</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">500000</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Property) -&gt; Property -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-61"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either String a
+</span><a href="#local-6989586621679160588"><span class="hs-identifier hs-var">boundedFromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160586"><span class="hs-identifier hs-var">br</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-62"></span><span>              </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679160590"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679160590"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Property
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679160590"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-63"></span><span>              </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679160592"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160592"><span class="hs-identifier hs-var">br'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160586"><span class="hs-identifier hs-var">br</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160592"><span class="hs-identifier hs-var">br'</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Roundtrip from valid Scientific and back exactly&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Spec) -&gt; Property -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-65"></span><span>        </span><span class="annot"><span class="annottext">Int -&gt; Property -&gt; Property
+forall prop. Testable prop =&gt; Int -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#within"><span class="hs-identifier hs-var">within</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">500000</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Property) -&gt; Property -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-66"></span><span>          </span><span class="annot"><span class="annottext">Gen Scientific -&gt; (Scientific -&gt; Property) -&gt; Property
+forall a prop.
+(Show a, Testable prop) =&gt;
+Gen a -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Gen Scientific
+forall a. GenValid a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/genvalidity-1.1.1.0-e4bdda86e46bf928accdb611748e281771c131d7c89cc6ac3fb4d95bb53c7487/share/doc/html/src/Data.GenValidity.html#genValid"><span class="hs-identifier hs-var">genValid</span></a></span><span> </span><span class="annot"><span class="annottext">((Scientific -&gt; Property) -&gt; Property)
+-&gt; (Scientific -&gt; Property) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679160593"><span class="annot"><span class="annottext">Scientific
+</span><a href="#local-6989586621679160593"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/scientific-0.3.8.0-5f850c777594318470c53a2050ab57cb8900a456ca5a9e00fd1403e4733337d0/share/doc/html/src/Data.Scientific.html#Scientific"><span class="hs-identifier hs-type">Scientific</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-67"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either String a
+</span><a href="#local-6989586621679160588"><span class="hs-identifier hs-var">boundedFromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Scientific -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific
+</span><a href="#local-6989586621679160593"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-68"></span><span>              </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679160594"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160594"><span class="hs-identifier hs-var">ui</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Scientific
+</span><a href="#local-6989586621679160593"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Scientific -&gt; Scientific -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Scientific
+forall a. Fractional a =&gt; Rational -&gt; a
+</span><span class="hs-identifier hs-var">fromRational</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160594"><span class="hs-identifier hs-var">ui</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>              </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Property
+forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-70"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Bad Values&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Check divergence&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Spec) -&gt; Property -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-72"></span><span>          </span><span class="annot"><span class="annottext">Int -&gt; Expectation -&gt; Property
+forall prop. Testable prop =&gt; Int -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#within"><span class="hs-identifier hs-var">within</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">500000</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; Property) -&gt; Expectation -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-73"></span><span>            </span><span class="annot"><span class="annottext">ByteString -&gt; Either String a
+</span><a href="#local-6989586621679160588"><span class="hs-identifier hs-var">boundedFromJSON</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;10e1234567893456&quot;</span></span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; (Either String a -&gt; Bool) -&gt; Expectation
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; Bool
+forall a b. Either a b -&gt; Bool
+</span><span class="hs-identifier hs-var">isLeft</span></span><span>
+</span><span id="line-74"></span><span>        </span><span class="annot"><span class="annottext">[(String, ByteString)] -&gt; ((String, ByteString) -&gt; Spec) -&gt; Spec
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><span class="hs-identifier hs-var">forM_</span></span><span> </span><span class="annot"><span class="annottext">[(String, ByteString)]
+</span><a href="#local-6989586621679160565"><span class="hs-identifier hs-var">badJSONValues</span></a></span><span> </span><span class="annot"><span class="annottext">(((String, ByteString) -&gt; Spec) -&gt; Spec)
+-&gt; ((String, ByteString) -&gt; Spec) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679160598"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679160598"><span class="hs-identifier hs-var">testName</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679160599"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679160599"><span class="hs-identifier hs-var">invalidInput</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>          </span><span class="annot"><span class="annottext">String -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679160598"><span class="hs-identifier hs-var">testName</span></a></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-76"></span><span>            </span><span class="annot"><span class="annottext">ByteString -&gt; Either String a
+</span><a href="#local-6989586621679160588"><span class="hs-identifier hs-var">boundedFromJSON</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679160599"><span class="hs-identifier hs-var">invalidInput</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; (Either String a -&gt; Bool) -&gt; Expectation
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">Either String a -&gt; Bool
+forall a b. Either a b -&gt; Bool
+</span><span class="hs-identifier hs-var">isLeft</span></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CBOR roundtrip&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Spec) -&gt; Property -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">Gen a -&gt; (a -&gt; Expectation) -&gt; Property
+forall a prop.
+(Show a, Testable prop) =&gt;
+Gen a -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Gen a
+forall a. GenValid a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/genvalidity-1.1.1.0-e4bdda86e46bf928accdb611748e281771c131d7c89cc6ac3fb4d95bb53c7487/share/doc/html/src/Data.GenValidity.html#genValid"><span class="hs-identifier hs-var">genValid</span></a></span><span> </span><span class="annot"><span class="annottext">((a -&gt; Expectation) -&gt; Property) -&gt; (a -&gt; Expectation) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679160601"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160601"><span class="hs-identifier hs-var">br</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; Expectation
+forall t.
+(Show t, Eq t, EncCBOR t, DecCBOR t, HasCallStack) =&gt;
+t -&gt; Expectation
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#roundTripCborExpectation"><span class="hs-identifier hs-var">roundTripCborExpectation</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679160601"><span class="hs-identifier hs-var">br</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>    </span><span id="local-6989586621679160588"><span class="annot"><span class="annottext">boundedFromJSON :: ByteString -&gt; Either String a
+</span><a href="#local-6989586621679160588"><span class="hs-identifier hs-var hs-var">boundedFromJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either String a
+forall a. FromJSON a =&gt; ByteString -&gt; Either String a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Decoding.html#eitherDecode"><span class="hs-identifier hs-var">eitherDecode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="annot"><a href="#local-6989586621679160250"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><a href="Test.Cardano.Ledger.BaseTypesSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-84"></span><span id="spec"><span class="annot"><span class="annottext">spec :: Spec
+</span><a href="Test.Cardano.Ledger.BaseTypesSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679160610"><span class="annot"><span class="annottext">badJSONValues :: [(String, ByteString)]
+</span><a href="#local-6989586621679160610"><span class="hs-identifier hs-var hs-var">badJSONValues</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-86"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Word64 denominator overflow&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;3.14159265358979323e-7&quot;</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Negative value&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;-1e-3&quot;</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;BoundedRational&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(BoundedRational a, ToJSON a, FromJSON a, EncCBOR a, DecCBOR a,
+ Arbitrary a, GenValid a, Show a, Ord a) =&gt;
+[(String, ByteString)] -&gt; Spec
+</span><a href="Test.Cardano.Ledger.BaseTypesSpec.html#boundedRationalTests"><span class="hs-identifier hs-var">boundedRationalTests</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#UnitInterval"><span class="hs-identifier hs-type">UnitInterval</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, ByteString)] -&gt; Spec) -&gt; [(String, ByteString)] -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[(String, ByteString)]
+</span><a href="#local-6989586621679160610"><span class="hs-identifier hs-var">badJSONValues</span></a></span><span> </span><span class="annot"><span class="annottext">[(String, ByteString)]
+-&gt; [(String, ByteString)] -&gt; [(String, ByteString)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Too big&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;1.01&quot;</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(BoundedRational a, ToJSON a, FromJSON a, EncCBOR a, DecCBOR a,
+ Arbitrary a, GenValid a, Show a, Ord a) =&gt;
+[(String, ByteString)] -&gt; Spec
+</span><a href="Test.Cardano.Ledger.BaseTypesSpec.html#boundedRationalTests"><span class="hs-identifier hs-var">boundedRationalTests</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#PositiveUnitInterval"><span class="hs-identifier hs-type">PositiveUnitInterval</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, ByteString)] -&gt; Spec) -&gt; [(String, ByteString)] -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-90"></span><span>      </span><span class="annot"><span class="annottext">[(String, ByteString)]
+</span><a href="#local-6989586621679160610"><span class="hs-identifier hs-var">badJSONValues</span></a></span><span> </span><span class="annot"><span class="annottext">[(String, ByteString)]
+-&gt; [(String, ByteString)] -&gt; [(String, ByteString)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Zero&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;0&quot;</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Too big&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;1.01&quot;</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(BoundedRational a, ToJSON a, FromJSON a, EncCBOR a, DecCBOR a,
+ Arbitrary a, GenValid a, Show a, Ord a) =&gt;
+[(String, ByteString)] -&gt; Spec
+</span><a href="Test.Cardano.Ledger.BaseTypesSpec.html#boundedRationalTests"><span class="hs-identifier hs-var">boundedRationalTests</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#PositiveInterval"><span class="hs-identifier hs-type">PositiveInterval</span></a></span><span> </span><span class="annot"><span class="annottext">([(String, ByteString)] -&gt; Spec) -&gt; [(String, ByteString)] -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[(String, ByteString)]
+</span><a href="#local-6989586621679160610"><span class="hs-identifier hs-var">badJSONValues</span></a></span><span> </span><span class="annot"><span class="annottext">[(String, ByteString)]
+-&gt; [(String, ByteString)] -&gt; [(String, ByteString)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Zero&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;0&quot;</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(BoundedRational a, ToJSON a, FromJSON a, EncCBOR a, DecCBOR a,
+ Arbitrary a, GenValid a, Show a, Ord a) =&gt;
+[(String, ByteString)] -&gt; Spec
+</span><a href="Test.Cardano.Ledger.BaseTypesSpec.html#boundedRationalTests"><span class="hs-identifier hs-var">boundedRationalTests</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#NonNegativeInterval"><span class="hs-identifier hs-type">NonNegativeInterval</span></a></span><span> </span><span class="annot"><span class="annottext">[(String, ByteString)]
+</span><a href="#local-6989586621679160610"><span class="hs-identifier hs-var">badJSONValues</span></a></span><span>
+</span><span id="line-93"></span></pre></body></html>

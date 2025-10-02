@@ -1,0 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Binary.PlainSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Binary.PlainSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html"><span class="hs-identifier">Cardano.Ledger.Binary.Plain</span></a></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.html"><span class="hs-identifier">Test.Hspec</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html"><span class="hs-identifier">Test.Hspec.QuickCheck</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.PlainSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-11"></span><span id="spec"><span class="annot"><span class="annottext">spec :: Spec
+</span><a href="Test.Cardano.Ledger.Binary.PlainSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Plain&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; (Term -&gt; Expectation) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;decodeFullFromHexText . serializeAsHexText&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Term -&gt; Expectation) -&gt; Spec) -&gt; (Term -&gt; Expectation) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679191437"><span class="annot"><span class="annottext">Term
+</span><a href="#local-6989586621679191437"><span class="hs-identifier hs-var">term</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Term.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-14"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either DecoderError Term
+forall a. FromCBOR a =&gt; Text -&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html#decodeFullFromHexText"><span class="hs-identifier hs-var">decodeFullFromHexText</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Either DecoderError Term)
+-&gt; Text -&gt; Either DecoderError Term
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term -&gt; Text
+forall a. ToCBOR a =&gt; a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html#serializeAsHexText"><span class="hs-identifier hs-var">serializeAsHexText</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+</span><a href="#local-6989586621679191437"><span class="hs-identifier hs-var">term</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-15"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679191440"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679191440"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; String -&gt; Expectation
+String -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#expectationFailure"><span class="hs-identifier hs-var">expectationFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Expectation) -&gt; String -&gt; Expectation
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unexpected hex rountrip error: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679191440"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-16"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679191443"><span class="annot"><span class="annottext">Term
+</span><a href="#local-6989586621679191443"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Term.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term
+</span><a href="#local-6989586621679191443"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="annot"><span class="annottext">Term -&gt; Term -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+</span><a href="#local-6989586621679191437"><span class="hs-identifier hs-var">term</span></a></span><span>
+</span><span id="line-17"></span></pre></body></html>

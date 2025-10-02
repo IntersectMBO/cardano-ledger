@@ -1,0 +1,56 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Block.ValidationMode</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Block.ValidationMode.html#BlockValidationMode"><span class="hs-identifier">BlockValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Block.ValidationMode.html#toTxValidationMode"><span class="hs-identifier">toTxValidationMode</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.ValidationMode.html"><span class="hs-identifier">Cardano.Chain.UTxO.ValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.ValidationMode.html#TxValidationMode"><span class="hs-identifier">TxValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- BlockValidationMode</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="annot"><span class="hs-comment">-- | Indicates what sort of block validation should be performed.</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">data</span><span> </span><span id="BlockValidationMode"><span class="annot"><a href="Cardano.Chain.Block.ValidationMode.html#BlockValidationMode"><span class="hs-identifier hs-var">BlockValidationMode</span></a></span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | Perform all block validations.</span></span><span>
+</span><span id="line-18"></span><span>    </span><span id="BlockValidation"><span class="annot"><a href="Cardano.Chain.Block.ValidationMode.html#BlockValidation"><span class="hs-identifier hs-var">BlockValidation</span></a></span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Perform no block validations.</span></span><span>
+</span><span id="line-20"></span><span>    </span><span id="NoBlockValidation"><span class="annot"><a href="Cardano.Chain.Block.ValidationMode.html#NoBlockValidation"><span class="hs-identifier hs-var">NoBlockValidation</span></a></span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679580237"><span id="local-6989586621679580239"><span class="annot"><span class="annottext">BlockValidationMode -&gt; BlockValidationMode -&gt; Bool
+(BlockValidationMode -&gt; BlockValidationMode -&gt; Bool)
+-&gt; (BlockValidationMode -&gt; BlockValidationMode -&gt; Bool)
+-&gt; Eq BlockValidationMode
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: BlockValidationMode -&gt; BlockValidationMode -&gt; Bool
+== :: BlockValidationMode -&gt; BlockValidationMode -&gt; Bool
+$c/= :: BlockValidationMode -&gt; BlockValidationMode -&gt; Bool
+/= :: BlockValidationMode -&gt; BlockValidationMode -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679580244"><span id="local-6989586621679580246"><span id="local-6989586621679580250"><span class="annot"><span class="annottext">Int -&gt; BlockValidationMode -&gt; ShowS
+[BlockValidationMode] -&gt; ShowS
+BlockValidationMode -&gt; String
+(Int -&gt; BlockValidationMode -&gt; ShowS)
+-&gt; (BlockValidationMode -&gt; String)
+-&gt; ([BlockValidationMode] -&gt; ShowS)
+-&gt; Show BlockValidationMode
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BlockValidationMode -&gt; ShowS
+showsPrec :: Int -&gt; BlockValidationMode -&gt; ShowS
+$cshow :: BlockValidationMode -&gt; String
+show :: BlockValidationMode -&gt; String
+$cshowList :: [BlockValidationMode] -&gt; ShowS
+showList :: [BlockValidationMode] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><span class="hs-comment">-- | Translate a 'BlockValidationMode' to an appropriate 'TxValidationMode'.</span></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Cardano.Chain.Block.ValidationMode.html#toTxValidationMode"><span class="hs-identifier hs-type">toTxValidationMode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Block.ValidationMode.html#BlockValidationMode"><span class="hs-identifier hs-type">BlockValidationMode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.ValidationMode.html#TxValidationMode"><span class="hs-identifier hs-type">TxValidationMode</span></a></span><span>
+</span><span id="line-25"></span><span id="toTxValidationMode"><span class="annot"><span class="annottext">toTxValidationMode :: BlockValidationMode -&gt; TxValidationMode
+</span><a href="Cardano.Chain.Block.ValidationMode.html#toTxValidationMode"><span class="hs-identifier hs-var hs-var">toTxValidationMode</span></a></span></span><span> </span><span class="annot"><span class="annottext">BlockValidationMode
+</span><a href="Cardano.Chain.Block.ValidationMode.html#BlockValidation"><span class="hs-identifier hs-var">BlockValidation</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxValidationMode
+</span><a href="Cardano.Chain.UTxO.ValidationMode.html#TxValidation"><span class="hs-identifier hs-var">TxValidation</span></a></span><span>
+</span><span id="line-26"></span><span class="annot"><a href="Cardano.Chain.Block.ValidationMode.html#toTxValidationMode"><span class="hs-identifier hs-var">toTxValidationMode</span></a></span><span> </span><span class="annot"><span class="annottext">BlockValidationMode
+</span><a href="Cardano.Chain.Block.ValidationMode.html#NoBlockValidation"><span class="hs-identifier hs-var">NoBlockValidation</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxValidationMode
+</span><a href="Cardano.Chain.UTxO.ValidationMode.html#NoTxValidation"><span class="hs-identifier hs-var">NoTxValidation</span></a></span><span>
+</span><span id="line-27"></span></pre></body></html>

@@ -1,0 +1,1146 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState.PulsingReward</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#startStep"><span class="hs-identifier">startStep</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#pulseStep"><span class="hs-identifier">pulseStep</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#completeStep"><span class="hs-identifier">completeStep</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#createRUpd"><span class="hs-identifier">createRUpd</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#completeRupd"><span class="hs-identifier">completeRupd</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#circulation"><span class="hs-identifier">circulation</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#updateNonMyopic"><span class="hs-identifier">updateNonMyopic</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#decayFactor"><span class="hs-identifier">decayFactor</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html"><span class="hs-identifier">Cardano.Ledger.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#RewardAccount"><span class="hs-identifier">RewardAccount</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#raCredential"><span class="hs-identifier">raCredential</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ActiveSlotCoeff"><span class="hs-identifier">ActiveSlotCoeff</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BlocksMade"><span class="hs-identifier">BlocksMade</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BoundedRational"><span class="hs-identifier">BoundedRational</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier">NonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier">ShelleyBase</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#activeSlotVal"><span class="hs-identifier">activeSlotVal</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#knownNonZero"><span class="hs-identifier">knownNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#mulNonZero"><span class="hs-identifier">mulNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#toIntegerNonZero"><span class="hs-identifier">toIntegerNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#%25."><span class="hs-operator">(%.)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#DeltaCoin"><span class="hs-identifier">DeltaCoin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#rationalToCoinViaFloor"><span class="hs-identifier">rationalToCoinViaFloor</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#toDeltaCoin"><span class="hs-identifier">toDeltaCoin</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html#hardforkBabbageForgoRewardPrefilter"><span class="hs-identifier">hardforkBabbageForgoRewardPrefilter</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.Types.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState.Types</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.PoolRank.html"><span class="hs-identifier">Cardano.Ledger.Shelley.PoolRank</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.PoolRank.html#Likelihood"><span class="hs-identifier">Likelihood</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.PoolRank.html#NonMyopic"><span class="hs-identifier">NonMyopic</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.PoolRank.html#applyDecay"><span class="hs-identifier">applyDecay</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.PoolRank.html#leaderProbability"><span class="hs-identifier">leaderProbability</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.PoolRank.html#likelihood"><span class="hs-identifier">likelihood</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html"><span class="hs-identifier">Cardano.Ledger.Shelley.RewardUpdate</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#FreeVars"><span class="hs-identifier">FreeVars</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Pulser"><span class="hs-identifier">Pulser</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#PulsingRewUpdate"><span class="hs-identifier">PulsingRewUpdate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardAns"><span class="hs-identifier">RewardAns</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardEvent"><span class="hs-identifier">RewardEvent</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardPulser"><span class="hs-identifier">RewardPulser</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardSnapShot"><span class="hs-identifier">RewardSnapShot</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardUpdate"><span class="hs-identifier">RewardUpdate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rewards.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Rewards</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rewards.html#PoolRewardInfo"><span class="hs-identifier">PoolRewardInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rewards.html#StakeShare"><span class="hs-identifier">StakeShare</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rewards.html#leaderRewardToGeneral"><span class="hs-identifier">leaderRewardToGeneral</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rewards.html#mkPoolRewardInfo"><span class="hs-identifier">mkPoolRewardInfo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rewards.html#sumRewards"><span class="hs-identifier">sumRewards</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html"><span class="hs-identifier">Cardano.Ledger.Slot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochSize"><span class="hs-identifier">EpochSize</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.html"><span class="hs-identifier">Cardano.Ledger.State</span></a></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html"><span class="hs-identifier">Cardano.Ledger.Val</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#%3C-%3E"><span class="hs-operator">(&lt;-&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/groups-0.5.3-9a9bbeb34e11b6941d1c31115962af9b6cfe665bc5b63c17e53cdcd6264ee49d/share/doc/html/src/Data.Group.html"><span class="hs-identifier">Data.Group</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/groups-0.5.3-9a9bbeb34e11b6941d1c31115962af9b6cfe665bc5b63c17e53cdcd6264ee49d/share/doc/html/src/Data.Group.html#invert"><span class="hs-identifier">invert</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.Pulse.html"><span class="hs-identifier">Data.Pulse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.Pulse.html#Pulsable"><span class="hs-identifier">Pulsable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.Pulse.html#completeM"><span class="hs-identifier">completeM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Ratio</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(%)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html"><span class="hs-identifier">Data.VMap</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">VMap</span></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- =============================</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- To prevent a huge pause, at the stability point, we spread out the</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- Calculation of rewards over many blocks. We do this in 3 phases. Phase 1</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- of a reward upate is a pure computation, computing some parameters which</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- become fixed at the time when we reach the stability point. One of these</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- parameters is a Pulser, i.e. a computation that when pulseM'ed computes</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- a portion of what is required, so that the whole compuation can be spread out in time.</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#startStep"><span class="hs-identifier hs-type">startStep</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679519253"><span class="annot"><a href="#local-6989586621679519253"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#EraGov"><span class="hs-identifier hs-type">EraGov</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679519253"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier hs-type">EraCertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679519253"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochSize"><span class="hs-identifier hs-type">EpochSize</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BlocksMade"><span class="hs-identifier hs-type">BlocksMade</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.Types.html#EpochState"><span class="hs-identifier hs-type">EpochState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679519253"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ActiveSlotCoeff"><span class="hs-identifier hs-type">ActiveSlotCoeff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#PulsingRewUpdate"><span class="hs-identifier hs-type">PulsingRewUpdate</span></a></span><span>
+</span><span id="line-99"></span><span id="startStep"><span class="annot"><span class="annottext">startStep :: forall era.
+(EraGov era, EraCertState era) =&gt;
+EpochSize
+-&gt; BlocksMade
+-&gt; EpochState era
+-&gt; Coin
+-&gt; ActiveSlotCoeff
+-&gt; NonZero Word64
+-&gt; PulsingRewUpdate
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#startStep"><span class="hs-identifier hs-var hs-var">startStep</span></a></span></span><span> </span><span id="local-6989586621679519600"><span class="annot"><span class="annottext">EpochSize
+</span><a href="#local-6989586621679519600"><span class="hs-identifier hs-var">slotsPerEpoch</span></a></span></span><span> </span><span id="local-6989586621679519601"><span class="annot"><span class="annottext">b :: BlocksMade
+</span><a href="#local-6989586621679519601"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BlocksMade"><span class="hs-identifier hs-type">BlocksMade</span></a></span><span> </span><span id="local-6989586621679519603"><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Natural
+</span><a href="#local-6989586621679519603"><span class="hs-identifier hs-var">b'</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679519604"><span class="annot"><span class="annottext">es :: EpochState era
+</span><a href="#local-6989586621679519604"><span class="hs-identifier hs-var">es</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.Types.html#EpochState"><span class="hs-identifier hs-type">EpochState</span></a></span><span> </span><span id="local-6989586621679519606"><span class="annot"><span class="annottext">ChainAccountState
+</span><a href="#local-6989586621679519606"><span class="hs-identifier hs-var">acnt</span></a></span></span><span> </span><span id="local-6989586621679519607"><span class="annot"><span class="annottext">LedgerState era
+</span><a href="#local-6989586621679519607"><span class="hs-identifier hs-var">ls</span></a></span></span><span> </span><span id="local-6989586621679519608"><span class="annot"><span class="annottext">SnapShots
+</span><a href="#local-6989586621679519608"><span class="hs-identifier hs-var">ss</span></a></span></span><span> </span><span id="local-6989586621679519609"><span class="annot"><span class="annottext">NonMyopic
+</span><a href="#local-6989586621679519609"><span class="hs-identifier hs-var">nm</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679519610"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519610"><span class="hs-identifier hs-var">maxSupply</span></a></span></span><span> </span><span id="local-6989586621679519611"><span class="annot"><span class="annottext">ActiveSlotCoeff
+</span><a href="#local-6989586621679519611"><span class="hs-identifier hs-var">asc</span></a></span></span><span> </span><span id="local-6989586621679519612"><span class="annot"><span class="annottext">NonZero Word64
+</span><a href="#local-6989586621679519612"><span class="hs-identifier hs-var">secparam</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#SnapShot"><span class="hs-identifier hs-type">SnapShot</span></a></span><span> </span><span id="local-6989586621679519614"><span class="annot"><span class="annottext">Stake
+</span><a href="#local-6989586621679519614"><span class="hs-identifier hs-var">stake</span></a></span></span><span> </span><span id="local-6989586621679519615"><span class="annot"><span class="annottext">VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+</span><a href="#local-6989586621679519615"><span class="hs-identifier hs-var">delegs</span></a></span></span><span> </span><span id="local-6989586621679519616"><span class="annot"><span class="annottext">VMap VB VB (KeyHash 'StakePool) PoolParams
+</span><a href="#local-6989586621679519616"><span class="hs-identifier hs-var">poolParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SnapShots -&gt; SnapShot
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#%24sel%3AssStakeGo%3ASnapShots"><span class="hs-identifier hs-var">ssStakeGo</span></a></span><span> </span><span class="annot"><span class="annottext">SnapShots
+</span><a href="#local-6989586621679519608"><span class="hs-identifier hs-var">ss</span></a></span><span>
+</span><span id="line-101"></span><span>      </span><span id="local-6989586621679519618"><span class="annot"><span class="annottext">numStakeCreds :: Integer
+</span><a href="#local-6989586621679519618"><span class="hs-identifier hs-var hs-var">numStakeCreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VMap VB VP (Credential 'Staking) (CompactForm Coin) -&gt; Int
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+Vector kv k =&gt;
+VMap kv vv k v -&gt; Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#size"><span class="hs-identifier hs-var">VMap.size</span></a></span><span> </span><span class="annot"><span class="annottext">(VMap VB VP (Credential 'Staking) (CompactForm Coin) -&gt; Int)
+-&gt; VMap VB VP (Credential 'Staking) (CompactForm Coin) -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Stake -&gt; VMap VB VP (Credential 'Staking) (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#%24sel%3AunStake%3AStake"><span class="hs-identifier hs-var">unStake</span></a></span><span> </span><span class="annot"><span class="annottext">Stake
+</span><a href="#local-6989586621679519614"><span class="hs-identifier hs-var">stake</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>      </span><span id="local-6989586621679519621"><span class="annot"><span class="annottext">k :: NonZero Integer
+</span><a href="#local-6989586621679519621"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonZero Word64 -&gt; NonZero Integer
+forall a. Integral a =&gt; NonZero a -&gt; NonZero Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#toIntegerNonZero"><span class="hs-identifier hs-var">toIntegerNonZero</span></a></span><span> </span><span class="annot"><span class="annottext">NonZero Word64
+</span><a href="#local-6989586621679519612"><span class="hs-identifier hs-var">secparam</span></a></span><span>
+</span><span id="line-103"></span><span>      </span><span class="hs-comment">-- We expect approximately 10k-many blocks to be produced each epoch.</span><span>
+</span><span id="line-104"></span><span>      </span><span class="hs-comment">-- The reward calculation begins (4k/f)-many slots into the epoch,</span><span>
+</span><span id="line-105"></span><span>      </span><span class="hs-comment">-- and we guarantee that it ends (2k/f)-many slots before the end</span><span>
+</span><span id="line-106"></span><span>      </span><span class="hs-comment">-- of the epoch (to allow tools such as db-sync to see the reward</span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-comment">-- values in advance of them being applied to the ledger state).</span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-comment">-- Therefore to evenly space out the reward calculation, we divide</span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-comment">-- the number of stake credentials by 4k in order to determine how many</span><span>
+</span><span id="line-111"></span><span>      </span><span class="hs-comment">-- stake credential rewards we should calculate each block.</span><span>
+</span><span id="line-112"></span><span>      </span><span class="hs-comment">-- If it does not finish in this amount of time, the calculation is</span><span>
+</span><span id="line-113"></span><span>      </span><span class="hs-comment">-- forced to completion.</span><span>
+</span><span id="line-114"></span><span>      </span><span id="local-6989586621679519622"><span class="annot"><span class="annottext">pulseSize :: Int
+</span><a href="#local-6989586621679519622"><span class="hs-identifier hs-var hs-var">pulseSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">max</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; Int
+forall b. Integral b =&gt; Rational -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">ceiling</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519618"><span class="hs-identifier hs-var">numStakeCreds</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; NonZero Integer -&gt; Rational
+forall a. Integral a =&gt; a -&gt; NonZero a -&gt; Ratio a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#%25."><span class="hs-operator hs-var">%.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (n :: Natural). (KnownNat n, 1 &lt;= n) =&gt; NonZero Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#knownNonZero"><span class="hs-identifier hs-var">knownNonZero</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">4</span></span><span> </span><span class="annot"><span class="annottext">NonZero Integer -&gt; NonZero Integer -&gt; NonZero Integer
+forall a b.
+(Integral a, Integral b) =&gt;
+NonZero a -&gt; NonZero b -&gt; NonZero Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#mulNonZero"><span class="hs-operator hs-var">`mulNonZero`</span></a></span><span> </span><span class="annot"><span class="annottext">NonZero Integer
+</span><a href="#local-6989586621679519621"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>      </span><span class="hs-comment">-- We now compute the amount of total rewards that can potentially be given</span><span>
+</span><span id="line-116"></span><span>      </span><span class="hs-comment">-- out this epoch, and the adjustments to the reserves and the treasury.</span><span>
+</span><span id="line-117"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span id="local-6989586621679519626"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519626"><span class="hs-identifier hs-var">reserves</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ChainAccountState
+</span><a href="#local-6989586621679519606"><span class="hs-identifier hs-var">acnt</span></a></span><span> </span><span class="annot"><span class="annottext">ChainAccountState -&gt; Getting Coin ChainAccountState Coin -&gt; Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Coin ChainAccountState Coin
+Lens' ChainAccountState Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.ChainAccount.html#casReservesL"><span class="hs-identifier hs-var">casReservesL</span></a></span><span>
+</span><span id="line-118"></span><span>      </span><span id="local-6989586621679519628"><span class="annot"><span class="annottext">accounts :: Accounts era
+</span><a href="#local-6989586621679519628"><span class="hs-identifier hs-var hs-var">accounts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LedgerState era
+</span><a href="#local-6989586621679519607"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="annot"><span class="annottext">LedgerState era
+-&gt; Getting (Accounts era) (LedgerState era) (Accounts era)
+-&gt; Accounts era
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(CertState era -&gt; Const (Accounts era) (CertState era))
+-&gt; LedgerState era -&gt; Const (Accounts era) (LedgerState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(CertState era -&gt; f (CertState era))
+-&gt; LedgerState era -&gt; f (LedgerState era)
+</span><a href="Cardano.Ledger.Shelley.LedgerState.Types.html#lsCertStateL"><span class="hs-identifier hs-var">lsCertStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((CertState era -&gt; Const (Accounts era) (CertState era))
+ -&gt; LedgerState era -&gt; Const (Accounts era) (LedgerState era))
+-&gt; ((Accounts era -&gt; Const (Accounts era) (Accounts era))
+    -&gt; CertState era -&gt; Const (Accounts era) (CertState era))
+-&gt; Getting (Accounts era) (LedgerState era) (Accounts era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(DState era -&gt; Const (Accounts era) (DState era))
+-&gt; CertState era -&gt; Const (Accounts era) (CertState era)
+forall era. EraCertState era =&gt; Lens' (CertState era) (DState era)
+Lens' (CertState era) (DState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#certDStateL"><span class="hs-identifier hs-var">certDStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((DState era -&gt; Const (Accounts era) (DState era))
+ -&gt; CertState era -&gt; Const (Accounts era) (CertState era))
+-&gt; ((Accounts era -&gt; Const (Accounts era) (Accounts era))
+    -&gt; DState era -&gt; Const (Accounts era) (DState era))
+-&gt; (Accounts era -&gt; Const (Accounts era) (Accounts era))
+-&gt; CertState era
+-&gt; Const (Accounts era) (CertState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Accounts era -&gt; Const (Accounts era) (Accounts era))
+-&gt; DState era -&gt; Const (Accounts era) (DState era)
+forall era. Lens' (DState era) (Accounts era)
+forall (t :: * -&gt; *) era.
+CanSetAccounts t =&gt;
+Lens' (t era) (Accounts era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#accountsL"><span class="hs-identifier hs-var">accountsL</span></a></span><span>
+</span><span id="line-119"></span><span>      </span><span class="hs-comment">-- reserves and rewards change</span><span>
+</span><span id="line-120"></span><span>      </span><span id="local-6989586621679519633"><span class="annot"><span class="annottext">pr :: PParams era
+</span><a href="#local-6989586621679519633"><span class="hs-identifier hs-var hs-var">pr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochState era
+</span><a href="#local-6989586621679519604"><span class="hs-identifier hs-var">es</span></a></span><span> </span><span class="annot"><span class="annottext">EpochState era
+-&gt; Getting (PParams era) (EpochState era) (PParams era)
+-&gt; PParams era
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (PParams era) (EpochState era) (PParams era)
+forall era. EraGov era =&gt; Lens' (EpochState era) (PParams era)
+Lens' (EpochState era) (PParams era)
+</span><a href="Cardano.Ledger.Shelley.LedgerState.Types.html#prevPParamsEpochStateL"><span class="hs-identifier hs-var">prevPParamsEpochStateL</span></a></span><span>
+</span><span id="line-121"></span><span>      </span><span id="local-6989586621679519635"><span class="annot"><span class="annottext">deltaR1 :: Coin
+</span><a href="#local-6989586621679519635"><span class="hs-identifier hs-var hs-var">deltaR1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-122"></span><span>        </span><span class="annot"><span class="annottext">Rational -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#rationalToCoinViaFloor"><span class="hs-identifier hs-var">rationalToCoinViaFloor</span></a></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Coin) -&gt; Rational -&gt; Coin
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-123"></span><span>          </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">min</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679519637"><span class="hs-identifier hs-var">eta</span></a></span><span>
+</span><span id="line-124"></span><span>            </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">UnitInterval -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679519633"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+-&gt; Getting UnitInterval (PParams era) UnitInterval -&gt; UnitInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting UnitInterval (PParams era) UnitInterval
+forall era. EraPParams era =&gt; Lens' (PParams era) UnitInterval
+Lens' (PParams era) UnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppRhoL"><span class="hs-identifier hs-var">ppRhoL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>            </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Rational
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519626"><span class="hs-identifier hs-var">reserves</span></a></span><span>
+</span><span id="line-126"></span><span>      </span><span id="local-6989586621679519641"><span class="annot"><span class="annottext">d :: Rational
+</span><a href="#local-6989586621679519641"><span class="hs-identifier hs-var hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UnitInterval -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679519633"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+-&gt; Getting UnitInterval (PParams era) UnitInterval -&gt; UnitInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting UnitInterval (PParams era) UnitInterval
+forall era.
+EraPParams era =&gt;
+SimpleGetter (PParams era) UnitInterval
+SimpleGetter (PParams era) UnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppDG"><span class="hs-identifier hs-var">ppDG</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>      </span><span id="local-6989586621679519643"><span class="annot"><span class="annottext">expectedBlocks :: Integer
+</span><a href="#local-6989586621679519643"><span class="hs-identifier hs-var hs-var">expectedBlocks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-128"></span><span>        </span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall b. Integral b =&gt; Rational -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">floor</span></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Integer) -&gt; Rational -&gt; Integer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-129"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679519641"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">PositiveUnitInterval -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ActiveSlotCoeff -&gt; PositiveUnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#activeSlotVal"><span class="hs-identifier hs-var">activeSlotVal</span></a></span><span> </span><span class="annot"><span class="annottext">ActiveSlotCoeff
+</span><a href="#local-6989586621679519611"><span class="hs-identifier hs-var">asc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Rational
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochSize -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#unEpochSize"><span class="hs-identifier hs-var">unEpochSize</span></a></span><span> </span><span class="annot"><span class="annottext">EpochSize
+</span><a href="#local-6989586621679519600"><span class="hs-identifier hs-var">slotsPerEpoch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>      </span><span class="hs-comment">-- TODO asc is a global constant, and slotsPerEpoch should not change often at all,</span><span>
+</span><span id="line-131"></span><span>      </span><span class="hs-comment">-- it would be nice to not have to compute expectedBlocks every epoch</span><span>
+</span><span id="line-132"></span><span>      </span><span id="local-6989586621679519646"><span class="annot"><span class="annottext">blocksMade :: Integer
+</span><a href="#local-6989586621679519646"><span class="hs-identifier hs-var hs-var">blocksMade</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Natural -&gt; Integer) -&gt; Natural -&gt; Integer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Natural -&gt; Natural -&gt; Natural)
+-&gt; Natural -&gt; Map (KeyHash 'StakePool) Natural -&gt; Natural
+forall a b k. (a -&gt; b -&gt; b) -&gt; b -&gt; Map k a -&gt; b
+</span><span class="hs-identifier hs-var">Map.foldr</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Natural
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">(+)</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Natural
+</span><a href="#local-6989586621679519603"><span class="hs-identifier hs-var">b'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-133"></span><span>      </span><span id="local-6989586621679519637"><span class="annot"><span class="annottext">eta :: Rational
+</span><a href="#local-6989586621679519637"><span class="hs-identifier hs-var hs-var">eta</span></a></span></span><span>
+</span><span id="line-134"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679519641"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">0.8</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-135"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-136"></span><span>            </span><span class="hs-comment">-- We use unsafe division here, because any sane configuration</span><span>
+</span><span id="line-137"></span><span>            </span><span class="hs-comment">-- should never have expectedBlocks anywhere close to zero</span><span>
+</span><span id="line-138"></span><span>            </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519646"><span class="hs-identifier hs-var">blocksMade</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Rational
+forall a. Integral a =&gt; a -&gt; a -&gt; Ratio a
+</span><span class="hs-operator hs-var">%</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519643"><span class="hs-identifier hs-var">expectedBlocks</span></a></span><span>
+</span><span id="line-139"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span id="local-6989586621679519649"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519649"><span class="hs-identifier hs-var">rPot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SnapShots -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#%24sel%3AssFee%3ASnapShots"><span class="hs-identifier hs-var">ssFee</span></a></span><span> </span><span class="annot"><span class="annottext">SnapShots
+</span><a href="#local-6989586621679519608"><span class="hs-identifier hs-var">ss</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Coin -&gt; Coin
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519635"><span class="hs-identifier hs-var">deltaR1</span></a></span><span>
+</span><span id="line-140"></span><span>      </span><span id="local-6989586621679519651"><span class="annot"><span class="annottext">deltaT1 :: Integer
+</span><a href="#local-6989586621679519651"><span class="hs-identifier hs-var hs-var">deltaT1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall b. Integral b =&gt; Rational -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">floor</span></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Integer) -&gt; Rational -&gt; Integer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">UnitInterval -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679519633"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+-&gt; Getting UnitInterval (PParams era) UnitInterval -&gt; UnitInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting UnitInterval (PParams era) UnitInterval
+forall era. EraPParams era =&gt; Lens' (PParams era) UnitInterval
+Lens' (PParams era) UnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppTauL"><span class="hs-identifier hs-var">ppTauL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Rational
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519649"><span class="hs-identifier hs-var">rPot</span></a></span><span>
+</span><span id="line-141"></span><span>      </span><span id="local-6989586621679519653"><span class="annot"><span class="annottext">_R :: Coin
+</span><a href="#local-6989586621679519653"><span class="hs-identifier hs-var hs-var">_R</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Coin) -&gt; Integer -&gt; Coin
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519649"><span class="hs-identifier hs-var">rPot</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519651"><span class="hs-identifier hs-var">deltaT1</span></a></span><span>
+</span><span id="line-142"></span><span>      </span><span class="hs-comment">-- We now compute stake pool specific values that are needed for computing</span><span>
+</span><span id="line-143"></span><span>      </span><span class="hs-comment">-- member and leader rewards.</span><span>
+</span><span id="line-144"></span><span>      </span><span id="local-6989586621679519654"><span class="annot"><span class="annottext">activeStake :: Coin
+</span><a href="#local-6989586621679519654"><span class="hs-identifier hs-var hs-var">activeStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Stake -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#sumAllStake"><span class="hs-identifier hs-var">sumAllStake</span></a></span><span> </span><span class="annot"><span class="annottext">Stake
+</span><a href="#local-6989586621679519614"><span class="hs-identifier hs-var">stake</span></a></span><span>
+</span><span id="line-145"></span><span>      </span><span id="local-6989586621679519656"><span class="annot"><span class="annottext">totalStake :: Coin
+</span><a href="#local-6989586621679519656"><span class="hs-identifier hs-var hs-var">totalStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochState era -&gt; Coin -&gt; Coin
+forall era. EpochState era -&gt; Coin -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#circulation"><span class="hs-identifier hs-var">circulation</span></a></span><span> </span><span class="annot"><span class="annottext">EpochState era
+</span><a href="#local-6989586621679519604"><span class="hs-identifier hs-var">es</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519610"><span class="hs-identifier hs-var">maxSupply</span></a></span><span>
+</span><span id="line-146"></span><span>      </span><span id="local-6989586621679519657"><span class="annot"><span class="annottext">stakePerPool :: Map (KeyHash 'StakePool) Coin
+</span><a href="#local-6989586621679519657"><span class="hs-identifier hs-var hs-var">stakePerPool</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+-&gt; Stake -&gt; Map (KeyHash 'StakePool) Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#sumStakePerPool"><span class="hs-identifier hs-var">sumStakePerPool</span></a></span><span> </span><span class="annot"><span class="annottext">VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+</span><a href="#local-6989586621679519615"><span class="hs-identifier hs-var">delegs</span></a></span><span> </span><span class="annot"><span class="annottext">Stake
+</span><a href="#local-6989586621679519614"><span class="hs-identifier hs-var">stake</span></a></span><span>
+</span><span id="line-147"></span><span>      </span><span id="local-6989586621679519659"><span class="annot"><span class="annottext">mkPoolRewardInfoCurry :: PoolParams -&gt; Either StakeShare PoolRewardInfo
+</span><a href="#local-6989586621679519659"><span class="hs-identifier hs-var hs-var">mkPoolRewardInfoCurry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-148"></span><span>        </span><span class="annot"><span class="annottext">PParams era
+-&gt; Coin
+-&gt; BlocksMade
+-&gt; Natural
+-&gt; Stake
+-&gt; VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+-&gt; Map (KeyHash 'StakePool) Coin
+-&gt; Coin
+-&gt; Coin
+-&gt; PoolParams
+-&gt; Either StakeShare PoolRewardInfo
+forall era.
+EraPParams era =&gt;
+PParams era
+-&gt; Coin
+-&gt; BlocksMade
+-&gt; Natural
+-&gt; Stake
+-&gt; VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+-&gt; Map (KeyHash 'StakePool) Coin
+-&gt; Coin
+-&gt; Coin
+-&gt; PoolParams
+-&gt; Either StakeShare PoolRewardInfo
+</span><a href="Cardano.Ledger.Shelley.Rewards.html#mkPoolRewardInfo"><span class="hs-identifier hs-var">mkPoolRewardInfo</span></a></span><span>
+</span><span id="line-149"></span><span>          </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679519633"><span class="hs-identifier hs-var">pr</span></a></span><span>
+</span><span id="line-150"></span><span>          </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519653"><span class="hs-identifier hs-var">_R</span></a></span><span>
+</span><span id="line-151"></span><span>          </span><span class="annot"><span class="annottext">BlocksMade
+</span><a href="#local-6989586621679519601"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-152"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Natural
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519646"><span class="hs-identifier hs-var">blocksMade</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>          </span><span class="annot"><span class="annottext">Stake
+</span><a href="#local-6989586621679519614"><span class="hs-identifier hs-var">stake</span></a></span><span>
+</span><span id="line-154"></span><span>          </span><span class="annot"><span class="annottext">VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+</span><a href="#local-6989586621679519615"><span class="hs-identifier hs-var">delegs</span></a></span><span>
+</span><span id="line-155"></span><span>          </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Coin
+</span><a href="#local-6989586621679519657"><span class="hs-identifier hs-var">stakePerPool</span></a></span><span>
+</span><span id="line-156"></span><span>          </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519656"><span class="hs-identifier hs-var">totalStake</span></a></span><span>
+</span><span id="line-157"></span><span>          </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519654"><span class="hs-identifier hs-var">activeStake</span></a></span><span>
+</span><span id="line-158"></span><span>      </span><span class="hs-comment">-- We map over the registered stake pools to compute the relevant</span><span>
+</span><span id="line-159"></span><span>      </span><span class="hs-comment">-- stake pool specific values.</span><span>
+</span><span id="line-160"></span><span>      </span><span id="local-6989586621679519660"><span class="annot"><span class="annottext">allPoolInfo :: VMap VB VB (KeyHash 'StakePool) (Either StakeShare PoolRewardInfo)
+</span><a href="#local-6989586621679519660"><span class="hs-identifier hs-var hs-var">allPoolInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PoolParams -&gt; Either StakeShare PoolRewardInfo)
+-&gt; VMap VB VB (KeyHash 'StakePool) PoolParams
+-&gt; VMap
+     VB VB (KeyHash 'StakePool) (Either StakeShare PoolRewardInfo)
+forall (vv :: * -&gt; *) a b (kv :: * -&gt; *) k.
+(Vector vv a, Vector vv b) =&gt;
+(a -&gt; b) -&gt; VMap kv vv k a -&gt; VMap kv vv k b
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#map"><span class="hs-identifier hs-var">VMap.map</span></a></span><span> </span><span class="annot"><span class="annottext">PoolParams -&gt; Either StakeShare PoolRewardInfo
+</span><a href="#local-6989586621679519659"><span class="hs-identifier hs-var">mkPoolRewardInfoCurry</span></a></span><span> </span><span class="annot"><span class="annottext">VMap VB VB (KeyHash 'StakePool) PoolParams
+</span><a href="#local-6989586621679519616"><span class="hs-identifier hs-var">poolParams</span></a></span><span>
+</span><span id="line-161"></span><span>
+</span><span id="line-162"></span><span>      </span><span class="hs-comment">-- Stake pools that do not produce any blocks get no rewards,</span><span>
+</span><span id="line-163"></span><span>      </span><span class="hs-comment">-- but some information is still needed from non-block-producing</span><span>
+</span><span id="line-164"></span><span>      </span><span class="hs-comment">-- pools for the ranking algorithm used by the wallets.</span><span>
+</span><span id="line-165"></span><span>      </span><span id="local-6989586621679519662"><span class="annot"><span class="annottext">blockProducingPoolInfo :: Map (KeyHash 'StakePool) PoolRewardInfo
+</span><a href="#local-6989586621679519662"><span class="hs-identifier hs-var hs-var">blockProducingPoolInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VMap VB VB (KeyHash 'StakePool) PoolRewardInfo
+-&gt; Map (KeyHash 'StakePool) PoolRewardInfo
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+VMap kv vv k v -&gt; Map k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#toMap"><span class="hs-identifier hs-var">VMap.toMap</span></a></span><span> </span><span class="annot"><span class="annottext">(VMap VB VB (KeyHash 'StakePool) PoolRewardInfo
+ -&gt; Map (KeyHash 'StakePool) PoolRewardInfo)
+-&gt; VMap VB VB (KeyHash 'StakePool) PoolRewardInfo
+-&gt; Map (KeyHash 'StakePool) PoolRewardInfo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Either StakeShare PoolRewardInfo -&gt; Maybe PoolRewardInfo)
+-&gt; VMap
+     VB VB (KeyHash 'StakePool) (Either StakeShare PoolRewardInfo)
+-&gt; VMap VB VB (KeyHash 'StakePool) PoolRewardInfo
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) a b.
+(Vector kv k, Vector vv a, Vector vv b) =&gt;
+(a -&gt; Maybe b) -&gt; VMap kv vv k a -&gt; VMap kv vv k b
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#mapMaybe"><span class="hs-identifier hs-var">VMap.mapMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(StakeShare -&gt; Maybe PoolRewardInfo)
+-&gt; (PoolRewardInfo -&gt; Maybe PoolRewardInfo)
+-&gt; Either StakeShare PoolRewardInfo
+-&gt; Maybe PoolRewardInfo
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><span class="hs-identifier hs-var">either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe PoolRewardInfo -&gt; StakeShare -&gt; Maybe PoolRewardInfo
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">Maybe PoolRewardInfo
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">PoolRewardInfo -&gt; Maybe PoolRewardInfo
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">VMap VB VB (KeyHash 'StakePool) (Either StakeShare PoolRewardInfo)
+</span><a href="#local-6989586621679519660"><span class="hs-identifier hs-var">allPoolInfo</span></a></span><span>
+</span><span id="line-166"></span><span>      </span><span id="local-6989586621679519667"><span class="annot"><span class="annottext">getSigma :: PoolRewardInfo -&gt; Rational
+</span><a href="#local-6989586621679519667"><span class="hs-identifier hs-var hs-var">getSigma</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StakeShare -&gt; Rational
+</span><a href="Cardano.Ledger.Shelley.Rewards.html#unStakeShare"><span class="hs-identifier hs-var">unStakeShare</span></a></span><span> </span><span class="annot"><span class="annottext">(StakeShare -&gt; Rational)
+-&gt; (PoolRewardInfo -&gt; StakeShare) -&gt; PoolRewardInfo -&gt; Rational
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PoolRewardInfo -&gt; StakeShare
+</span><a href="Cardano.Ledger.Shelley.Rewards.html#poolRelativeStake"><span class="hs-identifier hs-var">poolRelativeStake</span></a></span><span>
+</span><span id="line-167"></span><span>      </span><span id="local-6989586621679519670"><span class="annot"><span class="annottext">makeLikelihoods :: Either StakeShare PoolRewardInfo -&gt; Likelihood
+</span><a href="#local-6989586621679519670"><span class="hs-identifier hs-var hs-var">makeLikelihoods</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-168"></span><span>        </span><span class="hs-comment">-- This pool produced no blocks this epoch</span><span>
+</span><span id="line-169"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Rewards.html#StakeShare"><span class="hs-identifier hs-type">StakeShare</span></a></span><span> </span><span id="local-6989586621679519672"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679519672"><span class="hs-identifier hs-var">sigma</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-170"></span><span>          </span><span class="annot"><span class="annottext">Natural -&gt; Double -&gt; EpochSize -&gt; Likelihood
+</span><a href="Cardano.Ledger.Shelley.PoolRank.html#likelihood"><span class="hs-identifier hs-var">likelihood</span></a></span><span>
+</span><span id="line-171"></span><span>            </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-172"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ActiveSlotCoeff -&gt; Rational -&gt; UnitInterval -&gt; Double
+</span><a href="Cardano.Ledger.Shelley.PoolRank.html#leaderProbability"><span class="hs-identifier hs-var">leaderProbability</span></a></span><span> </span><span class="annot"><span class="annottext">ActiveSlotCoeff
+</span><a href="#local-6989586621679519611"><span class="hs-identifier hs-var">asc</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679519672"><span class="hs-identifier hs-var">sigma</span></a></span><span> </span><span class="annot"><span class="annottext">(UnitInterval -&gt; Double) -&gt; UnitInterval -&gt; Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679519633"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+-&gt; Getting UnitInterval (PParams era) UnitInterval -&gt; UnitInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting UnitInterval (PParams era) UnitInterval
+forall era.
+EraPParams era =&gt;
+SimpleGetter (PParams era) UnitInterval
+SimpleGetter (PParams era) UnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppDG"><span class="hs-identifier hs-var">ppDG</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>            </span><span class="annot"><span class="annottext">EpochSize
+</span><a href="#local-6989586621679519600"><span class="hs-identifier hs-var">slotsPerEpoch</span></a></span><span>
+</span><span id="line-174"></span><span>        </span><span class="hs-comment">-- This pool produced at least one block this epoch</span><span>
+</span><span id="line-175"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679519673"><span class="annot"><span class="annottext">PoolRewardInfo
+</span><a href="#local-6989586621679519673"><span class="hs-identifier hs-var">info</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-176"></span><span>          </span><span class="annot"><span class="annottext">Natural -&gt; Double -&gt; EpochSize -&gt; Likelihood
+</span><a href="Cardano.Ledger.Shelley.PoolRank.html#likelihood"><span class="hs-identifier hs-var">likelihood</span></a></span><span>
+</span><span id="line-177"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PoolRewardInfo -&gt; Natural
+</span><a href="Cardano.Ledger.Shelley.Rewards.html#poolBlocks"><span class="hs-identifier hs-var">poolBlocks</span></a></span><span> </span><span class="annot"><span class="annottext">PoolRewardInfo
+</span><a href="#local-6989586621679519673"><span class="hs-identifier hs-var">info</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ActiveSlotCoeff -&gt; Rational -&gt; UnitInterval -&gt; Double
+</span><a href="Cardano.Ledger.Shelley.PoolRank.html#leaderProbability"><span class="hs-identifier hs-var">leaderProbability</span></a></span><span> </span><span class="annot"><span class="annottext">ActiveSlotCoeff
+</span><a href="#local-6989586621679519611"><span class="hs-identifier hs-var">asc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PoolRewardInfo -&gt; Rational
+</span><a href="#local-6989586621679519667"><span class="hs-identifier hs-var">getSigma</span></a></span><span> </span><span class="annot"><span class="annottext">PoolRewardInfo
+</span><a href="#local-6989586621679519673"><span class="hs-identifier hs-var">info</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(UnitInterval -&gt; Double) -&gt; UnitInterval -&gt; Double
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679519633"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+-&gt; Getting UnitInterval (PParams era) UnitInterval -&gt; UnitInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting UnitInterval (PParams era) UnitInterval
+forall era.
+EraPParams era =&gt;
+SimpleGetter (PParams era) UnitInterval
+SimpleGetter (PParams era) UnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppDG"><span class="hs-identifier hs-var">ppDG</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>            </span><span class="annot"><span class="annottext">EpochSize
+</span><a href="#local-6989586621679519600"><span class="hs-identifier hs-var">slotsPerEpoch</span></a></span><span>
+</span><span id="line-180"></span><span>      </span><span id="local-6989586621679519675"><span class="annot"><span class="annottext">newLikelihoods :: Map (KeyHash 'StakePool) Likelihood
+</span><a href="#local-6989586621679519675"><span class="hs-identifier hs-var hs-var">newLikelihoods</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VMap VB VB (KeyHash 'StakePool) Likelihood
+-&gt; Map (KeyHash 'StakePool) Likelihood
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+VMap kv vv k v -&gt; Map k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#toMap"><span class="hs-identifier hs-var">VMap.toMap</span></a></span><span> </span><span class="annot"><span class="annottext">(VMap VB VB (KeyHash 'StakePool) Likelihood
+ -&gt; Map (KeyHash 'StakePool) Likelihood)
+-&gt; VMap VB VB (KeyHash 'StakePool) Likelihood
+-&gt; Map (KeyHash 'StakePool) Likelihood
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Either StakeShare PoolRewardInfo -&gt; Likelihood)
+-&gt; VMap
+     VB VB (KeyHash 'StakePool) (Either StakeShare PoolRewardInfo)
+-&gt; VMap VB VB (KeyHash 'StakePool) Likelihood
+forall (vv :: * -&gt; *) a b (kv :: * -&gt; *) k.
+(Vector vv a, Vector vv b) =&gt;
+(a -&gt; b) -&gt; VMap kv vv k a -&gt; VMap kv vv k b
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#map"><span class="hs-identifier hs-var">VMap.map</span></a></span><span> </span><span class="annot"><span class="annottext">Either StakeShare PoolRewardInfo -&gt; Likelihood
+</span><a href="#local-6989586621679519670"><span class="hs-identifier hs-var">makeLikelihoods</span></a></span><span> </span><span class="annot"><span class="annottext">VMap VB VB (KeyHash 'StakePool) (Either StakeShare PoolRewardInfo)
+</span><a href="#local-6989586621679519660"><span class="hs-identifier hs-var">allPoolInfo</span></a></span><span>
+</span><span id="line-181"></span><span>      </span><span class="hs-comment">-- We now compute the leader rewards for each stake pool.</span><span>
+</span><span id="line-182"></span><span>      </span><span id="local-6989586621679519676"><span class="annot"><span class="annottext">collectLRs :: RewardEvent -&gt; PoolRewardInfo -&gt; RewardEvent
+</span><a href="#local-6989586621679519676"><span class="hs-identifier hs-var hs-var">collectLRs</span></a></span></span><span> </span><span id="local-6989586621679519677"><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519677"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span id="local-6989586621679519678"><span class="annot"><span class="annottext">PoolRewardInfo
+</span><a href="#local-6989586621679519678"><span class="hs-identifier hs-var">poolRI</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-183"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679519679"><span class="annot"><span class="annottext">account :: Credential 'Staking
+</span><a href="#local-6989586621679519679"><span class="hs-identifier hs-var hs-var">account</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RewardAccount -&gt; Credential 'Staking
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#raCredential"><span class="hs-identifier hs-var">raCredential</span></a></span><span> </span><span class="annot"><span class="annottext">(RewardAccount -&gt; Credential 'Staking)
+-&gt; (PoolParams -&gt; RewardAccount)
+-&gt; PoolParams
+-&gt; Credential 'Staking
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PoolParams -&gt; RewardAccount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#ppRewardAccount"><span class="hs-identifier hs-var">ppRewardAccount</span></a></span><span> </span><span class="annot"><span class="annottext">(PoolParams -&gt; Credential 'Staking)
+-&gt; PoolParams -&gt; Credential 'Staking
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PoolRewardInfo -&gt; PoolParams
+</span><a href="Cardano.Ledger.Shelley.Rewards.html#poolPs"><span class="hs-identifier hs-var">poolPs</span></a></span><span> </span><span class="annot"><span class="annottext">PoolRewardInfo
+</span><a href="#local-6989586621679519678"><span class="hs-identifier hs-var">poolRI</span></a></span><span>
+</span><span id="line-184"></span><span>            </span><span id="local-6989586621679519682"><span class="annot"><span class="annottext">packageLeaderReward :: PoolRewardInfo -&gt; Set Reward
+</span><a href="#local-6989586621679519682"><span class="hs-identifier hs-var hs-var">packageLeaderReward</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Reward -&gt; Set Reward
+forall a. a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.singleton</span></span><span> </span><span class="annot"><span class="annottext">(Reward -&gt; Set Reward)
+-&gt; (PoolRewardInfo -&gt; Reward) -&gt; PoolRewardInfo -&gt; Set Reward
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">LeaderOnlyReward -&gt; Reward
+</span><a href="Cardano.Ledger.Shelley.Rewards.html#leaderRewardToGeneral"><span class="hs-identifier hs-var">leaderRewardToGeneral</span></a></span><span> </span><span class="annot"><span class="annottext">(LeaderOnlyReward -&gt; Reward)
+-&gt; (PoolRewardInfo -&gt; LeaderOnlyReward) -&gt; PoolRewardInfo -&gt; Reward
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PoolRewardInfo -&gt; LeaderOnlyReward
+</span><a href="Cardano.Ledger.Shelley.Rewards.html#poolLeaderReward"><span class="hs-identifier hs-var">poolLeaderReward</span></a></span><span>
+</span><span id="line-185"></span><span>         </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; Bool
+</span><a href="Cardano.Ledger.Shelley.Era.html#hardforkBabbageForgoRewardPrefilter"><span class="hs-identifier hs-var">hardforkBabbageForgoRewardPrefilter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679519633"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; Getting ProtVer (PParams era) ProtVer -&gt; ProtVer
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting ProtVer (PParams era) ProtVer
+forall era. EraPParams era =&gt; Lens' (PParams era) ProtVer
+Lens' (PParams era) ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppProtocolVersionL"><span class="hs-identifier hs-var">ppProtocolVersionL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span>              </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; Accounts era -&gt; Bool
+forall era.
+EraAccounts era =&gt;
+Credential 'Staking -&gt; Accounts era -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#isAccountRegistered"><span class="hs-identifier hs-var">isAccountRegistered</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679519679"><span class="hs-identifier hs-var">account</span></a></span><span> </span><span class="annot"><span class="annottext">Accounts era
+</span><a href="#local-6989586621679519628"><span class="hs-identifier hs-var">accounts</span></a></span><span>
+</span><span id="line-187"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">(Set Reward -&gt; Set Reward -&gt; Set Reward)
+-&gt; Credential 'Staking -&gt; Set Reward -&gt; RewardEvent -&gt; RewardEvent
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.insertWith</span></span><span> </span><span class="annot"><span class="annottext">Set Reward -&gt; Set Reward -&gt; Set Reward
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.union</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679519679"><span class="hs-identifier hs-var">account</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PoolRewardInfo -&gt; Set Reward
+</span><a href="#local-6989586621679519682"><span class="hs-identifier hs-var">packageLeaderReward</span></a></span><span> </span><span class="annot"><span class="annottext">PoolRewardInfo
+</span><a href="#local-6989586621679519678"><span class="hs-identifier hs-var">poolRI</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519677"><span class="hs-identifier hs-var">acc</span></a></span><span>
+</span><span id="line-188"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519677"><span class="hs-identifier hs-var">acc</span></a></span><span>
+</span><span id="line-189"></span><span>      </span><span class="hs-comment">-- The data in 'RewardSnapShot' will be used to finish up the reward calculation</span><span>
+</span><span id="line-190"></span><span>      </span><span class="hs-comment">-- once all the member rewards are complete.</span><span>
+</span><span id="line-191"></span><span>      </span><span id="local-6989586621679519690"><span class="annot"><span class="annottext">rewsnap :: RewardSnapShot
+</span><a href="#local-6989586621679519690"><span class="hs-identifier hs-var hs-var">rewsnap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-192"></span><span>        </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardSnapShot"><span class="hs-identifier hs-type">RewardSnapShot</span></a></span><span>
+</span><span id="line-193"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">rewFees :: Coin
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewFees"><span class="hs-identifier hs-var">rewFees</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SnapShots -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#%24sel%3AssFee%3ASnapShots"><span class="hs-identifier hs-var">ssFee</span></a></span><span> </span><span class="annot"><span class="annottext">SnapShots
+</span><a href="#local-6989586621679519608"><span class="hs-identifier hs-var">ss</span></a></span><span>
+</span><span id="line-194"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewProtocolVersion :: ProtVer
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewProtocolVersion"><span class="hs-identifier hs-var">rewProtocolVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679519633"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; Getting ProtVer (PParams era) ProtVer -&gt; ProtVer
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting ProtVer (PParams era) ProtVer
+forall era. EraPParams era =&gt; Lens' (PParams era) ProtVer
+Lens' (PParams era) ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppProtocolVersionL"><span class="hs-identifier hs-var">ppProtocolVersionL</span></a></span><span>
+</span><span id="line-195"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewNonMyopic :: NonMyopic
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewNonMyopic"><span class="hs-identifier hs-var">rewNonMyopic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonMyopic
+</span><a href="#local-6989586621679519609"><span class="hs-identifier hs-var">nm</span></a></span><span>
+</span><span id="line-196"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewDeltaR1 :: Coin
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewDeltaR1"><span class="hs-identifier hs-var">rewDeltaR1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519635"><span class="hs-identifier hs-var">deltaR1</span></a></span><span>
+</span><span id="line-197"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewR :: Coin
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewR"><span class="hs-identifier hs-var">rewR</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519653"><span class="hs-identifier hs-var">_R</span></a></span><span>
+</span><span id="line-198"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewDeltaT1 :: Coin
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewDeltaT1"><span class="hs-identifier hs-var">rewDeltaT1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519651"><span class="hs-identifier hs-var">deltaT1</span></a></span><span>
+</span><span id="line-199"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewLikelihoods :: Map (KeyHash 'StakePool) Likelihood
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewLikelihoods"><span class="hs-identifier hs-var">rewLikelihoods</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Likelihood
+</span><a href="#local-6989586621679519675"><span class="hs-identifier hs-var">newLikelihoods</span></a></span><span>
+</span><span id="line-200"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewLeaders :: RewardEvent
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewLeaders"><span class="hs-identifier hs-var">rewLeaders</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(RewardEvent -&gt; PoolRewardInfo -&gt; RewardEvent)
+-&gt; RewardEvent
+-&gt; Map (KeyHash 'StakePool) PoolRewardInfo
+-&gt; RewardEvent
+forall a b k. (a -&gt; b -&gt; a) -&gt; a -&gt; Map k b -&gt; a
+</span><span class="hs-identifier hs-var">Map.foldl'</span></span><span> </span><span class="annot"><span class="annottext">RewardEvent -&gt; PoolRewardInfo -&gt; RewardEvent
+</span><a href="#local-6989586621679519676"><span class="hs-identifier hs-var">collectLRs</span></a></span><span> </span><span class="annot"><span class="annottext">RewardEvent
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) PoolRewardInfo
+</span><a href="#local-6989586621679519662"><span class="hs-identifier hs-var">blockProducingPoolInfo</span></a></span><span>
+</span><span id="line-201"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-202"></span><span>      </span><span class="hs-comment">-- The data in 'FreeVars' to supply individual stake pool members with</span><span>
+</span><span id="line-203"></span><span>      </span><span class="hs-comment">-- the neccessary information to compute their individual rewards.</span><span>
+</span><span id="line-204"></span><span>      </span><span id="local-6989586621679519701"><span class="annot"><span class="annottext">free :: FreeVars
+</span><a href="#local-6989586621679519701"><span class="hs-identifier hs-var hs-var">free</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-205"></span><span>        </span><span class="annot"><span class="annottext">VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+-&gt; Set (Credential 'Staking)
+-&gt; Coin
+-&gt; ProtVer
+-&gt; Map (KeyHash 'StakePool) PoolRewardInfo
+-&gt; FreeVars
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#FreeVars"><span class="hs-identifier hs-var">FreeVars</span></a></span><span>
+</span><span id="line-206"></span><span>          </span><span class="annot"><span class="annottext">VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+</span><a href="#local-6989586621679519615"><span class="hs-identifier hs-var">delegs</span></a></span><span>
+</span><span id="line-207"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (Credential 'Staking) (AccountState era)
+-&gt; Set (Credential 'Staking)
+forall k a. Map k a -&gt; Set k
+</span><span class="hs-identifier hs-var">Map.keysSet</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Accounts era
+</span><a href="#local-6989586621679519628"><span class="hs-identifier hs-var">accounts</span></a></span><span> </span><span class="annot"><span class="annottext">Accounts era
+-&gt; Getting
+     (Map (Credential 'Staking) (AccountState era))
+     (Accounts era)
+     (Map (Credential 'Staking) (AccountState era))
+-&gt; Map (Credential 'Staking) (AccountState era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Map (Credential 'Staking) (AccountState era))
+  (Accounts era)
+  (Map (Credential 'Staking) (AccountState era))
+forall era.
+EraAccounts era =&gt;
+Lens' (Accounts era) (Map (Credential 'Staking) (AccountState era))
+Lens' (Accounts era) (Map (Credential 'Staking) (AccountState era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#accountsMapL"><span class="hs-identifier hs-var">accountsMapL</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- TODO optimize. This is an expensive operation</span><span>
+</span><span id="line-208"></span><span>          </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519656"><span class="hs-identifier hs-var">totalStake</span></a></span><span>
+</span><span id="line-209"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679519633"><span class="hs-identifier hs-var">pr</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; Getting ProtVer (PParams era) ProtVer -&gt; ProtVer
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting ProtVer (PParams era) ProtVer
+forall era. EraPParams era =&gt; Lens' (PParams era) ProtVer
+Lens' (PParams era) ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppProtocolVersionL"><span class="hs-identifier hs-var">ppProtocolVersionL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-210"></span><span>          </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) PoolRewardInfo
+</span><a href="#local-6989586621679519662"><span class="hs-identifier hs-var">blockProducingPoolInfo</span></a></span><span>
+</span><span id="line-211"></span><span>      </span><span class="annot"><a href="#local-6989586621679519705"><span class="hs-identifier hs-type">pulser</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Pulser"><span class="hs-identifier hs-type">Pulser</span></a></span><span>
+</span><span id="line-212"></span><span>      </span><span id="local-6989586621679519705"><span class="annot"><span class="annottext">pulser :: Pulser
+</span><a href="#local-6989586621679519705"><span class="hs-identifier hs-var hs-var">pulser</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-213"></span><span>        </span><span class="annot"><span class="annottext">Int
+-&gt; FreeVars
+-&gt; VMap VB VP (Credential 'Staking) (CompactForm Coin)
+-&gt; RewardAns
+-&gt; Pulser
+forall ans (m :: * -&gt; *).
+(ans ~ RewardAns, m ~ ReaderT Globals Identity) =&gt;
+Int
+-&gt; FreeVars
+-&gt; VMap VB VP (Credential 'Staking) (CompactForm Coin)
+-&gt; ans
+-&gt; RewardPulser m ans
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RSLP"><span class="hs-identifier hs-var">RSLP</span></a></span><span>
+</span><span id="line-214"></span><span>          </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679519622"><span class="hs-identifier hs-var">pulseSize</span></a></span><span>
+</span><span id="line-215"></span><span>          </span><span class="annot"><span class="annottext">FreeVars
+</span><a href="#local-6989586621679519701"><span class="hs-identifier hs-var">free</span></a></span><span>
+</span><span id="line-216"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Stake -&gt; VMap VB VP (Credential 'Staking) (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#%24sel%3AunStake%3AStake"><span class="hs-identifier hs-var">unStake</span></a></span><span> </span><span class="annot"><span class="annottext">Stake
+</span><a href="#local-6989586621679519614"><span class="hs-identifier hs-var">stake</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-217"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (Credential 'Staking) Reward -&gt; RewardEvent -&gt; RewardAns
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardAns"><span class="hs-identifier hs-var">RewardAns</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) Reward
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span> </span><span class="annot"><span class="annottext">RewardEvent
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-218"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">RewardSnapShot -&gt; Pulser -&gt; PulsingRewUpdate
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Pulsing"><span class="hs-identifier hs-var">Pulsing</span></a></span><span> </span><span class="annot"><span class="annottext">RewardSnapShot
+</span><a href="#local-6989586621679519690"><span class="hs-identifier hs-var">rewsnap</span></a></span><span> </span><span class="annot"><span class="annottext">Pulser
+</span><a href="#local-6989586621679519705"><span class="hs-identifier hs-var">pulser</span></a></span><span>
+</span><span id="line-219"></span><span>
+</span><span id="line-220"></span><span class="hs-comment">-- Phase 2</span><span>
+</span><span id="line-221"></span><span>
+</span><span id="line-222"></span><span class="annot"><span class="hs-comment">-- | Run the pulser for a bit. If is has nothing left to do, complete it.</span></span><span>
+</span><span id="line-223"></span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#pulseStep"><span class="hs-identifier hs-type">pulseStep</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-224"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#PulsingRewUpdate"><span class="hs-identifier hs-type">PulsingRewUpdate</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-225"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier hs-type">ShelleyBase</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#PulsingRewUpdate"><span class="hs-identifier hs-type">PulsingRewUpdate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardEvent"><span class="hs-identifier hs-type">RewardEvent</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-226"></span><span id="pulseStep"><span class="annot"><span class="annottext">pulseStep :: PulsingRewUpdate -&gt; ShelleyBase (PulsingRewUpdate, RewardEvent)
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#pulseStep"><span class="hs-identifier hs-var hs-var">pulseStep</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Complete"><span class="hs-identifier hs-type">Complete</span></a></span><span> </span><span id="local-6989586621679519711"><span class="annot"><span class="annottext">RewardUpdate
+</span><a href="#local-6989586621679519711"><span class="hs-identifier hs-var">r_</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PulsingRewUpdate, RewardEvent)
+-&gt; ShelleyBase (PulsingRewUpdate, RewardEvent)
+forall a. a -&gt; ReaderT Globals Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RewardUpdate -&gt; PulsingRewUpdate
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Complete"><span class="hs-identifier hs-var">Complete</span></a></span><span> </span><span class="annot"><span class="annottext">RewardUpdate
+</span><a href="#local-6989586621679519711"><span class="hs-identifier hs-var">r_</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">RewardEvent
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-227"></span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#pulseStep"><span class="hs-identifier hs-var">pulseStep</span></a></span><span> </span><span id="local-6989586621679519712"><span class="annot"><span class="annottext">p :: PulsingRewUpdate
+</span><a href="#local-6989586621679519712"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Pulsing"><span class="hs-identifier hs-type">Pulsing</span></a></span><span> </span><span class="annot"><span class="annottext">RewardSnapShot
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679519713"><span class="annot"><span class="annottext">Pulser
+</span><a href="#local-6989586621679519713"><span class="hs-identifier hs-var">pulser</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Pulser -&gt; Bool
+forall (m :: * -&gt; *) ans. RewardPulser m ans -&gt; Bool
+forall (pulse :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) ans.
+Pulsable pulse =&gt;
+pulse m ans -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.Pulse.html#done"><span class="hs-identifier hs-var">done</span></a></span><span> </span><span class="annot"><span class="annottext">Pulser
+</span><a href="#local-6989586621679519713"><span class="hs-identifier hs-var">pulser</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PulsingRewUpdate -&gt; ShelleyBase (PulsingRewUpdate, RewardEvent)
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#completeStep"><span class="hs-identifier hs-var">completeStep</span></a></span><span> </span><span class="annot"><span class="annottext">PulsingRewUpdate
+</span><a href="#local-6989586621679519712"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-228"></span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#pulseStep"><span class="hs-identifier hs-var">pulseStep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Pulsing"><span class="hs-identifier hs-type">Pulsing</span></a></span><span> </span><span id="local-6989586621679519715"><span class="annot"><span class="annottext">RewardSnapShot
+</span><a href="#local-6989586621679519715"><span class="hs-identifier hs-var">rewsnap</span></a></span></span><span> </span><span id="local-6989586621679519716"><span class="annot"><span class="annottext">Pulser
+</span><a href="#local-6989586621679519716"><span class="hs-identifier hs-var">pulser</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-229"></span><span>  </span><span class="hs-comment">-- The pulser might compute provenance, but using pulseM here does not compute it</span><span>
+</span><span id="line-230"></span><span>  </span><span id="local-6989586621679519717"><span class="annot"><span class="annottext">p2 :: Pulser
+</span><a href="#local-6989586621679519717"><span class="hs-identifier hs-var">p2</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RSLP"><span class="hs-identifier hs-type">RSLP</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">FreeVars
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">VMap VB VP (Credential 'Staking) (CompactForm Coin)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardAns"><span class="hs-identifier hs-type">RewardAns</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) Reward
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679519721"><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519721"><span class="hs-identifier hs-var">event</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Pulser -&gt; ReaderT Globals Identity Pulser
+forall (m :: * -&gt; *) ans.
+Monad m =&gt;
+RewardPulser m ans -&gt; m (RewardPulser m ans)
+forall (pulse :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) ans.
+(Pulsable pulse, Monad m) =&gt;
+pulse m ans -&gt; m (pulse m ans)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.Pulse.html#pulseM"><span class="hs-identifier hs-var">pulseM</span></a></span><span> </span><span class="annot"><span class="annottext">Pulser
+</span><a href="#local-6989586621679519716"><span class="hs-identifier hs-var">pulser</span></a></span><span>
+</span><span id="line-231"></span><span>  </span><span class="annot"><span class="annottext">(PulsingRewUpdate, RewardEvent)
+-&gt; ShelleyBase (PulsingRewUpdate, RewardEvent)
+forall a. a -&gt; ReaderT Globals Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RewardSnapShot -&gt; Pulser -&gt; PulsingRewUpdate
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Pulsing"><span class="hs-identifier hs-var">Pulsing</span></a></span><span> </span><span class="annot"><span class="annottext">RewardSnapShot
+</span><a href="#local-6989586621679519715"><span class="hs-identifier hs-var">rewsnap</span></a></span><span> </span><span class="annot"><span class="annottext">Pulser
+</span><a href="#local-6989586621679519717"><span class="hs-identifier hs-var">p2</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519721"><span class="hs-identifier hs-var">event</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span class="hs-comment">-- Phase 3</span><span>
+</span><span id="line-234"></span><span>
+</span><span id="line-235"></span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#completeStep"><span class="hs-identifier hs-type">completeStep</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-236"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#PulsingRewUpdate"><span class="hs-identifier hs-type">PulsingRewUpdate</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-237"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier hs-type">ShelleyBase</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#PulsingRewUpdate"><span class="hs-identifier hs-type">PulsingRewUpdate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardEvent"><span class="hs-identifier hs-type">RewardEvent</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-238"></span><span id="completeStep"><span class="annot"><span class="annottext">completeStep :: PulsingRewUpdate -&gt; ShelleyBase (PulsingRewUpdate, RewardEvent)
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#completeStep"><span class="hs-identifier hs-var hs-var">completeStep</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Complete"><span class="hs-identifier hs-type">Complete</span></a></span><span> </span><span id="local-6989586621679519723"><span class="annot"><span class="annottext">RewardUpdate
+</span><a href="#local-6989586621679519723"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PulsingRewUpdate, RewardEvent)
+-&gt; ShelleyBase (PulsingRewUpdate, RewardEvent)
+forall a. a -&gt; ReaderT Globals Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RewardUpdate -&gt; PulsingRewUpdate
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Complete"><span class="hs-identifier hs-var">Complete</span></a></span><span> </span><span class="annot"><span class="annottext">RewardUpdate
+</span><a href="#local-6989586621679519723"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">RewardEvent
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#completeStep"><span class="hs-identifier hs-var">completeStep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Pulsing"><span class="hs-identifier hs-type">Pulsing</span></a></span><span> </span><span id="local-6989586621679519724"><span class="annot"><span class="annottext">RewardSnapShot
+</span><a href="#local-6989586621679519724"><span class="hs-identifier hs-var">rewsnap</span></a></span></span><span> </span><span id="local-6989586621679519725"><span class="annot"><span class="annottext">Pulser
+</span><a href="#local-6989586621679519725"><span class="hs-identifier hs-var">pulser</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-240"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679519726"><span class="annot"><span class="annottext">RewardUpdate
+</span><a href="#local-6989586621679519726"><span class="hs-identifier hs-var">p2</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679519727"><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519727"><span class="hs-identifier hs-var">event</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PulsingRewUpdate -&gt; ShelleyBase (RewardUpdate, RewardEvent)
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#completeRupd"><span class="hs-identifier hs-var">completeRupd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RewardSnapShot -&gt; Pulser -&gt; PulsingRewUpdate
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Pulsing"><span class="hs-identifier hs-var">Pulsing</span></a></span><span> </span><span class="annot"><span class="annottext">RewardSnapShot
+</span><a href="#local-6989586621679519724"><span class="hs-identifier hs-var">rewsnap</span></a></span><span> </span><span class="annot"><span class="annottext">Pulser
+</span><a href="#local-6989586621679519725"><span class="hs-identifier hs-var">pulser</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-241"></span><span>  </span><span class="annot"><span class="annottext">(PulsingRewUpdate, RewardEvent)
+-&gt; ShelleyBase (PulsingRewUpdate, RewardEvent)
+forall a. a -&gt; ReaderT Globals Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RewardUpdate -&gt; PulsingRewUpdate
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Complete"><span class="hs-identifier hs-var">Complete</span></a></span><span> </span><span class="annot"><span class="annottext">RewardUpdate
+</span><a href="#local-6989586621679519726"><span class="hs-identifier hs-var">p2</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519727"><span class="hs-identifier hs-var">event</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>
+</span><span id="line-243"></span><span class="hs-comment">-- | Phase 3 of reward update has several parts</span><span>
+</span><span id="line-244"></span><span class="hs-comment">--   a) completeM the pulser (in case there are still computions to run)</span><span>
+</span><span id="line-245"></span><span class="hs-comment">--   b) Combine the pulser provenance with the RewardProvenance</span><span>
+</span><span id="line-246"></span><span class="hs-comment">--   c) Construct the final RewardUpdate</span><span>
+</span><span id="line-247"></span><span class="hs-comment">--   d) Add the leader rewards to both the events and the computed Rewards</span><span>
+</span><span id="line-248"></span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#completeRupd"><span class="hs-identifier hs-type">completeRupd</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-249"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#PulsingRewUpdate"><span class="hs-identifier hs-type">PulsingRewUpdate</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-250"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier hs-type">ShelleyBase</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardUpdate"><span class="hs-identifier hs-type">RewardUpdate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardEvent"><span class="hs-identifier hs-type">RewardEvent</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-251"></span><span id="completeRupd"><span class="annot"><span class="annottext">completeRupd :: PulsingRewUpdate -&gt; ShelleyBase (RewardUpdate, RewardEvent)
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#completeRupd"><span class="hs-identifier hs-var hs-var">completeRupd</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Complete"><span class="hs-identifier hs-type">Complete</span></a></span><span> </span><span id="local-6989586621679519728"><span class="annot"><span class="annottext">RewardUpdate
+</span><a href="#local-6989586621679519728"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(RewardUpdate, RewardEvent)
+-&gt; ShelleyBase (RewardUpdate, RewardEvent)
+forall a. a -&gt; ReaderT Globals Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RewardUpdate
+</span><a href="#local-6989586621679519728"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">RewardEvent
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-252"></span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#completeRupd"><span class="hs-identifier hs-var">completeRupd</span></a></span><span>
+</span><span id="line-253"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Pulsing"><span class="hs-identifier hs-type">Pulsing</span></a></span><span>
+</span><span id="line-254"></span><span>      </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardSnapShot"><span class="hs-identifier hs-type">RewardSnapShot</span></a></span><span>
+</span><span id="line-255"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">rewDeltaR1 :: RewardSnapShot -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewDeltaR1"><span class="hs-identifier hs-var">rewDeltaR1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679519729"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519729"><span class="hs-identifier hs-var">deltaR1</span></a></span></span><span>
+</span><span id="line-256"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewFees :: RewardSnapShot -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewFees"><span class="hs-identifier hs-var">rewFees</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679519730"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519730"><span class="hs-identifier hs-var">feesSS</span></a></span></span><span>
+</span><span id="line-257"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewR :: RewardSnapShot -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewR"><span class="hs-identifier hs-var">rewR</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679519731"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519731"><span class="hs-identifier hs-var">oldr</span></a></span></span><span>
+</span><span id="line-258"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewDeltaT1 :: RewardSnapShot -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewDeltaT1"><span class="hs-identifier hs-var">rewDeltaT1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span id="local-6989586621679519732"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519732"><span class="hs-identifier hs-var">deltaT1</span></a></span></span><span>
+</span><span id="line-259"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewNonMyopic :: RewardSnapShot -&gt; NonMyopic
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewNonMyopic"><span class="hs-identifier hs-var">rewNonMyopic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679519733"><span class="annot"><span class="annottext">NonMyopic
+</span><a href="#local-6989586621679519733"><span class="hs-identifier hs-var">nm</span></a></span></span><span>
+</span><span id="line-260"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewLikelihoods :: RewardSnapShot -&gt; Map (KeyHash 'StakePool) Likelihood
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewLikelihoods"><span class="hs-identifier hs-var">rewLikelihoods</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679519734"><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Likelihood
+</span><a href="#local-6989586621679519734"><span class="hs-identifier hs-var">newLikelihoods</span></a></span></span><span>
+</span><span id="line-261"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewLeaders :: RewardSnapShot -&gt; RewardEvent
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewLeaders"><span class="hs-identifier hs-var">rewLeaders</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679519735"><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519735"><span class="hs-identifier hs-var">lrewards</span></a></span></span><span>
+</span><span id="line-262"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rewProtocolVersion :: RewardSnapShot -&gt; ProtVer
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rewProtocolVersion"><span class="hs-identifier hs-var">rewProtocolVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679519736"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679519736"><span class="hs-identifier hs-var">protVer</span></a></span></span><span>
+</span><span id="line-263"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-264"></span><span>      </span><span id="local-6989586621679519737"><span class="annot"><span class="annottext">pulser :: Pulser
+</span><a href="#local-6989586621679519737"><span class="hs-identifier hs-var">pulser</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RSLP"><span class="hs-identifier hs-type">RSLP</span></a></span><span> </span><span id="local-6989586621679519757"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679519757"><span class="hs-identifier hs-var">_size</span></a></span></span><span> </span><span id="local-6989586621679519758"><span class="annot"><span class="annottext">FreeVars
+</span><a href="#local-6989586621679519758"><span class="hs-identifier hs-var">_free</span></a></span></span><span> </span><span id="local-6989586621679519759"><span class="annot"><span class="annottext">VMap VB VP (Credential 'Staking) (CompactForm Coin)
+</span><a href="#local-6989586621679519759"><span class="hs-identifier hs-var">_source</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardAns"><span class="hs-identifier hs-type">RewardAns</span></a></span><span> </span><span id="local-6989586621679519760"><span class="annot"><span class="annottext">Map (Credential 'Staking) Reward
+</span><a href="#local-6989586621679519760"><span class="hs-identifier hs-var">prev</span></a></span></span><span> </span><span id="local-6989586621679519761"><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519761"><span class="hs-identifier hs-var">_now</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- If prev is Map.empty, we have never pulsed.</span><span>
+</span><span id="line-265"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-266"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardAns"><span class="hs-identifier hs-type">RewardAns</span></a></span><span> </span><span id="local-6989586621679519762"><span class="annot"><span class="annottext">Map (Credential 'Staking) Reward
+</span><a href="#local-6989586621679519762"><span class="hs-identifier hs-var">rs_</span></a></span></span><span> </span><span id="local-6989586621679519763"><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519763"><span class="hs-identifier hs-var">events</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Pulser -&gt; ReaderT Globals Identity RewardAns
+forall (m :: * -&gt; *) ans. Monad m =&gt; RewardPulser m ans -&gt; m ans
+forall (pulse :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) ans.
+(Pulsable pulse, Monad m) =&gt;
+pulse m ans -&gt; m ans
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.Pulse.html#completeM"><span class="hs-identifier hs-var">completeM</span></a></span><span> </span><span class="annot"><span class="annottext">Pulser
+</span><a href="#local-6989586621679519737"><span class="hs-identifier hs-var">pulser</span></a></span><span>
+</span><span id="line-267"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679519764"><span class="annot"><span class="annottext">rs' :: RewardEvent
+</span><a href="#local-6989586621679519764"><span class="hs-identifier hs-var hs-var">rs'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Reward -&gt; Set Reward)
+-&gt; Map (Credential 'Staking) Reward -&gt; RewardEvent
+forall a b k. (a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><span class="hs-identifier hs-var">Map.map</span></span><span> </span><span class="annot"><span class="annottext">Reward -&gt; Set Reward
+forall a. a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.singleton</span></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) Reward
+</span><a href="#local-6989586621679519762"><span class="hs-identifier hs-var">rs_</span></a></span><span>
+</span><span id="line-268"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679519766"><span class="annot"><span class="annottext">rs'' :: RewardEvent
+</span><a href="#local-6989586621679519766"><span class="hs-identifier hs-var hs-var">rs''</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Set Reward -&gt; Set Reward -&gt; Set Reward)
+-&gt; RewardEvent -&gt; RewardEvent -&gt; RewardEvent
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.unionWith</span></span><span> </span><span class="annot"><span class="annottext">Set Reward -&gt; Set Reward -&gt; Set Reward
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.union</span></span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519764"><span class="hs-identifier hs-var">rs'</span></a></span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519735"><span class="hs-identifier hs-var">lrewards</span></a></span><span>
+</span><span id="line-269"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679519768"><span class="annot"><span class="annottext">events' :: RewardEvent
+</span><a href="#local-6989586621679519768"><span class="hs-identifier hs-var hs-var">events'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Set Reward -&gt; Set Reward -&gt; Set Reward)
+-&gt; RewardEvent -&gt; RewardEvent -&gt; RewardEvent
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.unionWith</span></span><span> </span><span class="annot"><span class="annottext">Set Reward -&gt; Set Reward -&gt; Set Reward
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.union</span></span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519763"><span class="hs-identifier hs-var">events</span></a></span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519735"><span class="hs-identifier hs-var">lrewards</span></a></span><span>
+</span><span id="line-270"></span><span>
+</span><span id="line-271"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679519769"><span class="annot"><span class="annottext">deltaR2 :: Coin
+</span><a href="#local-6989586621679519769"><span class="hs-identifier hs-var hs-var">deltaR2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519731"><span class="hs-identifier hs-var">oldr</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Coin -&gt; Coin
+forall t. Val t =&gt; t -&gt; t -&gt; t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#%3C-%3E"><span class="hs-operator hs-var">&lt;-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; RewardEvent -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.Rewards.html#sumRewards"><span class="hs-identifier hs-var">sumRewards</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679519736"><span class="hs-identifier hs-var">protVer</span></a></span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519766"><span class="hs-identifier hs-var">rs''</span></a></span><span>
+</span><span id="line-272"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679519770"><span class="annot"><span class="annottext">neverpulsed :: Bool
+</span><a href="#local-6989586621679519770"><span class="hs-identifier hs-var hs-var">neverpulsed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) Reward -&gt; Bool
+forall k a. Map k a -&gt; Bool
+</span><span class="hs-identifier hs-var">Map.null</span></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) Reward
+</span><a href="#local-6989586621679519760"><span class="hs-identifier hs-var">prev</span></a></span><span>
+</span><span id="line-273"></span><span>        </span><span class="hs-glyph">!</span><span id="local-6989586621679519772"><span class="annot"><span class="annottext">newevent :: RewardEvent
+</span><a href="#local-6989586621679519772"><span class="hs-identifier hs-var hs-var">newevent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-274"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679519770"><span class="hs-identifier hs-var">neverpulsed</span></a></span><span> </span><span class="hs-comment">-- If we have never pulsed then everything in the computed needs to added to the event</span><span>
+</span><span id="line-275"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">(Set Reward -&gt; Set Reward -&gt; Set Reward)
+-&gt; RewardEvent -&gt; RewardEvent -&gt; RewardEvent
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.unionWith</span></span><span> </span><span class="annot"><span class="annottext">Set Reward -&gt; Set Reward -&gt; Set Reward
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.union</span></span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519764"><span class="hs-identifier hs-var">rs'</span></a></span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519768"><span class="hs-identifier hs-var">events'</span></a></span><span>
+</span><span id="line-276"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519768"><span class="hs-identifier hs-var">events'</span></a></span><span>
+</span><span id="line-277"></span><span>    </span><span class="annot"><span class="annottext">(RewardUpdate, RewardEvent)
+-&gt; ShelleyBase (RewardUpdate, RewardEvent)
+forall a. a -&gt; ReaderT Globals Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span>
+</span><span id="line-278"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardUpdate"><span class="hs-identifier hs-type">RewardUpdate</span></a></span><span>
+</span><span id="line-279"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">deltaT :: DeltaCoin
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#deltaT"><span class="hs-identifier hs-var">deltaT</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; DeltaCoin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#DeltaCoin"><span class="hs-identifier hs-var">DeltaCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679519732"><span class="hs-identifier hs-var">deltaT1</span></a></span><span>
+</span><span id="line-280"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">deltaR :: DeltaCoin
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#deltaR"><span class="hs-identifier hs-var">deltaR</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DeltaCoin -&gt; DeltaCoin
+forall m. Group m =&gt; m -&gt; m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/groups-0.5.3-9a9bbeb34e11b6941d1c31115962af9b6cfe665bc5b63c17e53cdcd6264ee49d/share/doc/html/src/Data.Group.html#invert"><span class="hs-identifier hs-var">invert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coin -&gt; DeltaCoin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#toDeltaCoin"><span class="hs-identifier hs-var">toDeltaCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519729"><span class="hs-identifier hs-var">deltaR1</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">DeltaCoin -&gt; DeltaCoin -&gt; DeltaCoin
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; DeltaCoin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#toDeltaCoin"><span class="hs-identifier hs-var">toDeltaCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519769"><span class="hs-identifier hs-var">deltaR2</span></a></span><span>
+</span><span id="line-281"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">rs :: RewardEvent
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#rs"><span class="hs-identifier hs-var">rs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519766"><span class="hs-identifier hs-var">rs''</span></a></span><span>
+</span><span id="line-282"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">deltaF :: DeltaCoin
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#deltaF"><span class="hs-identifier hs-var">deltaF</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DeltaCoin -&gt; DeltaCoin
+forall m. Group m =&gt; m -&gt; m
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/groups-0.5.3-9a9bbeb34e11b6941d1c31115962af9b6cfe665bc5b63c17e53cdcd6264ee49d/share/doc/html/src/Data.Group.html#invert"><span class="hs-identifier hs-var">invert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coin -&gt; DeltaCoin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#toDeltaCoin"><span class="hs-identifier hs-var">toDeltaCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519730"><span class="hs-identifier hs-var">feesSS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-283"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">nonMyopic :: NonMyopic
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#nonMyopic"><span class="hs-identifier hs-var">nonMyopic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonMyopic
+-&gt; Coin -&gt; Map (KeyHash 'StakePool) Likelihood -&gt; NonMyopic
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#updateNonMyopic"><span class="hs-identifier hs-var">updateNonMyopic</span></a></span><span> </span><span class="annot"><span class="annottext">NonMyopic
+</span><a href="#local-6989586621679519733"><span class="hs-identifier hs-var">nm</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519731"><span class="hs-identifier hs-var">oldr</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Likelihood
+</span><a href="#local-6989586621679519734"><span class="hs-identifier hs-var">newLikelihoods</span></a></span><span>
+</span><span id="line-284"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-285"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519772"><span class="hs-identifier hs-var">newevent</span></a></span><span>
+</span><span id="line-286"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-287"></span><span>
+</span><span id="line-288"></span><span class="hs-comment">-- | To create a reward update, run all 3 phases</span><span>
+</span><span id="line-289"></span><span class="hs-comment">--   This function is not used in the rules, so it ignores RewardEvents</span><span>
+</span><span id="line-290"></span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#createRUpd"><span class="hs-identifier hs-type">createRUpd</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-291"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679519410"><span class="annot"><a href="#local-6989586621679519410"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-292"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#EraGov"><span class="hs-identifier hs-type">EraGov</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679519410"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier hs-type">EraCertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679519410"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-293"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochSize"><span class="hs-identifier hs-type">EpochSize</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-294"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BlocksMade"><span class="hs-identifier hs-type">BlocksMade</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-295"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.Types.html#EpochState"><span class="hs-identifier hs-type">EpochState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679519410"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-296"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-297"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ActiveSlotCoeff"><span class="hs-identifier hs-type">ActiveSlotCoeff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-298"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-299"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier hs-type">ShelleyBase</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#RewardUpdate"><span class="hs-identifier hs-type">RewardUpdate</span></a></span><span>
+</span><span id="line-300"></span><span id="createRUpd"><span class="annot"><span class="annottext">createRUpd :: forall era.
+(EraGov era, EraCertState era) =&gt;
+EpochSize
+-&gt; BlocksMade
+-&gt; EpochState era
+-&gt; Coin
+-&gt; ActiveSlotCoeff
+-&gt; NonZero Word64
+-&gt; ShelleyBase RewardUpdate
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#createRUpd"><span class="hs-identifier hs-var hs-var">createRUpd</span></a></span></span><span> </span><span id="local-6989586621679519790"><span class="annot"><span class="annottext">EpochSize
+</span><a href="#local-6989586621679519790"><span class="hs-identifier hs-var">slotsPerEpoch</span></a></span></span><span> </span><span id="local-6989586621679519791"><span class="annot"><span class="annottext">BlocksMade
+</span><a href="#local-6989586621679519791"><span class="hs-identifier hs-var">blocksmade</span></a></span></span><span> </span><span id="local-6989586621679519792"><span class="annot"><span class="annottext">EpochState era
+</span><a href="#local-6989586621679519792"><span class="hs-identifier hs-var">epstate</span></a></span></span><span> </span><span id="local-6989586621679519793"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519793"><span class="hs-identifier hs-var">maxSupply</span></a></span></span><span> </span><span id="local-6989586621679519794"><span class="annot"><span class="annottext">ActiveSlotCoeff
+</span><a href="#local-6989586621679519794"><span class="hs-identifier hs-var">asc</span></a></span></span><span> </span><span id="local-6989586621679519795"><span class="annot"><span class="annottext">NonZero Word64
+</span><a href="#local-6989586621679519795"><span class="hs-identifier hs-var">secparam</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-301"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679519796"><span class="annot"><span class="annottext">step1 :: PulsingRewUpdate
+</span><a href="#local-6989586621679519796"><span class="hs-identifier hs-var hs-var">step1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochSize
+-&gt; BlocksMade
+-&gt; EpochState era
+-&gt; Coin
+-&gt; ActiveSlotCoeff
+-&gt; NonZero Word64
+-&gt; PulsingRewUpdate
+forall era.
+(EraGov era, EraCertState era) =&gt;
+EpochSize
+-&gt; BlocksMade
+-&gt; EpochState era
+-&gt; Coin
+-&gt; ActiveSlotCoeff
+-&gt; NonZero Word64
+-&gt; PulsingRewUpdate
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#startStep"><span class="hs-identifier hs-var">startStep</span></a></span><span> </span><span class="annot"><span class="annottext">EpochSize
+</span><a href="#local-6989586621679519790"><span class="hs-identifier hs-var">slotsPerEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">BlocksMade
+</span><a href="#local-6989586621679519791"><span class="hs-identifier hs-var">blocksmade</span></a></span><span> </span><span class="annot"><span class="annottext">EpochState era
+</span><a href="#local-6989586621679519792"><span class="hs-identifier hs-var">epstate</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519793"><span class="hs-identifier hs-var">maxSupply</span></a></span><span> </span><span class="annot"><span class="annottext">ActiveSlotCoeff
+</span><a href="#local-6989586621679519794"><span class="hs-identifier hs-var">asc</span></a></span><span> </span><span class="annot"><span class="annottext">NonZero Word64
+</span><a href="#local-6989586621679519795"><span class="hs-identifier hs-var">secparam</span></a></span><span>
+</span><span id="line-302"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679519797"><span class="annot"><span class="annottext">PulsingRewUpdate
+</span><a href="#local-6989586621679519797"><span class="hs-identifier hs-var">step2</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679519798"><span class="annot"><span class="annottext">RewardEvent
+</span><a href="#local-6989586621679519798"><span class="hs-identifier hs-var">_event</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PulsingRewUpdate -&gt; ShelleyBase (PulsingRewUpdate, RewardEvent)
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#pulseStep"><span class="hs-identifier hs-var">pulseStep</span></a></span><span> </span><span class="annot"><span class="annottext">PulsingRewUpdate
+</span><a href="#local-6989586621679519796"><span class="hs-identifier hs-var">step1</span></a></span><span>
+</span><span id="line-303"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">PulsingRewUpdate
+</span><a href="#local-6989586621679519797"><span class="hs-identifier hs-var">step2</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-304"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Complete"><span class="hs-identifier hs-type">Complete</span></a></span><span> </span><span id="local-6989586621679519799"><span class="annot"><span class="annottext">RewardUpdate
+</span><a href="#local-6989586621679519799"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RewardUpdate -&gt; ShelleyBase RewardUpdate
+forall a. a -&gt; ReaderT Globals Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">RewardUpdate
+</span><a href="#local-6989586621679519799"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-305"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Pulsing"><span class="hs-identifier hs-type">Pulsing</span></a></span><span> </span><span id="local-6989586621679519800"><span class="annot"><span class="annottext">RewardSnapShot
+</span><a href="#local-6989586621679519800"><span class="hs-identifier hs-var">rewsnap</span></a></span></span><span> </span><span id="local-6989586621679519801"><span class="annot"><span class="annottext">Pulser
+</span><a href="#local-6989586621679519801"><span class="hs-identifier hs-var">pulser</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(RewardUpdate, RewardEvent) -&gt; RewardUpdate
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">((RewardUpdate, RewardEvent) -&gt; RewardUpdate)
+-&gt; ShelleyBase (RewardUpdate, RewardEvent)
+-&gt; ShelleyBase RewardUpdate
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">PulsingRewUpdate -&gt; ShelleyBase (RewardUpdate, RewardEvent)
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#completeRupd"><span class="hs-identifier hs-var">completeRupd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RewardSnapShot -&gt; Pulser -&gt; PulsingRewUpdate
+</span><a href="Cardano.Ledger.Shelley.RewardUpdate.html#Pulsing"><span class="hs-identifier hs-var">Pulsing</span></a></span><span> </span><span class="annot"><span class="annottext">RewardSnapShot
+</span><a href="#local-6989586621679519800"><span class="hs-identifier hs-var">rewsnap</span></a></span><span> </span><span class="annot"><span class="annottext">Pulser
+</span><a href="#local-6989586621679519801"><span class="hs-identifier hs-var">pulser</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-306"></span><span>
+</span><span id="line-307"></span><span class="hs-comment">-- | Calculate the current circulation</span><span>
+</span><span id="line-308"></span><span class="hs-comment">--</span><span>
+</span><span id="line-309"></span><span class="hs-comment">-- This is used in the rewards calculation, and for API endpoints for pool ranking.</span><span>
+</span><span id="line-310"></span><span id="local-6989586621679519344"><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#circulation"><span class="hs-identifier hs-type">circulation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.Types.html#EpochState"><span class="hs-identifier hs-type">EpochState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679519344"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span></span><span>
+</span><span id="line-311"></span><span id="circulation"><span class="annot"><span class="annottext">circulation :: forall era. EpochState era -&gt; Coin -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#circulation"><span class="hs-identifier hs-var hs-var">circulation</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.Types.html#EpochState"><span class="hs-identifier hs-type">EpochState</span></a></span><span> </span><span id="local-6989586621679519805"><span class="annot"><span class="annottext">ChainAccountState
+</span><a href="#local-6989586621679519805"><span class="hs-identifier hs-var">acnt</span></a></span></span><span> </span><span class="annot"><span class="annottext">LedgerState era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">SnapShots
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">NonMyopic
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679519806"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519806"><span class="hs-identifier hs-var">supply</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-312"></span><span>  </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519806"><span class="hs-identifier hs-var">supply</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Coin -&gt; Coin
+forall t. Val t =&gt; t -&gt; t -&gt; t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#%3C-%3E"><span class="hs-operator hs-var">&lt;-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ChainAccountState -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.ChainAccount.html#casReserves"><span class="hs-identifier hs-var">casReserves</span></a></span><span> </span><span class="annot"><span class="annottext">ChainAccountState
+</span><a href="#local-6989586621679519805"><span class="hs-identifier hs-var">acnt</span></a></span><span>
+</span><span id="line-313"></span><span>
+</span><span id="line-314"></span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#decayFactor"><span class="hs-identifier hs-type">decayFactor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Float</span></span><span>
+</span><span id="line-315"></span><span id="decayFactor"><span class="annot"><span class="annottext">decayFactor :: Float
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#decayFactor"><span class="hs-identifier hs-var hs-var">decayFactor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Float
+</span><span class="hs-number">0.9</span></span><span>
+</span><span id="line-316"></span><span>
+</span><span id="line-317"></span><span class="annot"><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#updateNonMyopic"><span class="hs-identifier hs-type">updateNonMyopic</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-318"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.PoolRank.html#NonMyopic"><span class="hs-identifier hs-type">NonMyopic</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-319"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-320"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-type">StakePool</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.PoolRank.html#Likelihood"><span class="hs-identifier hs-type">Likelihood</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-321"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.PoolRank.html#NonMyopic"><span class="hs-identifier hs-type">NonMyopic</span></a></span><span>
+</span><span id="line-322"></span><span id="updateNonMyopic"><span class="annot"><span class="annottext">updateNonMyopic :: NonMyopic
+-&gt; Coin -&gt; Map (KeyHash 'StakePool) Likelihood -&gt; NonMyopic
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#updateNonMyopic"><span class="hs-identifier hs-var hs-var">updateNonMyopic</span></a></span></span><span> </span><span id="local-6989586621679519808"><span class="annot"><span class="annottext">NonMyopic
+</span><a href="#local-6989586621679519808"><span class="hs-identifier hs-var">nm</span></a></span></span><span> </span><span id="local-6989586621679519809"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679519809"><span class="hs-identifier hs-var">rPot_</span></a></span></span><span> </span><span id="local-6989586621679519810"><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Likelihood
+</span><a href="#local-6989586621679519810"><span class="hs-identifier hs-var">newLikelihoods</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-323"></span><span>  </span><span class="annot"><span class="annottext">NonMyopic
+</span><a href="#local-6989586621679519808"><span class="hs-identifier hs-var">nm</span></a></span><span>
+</span><span id="line-324"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.PoolRank.html#likelihoodsNM"><span class="hs-identifier hs-var">likelihoodsNM</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679519812"><span class="hs-identifier hs-type">updatedLikelihoods</span></a></span><span>
+</span><span id="line-325"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.PoolRank.html#rewardPotNM"><span class="hs-identifier hs-var">rewardPotNM</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679519809"><span class="hs-identifier hs-type">rPot_</span></a></span><span>
+</span><span id="line-326"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-327"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-328"></span><span>    </span><span id="local-6989586621679519814"><span class="annot"><span class="annottext">history :: Map (KeyHash 'StakePool) Likelihood
+</span><a href="#local-6989586621679519814"><span class="hs-identifier hs-var hs-var">history</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonMyopic -&gt; Map (KeyHash 'StakePool) Likelihood
+</span><a href="Cardano.Ledger.Shelley.PoolRank.html#likelihoodsNM"><span class="hs-identifier hs-var">likelihoodsNM</span></a></span><span> </span><span class="annot"><span class="annottext">NonMyopic
+</span><a href="#local-6989586621679519808"><span class="hs-identifier hs-var">nm</span></a></span><span>
+</span><span id="line-329"></span><span>    </span><span id="local-6989586621679519815"><span class="annot"><span class="annottext">performance :: KeyHash 'StakePool -&gt; Likelihood -&gt; Likelihood
+</span><a href="#local-6989586621679519815"><span class="hs-identifier hs-var hs-var">performance</span></a></span></span><span> </span><span id="local-6989586621679519816"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679519816"><span class="hs-identifier hs-var">kh</span></a></span></span><span> </span><span id="local-6989586621679519817"><span class="annot"><span class="annottext">Likelihood
+</span><a href="#local-6989586621679519817"><span class="hs-identifier hs-var">newPerf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-330"></span><span>      </span><span class="annot"><span class="annottext">Likelihood
+-&gt; (Likelihood -&gt; Likelihood) -&gt; Maybe Likelihood -&gt; Likelihood
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><span class="hs-identifier hs-var">maybe</span></span><span>
+</span><span id="line-331"></span><span>        </span><span class="annot"><span class="annottext">Likelihood
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-332"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Float -&gt; Likelihood -&gt; Likelihood
+</span><a href="Cardano.Ledger.Shelley.PoolRank.html#applyDecay"><span class="hs-identifier hs-var">applyDecay</span></a></span><span> </span><span class="annot"><span class="annottext">Float
+</span><a href="Cardano.Ledger.Shelley.LedgerState.PulsingReward.html#decayFactor"><span class="hs-identifier hs-var">decayFactor</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-333"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyHash 'StakePool
+-&gt; Map (KeyHash 'StakePool) Likelihood -&gt; Maybe Likelihood
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679519816"><span class="hs-identifier hs-var">kh</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Likelihood
+</span><a href="#local-6989586621679519814"><span class="hs-identifier hs-var">history</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-334"></span><span>        </span><span class="annot"><span class="annottext">Likelihood -&gt; Likelihood -&gt; Likelihood
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Likelihood
+</span><a href="#local-6989586621679519817"><span class="hs-identifier hs-var">newPerf</span></a></span><span>
+</span><span id="line-335"></span><span>    </span><span id="local-6989586621679519812"><span class="annot"><span class="annottext">updatedLikelihoods :: Map (KeyHash 'StakePool) Likelihood
+</span><a href="#local-6989586621679519812"><span class="hs-identifier hs-var hs-var">updatedLikelihoods</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(KeyHash 'StakePool -&gt; Likelihood -&gt; Likelihood)
+-&gt; Map (KeyHash 'StakePool) Likelihood
+-&gt; Map (KeyHash 'StakePool) Likelihood
+forall k a b. (k -&gt; a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><span class="hs-identifier hs-var">Map.mapWithKey</span></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool -&gt; Likelihood -&gt; Likelihood
+</span><a href="#local-6989586621679519815"><span class="hs-identifier hs-var">performance</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Likelihood
+</span><a href="#local-6989586621679519810"><span class="hs-identifier hs-var">newLikelihoods</span></a></span><span>
+</span><span id="line-336"></span></pre></body></html>

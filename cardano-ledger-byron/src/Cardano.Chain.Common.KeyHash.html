@@ -1,0 +1,272 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Common.KeyHash</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.KeyHash.html#KeyHash"><span class="hs-identifier">KeyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.KeyHash.html#hashKey"><span class="hs-identifier">hashKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddressHash.html"><span class="hs-identifier">Cardano.Chain.Common.AddressHash</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.html"><span class="hs-identifier">Cardano.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Hashing.html#decodeAbstractHash"><span class="hs-identifier">decodeAbstractHash</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Hashing.html#hashHexF"><span class="hs-identifier">hashHexF</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.html"><span class="hs-identifier">Cardano.Crypto.Signing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier">VerificationKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/heapwords-0.1.0.2-b6417b7556a8e92d841bb3a7d489e50a628754cd86fcb83441bde6481e83fe38/share/doc/html/src/Cardano.HeapWords.html"><span class="hs-identifier">Cardano.HeapWords</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/heapwords-0.1.0.2-b6417b7556a8e92d841bb3a7d489e50a628754cd86fcb83441bde6481e83fe38/share/doc/html/src/Cardano.HeapWords.html#HeapWords"><span class="hs-identifier">HeapWords</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.html"><span class="hs-identifier">Formatting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#formatToString"><span class="hs-identifier">formatToString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier">Buildable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.html"><span class="hs-identifier">Text.JSON.Canonical</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#FromObjectKey"><span class="hs-identifier">FromObjectKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Types.html#JSValue"><span class="hs-identifier">JSValue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#ToObjectKey"><span class="hs-identifier">ToObjectKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Types.html#toJSString"><span class="hs-identifier">toJSString</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><span class="hs-comment">-- | A 'KeyHash' refers to a 'VerificationKey'</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">newtype</span><span> </span><span id="KeyHash"><span class="annot"><a href="Cardano.Chain.Common.KeyHash.html#KeyHash"><span class="hs-identifier hs-var">KeyHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="KeyHash"><span class="annot"><a href="Cardano.Chain.Common.KeyHash.html#KeyHash"><span class="hs-identifier hs-var">KeyHash</span></a></span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unKeyHash"><span class="annot"><span class="annottext">KeyHash -&gt; AddressHash VerificationKey
+</span><a href="Cardano.Chain.Common.KeyHash.html#unKeyHash"><span class="hs-identifier hs-var hs-var">unKeyHash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddressHash.html#AddressHash"><span class="hs-identifier hs-type">AddressHash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679558075"><span id="local-6989586621679558080"><span class="annot"><span class="annottext">KeyHash -&gt; KeyHash -&gt; Bool
+(KeyHash -&gt; KeyHash -&gt; Bool)
+-&gt; (KeyHash -&gt; KeyHash -&gt; Bool) -&gt; Eq KeyHash
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: KeyHash -&gt; KeyHash -&gt; Bool
+== :: KeyHash -&gt; KeyHash -&gt; Bool
+$c/= :: KeyHash -&gt; KeyHash -&gt; Bool
+/= :: KeyHash -&gt; KeyHash -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679558088"><span id="local-6989586621679558093"><span id="local-6989586621679558097"><span id="local-6989586621679558101"><span id="local-6989586621679558105"><span id="local-6989586621679558109"><span id="local-6989586621679558113"><span class="annot"><span class="annottext">Eq KeyHash
+Eq KeyHash =&gt;
+(KeyHash -&gt; KeyHash -&gt; Ordering)
+-&gt; (KeyHash -&gt; KeyHash -&gt; Bool)
+-&gt; (KeyHash -&gt; KeyHash -&gt; Bool)
+-&gt; (KeyHash -&gt; KeyHash -&gt; Bool)
+-&gt; (KeyHash -&gt; KeyHash -&gt; Bool)
+-&gt; (KeyHash -&gt; KeyHash -&gt; KeyHash)
+-&gt; (KeyHash -&gt; KeyHash -&gt; KeyHash)
+-&gt; Ord KeyHash
+KeyHash -&gt; KeyHash -&gt; Bool
+KeyHash -&gt; KeyHash -&gt; Ordering
+KeyHash -&gt; KeyHash -&gt; KeyHash
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: KeyHash -&gt; KeyHash -&gt; Ordering
+compare :: KeyHash -&gt; KeyHash -&gt; Ordering
+$c&lt; :: KeyHash -&gt; KeyHash -&gt; Bool
+&lt; :: KeyHash -&gt; KeyHash -&gt; Bool
+$c&lt;= :: KeyHash -&gt; KeyHash -&gt; Bool
+&lt;= :: KeyHash -&gt; KeyHash -&gt; Bool
+$c&gt; :: KeyHash -&gt; KeyHash -&gt; Bool
+&gt; :: KeyHash -&gt; KeyHash -&gt; Bool
+$c&gt;= :: KeyHash -&gt; KeyHash -&gt; Bool
+&gt;= :: KeyHash -&gt; KeyHash -&gt; Bool
+$cmax :: KeyHash -&gt; KeyHash -&gt; KeyHash
+max :: KeyHash -&gt; KeyHash -&gt; KeyHash
+$cmin :: KeyHash -&gt; KeyHash -&gt; KeyHash
+min :: KeyHash -&gt; KeyHash -&gt; KeyHash
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679558119"><span id="local-6989586621679558125"><span id="local-6989586621679558129"><span class="annot"><span class="annottext">Int -&gt; KeyHash -&gt; ShowS
+[KeyHash] -&gt; ShowS
+KeyHash -&gt; String
+(Int -&gt; KeyHash -&gt; ShowS)
+-&gt; (KeyHash -&gt; String) -&gt; ([KeyHash] -&gt; ShowS) -&gt; Show KeyHash
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; KeyHash -&gt; ShowS
+showsPrec :: Int -&gt; KeyHash -&gt; ShowS
+$cshow :: KeyHash -&gt; String
+show :: KeyHash -&gt; String
+$cshowList :: [KeyHash] -&gt; ShowS
+showList :: [KeyHash] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679558133"><span class="annot"><span class="annottext">KeyHash -&gt; ()
+(KeyHash -&gt; ()) -&gt; NFData KeyHash
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: KeyHash -&gt; ()
+rnf :: KeyHash -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679558140"><span class="annot"><span class="annottext">KeyHash -&gt; Builder
+(KeyHash -&gt; Builder) -&gt; Buildable KeyHash
+forall p. (p -&gt; Builder) -&gt; Buildable p
+$cbuild :: KeyHash -&gt; Builder
+build :: KeyHash -&gt; Builder
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier hs-var hs-var hs-var hs-var">Buildable</span></a></span></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679558149"><span id="local-6989586621679558157"><span id="local-6989586621679558164"><span class="annot"><span class="annottext">Typeable KeyHash
+Typeable KeyHash =&gt;
+(forall s. Decoder s KeyHash)
+-&gt; (forall s. Proxy KeyHash -&gt; Decoder s ())
+-&gt; (Proxy KeyHash -&gt; Text)
+-&gt; DecCBOR KeyHash
+Proxy KeyHash -&gt; Text
+forall s. Decoder s KeyHash
+forall a.
+Typeable a =&gt;
+(forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy KeyHash -&gt; Decoder s ()
+$cdecCBOR :: forall s. Decoder s KeyHash
+decCBOR :: forall s. Decoder s KeyHash
+$cdropCBOR :: forall s. Proxy KeyHash -&gt; Decoder s ()
+dropCBOR :: forall s. Proxy KeyHash -&gt; Decoder s ()
+$clabel :: Proxy KeyHash -&gt; Text
+label :: Proxy KeyHash -&gt; Text
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679558176"><span id="local-6989586621679558186"><span id="local-6989586621679558195"><span class="annot"><span class="annottext">Typeable KeyHash
+Typeable KeyHash =&gt;
+(KeyHash -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy KeyHash -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [KeyHash] -&gt; Size)
+-&gt; EncCBOR KeyHash
+KeyHash -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [KeyHash] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy KeyHash -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+$cencCBOR :: KeyHash -&gt; Encoding
+encCBOR :: KeyHash -&gt; Encoding
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy KeyHash -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy KeyHash -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [KeyHash] -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [KeyHash] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679558204"><span class="annot"><span class="annottext">KeyHash -&gt; Int
+(KeyHash -&gt; Int) -&gt; HeapWords KeyHash
+forall a. (a -&gt; Int) -&gt; HeapWords a
+$cheapWords :: KeyHash -&gt; Int
+heapWords :: KeyHash -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/heapwords-0.1.0.2-b6417b7556a8e92d841bb3a7d489e50a628754cd86fcb83441bde6481e83fe38/share/doc/html/src/Cardano.HeapWords.html#HeapWords"><span class="hs-identifier hs-var hs-var hs-var hs-var">HeapWords</span></a></span></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679558211"><span id="local-6989586621679558216"><span id="local-6989586621679558220"><span class="annot"><span class="annottext">Context -&gt; KeyHash -&gt; IO (Maybe ThunkInfo)
+Proxy KeyHash -&gt; String
+(Context -&gt; KeyHash -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; KeyHash -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy KeyHash -&gt; String)
+-&gt; NoThunks KeyHash
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; KeyHash -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; KeyHash -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; KeyHash -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; KeyHash -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy KeyHash -&gt; String
+showTypeOf :: Proxy KeyHash -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679558024"><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621679558024"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#ToObjectKey"><span class="hs-identifier hs-type">ToObjectKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679558024"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.KeyHash.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679558235"><span class="annot"><span class="annottext">toObjectKey :: KeyHash -&gt; m JSString
+</span><a href="#local-6989586621679558235"><span class="hs-identifier hs-var hs-var hs-var hs-var">toObjectKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">JSString -&gt; m JSString
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(JSString -&gt; m JSString)
+-&gt; (KeyHash -&gt; JSString) -&gt; KeyHash -&gt; m JSString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; JSString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Types.html#toJSString"><span class="hs-identifier hs-var">toJSString</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; JSString) -&gt; (KeyHash -&gt; String) -&gt; KeyHash -&gt; JSString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format String (AddressHash VerificationKey -&gt; String)
+-&gt; AddressHash VerificationKey -&gt; String
+forall a. Format String a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#formatToString"><span class="hs-identifier hs-var">formatToString</span></a></span><span> </span><span class="annot"><span class="annottext">Format String (AddressHash VerificationKey -&gt; String)
+forall r algo a. Format r (AbstractHash algo a -&gt; r)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Hashing.html#hashHexF"><span class="hs-identifier hs-var">hashHexF</span></a></span><span> </span><span class="annot"><span class="annottext">(AddressHash VerificationKey -&gt; String)
+-&gt; (KeyHash -&gt; AddressHash VerificationKey) -&gt; KeyHash -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">KeyHash -&gt; AddressHash VerificationKey
+</span><a href="Cardano.Chain.Common.KeyHash.html#unKeyHash"><span class="hs-identifier hs-var">unKeyHash</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679558044"><span class="annot"><span class="hs-identifier hs-type">MonadError</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Json.Canonical.html#SchemaError"><span class="hs-identifier hs-type">SchemaError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679558044"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#FromObjectKey"><span class="hs-identifier hs-type">FromObjectKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679558044"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.KeyHash.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679558261"><span class="annot"><span class="annottext">fromObjectKey :: JSString -&gt; m (Maybe KeyHash)
+</span><a href="#local-6989586621679558261"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromObjectKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">(AddressHash VerificationKey -&gt; Maybe KeyHash)
+-&gt; m (AddressHash VerificationKey) -&gt; m (Maybe KeyHash)
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyHash -&gt; Maybe KeyHash
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(KeyHash -&gt; Maybe KeyHash)
+-&gt; (AddressHash VerificationKey -&gt; KeyHash)
+-&gt; AddressHash VerificationKey
+-&gt; Maybe KeyHash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">AddressHash VerificationKey -&gt; KeyHash
+</span><a href="Cardano.Chain.Common.KeyHash.html#KeyHash"><span class="hs-identifier hs-var">KeyHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">(m (AddressHash VerificationKey) -&gt; m (Maybe KeyHash))
+-&gt; (JSString -&gt; m (AddressHash VerificationKey))
+-&gt; JSString
+-&gt; m (Maybe KeyHash)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Either Text (AddressHash VerificationKey))
+-&gt; JSValue -&gt; m (AddressHash VerificationKey)
+forall a (m :: * -&gt; *) e.
+(Typeable a, ReportSchemaErrors m, Buildable e) =&gt;
+(Text -&gt; Either e a) -&gt; JSValue -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Json.Parse.html#parseJSString"><span class="hs-identifier hs-var">parseJSString</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either Text (AddressHash VerificationKey)
+forall algo a.
+HashAlgorithm algo =&gt;
+Text -&gt; Either Text (AbstractHash algo a)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Hashing.html#decodeAbstractHash"><span class="hs-identifier hs-var">decodeAbstractHash</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">(JSValue -&gt; m (AddressHash VerificationKey))
+-&gt; (JSString -&gt; JSValue)
+-&gt; JSString
+-&gt; m (AddressHash VerificationKey)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">JSString -&gt; JSValue
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Types.html#JSString"><span class="hs-identifier hs-var">JSString</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><a href="Cardano.Chain.Common.KeyHash.html#hashKey"><span class="hs-identifier hs-type">hashKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.KeyHash.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span>
+</span><span id="line-54"></span><span id="hashKey"><span class="annot"><span class="annottext">hashKey :: VerificationKey -&gt; KeyHash
+</span><a href="Cardano.Chain.Common.KeyHash.html#hashKey"><span class="hs-identifier hs-var hs-var">hashKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AddressHash VerificationKey -&gt; KeyHash
+</span><a href="Cardano.Chain.Common.KeyHash.html#KeyHash"><span class="hs-identifier hs-var">KeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">(AddressHash VerificationKey -&gt; KeyHash)
+-&gt; (VerificationKey -&gt; AddressHash VerificationKey)
+-&gt; VerificationKey
+-&gt; KeyHash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">VerificationKey -&gt; AddressHash VerificationKey
+forall a. EncCBOR a =&gt; a -&gt; AddressHash a
+</span><a href="Cardano.Chain.Common.AddressHash.html#addressHash"><span class="hs-identifier hs-var">addressHash</span></a></span><span>
+</span><span id="line-55"></span></pre></body></html>

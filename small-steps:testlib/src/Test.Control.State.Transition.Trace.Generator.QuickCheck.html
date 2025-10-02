@@ -1,0 +1,1127 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DefaultSignatures #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE TupleSections #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-16"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Control.State.Transition.Trace.Generator.QuickCheck</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier">HasTrace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier">BaseEnv</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#envGen"><span class="hs-identifier">envGen</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#sigGen"><span class="hs-identifier">sigGen</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#shrinkSignal"><span class="hs-identifier">shrinkSignal</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#interpretSTS"><span class="hs-identifier">interpretSTS</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceFrom"><span class="hs-identifier">traceFrom</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceFromInitState"><span class="hs-identifier">traceFromInitState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#trace"><span class="hs-identifier">trace</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#shrinkTrace"><span class="hs-identifier">shrinkTrace</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Trace generator properties</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#forAllTrace"><span class="hs-identifier">forAllTrace</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#forAllTraceFromInitState"><span class="hs-identifier">forAllTraceFromInitState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#onlyValidSignalsAreGenerated"><span class="hs-identifier">onlyValidSignalsAreGenerated</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#onlyValidSignalsAreGeneratedFromInitState"><span class="hs-identifier">onlyValidSignalsAreGeneratedFromInitState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Trace classification</span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceLengthsAreClassified"><span class="hs-identifier">traceLengthsAreClassified</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#classifyTraceLength"><span class="hs-identifier">classifyTraceLength</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#classifySize"><span class="hs-identifier">classifySize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Internal</span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#mkIntervals"><span class="hs-identifier">mkIntervals</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier">Environment</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#IRC"><span class="hs-identifier">IRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#IRC"><span class="hs-identifier">IRC</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier">STS</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier">Signal</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier">State</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier">TRC</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html"><span class="hs-identifier">Control.State.Transition.Extended</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Identity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Identity</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Kind</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Type</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.List.NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NonEmpty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromMaybe</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Stack</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.html"><span class="hs-identifier">Test.Control.State.Transition.Trace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Trace.html#Trace"><span class="hs-identifier">Trace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.html"><span class="hs-identifier">Test.Control.State.Transition.Trace</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Trace</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.html"><span class="hs-identifier">Test.QuickCheck</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">QuickCheck</span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- | State transition systems for which traces can be generated, given a trace</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- generation environment.</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- The trace generation environment allows to pass relevant data to the trace</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- generation algorithm.</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="HasTrace"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-var">HasTrace</span></a></span></span><span> </span><span id="local-6989586621679224775"><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span></span><span> </span><span id="local-6989586621679224776"><span class="annot"><a href="#local-6989586621679224776"><span class="hs-identifier hs-type">traceGenEnv</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="BaseEnv"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-var">BaseEnv</span></a></span></span><span> </span><span id="local-6989586621679224775"><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="BaseEnv"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-var">BaseEnv</span></a></span></span><span> </span><span id="local-6989586621679224928"><span class="annot"><a href="#local-6989586621679224928"><span class="hs-identifier hs-type hs-type">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-comment">-- | Interpret the action from the base monad into a pure value, given some</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-comment">-- initial environment. This obviously places some contraints on the nature of</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-comment">-- the base monad for a trace to be completed.</span><span>
+</span><span id="line-64"></span><span>  </span><span id="interpretSTS"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#interpretSTS"><span class="hs-identifier hs-type">interpretSTS</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679224808"><span class="annot"><a href="#local-6989586621679224808"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-type">BaseEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#BaseM"><span class="hs-identifier hs-type">STS.BaseM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224808"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679224808"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="interpretSTS"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#interpretSTS"><span class="hs-identifier hs-type">interpretSTS</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#BaseM"><span class="hs-identifier hs-type">STS.BaseM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679224782"><span class="annot"><a href="#local-6989586621679224782"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-type">BaseEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#BaseM"><span class="hs-identifier hs-type">STS.BaseM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224782"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679224782"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621679224930"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#interpretSTS"><span class="hs-identifier hs-var hs-var">interpretSTS</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span id="local-6989586621679224934"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679224934"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679224934"><span class="hs-identifier hs-var">x</span></a></span></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>  </span><span id="envGen"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#envGen"><span class="hs-identifier hs-type">envGen</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679224776"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">QuickCheck.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>  </span><span id="sigGen"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#sigGen"><span class="hs-identifier hs-type">sigGen</span></a></span></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><a href="#local-6989586621679224776"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">QuickCheck.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-type">Signal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span>  </span><span id="shrinkSignal"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#shrinkSignal"><span class="hs-identifier hs-type">shrinkSignal</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-type">Signal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-type">Signal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224775"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><span class="hs-comment">-- | Generate a random trace starting in the given environment and initial state.</span></span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceFrom"><span class="hs-identifier hs-type">traceFrom</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679224787"><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span></span><span> </span><span id="local-6989586621679224788"><span class="annot"><a href="#local-6989586621679224788"><span class="hs-identifier hs-type">traceGenEnv</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-type">HasTrace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224788"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-type">BaseEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Maximum trace length.</span></span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><a href="#local-6989586621679224788"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">QuickCheck.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span id="traceFrom"><span class="annot"><span class="annottext">traceFrom :: forall sts traceGenEnv.
+HasTrace sts traceGenEnv =&gt;
+BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Environment sts
+-&gt; State sts
+-&gt; Gen (Trace sts)
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceFrom"><span class="hs-identifier hs-var hs-var">traceFrom</span></a></span></span><span> </span><span id="local-6989586621679224965"><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679224965"><span class="hs-identifier hs-var">traceEnv</span></a></span></span><span> </span><span id="local-6989586621679224966"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679224966"><span class="hs-identifier hs-var">maxTraceLength</span></a></span></span><span> </span><span id="local-6989586621679224967"><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679224967"><span class="hs-identifier hs-var">traceGenEnv</span></a></span></span><span> </span><span id="local-6989586621679224968"><span class="annot"><span class="annottext">Environment sts
+</span><a href="#local-6989586621679224968"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679224969"><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679224969"><span class="hs-identifier hs-var">st0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-91"></span><span>  </span><span id="local-6989586621679224970"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679224970"><span class="hs-identifier hs-var">chosenTraceLength</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Word64, Word64) -&gt; Gen Word64
+forall a. Random a =&gt; (a, a) -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#choose"><span class="hs-identifier hs-var">QuickCheck.choose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679224966"><span class="hs-identifier hs-var">maxTraceLength</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><span class="annottext">Environment sts
+-&gt; State sts -&gt; [(State sts, Signal sts)] -&gt; Trace sts
+forall s.
+Environment s -&gt; State s -&gt; [(State s, Signal s)] -&gt; Trace s
+</span><a href="Test.Control.State.Transition.Trace.html#mkTrace"><span class="hs-identifier hs-var">Trace.mkTrace</span></a></span><span> </span><span class="annot"><span class="annottext">Environment sts
+</span><a href="#local-6989586621679224968"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679224969"><span class="hs-identifier hs-var">st0</span></a></span><span> </span><span class="annot"><span class="annottext">([(State sts, Signal sts)] -&gt; Trace sts)
+-&gt; Gen [(State sts, Signal sts)] -&gt; Gen (Trace sts)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Word64
+-&gt; State sts
+-&gt; [(State sts, Signal sts)]
+-&gt; Gen [(State sts, Signal sts)]
+</span><a href="#local-6989586621679224974"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679224970"><span class="hs-identifier hs-var">chosenTraceLength</span></a></span><span> </span><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679224969"><span class="hs-identifier hs-var">st0</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><a href="#local-6989586621679224974"><span class="hs-identifier hs-type">loop</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-96"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-type">Signal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">QuickCheck.Gen</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-type">Signal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-99"></span><span>    </span><span id="local-6989586621679224974"><span class="annot"><span class="annottext">loop :: Word64
+-&gt; State sts
+-&gt; [(State sts, Signal sts)]
+-&gt; Gen [(State sts, Signal sts)]
+</span><a href="#local-6989586621679224974"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">State sts
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679224975"><span class="annot"><span class="annottext">[(State sts, Signal sts)]
+</span><a href="#local-6989586621679224975"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(State sts, Signal sts)] -&gt; Gen [(State sts, Signal sts)]
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">[(State sts, Signal sts)]
+</span><a href="#local-6989586621679224975"><span class="hs-identifier hs-var">acc</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><a href="#local-6989586621679224974"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span id="local-6989586621679224976"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679224976"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679224977"><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679224977"><span class="hs-identifier hs-var">sti</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679224978"><span class="annot"><span class="annottext">[(State sts, Signal sts)]
+</span><a href="#local-6989586621679224978"><span class="hs-identifier hs-var">stSigs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-101"></span><span>      </span><span id="local-6989586621679224979"><span class="annot"><span class="annottext">Signal sts
+</span><a href="#local-6989586621679224979"><span class="hs-identifier hs-var">sig</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, HasCallStack) =&gt;
+traceGenEnv -&gt; Environment sts -&gt; State sts -&gt; Gen (Signal sts)
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#sigGen"><span class="hs-identifier hs-var">sigGen</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224788"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679224967"><span class="hs-identifier hs-var">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Environment sts
+</span><a href="#local-6989586621679224968"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679224977"><span class="hs-identifier hs-var">sti</span></a></span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">forall sts traceGenEnv a.
+(HasTrace sts traceGenEnv, HasCallStack) =&gt;
+BaseEnv sts -&gt; BaseM sts a -&gt; a
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#interpretSTS"><span class="hs-identifier hs-var">interpretSTS</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224788"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679224965"><span class="hs-identifier hs-var">traceEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *) (rtype :: RuleType).
+(STS s, RuleTypeRep rtype, m ~ BaseM s) =&gt;
+RuleContext rtype s
+-&gt; m (Either (NonEmpty (PredicateFailure s)) (State s))
+</span><a href="Test.Control.State.Transition.Trace.html#applySTSTest"><span class="hs-identifier hs-var">Trace.applySTSTest</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224787"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Environment sts, State sts, Signal sts) -&gt; TRC sts
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Environment sts
+</span><a href="#local-6989586621679224968"><span class="hs-identifier hs-var">env</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679224977"><span class="hs-identifier hs-var">sti</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Signal sts
+</span><a href="#local-6989586621679224979"><span class="hs-identifier hs-var">sig</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-103"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679224981"><span class="annot"><span class="annottext">NonEmpty (PredicateFailure sts)
+</span><a href="#local-6989586621679224981"><span class="hs-identifier hs-var">_predicateFailures</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-104"></span><span>          </span><span class="annot"><span class="annottext">Word64
+-&gt; State sts
+-&gt; [(State sts, Signal sts)]
+-&gt; Gen [(State sts, Signal sts)]
+</span><a href="#local-6989586621679224974"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679224976"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679224977"><span class="hs-identifier hs-var">sti</span></a></span><span> </span><span class="annot"><span class="annottext">[(State sts, Signal sts)]
+</span><a href="#local-6989586621679224978"><span class="hs-identifier hs-var">stSigs</span></a></span><span>
+</span><span id="line-105"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679224982"><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679224982"><span class="hs-identifier hs-var">sti'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-106"></span><span>          </span><span class="annot"><span class="annottext">Word64
+-&gt; State sts
+-&gt; [(State sts, Signal sts)]
+-&gt; Gen [(State sts, Signal sts)]
+</span><a href="#local-6989586621679224974"><span class="hs-identifier hs-var">loop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679224976"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679224982"><span class="hs-identifier hs-var">sti'</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679224982"><span class="hs-identifier hs-var">sti'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Signal sts
+</span><a href="#local-6989586621679224979"><span class="hs-identifier hs-var">sig</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(State sts, Signal sts)
+-&gt; [(State sts, Signal sts)] -&gt; [(State sts, Signal sts)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[(State sts, Signal sts)]
+</span><a href="#local-6989586621679224978"><span class="hs-identifier hs-var">stSigs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="annot"><span class="hs-comment">-- | Generate a random trace.</span></span><span>
+</span><span id="line-109"></span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#trace"><span class="hs-identifier hs-type">trace</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679224817"><span class="annot"><a href="#local-6989586621679224817"><span class="hs-identifier hs-type">sts</span></a></span></span><span> </span><span id="local-6989586621679224818"><span class="annot"><a href="#local-6989586621679224818"><span class="hs-identifier hs-type">traceGenEnv</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-type">HasTrace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224817"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224818"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224817"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-type">BaseEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224817"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Maximum trace length.</span></span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-117"></span><span>  </span><span class="annot"><a href="#local-6989586621679224818"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">QuickCheck.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224817"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span id="trace"><span class="annot"><span class="annottext">trace :: forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, Show (Environment sts)) =&gt;
+BaseEnv sts -&gt; Word64 -&gt; traceGenEnv -&gt; Gen (Trace sts)
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#trace"><span class="hs-identifier hs-var hs-var">trace</span></a></span></span><span> </span><span id="local-6989586621679224989"><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679224989"><span class="hs-identifier hs-var">traceEnv</span></a></span></span><span> </span><span id="local-6989586621679224990"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679224990"><span class="hs-identifier hs-var">maxTraceLength</span></a></span></span><span> </span><span id="local-6989586621679224991"><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679224991"><span class="hs-identifier hs-var">traceGenEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-120"></span><span>  </span><span class="annot"><span class="annottext">BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; Gen (Trace sts)
+forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, Show (Environment sts), HasCallStack) =&gt;
+BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; Gen (Trace sts)
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceFromInitState"><span class="hs-identifier hs-var">traceFromInitState</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679224989"><span class="hs-identifier hs-var">traceEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679224990"><span class="hs-identifier hs-var">maxTraceLength</span></a></span><span> </span><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679224991"><span class="hs-identifier hs-var">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe
+  (IRC sts
+   -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- | Generate a random trace given a generator for initial state.</span><span>
+</span><span id="line-123"></span><span class="hs-comment">--</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- Takes an optional generator for initial state, or defaults to 'applySTS'</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- if no initial state is required by the STS.</span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceFromInitState"><span class="hs-identifier hs-type">traceFromInitState</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679224822"><span class="annot"><a href="#local-6989586621679224822"><span class="hs-identifier hs-type">sts</span></a></span></span><span> </span><span id="local-6989586621679224823"><span class="annot"><a href="#local-6989586621679224823"><span class="hs-identifier hs-type">traceGenEnv</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-type">HasTrace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224822"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224823"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224822"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-type">BaseEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224822"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Maximum trace length.</span></span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><a href="#local-6989586621679224823"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Optional generator of STS initial state</span></span><span>
+</span><span id="line-137"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#IRC"><span class="hs-identifier hs-type">IRC</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224822"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">QuickCheck.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">STS.PredicateFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224822"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224822"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-138"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">QuickCheck.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224822"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span id="traceFromInitState"><span class="annot"><span class="annottext">traceFromInitState :: forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, Show (Environment sts), HasCallStack) =&gt;
+BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; Gen (Trace sts)
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceFromInitState"><span class="hs-identifier hs-var hs-var">traceFromInitState</span></a></span></span><span> </span><span id="local-6989586621679225017"><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225017"><span class="hs-identifier hs-var">baseEnv</span></a></span></span><span> </span><span id="local-6989586621679225018"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225018"><span class="hs-identifier hs-var">maxTraceLength</span></a></span></span><span> </span><span id="local-6989586621679225019"><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225019"><span class="hs-identifier hs-var">traceGenEnv</span></a></span></span><span> </span><span id="local-6989586621679225020"><span class="annot"><span class="annottext">Maybe
+  (IRC sts
+   -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+</span><a href="#local-6989586621679225020"><span class="hs-identifier hs-var">genSt0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-140"></span><span>  </span><span id="local-6989586621679225021"><span class="annot"><span class="annottext">Environment sts
+</span><a href="#local-6989586621679225021"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, HasCallStack) =&gt;
+traceGenEnv -&gt; Gen (Environment sts)
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#envGen"><span class="hs-identifier hs-var">envGen</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224822"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224823"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225019"><span class="hs-identifier hs-var">traceGenEnv</span></a></span><span>
+</span><span id="line-141"></span><span>  </span><span id="local-6989586621679225022"><span class="annot"><span class="annottext">Either (NonEmpty (PredicateFailure sts)) (State sts)
+</span><a href="#local-6989586621679225022"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><span class="annottext">(IRC sts
+ -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; IRC sts
+-&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts))
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span>
+</span><span id="line-143"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty (PredicateFailure sts)) (State sts)
+-&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts))
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span>
+</span><span id="line-144"></span><span>          </span><span class="annot"><span class="annottext">(Either (NonEmpty (PredicateFailure sts)) (State sts)
+ -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; (IRC sts
+    -&gt; Either (NonEmpty (PredicateFailure sts)) (State sts))
+-&gt; IRC sts
+-&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">forall sts traceGenEnv a.
+(HasTrace sts traceGenEnv, HasCallStack) =&gt;
+BaseEnv sts -&gt; BaseM sts a -&gt; a
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#interpretSTS"><span class="hs-identifier hs-var">interpretSTS</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224822"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224823"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225017"><span class="hs-identifier hs-var">baseEnv</span></a></span><span>
+</span><span id="line-145"></span><span>          </span><span class="annot"><span class="annottext">(BaseM sts (Either (NonEmpty (PredicateFailure sts)) (State sts))
+ -&gt; Either (NonEmpty (PredicateFailure sts)) (State sts))
+-&gt; (IRC sts
+    -&gt; BaseM
+         sts (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; IRC sts
+-&gt; Either (NonEmpty (PredicateFailure sts)) (State sts)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">RuleContext 'Initial sts
+-&gt; BaseM sts (Either (NonEmpty (PredicateFailure sts)) (State sts))
+IRC sts
+-&gt; BaseM sts (Either (NonEmpty (PredicateFailure sts)) (State sts))
+forall s (m :: * -&gt; *) (rtype :: RuleType).
+(STS s, RuleTypeRep rtype, m ~ BaseM s) =&gt;
+RuleContext rtype s
+-&gt; m (Either (NonEmpty (PredicateFailure s)) (State s))
+</span><a href="Test.Control.State.Transition.Trace.html#applySTSTest"><span class="hs-identifier hs-var">Trace.applySTSTest</span></a></span><span>
+</span><span id="line-146"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>      </span><span class="annot"><span class="annottext">Maybe
+  (IRC sts
+   -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+</span><a href="#local-6989586621679225020"><span class="hs-identifier hs-var">genSt0</span></a></span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><span class="annottext">(IRC sts
+ -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; IRC sts
+-&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Environment sts -&gt; IRC sts
+forall sts. Environment sts -&gt; IRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#IRC"><span class="hs-identifier hs-var">IRC</span></a></span><span> </span><span class="annot"><span class="annottext">Environment sts
+</span><a href="#local-6989586621679225021"><span class="hs-identifier hs-var">env</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty (PredicateFailure sts)) (State sts)
+</span><a href="#local-6989586621679225022"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679225024"><span class="annot"><span class="annottext">NonEmpty (PredicateFailure sts)
+</span><a href="#local-6989586621679225024"><span class="hs-identifier hs-var">pf</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-152"></span><span>      </span><span class="annot"><span class="annottext">[Char] -&gt; Gen (Trace sts)
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; Gen (Trace sts)) -&gt; [Char] -&gt; Gen (Trace sts)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-153"></span><span>        </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Failed to apply the initial rule to the generated environment.\n&quot;</span></span><span>
+</span><span id="line-154"></span><span>          </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Generated environment: &quot;</span></span><span>
+</span><span id="line-155"></span><span>          </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Environment sts -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Environment sts
+</span><a href="#local-6989586621679225021"><span class="hs-identifier hs-var">env</span></a></span><span>
+</span><span id="line-156"></span><span>          </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Failure: &quot;</span></span><span>
+</span><span id="line-157"></span><span>          </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">NonEmpty (PredicateFailure sts) -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">NonEmpty (PredicateFailure sts)
+</span><a href="#local-6989586621679225024"><span class="hs-identifier hs-var">pf</span></a></span><span>
+</span><span id="line-158"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679225027"><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679225027"><span class="hs-identifier hs-var">st0</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Environment sts
+-&gt; State sts
+-&gt; Gen (Trace sts)
+forall sts traceGenEnv.
+HasTrace sts traceGenEnv =&gt;
+BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Environment sts
+-&gt; State sts
+-&gt; Gen (Trace sts)
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceFrom"><span class="hs-identifier hs-var">traceFrom</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225017"><span class="hs-identifier hs-var">baseEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225018"><span class="hs-identifier hs-var">maxTraceLength</span></a></span><span> </span><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225019"><span class="hs-identifier hs-var">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Environment sts
+</span><a href="#local-6989586621679225021"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679225027"><span class="hs-identifier hs-var">st0</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- | Check a property on the 'sts' traces.</span><span>
+</span><span id="line-161"></span><span class="hs-comment">--</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- Takes an optional generator for initial state of the STS.</span><span>
+</span><span id="line-163"></span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#forAllTraceFromInitState"><span class="hs-identifier hs-type">forAllTraceFromInitState</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679224841"><span class="annot"><a href="#local-6989586621679224841"><span class="hs-identifier hs-type">sts</span></a></span></span><span> </span><span id="local-6989586621679224842"><span class="annot"><a href="#local-6989586621679224842"><span class="hs-identifier hs-type">traceGenEnv</span></a></span></span><span> </span><span id="local-6989586621679224843"><span class="annot"><a href="#local-6989586621679224843"><span class="hs-identifier hs-type">prop</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-type">HasTrace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224841"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224842"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Testable"><span class="hs-identifier hs-type">QuickCheck.Testable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224843"><span class="hs-identifier hs-type">prop</span></a></span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224841"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-169"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-type">BaseEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224841"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-170"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Maximum trace length.</span></span><span>
+</span><span id="line-171"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-172"></span><span>  </span><span class="annot"><a href="#local-6989586621679224842"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-173"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Optional generator of STS initial state</span></span><span>
+</span><span id="line-174"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#IRC"><span class="hs-identifier hs-type">IRC</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224841"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">QuickCheck.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">STS.PredicateFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224841"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224841"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224841"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679224843"><span class="hs-identifier hs-type">prop</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-176"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QuickCheck.Property</span></a></span><span>
+</span><span id="line-177"></span><span id="forAllTraceFromInitState"><span class="annot"><span class="annottext">forAllTraceFromInitState :: forall sts traceGenEnv prop.
+(HasTrace sts traceGenEnv, Testable prop,
+ Show (Environment sts)) =&gt;
+BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; (Trace sts -&gt; prop)
+-&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#forAllTraceFromInitState"><span class="hs-identifier hs-var hs-var">forAllTraceFromInitState</span></a></span></span><span> </span><span id="local-6989586621679225037"><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225037"><span class="hs-identifier hs-var">baseEnv</span></a></span></span><span> </span><span id="local-6989586621679225038"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225038"><span class="hs-identifier hs-var">maxTraceLength</span></a></span></span><span> </span><span id="local-6989586621679225039"><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225039"><span class="hs-identifier hs-var">traceGenEnv</span></a></span></span><span> </span><span id="local-6989586621679225040"><span class="annot"><span class="annottext">Maybe
+  (IRC sts
+   -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+</span><a href="#local-6989586621679225040"><span class="hs-identifier hs-var">genSt0</span></a></span></span><span> </span><span id="local-6989586621679225041"><span class="annot"><span class="annottext">Trace sts -&gt; prop
+</span><a href="#local-6989586621679225041"><span class="hs-identifier hs-var">prop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-178"></span><span>  </span><span class="annot"><span class="annottext">Gen (Trace sts)
+-&gt; (Trace sts -&gt; [Trace sts]) -&gt; (Trace sts -&gt; prop) -&gt; Property
+forall prop a.
+Testable prop =&gt;
+Gen a -&gt; (a -&gt; [a]) -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAllShrinkBlind"><span class="hs-identifier hs-var">QuickCheck.forAllShrinkBlind</span></a></span><span>
+</span><span id="line-179"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, Show (Environment sts), HasCallStack) =&gt;
+BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; Gen (Trace sts)
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceFromInitState"><span class="hs-identifier hs-var">traceFromInitState</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224841"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224842"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225037"><span class="hs-identifier hs-var">baseEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225038"><span class="hs-identifier hs-var">maxTraceLength</span></a></span><span> </span><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225039"><span class="hs-identifier hs-var">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe
+  (IRC sts
+   -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+</span><a href="#local-6989586621679225040"><span class="hs-identifier hs-var">genSt0</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall sts traceGenEnv.
+HasTrace sts traceGenEnv =&gt;
+BaseEnv sts -&gt; Trace sts -&gt; [Trace sts]
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#shrinkTrace"><span class="hs-identifier hs-var">shrinkTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224841"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224842"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225037"><span class="hs-identifier hs-var">baseEnv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>    </span><span class="annot"><span class="annottext">Trace sts -&gt; prop
+</span><a href="#local-6989586621679225041"><span class="hs-identifier hs-var">prop</span></a></span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="annot"><span class="hs-comment">-- | Check a property on the 'sts' traces.</span></span><span>
+</span><span id="line-184"></span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#forAllTrace"><span class="hs-identifier hs-type">forAllTrace</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-185"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679224853"><span class="annot"><a href="#local-6989586621679224853"><span class="hs-identifier hs-type">sts</span></a></span></span><span> </span><span id="local-6989586621679224854"><span class="annot"><a href="#local-6989586621679224854"><span class="hs-identifier hs-type">traceGenEnv</span></a></span></span><span> </span><span id="local-6989586621679224855"><span class="annot"><a href="#local-6989586621679224855"><span class="hs-identifier hs-type">prop</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-type">HasTrace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224853"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224854"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span>
+</span><span id="line-187"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Testable"><span class="hs-identifier hs-type">QuickCheck.Testable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224855"><span class="hs-identifier hs-type">prop</span></a></span><span>
+</span><span id="line-188"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224853"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-190"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-type">BaseEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224853"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-191"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Maximum trace length.</span></span><span>
+</span><span id="line-192"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-193"></span><span>  </span><span class="annot"><a href="#local-6989586621679224854"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-194"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224853"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679224855"><span class="hs-identifier hs-type">prop</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-195"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QuickCheck.Property</span></a></span><span>
+</span><span id="line-196"></span><span id="forAllTrace"><span class="annot"><span class="annottext">forAllTrace :: forall sts traceGenEnv prop.
+(HasTrace sts traceGenEnv, Testable prop,
+ Show (Environment sts)) =&gt;
+BaseEnv sts
+-&gt; Word64 -&gt; traceGenEnv -&gt; (Trace sts -&gt; prop) -&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#forAllTrace"><span class="hs-identifier hs-var hs-var">forAllTrace</span></a></span></span><span> </span><span id="local-6989586621679225049"><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225049"><span class="hs-identifier hs-var">baseEnv</span></a></span></span><span> </span><span id="local-6989586621679225050"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225050"><span class="hs-identifier hs-var">maxTraceLength</span></a></span></span><span> </span><span id="local-6989586621679225051"><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225051"><span class="hs-identifier hs-var">traceGenEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-197"></span><span>  </span><span class="annot"><span class="annottext">BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; (Trace sts -&gt; prop)
+-&gt; Property
+forall sts traceGenEnv prop.
+(HasTrace sts traceGenEnv, Testable prop,
+ Show (Environment sts)) =&gt;
+BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; (Trace sts -&gt; prop)
+-&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#forAllTraceFromInitState"><span class="hs-identifier hs-var">forAllTraceFromInitState</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225049"><span class="hs-identifier hs-var">baseEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225050"><span class="hs-identifier hs-var">maxTraceLength</span></a></span><span> </span><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225051"><span class="hs-identifier hs-var">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe
+  (IRC sts
+   -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-198"></span><span>
+</span><span id="line-199"></span><span class="hs-comment">-- | Shrink a trace by shrinking the list of signals and reconstructing traces from these</span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- shrunk lists of signals.</span><span>
+</span><span id="line-201"></span><span class="hs-comment">--</span><span>
+</span><span id="line-202"></span><span class="hs-comment">-- When shrinking a trace that is failing some property (often stated in terms of a signal in the trace)</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- then the most recent signal is likely crucial to the failure of the property and must be preserved</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- in the shrunk traces.</span><span>
+</span><span id="line-205"></span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#shrinkTrace"><span class="hs-identifier hs-type">shrinkTrace</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-206"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679224851"><span class="annot"><a href="#local-6989586621679224851"><span class="hs-identifier hs-type">sts</span></a></span></span><span> </span><span id="local-6989586621679224852"><span class="annot"><a href="#local-6989586621679224852"><span class="hs-identifier hs-type">traceGenEnv</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-207"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-type">HasTrace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224851"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224852"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-208"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-type">BaseEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224851"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-209"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224851"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-210"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="Test.Control.State.Transition.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224851"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-211"></span><span id="shrinkTrace"><span class="annot"><span class="annottext">shrinkTrace :: forall sts traceGenEnv.
+HasTrace sts traceGenEnv =&gt;
+BaseEnv sts -&gt; Trace sts -&gt; [Trace sts]
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#shrinkTrace"><span class="hs-identifier hs-var hs-var">shrinkTrace</span></a></span></span><span> </span><span id="local-6989586621679225066"><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225066"><span class="hs-identifier hs-var">baseEnv</span></a></span></span><span> </span><span id="local-6989586621679225067"><span class="annot"><span class="annottext">Trace sts
+</span><a href="#local-6989586621679225067"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-212"></span><span>  </span><span class="annot"><span class="annottext">forall sts traceGenEnv a.
+(HasTrace sts traceGenEnv, HasCallStack) =&gt;
+BaseEnv sts -&gt; BaseM sts a -&gt; a
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#interpretSTS"><span class="hs-identifier hs-var">interpretSTS</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224851"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224852"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225066"><span class="hs-identifier hs-var">baseEnv</span></a></span><span> </span><span class="annot"><span class="annottext">(BaseM sts [Trace sts] -&gt; [Trace sts])
+-&gt; BaseM sts [Trace sts] -&gt; [Trace sts]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-213"></span><span>    </span><span class="annot"><span class="annottext">Environment sts
+-&gt; State sts -&gt; [Signal sts] -&gt; BaseM sts (Trace sts)
+forall s (m :: * -&gt; *).
+(STS s, m ~ BaseM s) =&gt;
+Environment s -&gt; State s -&gt; [Signal s] -&gt; m (Trace s)
+</span><a href="Test.Control.State.Transition.Trace.html#closure"><span class="hs-identifier hs-var">Trace.closure</span></a></span><span> </span><span class="annot"><span class="annottext">Environment sts
+</span><a href="#local-6989586621679225069"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679225070"><span class="hs-identifier hs-var">st0</span></a></span><span> </span><span class="annot"><span class="annottext">([Signal sts] -&gt; BaseM sts (Trace sts))
+-&gt; [[Signal sts]] -&gt; BaseM sts [Trace sts]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><span class="hs-operator hs-var">`traverse`</span></span><span> </span><span class="annot"><span class="annottext">[Signal sts] -&gt; [[Signal sts]]
+forall {a}. [a] -&gt; [[a]]
+</span><a href="#local-6989586621679225072"><span class="hs-identifier hs-var">shrinkSignals</span></a></span><span> </span><span class="annot"><span class="annottext">[Signal sts]
+</span><a href="#local-6989586621679225073"><span class="hs-identifier hs-var">signals</span></a></span><span>
+</span><span id="line-214"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-215"></span><span>    </span><span id="local-6989586621679225069"><span class="annot"><span class="annottext">env :: Environment sts
+</span><a href="#local-6989586621679225069"><span class="hs-identifier hs-var hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace sts -&gt; Environment sts
+forall s. Trace s -&gt; Environment s
+</span><a href="Test.Control.State.Transition.Trace.html#_traceEnv"><span class="hs-identifier hs-var">Trace._traceEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Trace sts
+</span><a href="#local-6989586621679225067"><span class="hs-identifier hs-var">tr</span></a></span><span>
+</span><span id="line-216"></span><span>    </span><span id="local-6989586621679225070"><span class="annot"><span class="annottext">st0 :: State sts
+</span><a href="#local-6989586621679225070"><span class="hs-identifier hs-var hs-var">st0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace sts -&gt; State sts
+forall s. Trace s -&gt; State s
+</span><a href="Test.Control.State.Transition.Trace.html#_traceInitState"><span class="hs-identifier hs-var">Trace._traceInitState</span></a></span><span> </span><span class="annot"><span class="annottext">Trace sts
+</span><a href="#local-6989586621679225067"><span class="hs-identifier hs-var">tr</span></a></span><span>
+</span><span id="line-217"></span><span>    </span><span id="local-6989586621679225073"><span class="annot"><span class="annottext">signals :: [Signal sts]
+</span><a href="#local-6989586621679225073"><span class="hs-identifier hs-var hs-var">signals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TraceOrder -&gt; Trace sts -&gt; [Signal sts]
+forall s. TraceOrder -&gt; Trace s -&gt; [Signal s]
+</span><a href="Test.Control.State.Transition.Trace.html#traceSignals"><span class="hs-identifier hs-var">Trace.traceSignals</span></a></span><span> </span><span class="annot"><span class="annottext">TraceOrder
+</span><a href="Test.Control.State.Transition.Trace.html#NewestFirst"><span class="hs-identifier hs-var">Trace.NewestFirst</span></a></span><span> </span><span class="annot"><span class="annottext">Trace sts
+</span><a href="#local-6989586621679225067"><span class="hs-identifier hs-var">tr</span></a></span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span><span>    </span><span class="hs-comment">-- Shrink a list of signals such that we preserve the most recent signal in the shrunk lists.</span><span>
+</span><span id="line-220"></span><span>    </span><span class="hs-comment">-- This shrinker</span><span>
+</span><span id="line-221"></span><span>    </span><span class="hs-comment">--   - recursively omits all but the most recent signal</span><span>
+</span><span id="line-222"></span><span>    </span><span class="hs-comment">--   - builds up lists of signals starting with the most recent signal and</span><span>
+</span><span id="line-223"></span><span>    </span><span class="hs-comment">--     building up to a list excluding the first (oldest) signal</span><span>
+</span><span id="line-224"></span><span>    </span><span class="hs-comment">--   - explicitly shrinks in order from small to larger lists of signals</span><span>
+</span><span id="line-225"></span><span>    </span><span class="hs-comment">--     (i.e. ordered by most to least aggressive shrinking)</span><span>
+</span><span id="line-226"></span><span>    </span><span id="local-6989586621679225072"><span class="annot"><span class="annottext">shrinkSignals :: [a] -&gt; [[a]]
+</span><a href="#local-6989586621679225072"><span class="hs-identifier hs-var hs-var">shrinkSignals</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679225080"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225080"><span class="hs-identifier hs-var">sn</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679225081"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225081"><span class="hs-identifier hs-var">_last</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-227"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225080"><span class="hs-identifier hs-var">sn</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-228"></span><span>    </span><span class="annot"><a href="#local-6989586621679225072"><span class="hs-identifier hs-var">shrinkSignals</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679225082"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225082"><span class="hs-identifier hs-var">sn</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679225083"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225083"><span class="hs-identifier hs-var">sm</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679225084"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679225084"><span class="hs-identifier hs-var">sigs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-229"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225082"><span class="hs-identifier hs-var">sn</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span> </span><span class="hs-comment">-- a trace with only the most recent signal</span><span>
+</span><span id="line-230"></span><span>        </span><span class="annot"><span class="annottext">[[a]] -&gt; [[a]] -&gt; [[a]]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225082"><span class="hs-identifier hs-var">sn</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([a] -&gt; [a]) -&gt; [[a]] -&gt; [[a]]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [[a]]
+</span><a href="#local-6989586621679225072"><span class="hs-identifier hs-var">shrinkSignals</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225083"><span class="hs-identifier hs-var">sm</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679225084"><span class="hs-identifier hs-var">sigs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- shrink the tail</span><span>
+</span><span id="line-231"></span><span>        </span><span class="annot"><span class="annottext">[[a]] -&gt; [[a]] -&gt; [[a]]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225082"><span class="hs-identifier hs-var">sn</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679225084"><span class="hs-identifier hs-var">sigs</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-comment">-- discard the second most recent signal</span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span>    </span><span class="hs-comment">-- shrink to [] if there is one or no signals</span><span>
+</span><span id="line-234"></span><span>    </span><span class="annot"><a href="#local-6989586621679225072"><span class="hs-identifier hs-var">shrinkSignals</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-235"></span><span>
+</span><span id="line-236"></span><span class="annot"><span class="hs-comment">-- | Property that asserts that only valid signals are generated.</span></span><span>
+</span><span id="line-237"></span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#onlyValidSignalsAreGenerated"><span class="hs-identifier hs-type">onlyValidSignalsAreGenerated</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-238"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679224873"><span class="annot"><a href="#local-6989586621679224873"><span class="hs-identifier hs-type">sts</span></a></span></span><span> </span><span id="local-6989586621679224874"><span class="annot"><a href="#local-6989586621679224874"><span class="hs-identifier hs-type">traceGenEnv</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-239"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-type">HasTrace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224873"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224874"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span>
+</span><span id="line-240"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224873"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-241"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-type">Signal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224873"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-243"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-type">BaseEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224873"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-244"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Maximum trace length.</span></span><span>
+</span><span id="line-245"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-246"></span><span>  </span><span class="annot"><a href="#local-6989586621679224874"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-247"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QuickCheck.Property</span></a></span><span>
+</span><span id="line-248"></span><span id="onlyValidSignalsAreGenerated"><span class="annot"><span class="annottext">onlyValidSignalsAreGenerated :: forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, Show (Environment sts),
+ Show (Signal sts)) =&gt;
+BaseEnv sts -&gt; Word64 -&gt; traceGenEnv -&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#onlyValidSignalsAreGenerated"><span class="hs-identifier hs-var hs-var">onlyValidSignalsAreGenerated</span></a></span></span><span> </span><span id="local-6989586621679225091"><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225091"><span class="hs-identifier hs-var">baseEnv</span></a></span></span><span> </span><span id="local-6989586621679225092"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225092"><span class="hs-identifier hs-var">maxTraceLength</span></a></span></span><span> </span><span id="local-6989586621679225093"><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225093"><span class="hs-identifier hs-var">traceGenEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-249"></span><span>  </span><span class="annot"><span class="annottext">forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, Show (Environment sts),
+ Show (Signal sts)) =&gt;
+BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#onlyValidSignalsAreGeneratedFromInitState"><span class="hs-identifier hs-var">onlyValidSignalsAreGeneratedFromInitState</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224873"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225091"><span class="hs-identifier hs-var">baseEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225092"><span class="hs-identifier hs-var">maxTraceLength</span></a></span><span> </span><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225093"><span class="hs-identifier hs-var">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe
+  (IRC sts
+   -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-250"></span><span>
+</span><span id="line-251"></span><span class="hs-comment">-- | Property that asserts that only valid signals are generated.</span><span>
+</span><span id="line-252"></span><span class="hs-comment">--</span><span>
+</span><span id="line-253"></span><span class="hs-comment">-- Takes an optional generator for initial state of the STS.</span><span>
+</span><span id="line-254"></span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#onlyValidSignalsAreGeneratedFromInitState"><span class="hs-identifier hs-type">onlyValidSignalsAreGeneratedFromInitState</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-255"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679224877"><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span></span><span> </span><span id="local-6989586621679224878"><span class="annot"><a href="#local-6989586621679224878"><span class="hs-identifier hs-type">traceGenEnv</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-256"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-type">HasTrace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224878"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span>
+</span><span id="line-257"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-258"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-type">Signal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-259"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-260"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-type">BaseEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-261"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Maximum trace length.</span></span><span>
+</span><span id="line-262"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-263"></span><span>  </span><span class="annot"><a href="#local-6989586621679224878"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-264"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Optional generator of STS initial state</span></span><span>
+</span><span id="line-265"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#IRC"><span class="hs-identifier hs-type">IRC</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">QuickCheck.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">STS.PredicateFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-266"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QuickCheck.Property</span></a></span><span>
+</span><span id="line-267"></span><span id="onlyValidSignalsAreGeneratedFromInitState"><span class="annot"><span class="annottext">onlyValidSignalsAreGeneratedFromInitState :: forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, Show (Environment sts),
+ Show (Signal sts)) =&gt;
+BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#onlyValidSignalsAreGeneratedFromInitState"><span class="hs-identifier hs-var hs-var">onlyValidSignalsAreGeneratedFromInitState</span></a></span></span><span> </span><span id="local-6989586621679225121"><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225121"><span class="hs-identifier hs-var">baseEnv</span></a></span></span><span> </span><span id="local-6989586621679225122"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225122"><span class="hs-identifier hs-var">maxTraceLength</span></a></span></span><span> </span><span id="local-6989586621679225123"><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225123"><span class="hs-identifier hs-var">traceGenEnv</span></a></span></span><span> </span><span id="local-6989586621679225124"><span class="annot"><span class="annottext">Maybe
+  (IRC sts
+   -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+</span><a href="#local-6989586621679225124"><span class="hs-identifier hs-var">genSt0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-268"></span><span>  </span><span class="annot"><span class="annottext">BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; (Trace sts -&gt; Property)
+-&gt; Property
+forall sts traceGenEnv prop.
+(HasTrace sts traceGenEnv, Testable prop,
+ Show (Environment sts)) =&gt;
+BaseEnv sts
+-&gt; Word64
+-&gt; traceGenEnv
+-&gt; Maybe
+     (IRC sts
+      -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+-&gt; (Trace sts -&gt; prop)
+-&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#forAllTraceFromInitState"><span class="hs-identifier hs-var">forAllTraceFromInitState</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225121"><span class="hs-identifier hs-var">baseEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225122"><span class="hs-identifier hs-var">maxTraceLength</span></a></span><span> </span><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225123"><span class="hs-identifier hs-var">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe
+  (IRC sts
+   -&gt; Gen (Either (NonEmpty (PredicateFailure sts)) (State sts)))
+</span><a href="#local-6989586621679225124"><span class="hs-identifier hs-var">genSt0</span></a></span><span> </span><span class="annot"><span class="annottext">Trace sts -&gt; Property
+</span><a href="#local-6989586621679225125"><span class="hs-identifier hs-var">validSignalsAreGenerated</span></a></span><span>
+</span><span id="line-269"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-270"></span><span>    </span><span class="annot"><a href="#local-6989586621679225125"><span class="hs-identifier hs-type">validSignalsAreGenerated</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-271"></span><span>      </span><span class="annot"><a href="Test.Control.State.Transition.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-272"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QuickCheck.Property</span></a></span><span>
+</span><span id="line-273"></span><span>    </span><span id="local-6989586621679225125"><span class="annot"><span class="annottext">validSignalsAreGenerated :: Trace sts -&gt; Property
+</span><a href="#local-6989586621679225125"><span class="hs-identifier hs-var hs-var">validSignalsAreGenerated</span></a></span></span><span> </span><span id="local-6989586621679225126"><span class="annot"><span class="annottext">Trace sts
+</span><a href="#local-6989586621679225126"><span class="hs-identifier hs-var">someTrace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-274"></span><span>      </span><span class="annot"><span class="annottext">Gen (Signal sts)
+-&gt; (Signal sts -&gt; [Signal sts])
+-&gt; (Signal sts -&gt; Property)
+-&gt; Property
+forall a prop.
+(Show a, Testable prop) =&gt;
+Gen a -&gt; (a -&gt; [a]) -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAllShrink"><span class="hs-identifier hs-var">QuickCheck.forAllShrink</span></a></span><span>
+</span><span id="line-275"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, HasCallStack) =&gt;
+traceGenEnv -&gt; Environment sts -&gt; State sts -&gt; Gen (Signal sts)
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#sigGen"><span class="hs-identifier hs-var">sigGen</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224878"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225123"><span class="hs-identifier hs-var">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Environment sts
+</span><a href="#local-6989586621679225128"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679225129"><span class="hs-identifier hs-var">lastState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-276"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, HasCallStack) =&gt;
+Signal sts -&gt; [Signal sts]
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#shrinkSignal"><span class="hs-identifier hs-var">shrinkSignal</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224878"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-277"></span><span>        </span><span class="annot"><span class="annottext">Signal sts -&gt; Property
+</span><a href="#local-6989586621679225130"><span class="hs-identifier hs-var">signalIsValid</span></a></span><span>
+</span><span id="line-278"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-279"></span><span>        </span><span id="local-6989586621679225130"><span class="annot"><span class="annottext">signalIsValid :: Signal sts -&gt; Property
+</span><a href="#local-6989586621679225130"><span class="hs-identifier hs-var hs-var">signalIsValid</span></a></span></span><span> </span><span id="local-6989586621679225131"><span class="annot"><span class="annottext">Signal sts
+</span><a href="#local-6989586621679225131"><span class="hs-identifier hs-var">signal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-280"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">forall sts traceGenEnv a.
+(HasTrace sts traceGenEnv, HasCallStack) =&gt;
+BaseEnv sts -&gt; BaseM sts a -&gt; a
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#interpretSTS"><span class="hs-identifier hs-var">interpretSTS</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224878"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225121"><span class="hs-identifier hs-var">baseEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *) (rtype :: RuleType).
+(STS s, RuleTypeRep rtype, m ~ BaseM s) =&gt;
+RuleContext rtype s
+-&gt; m (Either (NonEmpty (PredicateFailure s)) (State s))
+</span><a href="Test.Control.State.Transition.Trace.html#applySTSTest"><span class="hs-identifier hs-var">Trace.applySTSTest</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224877"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Environment sts, State sts, Signal sts) -&gt; TRC sts
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Environment sts
+</span><a href="#local-6989586621679225128"><span class="hs-identifier hs-var">env</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State sts
+</span><a href="#local-6989586621679225129"><span class="hs-identifier hs-var">lastState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Signal sts
+</span><a href="#local-6989586621679225131"><span class="hs-identifier hs-var">signal</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-281"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679225132"><span class="annot"><span class="annottext">NonEmpty (PredicateFailure sts)
+</span><a href="#local-6989586621679225132"><span class="hs-identifier hs-var">pf</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Bool -&gt; Property
+forall prop. Testable prop =&gt; [Char] -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#counterexample"><span class="hs-identifier hs-var">QuickCheck.counterexample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty (PredicateFailure sts) -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">NonEmpty (PredicateFailure sts)
+</span><a href="#local-6989586621679225132"><span class="hs-identifier hs-var">pf</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-282"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="annot"><span class="annottext">State sts
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Property
+forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#property"><span class="hs-identifier hs-var">QuickCheck.property</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-283"></span><span>        </span><span id="local-6989586621679225128"><span class="annot"><span class="annottext">env :: Environment sts
+</span><a href="#local-6989586621679225128"><span class="hs-identifier hs-var hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace sts -&gt; Environment sts
+forall s. Trace s -&gt; Environment s
+</span><a href="Test.Control.State.Transition.Trace.html#_traceEnv"><span class="hs-identifier hs-var">Trace._traceEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Trace sts
+</span><a href="#local-6989586621679225126"><span class="hs-identifier hs-var">someTrace</span></a></span><span>
+</span><span id="line-284"></span><span>        </span><span id="local-6989586621679225129"><span class="annot"><span class="annottext">lastState :: State sts
+</span><a href="#local-6989586621679225129"><span class="hs-identifier hs-var hs-var">lastState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace sts -&gt; State sts
+forall s. Trace s -&gt; State s
+</span><a href="Test.Control.State.Transition.Trace.html#lastState"><span class="hs-identifier hs-var">Trace.lastState</span></a></span><span> </span><span class="annot"><span class="annottext">Trace sts
+</span><a href="#local-6989586621679225126"><span class="hs-identifier hs-var">someTrace</span></a></span><span>
+</span><span id="line-285"></span><span>
+</span><span id="line-286"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-287"></span><span class="hs-comment">-- Trace classification</span><span>
+</span><span id="line-288"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-289"></span><span>
+</span><span id="line-290"></span><span class="annot"><span class="hs-comment">-- | Property that simply classifies the lengths of the generated traces.</span></span><span>
+</span><span id="line-291"></span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceLengthsAreClassified"><span class="hs-identifier hs-type">traceLengthsAreClassified</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-292"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679224885"><span class="annot"><a href="#local-6989586621679224885"><span class="hs-identifier hs-type">sts</span></a></span></span><span> </span><span id="local-6989586621679224886"><span class="annot"><a href="#local-6989586621679224886"><span class="hs-identifier hs-type">traceGenEnv</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-293"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-type">HasTrace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224885"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224886"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span>
+</span><span id="line-294"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224885"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-295"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-296"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#BaseEnv"><span class="hs-identifier hs-type">BaseEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224885"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-297"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Maximum trace length that the signal generator of 's' can generate.</span></span><span>
+</span><span id="line-298"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-299"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Lengths of the intervals in which the lengths range should be split.</span></span><span>
+</span><span id="line-300"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-301"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Trace generation environment</span></span><span>
+</span><span id="line-302"></span><span>  </span><span class="annot"><a href="#local-6989586621679224886"><span class="hs-identifier hs-type">traceGenEnv</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-303"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QuickCheck.Property</span></a></span><span>
+</span><span id="line-304"></span><span id="traceLengthsAreClassified"><span class="annot"><span class="annottext">traceLengthsAreClassified :: forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, Show (Environment sts)) =&gt;
+BaseEnv sts -&gt; Word64 -&gt; Word64 -&gt; traceGenEnv -&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceLengthsAreClassified"><span class="hs-identifier hs-var hs-var">traceLengthsAreClassified</span></a></span></span><span> </span><span id="local-6989586621679225141"><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225141"><span class="hs-identifier hs-var">baseEnv</span></a></span></span><span> </span><span id="local-6989586621679225142"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225142"><span class="hs-identifier hs-var">maxTraceLength</span></a></span></span><span> </span><span id="local-6989586621679225143"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225143"><span class="hs-identifier hs-var">intervalSize</span></a></span></span><span> </span><span id="local-6989586621679225144"><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225144"><span class="hs-identifier hs-var">traceGenEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-305"></span><span>  </span><span class="annot"><span class="annottext">forall sts traceGenEnv prop.
+(HasTrace sts traceGenEnv, Testable prop,
+ Show (Environment sts)) =&gt;
+BaseEnv sts
+-&gt; Word64 -&gt; traceGenEnv -&gt; (Trace sts -&gt; prop) -&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#forAllTrace"><span class="hs-identifier hs-var">forAllTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679224885"><span class="hs-identifier hs-type">sts</span></a></span><span>
+</span><span id="line-306"></span><span>    </span><span class="annot"><span class="annottext">BaseEnv sts
+</span><a href="#local-6989586621679225141"><span class="hs-identifier hs-var">baseEnv</span></a></span><span>
+</span><span id="line-307"></span><span>    </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225142"><span class="hs-identifier hs-var">maxTraceLength</span></a></span><span>
+</span><span id="line-308"></span><span>    </span><span class="annot"><span class="annottext">traceGenEnv
+</span><a href="#local-6989586621679225144"><span class="hs-identifier hs-var">traceGenEnv</span></a></span><span>
+</span><span id="line-309"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Trace sts -&gt; Property
+forall s. Word64 -&gt; Word64 -&gt; Trace s -&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#classifyTraceLength"><span class="hs-identifier hs-var">classifyTraceLength</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225142"><span class="hs-identifier hs-var">maxTraceLength</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225143"><span class="hs-identifier hs-var">intervalSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-310"></span><span>
+</span><span id="line-311"></span><span class="hs-comment">-- | Classify the trace length as either:</span><span>
+</span><span id="line-312"></span><span class="hs-comment">--</span><span>
+</span><span id="line-313"></span><span class="hs-comment">-- - being empty</span><span>
+</span><span id="line-314"></span><span class="hs-comment">-- - being a singleton</span><span>
+</span><span id="line-315"></span><span class="hs-comment">-- - having the given maximum size</span><span>
+</span><span id="line-316"></span><span class="hs-comment">-- - belonging to one of the intervals between 2 and the maximum size - 1. The</span><span>
+</span><span id="line-317"></span><span class="hs-comment">--   number of intervals are determined by the @step@ parameter.</span><span>
+</span><span id="line-318"></span><span id="local-6989586621679224889"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#classifyTraceLength"><span class="hs-identifier hs-type">classifyTraceLength</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-319"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Maximum size of the traces</span></span><span>
+</span><span id="line-320"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-321"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Steps used to divide the interval</span></span><span>
+</span><span id="line-322"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-323"></span><span>  </span><span class="annot"><a href="Test.Control.State.Transition.Trace.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679224889"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-324"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QuickCheck.Property</span></a></span></span><span>
+</span><span id="line-325"></span><span id="classifyTraceLength"><span class="annot"><span class="annottext">classifyTraceLength :: forall s. Word64 -&gt; Word64 -&gt; Trace s -&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#classifyTraceLength"><span class="hs-identifier hs-var hs-var">classifyTraceLength</span></a></span></span><span> </span><span id="local-6989586621679225152"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225152"><span class="hs-identifier hs-var">maxTraceLength</span></a></span></span><span> </span><span id="local-6989586621679225153"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225153"><span class="hs-identifier hs-var">step</span></a></span></span><span> </span><span id="local-6989586621679225154"><span class="annot"><span class="annottext">Trace s
+</span><a href="#local-6989586621679225154"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-326"></span><span>  </span><span class="annot"><span class="annottext">[Char]
+-&gt; Trace s -&gt; (Trace s -&gt; Word64) -&gt; Word64 -&gt; Word64 -&gt; Property
+forall n a.
+(Show n, Integral n) =&gt;
+[Char] -&gt; a -&gt; (a -&gt; n) -&gt; n -&gt; n -&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#classifySize"><span class="hs-identifier hs-var">classifySize</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;trace length:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Trace s
+</span><a href="#local-6989586621679225154"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word64) -&gt; (Trace s -&gt; Int) -&gt; Trace s -&gt; Word64
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Trace s -&gt; Int
+forall s. Trace s -&gt; Int
+</span><a href="Test.Control.State.Transition.Trace.html#traceLength"><span class="hs-identifier hs-var">Trace.traceLength</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225152"><span class="hs-identifier hs-var">maxTraceLength</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679225153"><span class="hs-identifier hs-var">step</span></a></span><span>
+</span><span id="line-327"></span><span>
+</span><span id="line-328"></span><span class="hs-comment">-- | Classify the value size as either:</span><span>
+</span><span id="line-329"></span><span class="hs-comment">--</span><span>
+</span><span id="line-330"></span><span class="hs-comment">-- - being empty</span><span>
+</span><span id="line-331"></span><span class="hs-comment">-- - being a singleton</span><span>
+</span><span id="line-332"></span><span class="hs-comment">-- - having the given maximum size</span><span>
+</span><span id="line-333"></span><span class="hs-comment">-- - belonging to one of the intervals between 2 and the maximum size - 1. The</span><span>
+</span><span id="line-334"></span><span class="hs-comment">--   number of intervals are determined by the @step@ parameter.</span><span>
+</span><span id="line-335"></span><span id="local-6989586621679224891"><span id="local-6989586621679224892"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#classifySize"><span class="hs-identifier hs-type">classifySize</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-336"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621679224891"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679224891"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-337"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Prefix to be added to the label intervals</span></span><span>
+</span><span id="line-338"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-339"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Value to classify</span></span><span>
+</span><span id="line-340"></span><span>  </span><span class="annot"><a href="#local-6989586621679224892"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-341"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Size function</span></span><span>
+</span><span id="line-342"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679224892"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679224891"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-343"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Maximum value size</span></span><span>
+</span><span id="line-344"></span><span>  </span><span class="annot"><a href="#local-6989586621679224891"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-345"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Steps used to divide the size interval</span></span><span>
+</span><span id="line-346"></span><span>  </span><span class="annot"><a href="#local-6989586621679224891"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-347"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">QuickCheck.Property</span></a></span></span></span><span>
+</span><span id="line-348"></span><span id="classifySize"><span class="annot"><span class="annottext">classifySize :: forall n a.
+(Show n, Integral n) =&gt;
+[Char] -&gt; a -&gt; (a -&gt; n) -&gt; n -&gt; n -&gt; Property
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#classifySize"><span class="hs-identifier hs-var hs-var">classifySize</span></a></span></span><span> </span><span id="local-6989586621679225187"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679225187"><span class="hs-identifier hs-var">prefixLabel</span></a></span></span><span> </span><span id="local-6989586621679225188"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225188"><span class="hs-identifier hs-var">value</span></a></span></span><span> </span><span id="local-6989586621679225189"><span class="annot"><span class="annottext">a -&gt; n
+</span><a href="#local-6989586621679225189"><span class="hs-identifier hs-var">sizeF</span></a></span></span><span> </span><span id="local-6989586621679225190"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225190"><span class="hs-identifier hs-var">upBound</span></a></span></span><span> </span><span id="local-6989586621679225191"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225191"><span class="hs-identifier hs-var">step</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-349"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; [Char] -&gt; Property -&gt; Property
+forall prop. Testable prop =&gt; Bool -&gt; [Char] -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#classify"><span class="hs-identifier hs-var">QuickCheck.classify</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; n
+</span><a href="#local-6989586621679225189"><span class="hs-identifier hs-var">sizeF</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225188"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; [Char]
+</span><a href="#local-6989586621679225193"><span class="hs-identifier hs-var">mkLabel</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;empty&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Property) -&gt; Property -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-350"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; [Char] -&gt; Property -&gt; Property
+forall prop. Testable prop =&gt; Bool -&gt; [Char] -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#classify"><span class="hs-identifier hs-var">QuickCheck.classify</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; n
+</span><a href="#local-6989586621679225189"><span class="hs-identifier hs-var">sizeF</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225188"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; [Char]
+</span><a href="#local-6989586621679225193"><span class="hs-identifier hs-var">mkLabel</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;singleton&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Property) -&gt; Property -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-351"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; [Char] -&gt; Property -&gt; Property
+forall prop. Testable prop =&gt; Bool -&gt; [Char] -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#classify"><span class="hs-identifier hs-var">QuickCheck.classify</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; n
+</span><a href="#local-6989586621679225189"><span class="hs-identifier hs-var">sizeF</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225188"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225190"><span class="hs-identifier hs-var">upBound</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679225194"><span class="hs-identifier hs-var">upBoundLabel</span></a></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Property) -&gt; Property -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-352"></span><span>        </span><span class="annot"><span class="annottext">((n, n) -&gt; Property -&gt; Property)
+-&gt; Property -&gt; [(n, n)] -&gt; Property
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldr</span></span><span> </span><span class="annot"><span class="annottext">(n, n) -&gt; Property -&gt; Property
+</span><a href="#local-6989586621679225196"><span class="hs-identifier hs-var">classifySizeInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Property
+forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#property"><span class="hs-identifier hs-var">QuickCheck.property</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">n -&gt; n -&gt; n -&gt; [(n, n)]
+forall n. Integral n =&gt; n -&gt; n -&gt; n -&gt; [(n, n)]
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#mkIntervals"><span class="hs-identifier hs-var">mkIntervals</span></a></span><span> </span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225190"><span class="hs-identifier hs-var">upBound</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225191"><span class="hs-identifier hs-var">step</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-353"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-354"></span><span>    </span><span id="local-6989586621679225194"><span class="annot"><span class="annottext">upBoundLabel :: [Char]
+</span><a href="#local-6989586621679225194"><span class="hs-identifier hs-var hs-var">upBoundLabel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char]
+</span><a href="#local-6989586621679225193"><span class="hs-identifier hs-var">mkLabel</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; [Char]) -&gt; [Char] -&gt; [Char]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">n -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225190"><span class="hs-identifier hs-var">upBound</span></a></span><span>
+</span><span id="line-355"></span><span>    </span><span id="local-6989586621679225193"><span class="annot"><span class="annottext">mkLabel :: [Char] -&gt; [Char]
+</span><a href="#local-6989586621679225193"><span class="hs-identifier hs-var hs-var">mkLabel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679225187"><span class="hs-identifier hs-var">prefixLabel</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot; &quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span class="hs-special">)</span><span>
+</span><span id="line-356"></span><span>    </span><span id="local-6989586621679225196"><span class="annot"><span class="annottext">classifySizeInterval :: (n, n) -&gt; Property -&gt; Property
+</span><a href="#local-6989586621679225196"><span class="hs-identifier hs-var hs-var">classifySizeInterval</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679225197"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225197"><span class="hs-identifier hs-var">low</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679225198"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225198"><span class="hs-identifier hs-var">high</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679225199"><span class="annot"><span class="annottext">Property
+</span><a href="#local-6989586621679225199"><span class="hs-identifier hs-var">prop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-357"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; [Char] -&gt; Property -&gt; Property
+forall prop. Testable prop =&gt; Bool -&gt; [Char] -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#classify"><span class="hs-identifier hs-var">QuickCheck.classify</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225197"><span class="hs-identifier hs-var">low</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; n
+</span><a href="#local-6989586621679225189"><span class="hs-identifier hs-var">sizeF</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225188"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; n
+</span><a href="#local-6989586621679225189"><span class="hs-identifier hs-var">sizeF</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679225188"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225198"><span class="hs-identifier hs-var">high</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679225203"><span class="hs-identifier hs-var">desc</span></a></span><span> </span><span class="annot"><span class="annottext">Property
+</span><a href="#local-6989586621679225199"><span class="hs-identifier hs-var">prop</span></a></span><span>
+</span><span id="line-358"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-359"></span><span>        </span><span id="local-6989586621679225203"><span class="annot"><span class="annottext">desc :: [Char]
+</span><a href="#local-6989586621679225203"><span class="hs-identifier hs-var hs-var">desc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;[&quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">n -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225197"><span class="hs-identifier hs-var">low</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">n -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225198"><span class="hs-identifier hs-var">high</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;)&quot;</span></span><span>
+</span><span id="line-360"></span><span>
+</span><span id="line-361"></span><span class="hs-comment">-- | Given a lower bound @low@,  an upper bound @high@ and a step size @step@</span><span>
+</span><span id="line-362"></span><span class="hs-comment">-- (both of which must be positive), divide the interval @[0, ub]@ into</span><span>
+</span><span id="line-363"></span><span class="hs-comment">-- sub-intervals of @step@ size.</span><span>
+</span><span id="line-364"></span><span class="hs-comment">--</span><span>
+</span><span id="line-365"></span><span class="hs-comment">-- If any of these values is negative the empty list will be returned.</span><span>
+</span><span id="line-366"></span><span class="hs-comment">--</span><span>
+</span><span id="line-367"></span><span class="hs-comment">-- Examples:</span><span>
+</span><span id="line-368"></span><span class="hs-comment">--</span><span>
+</span><span id="line-369"></span><span class="hs-comment">-- &gt;&gt;&gt; mkIntervals 0 0 0 :: [(Int, Int)]</span><span>
+</span><span id="line-370"></span><span class="hs-comment">-- []</span><span>
+</span><span id="line-371"></span><span class="hs-comment">--</span><span>
+</span><span id="line-372"></span><span class="hs-comment">-- &gt;&gt;&gt; mkIntervals 0 10 2 :: [(Int, Int)]</span><span>
+</span><span id="line-373"></span><span class="hs-comment">-- [(0,2),(2,4),(4,6),(6,8),(8,10)]</span><span>
+</span><span id="line-374"></span><span class="hs-comment">--</span><span>
+</span><span id="line-375"></span><span class="hs-comment">-- &gt;&gt;&gt; mkIntervals 1 10 2 :: [(Int, Int)]</span><span>
+</span><span id="line-376"></span><span class="hs-comment">-- [(1,3),(3,5),(5,7),(7,9),(9,10)]</span><span>
+</span><span id="line-377"></span><span class="hs-comment">--</span><span>
+</span><span id="line-378"></span><span class="hs-comment">--</span><span>
+</span><span id="line-379"></span><span class="hs-comment">-- &gt;&gt;&gt; mkIntervals 3 10 3 :: [(Int, Int)]</span><span>
+</span><span id="line-380"></span><span class="hs-comment">-- [(3,6),(6,9),(9,10)]</span><span>
+</span><span id="line-381"></span><span class="hs-comment">--</span><span>
+</span><span id="line-382"></span><span class="hs-comment">-- &gt;&gt;&gt; mkIntervals 5 2 3 :: [(Int, Int)]</span><span>
+</span><span id="line-383"></span><span class="hs-comment">-- []</span><span>
+</span><span id="line-384"></span><span class="hs-comment">--</span><span>
+</span><span id="line-385"></span><span class="hs-comment">-- &gt;&gt;&gt; mkIntervals (-1) 10 3 :: [(Int, Int)]</span><span>
+</span><span id="line-386"></span><span class="hs-comment">-- []</span><span>
+</span><span id="line-387"></span><span class="hs-comment">--</span><span>
+</span><span id="line-388"></span><span class="hs-comment">-- &gt;&gt;&gt; mkIntervals 1 (-10) 3 :: [(Int, Int)]</span><span>
+</span><span id="line-389"></span><span class="hs-comment">-- []</span><span>
+</span><span id="line-390"></span><span class="hs-comment">--</span><span>
+</span><span id="line-391"></span><span class="hs-comment">-- &gt;&gt;&gt; mkIntervals 1 1000 (-100) :: [(Int, Int)]</span><span>
+</span><span id="line-392"></span><span class="hs-comment">-- []</span><span>
+</span><span id="line-393"></span><span id="local-6989586621679224906"><span class="annot"><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#mkIntervals"><span class="hs-identifier hs-type">mkIntervals</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-394"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679224906"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-395"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Interval lower bound</span></span><span>
+</span><span id="line-396"></span><span>  </span><span class="annot"><a href="#local-6989586621679224906"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-397"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Interval upper bound</span></span><span>
+</span><span id="line-398"></span><span>  </span><span class="annot"><a href="#local-6989586621679224906"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-399"></span><span>  </span><span class="hs-comment">-- | Step size, used to divide the interval in sub-intervals of the same</span><span>
+</span><span id="line-400"></span><span>  </span><span class="hs-comment">-- length.</span><span>
+</span><span id="line-401"></span><span>  </span><span class="annot"><a href="#local-6989586621679224906"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-402"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679224906"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679224906"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span></span><span>
+</span><span id="line-403"></span><span id="mkIntervals"><span class="annot"><span class="annottext">mkIntervals :: forall n. Integral n =&gt; n -&gt; n -&gt; n -&gt; [(n, n)]
+</span><a href="Test.Control.State.Transition.Trace.Generator.QuickCheck.html#mkIntervals"><span class="hs-identifier hs-var hs-var">mkIntervals</span></a></span></span><span> </span><span id="local-6989586621679225232"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225232"><span class="hs-identifier hs-var">low</span></a></span></span><span> </span><span id="local-6989586621679225233"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225233"><span class="hs-identifier hs-var">high</span></a></span></span><span> </span><span id="local-6989586621679225234"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225234"><span class="hs-identifier hs-var">step</span></a></span></span><span>
+</span><span id="line-404"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225232"><span class="hs-identifier hs-var">low</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225232"><span class="hs-identifier hs-var">low</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225233"><span class="hs-identifier hs-var">high</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225234"><span class="hs-identifier hs-var">step</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-405"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225232"><span class="hs-identifier hs-var">low</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225236"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225234"><span class="hs-identifier hs-var">step</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225233"><span class="hs-identifier hs-var">high</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`min`</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225232"><span class="hs-identifier hs-var">low</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225236"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225234"><span class="hs-identifier hs-var">step</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679225236"><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225236"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225239"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">1</span></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-406"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-407"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-408"></span><span>    </span><span id="local-6989586621679225240"><span class="annot"><span class="annottext">highNorm :: n
+</span><a href="#local-6989586621679225240"><span class="hs-identifier hs-var hs-var">highNorm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225233"><span class="hs-identifier hs-var">high</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225232"><span class="hs-identifier hs-var">low</span></a></span><span>
+</span><span id="line-409"></span><span>    </span><span id="local-6989586621679225239"><span class="annot"><span class="annottext">n :: n
+</span><a href="#local-6989586621679225239"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225240"><span class="hs-identifier hs-var">highNorm</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225234"><span class="hs-identifier hs-var">step</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`min`</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225240"><span class="hs-identifier hs-var">highNorm</span></a></span><span> </span><span class="annot"><span class="annottext">n -&gt; n -&gt; n
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`mod`</span></span><span> </span><span class="annot"><span class="annottext">n
+</span><a href="#local-6989586621679225234"><span class="hs-identifier hs-var">step</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-410"></span></pre></body></html>

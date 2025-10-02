@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE UndecidableSuperClasses #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Genesis</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Genesis.html#EraGenesis"><span class="hs-identifier">EraGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier">NoGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Genesis.html#mkGenesisWith"><span class="hs-identifier">mkGenesisWith</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#KeyValuePairs"><span class="hs-identifier">KeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#ToKeyValuePairs"><span class="hs-identifier">ToKeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Core.Era.html"><span class="hs-identifier">Cardano.Ledger.Core.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier">Era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">unless</span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.Internal.html#Value"><span class="hs-identifier">Value</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.KeyMap.html"><span class="hs-identifier">Data.Aeson.KeyMap</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">KV</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Kind</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Type</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Typeable</span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441353"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="EraGenesis"><span class="annot"><a href="Cardano.Ledger.Genesis.html#EraGenesis"><span class="hs-identifier hs-var">EraGenesis</span></a></span></span><span> </span><span id="local-6989586621679441353"><span class="annot"><a href="#local-6989586621679441353"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Genesis"><span class="annot"><a href="Cardano.Ledger.Genesis.html#Genesis"><span class="hs-identifier hs-var">Genesis</span></a></span></span><span> </span><span id="local-6989586621679441353"><span class="annot"><a href="#local-6989586621679441353"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Genesis"><span class="annot"><a href="Cardano.Ledger.Genesis.html#Genesis"><span class="hs-identifier hs-var">Genesis</span></a></span></span><span> </span><span id="local-6989586621679441457"><span class="annot"><a href="#local-6989586621679441457"><span class="hs-identifier hs-type hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-type">NoGenesis</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441457"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">data</span><span> </span><span id="NoGenesis"><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span></span><span> </span><span id="local-6989586621679441394"><span class="annot"><a href="#local-6989586621679441394"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NoGenesis"><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679441460"><span id="local-6989586621679441462"><span class="annot"><span class="annottext">NoGenesis era -&gt; NoGenesis era -&gt; Bool
+(NoGenesis era -&gt; NoGenesis era -&gt; Bool)
+-&gt; (NoGenesis era -&gt; NoGenesis era -&gt; Bool) -&gt; Eq (NoGenesis era)
+forall era. NoGenesis era -&gt; NoGenesis era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era. NoGenesis era -&gt; NoGenesis era -&gt; Bool
+== :: NoGenesis era -&gt; NoGenesis era -&gt; Bool
+$c/= :: forall era. NoGenesis era -&gt; NoGenesis era -&gt; Bool
+/= :: NoGenesis era -&gt; NoGenesis era -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679441467"><span id="local-6989586621679441469"><span id="local-6989586621679441473"><span class="annot"><span class="annottext">Int -&gt; NoGenesis era -&gt; ShowS
+[NoGenesis era] -&gt; ShowS
+NoGenesis era -&gt; String
+(Int -&gt; NoGenesis era -&gt; ShowS)
+-&gt; (NoGenesis era -&gt; String)
+-&gt; ([NoGenesis era] -&gt; ShowS)
+-&gt; Show (NoGenesis era)
+forall era. Int -&gt; NoGenesis era -&gt; ShowS
+forall era. [NoGenesis era] -&gt; ShowS
+forall era. NoGenesis era -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall era. Int -&gt; NoGenesis era -&gt; ShowS
+showsPrec :: Int -&gt; NoGenesis era -&gt; ShowS
+$cshow :: forall era. NoGenesis era -&gt; String
+show :: NoGenesis era -&gt; String
+$cshowList :: forall era. [NoGenesis era] -&gt; ShowS
+showList :: [NoGenesis era] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679441477"><span id="local-6989586621679441483"><span id="local-6989586621679441488"><span id="local-6989586621679441493"><span id="local-6989586621679441498"><span class="annot"><span class="annottext">[NoGenesis era] -&gt; Value
+[NoGenesis era] -&gt; Encoding
+NoGenesis era -&gt; Bool
+NoGenesis era -&gt; Value
+NoGenesis era -&gt; Encoding
+(NoGenesis era -&gt; Value)
+-&gt; (NoGenesis era -&gt; Encoding)
+-&gt; ([NoGenesis era] -&gt; Value)
+-&gt; ([NoGenesis era] -&gt; Encoding)
+-&gt; (NoGenesis era -&gt; Bool)
+-&gt; ToJSON (NoGenesis era)
+forall era. [NoGenesis era] -&gt; Value
+forall era. [NoGenesis era] -&gt; Encoding
+forall era. NoGenesis era -&gt; Bool
+forall era. NoGenesis era -&gt; Value
+forall era. NoGenesis era -&gt; Encoding
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: forall era. NoGenesis era -&gt; Value
+toJSON :: NoGenesis era -&gt; Value
+$ctoEncoding :: forall era. NoGenesis era -&gt; Encoding
+toEncoding :: NoGenesis era -&gt; Encoding
+$ctoJSONList :: forall era. [NoGenesis era] -&gt; Value
+toJSONList :: [NoGenesis era] -&gt; Value
+$ctoEncodingList :: forall era. [NoGenesis era] -&gt; Encoding
+toEncodingList :: [NoGenesis era] -&gt; Encoding
+$comitField :: forall era. NoGenesis era -&gt; Bool
+omitField :: NoGenesis era -&gt; Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#KeyValuePairs"><span class="hs-identifier hs-type">KeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-type">NoGenesis</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441394"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679441384"><span id="local-6989586621679441512"><span id="local-6989586621679441516"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441384"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-type">NoGenesis</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441384"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679441522"><span class="annot"><span class="annottext">toCBOR :: NoGenesis era -&gt; Encoding
+</span><a href="#local-6989586621679441522"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="annot"><span class="annottext">NoGenesis era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; Encoding
+forall a. ToCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#toCBOR"><span class="hs-identifier hs-var">toCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679441391"><span id="local-6989586621679441531"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441391"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-type">NoGenesis</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441391"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679441539"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (NoGenesis era)
+</span><a href="#local-6989586621679441539"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NoGenesis era
+forall era. NoGenesis era
+</span><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">NoGenesis era -&gt; Decoder s () -&gt; Decoder s (NoGenesis era)
+forall a b. a -&gt; Decoder s b -&gt; Decoder s a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><span class="hs-operator hs-var">&lt;$</span></span><span> </span><span class="annot"><span class="annottext">forall a s. FromCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var">fromCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679441403"><span id="local-6989586621679441548"><span id="local-6989586621679441553"><span id="local-6989586621679441556"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441403"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-type">NoGenesis</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441403"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679441410"><span id="local-6989586621679441565"><span id="local-6989586621679441570"><span id="local-6989586621679441573"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441410"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-type">NoGenesis</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441410"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679441375"><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#ToKeyValuePairs"><span class="hs-identifier hs-type">ToKeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-type">NoGenesis</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441375"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679441579"><span class="annot"><span class="annottext">toKeyValuePairs :: forall e kv. KeyValue e kv =&gt; NoGenesis era -&gt; [kv]
+</span><a href="#local-6989586621679441579"><span class="hs-identifier hs-var hs-var hs-var hs-var">toKeyValuePairs</span></a></span></span><span> </span><span class="annot"><span class="annottext">NoGenesis era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679441422"><span id="local-6989586621679441583"><span id="local-6989586621679441587"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-type">NoGenesis</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441422"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621679441599"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser (NoGenesis era)
+</span><a href="#local-6989586621679441599"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.Internal.html#Null"><span class="hs-identifier hs-var">Null</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NoGenesis era -&gt; Parser (NoGenesis era)
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">NoGenesis era
+forall era. NoGenesis era
+</span><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.Internal.html#Object"><span class="hs-identifier hs-type">Object</span></a></span><span> </span><span id="local-6989586621679441603"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679441603"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; Parser () -&gt; Parser ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><span class="hs-identifier hs-var">unless</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object -&gt; Bool
+forall v. KeyMap v -&gt; Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.KeyMap.html#null"><span class="hs-identifier hs-var">KV.null</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679441603"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Parser () -&gt; Parser ()) -&gt; Parser () -&gt; Parser ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Parser ()
+forall a. String -&gt; Parser a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;NoGenesis cannot have any fields&quot;</span></span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">NoGenesis era -&gt; Parser (NoGenesis era)
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">NoGenesis era
+forall era. NoGenesis era
+</span><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">Value
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Parser (NoGenesis era)
+forall a. String -&gt; Parser a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unexpected value type for NoGenesis&quot;</span></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- | Helper function that will produce `NoGenesis` for types that match it, otherwise action will be</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- called that will produce the desired genesis type.</span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Cardano.Ledger.Genesis.html#mkGenesisWith"><span class="hs-identifier hs-type">mkGenesisWith</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679441434"><span class="annot"><a href="#local-6989586621679441434"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span id="local-6989586621679441435"><span class="annot"><a href="#local-6989586621679441435"><span class="hs-identifier hs-type">g</span></a></span></span><span> </span><span id="local-6989586621679441436"><span class="annot"><a href="#local-6989586621679441436"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679441434"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679441435"><span class="hs-identifier hs-type">g</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621679441436"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-comment">-- | Action that will produce the genesis type, but it will be invoked only when it is statically</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-comment">-- known for @g@ to not be `NoGenesis`</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><a href="#local-6989586621679441436"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441435"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><a href="#local-6989586621679441436"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441435"><span class="hs-identifier hs-type">g</span></a></span><span>
+</span><span id="line-73"></span><span id="mkGenesisWith"><span class="annot"><span class="annottext">mkGenesisWith :: forall era g (m :: * -&gt; *).
+(Typeable era, Typeable g, Monad m) =&gt;
+m g -&gt; m g
+</span><a href="Cardano.Ledger.Genesis.html#mkGenesisWith"><span class="hs-identifier hs-var hs-var">mkGenesisWith</span></a></span></span><span> </span><span id="local-6989586621679441613"><span class="annot"><span class="annottext">m g
+</span><a href="#local-6989586621679441613"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (g :~: NoGenesis era)
+forall {k} (a :: k) (b :: k).
+(Typeable a, Typeable b) =&gt;
+Maybe (a :~: b)
+</span><span class="hs-identifier hs-var">eqT</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679441435"><span class="hs-identifier hs-type">g</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">:~:</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-type">NoGenesis</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441434"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">Maybe (g :~: NoGenesis era)
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">m g
+</span><a href="#local-6989586621679441613"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="annot"><span class="annottext">g :~: NoGenesis era
+</span><span class="hs-identifier hs-var">Refl</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">g -&gt; m g
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NoGenesis era
+forall era. NoGenesis era
+</span><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-type">NoGenesis</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679441434"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span></pre></body></html>

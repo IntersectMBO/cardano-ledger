@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.UTxO.GenesisUTxO</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>  </span><span class="annot"><a href="Cardano.Chain.UTxO.GenesisUTxO.html#genesisUtxo"><span class="hs-identifier">genesisUtxo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier">Address</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier">Lovelace</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Address.html#makeRedeemAddress"><span class="hs-identifier">makeRedeemAddress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.NetworkMagic.html"><span class="hs-identifier">Cardano.Chain.Common.NetworkMagic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.NetworkMagic.html#NetworkMagic"><span class="hs-identifier">NetworkMagic</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.NetworkMagic.html#makeNetworkMagic"><span class="hs-identifier">makeNetworkMagic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.html"><span class="hs-identifier">Cardano.Chain.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#unGenesisAvvmBalances"><span class="hs-identifier">unGenesisAvvmBalances</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#unGenesisNonAvvmBalances"><span class="hs-identifier">unGenesisNonAvvmBalances</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.html"><span class="hs-identifier">Cardano.Chain.Genesis</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Genesis</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.UTxO.html"><span class="hs-identifier">Cardano.Chain.UTxO.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.UTxO.html#UTxO"><span class="hs-identifier">UTxO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.UTxO.html"><span class="hs-identifier">Cardano.Chain.UTxO.UTxO</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UTxO</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.html"><span class="hs-identifier">Cardano.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.Redeem.Compact.html#fromCompactRedeemVerificationKey"><span class="hs-identifier">fromCompactRedeemVerificationKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="annot"><span class="hs-comment">-- | Create initial 'UTxO' from balances defined in the genesis config</span></span><span>
+</span><span id="line-16"></span><span class="annot"><a href="Cardano.Chain.UTxO.GenesisUTxO.html#genesisUtxo"><span class="hs-identifier hs-type">genesisUtxo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.Config.html#Config"><span class="hs-identifier hs-type">Genesis.Config</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span>
+</span><span id="line-17"></span><span id="genesisUtxo"><span class="annot"><span class="annottext">genesisUtxo :: Config -&gt; UTxO
+</span><a href="Cardano.Chain.UTxO.GenesisUTxO.html#genesisUtxo"><span class="hs-identifier hs-var hs-var">genesisUtxo</span></a></span></span><span> </span><span id="local-6989586621679601505"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679601505"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Address, Lovelace)] -&gt; UTxO
+</span><a href="Cardano.Chain.UTxO.UTxO.html#fromBalances"><span class="hs-identifier hs-var">UTxO.fromBalances</span></a></span><span> </span><span class="annot"><span class="annottext">[(Address, Lovelace)]
+</span><a href="#local-6989586621679601507"><span class="hs-identifier hs-var">balances</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="#local-6989586621679601507"><span class="hs-identifier hs-type">balances</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Address</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-20"></span><span>    </span><span id="local-6989586621679601507"><span class="annot"><span class="annottext">balances :: [(Address, Lovelace)]
+</span><a href="#local-6989586621679601507"><span class="hs-identifier hs-var hs-var">balances</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Address, Lovelace)]
+</span><a href="#local-6989586621679601508"><span class="hs-identifier hs-var">avvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">[(Address, Lovelace)]
+-&gt; [(Address, Lovelace)] -&gt; [(Address, Lovelace)]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">[(Address, Lovelace)]
+</span><a href="#local-6989586621679601509"><span class="hs-identifier hs-var">nonAvvmBalances</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="#local-6989586621679601508"><span class="hs-identifier hs-type">avvmBalances</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Address</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-23"></span><span>    </span><span id="local-6989586621679601508"><span class="annot"><span class="annottext">avvmBalances :: [(Address, Lovelace)]
+</span><a href="#local-6989586621679601508"><span class="hs-identifier hs-var hs-var">avvmBalances</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-24"></span><span>      </span><span class="annot"><span class="annottext">(CompactRedeemVerificationKey -&gt; Address)
+-&gt; (CompactRedeemVerificationKey, Lovelace) -&gt; (Address, Lovelace)
+forall a b c. (a -&gt; b) -&gt; (a, c) -&gt; (b, c)
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><span class="hs-identifier hs-var">first</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NetworkMagic -&gt; RedeemVerificationKey -&gt; Address
+</span><a href="Cardano.Chain.Common.Address.html#makeRedeemAddress"><span class="hs-identifier hs-var">makeRedeemAddress</span></a></span><span> </span><span class="annot"><span class="annottext">NetworkMagic
+</span><a href="#local-6989586621679601511"><span class="hs-identifier hs-var">networkMagic</span></a></span><span> </span><span class="annot"><span class="annottext">(RedeemVerificationKey -&gt; Address)
+-&gt; (CompactRedeemVerificationKey -&gt; RedeemVerificationKey)
+-&gt; CompactRedeemVerificationKey
+-&gt; Address
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">CompactRedeemVerificationKey -&gt; RedeemVerificationKey
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.Redeem.Compact.html#fromCompactRedeemVerificationKey"><span class="hs-identifier hs-var">fromCompactRedeemVerificationKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>        </span><span class="annot"><span class="annottext">((CompactRedeemVerificationKey, Lovelace) -&gt; (Address, Lovelace))
+-&gt; [(CompactRedeemVerificationKey, Lovelace)]
+-&gt; [(Address, Lovelace)]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Map CompactRedeemVerificationKey Lovelace
+-&gt; [(CompactRedeemVerificationKey, Lovelace)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">M.toList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenesisAvvmBalances -&gt; Map CompactRedeemVerificationKey Lovelace
+</span><a href="Cardano.Chain.Genesis.AvvmBalances.html#unGenesisAvvmBalances"><span class="hs-identifier hs-var">unGenesisAvvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">(GenesisAvvmBalances -&gt; Map CompactRedeemVerificationKey Lovelace)
+-&gt; GenesisAvvmBalances -&gt; Map CompactRedeemVerificationKey Lovelace
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Config -&gt; GenesisAvvmBalances
+</span><a href="Cardano.Chain.Genesis.Config.html#configAvvmDistr"><span class="hs-identifier hs-var">Genesis.configAvvmDistr</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679601505"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="#local-6989586621679601511"><span class="hs-identifier hs-type">networkMagic</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.NetworkMagic.html#NetworkMagic"><span class="hs-identifier hs-type">NetworkMagic</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span id="local-6989586621679601511"><span class="annot"><span class="annottext">networkMagic :: NetworkMagic
+</span><a href="#local-6989586621679601511"><span class="hs-identifier hs-var hs-var">networkMagic</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AProtocolMagic () -&gt; NetworkMagic
+forall a. AProtocolMagic a -&gt; NetworkMagic
+</span><a href="Cardano.Chain.Common.NetworkMagic.html#makeNetworkMagic"><span class="hs-identifier hs-var">makeNetworkMagic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Config -&gt; AProtocolMagic ()
+</span><a href="Cardano.Chain.Genesis.Config.html#configProtocolMagic"><span class="hs-identifier hs-var">Genesis.configProtocolMagic</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679601505"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="#local-6989586621679601509"><span class="hs-identifier hs-type">nonAvvmBalances</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Address</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-31"></span><span>    </span><span id="local-6989586621679601509"><span class="annot"><span class="annottext">nonAvvmBalances :: [(Address, Lovelace)]
+</span><a href="#local-6989586621679601509"><span class="hs-identifier hs-var hs-var">nonAvvmBalances</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-32"></span><span>      </span><span class="annot"><span class="annottext">Map Address Lovelace -&gt; [(Address, Lovelace)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">M.toList</span></span><span> </span><span class="annot"><span class="annottext">(Map Address Lovelace -&gt; [(Address, Lovelace)])
+-&gt; Map Address Lovelace -&gt; [(Address, Lovelace)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">GenesisNonAvvmBalances -&gt; Map Address Lovelace
+</span><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#unGenesisNonAvvmBalances"><span class="hs-identifier hs-var">unGenesisNonAvvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">(GenesisNonAvvmBalances -&gt; Map Address Lovelace)
+-&gt; GenesisNonAvvmBalances -&gt; Map Address Lovelace
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Config -&gt; GenesisNonAvvmBalances
+</span><a href="Cardano.Chain.Genesis.Config.html#configNonAvvmBalances"><span class="hs-identifier hs-var">Genesis.configNonAvvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679601505"><span class="hs-identifier hs-var">config</span></a></span><span>
+</span><span id="line-33"></span></pre></body></html>

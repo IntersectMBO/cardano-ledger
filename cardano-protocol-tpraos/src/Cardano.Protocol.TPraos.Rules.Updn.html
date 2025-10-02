@@ -1,0 +1,240 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE EmptyDataDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Protocol.TPraos.Rules.Updn</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UPDN"><span class="hs-identifier">UPDN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnEnv"><span class="hs-identifier">UpdnEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnState"><span class="hs-identifier">UpdnState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier">PredicateFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnPredicateFailure"><span class="hs-identifier">UpdnPredicateFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html"><span class="hs-identifier">Cardano.Ledger.Slot</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Protocol.Crypto.html"><span class="hs-identifier">Cardano.Protocol.Crypto</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Reader</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">asks</span></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">data</span><span> </span><span id="UPDN"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UPDN"><span class="hs-identifier hs-var">UPDN</span></a></span></span><span> </span><span id="local-6989586621679309220"><span class="annot"><a href="#local-6989586621679309220"><span class="hs-identifier hs-type">c</span></a></span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">newtype</span><span> </span><span id="UpdnEnv"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnEnv"><span class="hs-identifier hs-var">UpdnEnv</span></a></span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | New nonce</span></span><span>
+</span><span id="line-26"></span><span>    </span><span id="UpdnEnv"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnEnv"><span class="hs-identifier hs-var">UpdnEnv</span></a></span></span><span>
+</span><span id="line-27"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier hs-type">Nonce</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">data</span><span> </span><span id="UpdnState"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnState"><span class="hs-identifier hs-var">UpdnState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UpdnState"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnState"><span class="hs-identifier hs-var">UpdnState</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier hs-type">Nonce</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier hs-type">Nonce</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679309224"><span id="local-6989586621679309231"><span id="local-6989586621679309235"><span class="annot"><span class="annottext">Int -&gt; UpdnState -&gt; ShowS
+[UpdnState] -&gt; ShowS
+UpdnState -&gt; String
+(Int -&gt; UpdnState -&gt; ShowS)
+-&gt; (UpdnState -&gt; String)
+-&gt; ([UpdnState] -&gt; ShowS)
+-&gt; Show UpdnState
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; UpdnState -&gt; ShowS
+showsPrec :: Int -&gt; UpdnState -&gt; ShowS
+$cshow :: UpdnState -&gt; String
+show :: UpdnState -&gt; String
+$cshowList :: [UpdnState] -&gt; ShowS
+showList :: [UpdnState] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679309239"><span id="local-6989586621679309244"><span class="annot"><span class="annottext">UpdnState -&gt; UpdnState -&gt; Bool
+(UpdnState -&gt; UpdnState -&gt; Bool)
+-&gt; (UpdnState -&gt; UpdnState -&gt; Bool) -&gt; Eq UpdnState
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: UpdnState -&gt; UpdnState -&gt; Bool
+== :: UpdnState -&gt; UpdnState -&gt; Bool
+$c/= :: UpdnState -&gt; UpdnState -&gt; Bool
+/= :: UpdnState -&gt; UpdnState -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">data</span><span> </span><span id="UpdnPredicateFailure"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnPredicateFailure"><span class="hs-identifier hs-var">UpdnPredicateFailure</span></a></span></span><span> </span><span id="local-6989586621679309248"><span class="annot"><a href="#local-6989586621679309248"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-comment">-- No predicate failures</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679309250"><span id="local-6989586621679309252"><span class="annot"><span class="annottext">(forall x.
+ UpdnPredicateFailure c -&gt; Rep (UpdnPredicateFailure c) x)
+-&gt; (forall x.
+    Rep (UpdnPredicateFailure c) x -&gt; UpdnPredicateFailure c)
+-&gt; Generic (UpdnPredicateFailure c)
+forall x. Rep (UpdnPredicateFailure c) x -&gt; UpdnPredicateFailure c
+forall x. UpdnPredicateFailure c -&gt; Rep (UpdnPredicateFailure c) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall c x.
+Rep (UpdnPredicateFailure c) x -&gt; UpdnPredicateFailure c
+forall c x.
+UpdnPredicateFailure c -&gt; Rep (UpdnPredicateFailure c) x
+$cfrom :: forall c x.
+UpdnPredicateFailure c -&gt; Rep (UpdnPredicateFailure c) x
+from :: forall x. UpdnPredicateFailure c -&gt; Rep (UpdnPredicateFailure c) x
+$cto :: forall c x.
+Rep (UpdnPredicateFailure c) x -&gt; UpdnPredicateFailure c
+to :: forall x. Rep (UpdnPredicateFailure c) x -&gt; UpdnPredicateFailure c
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679309256"><span id="local-6989586621679309258"><span id="local-6989586621679309262"><span class="annot"><span class="annottext">Int -&gt; UpdnPredicateFailure c -&gt; ShowS
+[UpdnPredicateFailure c] -&gt; ShowS
+UpdnPredicateFailure c -&gt; String
+(Int -&gt; UpdnPredicateFailure c -&gt; ShowS)
+-&gt; (UpdnPredicateFailure c -&gt; String)
+-&gt; ([UpdnPredicateFailure c] -&gt; ShowS)
+-&gt; Show (UpdnPredicateFailure c)
+forall c. Int -&gt; UpdnPredicateFailure c -&gt; ShowS
+forall c. [UpdnPredicateFailure c] -&gt; ShowS
+forall c. UpdnPredicateFailure c -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall c. Int -&gt; UpdnPredicateFailure c -&gt; ShowS
+showsPrec :: Int -&gt; UpdnPredicateFailure c -&gt; ShowS
+$cshow :: forall c. UpdnPredicateFailure c -&gt; String
+show :: UpdnPredicateFailure c -&gt; String
+$cshowList :: forall c. [UpdnPredicateFailure c] -&gt; ShowS
+showList :: [UpdnPredicateFailure c] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679309265"><span id="local-6989586621679309267"><span class="annot"><span class="annottext">UpdnPredicateFailure c -&gt; UpdnPredicateFailure c -&gt; Bool
+(UpdnPredicateFailure c -&gt; UpdnPredicateFailure c -&gt; Bool)
+-&gt; (UpdnPredicateFailure c -&gt; UpdnPredicateFailure c -&gt; Bool)
+-&gt; Eq (UpdnPredicateFailure c)
+forall c. UpdnPredicateFailure c -&gt; UpdnPredicateFailure c -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall c. UpdnPredicateFailure c -&gt; UpdnPredicateFailure c -&gt; Bool
+== :: UpdnPredicateFailure c -&gt; UpdnPredicateFailure c -&gt; Bool
+$c/= :: forall c. UpdnPredicateFailure c -&gt; UpdnPredicateFailure c -&gt; Bool
+/= :: UpdnPredicateFailure c -&gt; UpdnPredicateFailure c -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679309158"><span id="local-6989586621679309271"><span id="local-6989586621679309275"><span id="local-6989586621679309281"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnPredicateFailure"><span class="hs-identifier hs-type">UpdnPredicateFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309158"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">newtype</span><span> </span><span id="UpdnEvent"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnEvent"><span class="hs-identifier hs-var">UpdnEvent</span></a></span></span><span> </span><span id="local-6989586621679309216"><span class="annot"><a href="#local-6989586621679309216"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NewEpoch"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#NewEpoch"><span class="hs-identifier hs-var">NewEpoch</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679309176"><span id="local-6989586621679309316"><span id="local-6989586621679309320"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309176"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UPDN"><span class="hs-identifier hs-type">UPDN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309176"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="State"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UPDN"><span class="hs-identifier hs-type">UPDN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309176"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnState"><span class="hs-identifier hs-type">UpdnState</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signal"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-var">Signal</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UPDN"><span class="hs-identifier hs-type">UPDN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309176"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Environment"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UPDN"><span class="hs-identifier hs-type">UPDN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309176"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnEnv"><span class="hs-identifier hs-type">UpdnEnv</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="BaseM"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#BaseM"><span class="hs-identifier hs-var">BaseM</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UPDN"><span class="hs-identifier hs-type">UPDN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309176"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier hs-type">ShelleyBase</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="PredicateFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-var">PredicateFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UPDN"><span class="hs-identifier hs-type">UPDN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309176"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnPredicateFailure"><span class="hs-identifier hs-type">UpdnPredicateFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309176"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Event"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Event"><span class="hs-identifier hs-var">Event</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UPDN"><span class="hs-identifier hs-type">UPDN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309176"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnEvent"><span class="hs-identifier hs-type">UpdnEvent</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309176"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679309329"><span class="annot"><span class="annottext">initialRules :: [InitialRule (UPDN c)]
+</span><a href="#local-6989586621679309329"><span class="hs-identifier hs-var hs-var hs-var hs-var">initialRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UpdnState -&gt; F (Clause (UPDN c) 'Initial) UpdnState
+forall a. a -&gt; F (Clause (UPDN c) 'Initial) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span>
+</span><span id="line-51"></span><span>        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Nonce -&gt; Nonce -&gt; UpdnState
+</span><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnState"><span class="hs-identifier hs-var">UpdnState</span></a></span><span>
+</span><span id="line-52"></span><span>            </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309331"><span class="hs-identifier hs-var">initialNonce</span></a></span><span>
+</span><span id="line-53"></span><span>            </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309331"><span class="hs-identifier hs-var">initialNonce</span></a></span><span>
+</span><span id="line-54"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>      </span><span id="local-6989586621679309331"><span class="annot"><span class="annottext">initialNonce :: Nonce
+</span><a href="#local-6989586621679309331"><span class="hs-identifier hs-var hs-var">initialNonce</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Nonce
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkNonceFromNumber"><span class="hs-identifier hs-var">mkNonceFromNumber</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679309336"><span class="annot"><span class="annottext">transitionRules :: [TransitionRule (UPDN c)]
+</span><a href="#local-6989586621679309336"><span class="hs-identifier hs-var hs-var hs-var hs-var">transitionRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TransitionRule (UPDN c)
+forall c. Crypto c =&gt; TransitionRule (UPDN c)
+</span><a href="Cardano.Protocol.TPraos.Rules.Updn.html#updTransition"><span class="hs-identifier hs-var">updTransition</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span id="local-6989586621679309183"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#updTransition"><span class="hs-identifier hs-type">updTransition</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309183"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TransitionRule"><span class="hs-identifier hs-type">TransitionRule</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UPDN"><span class="hs-identifier hs-type">UPDN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679309183"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-61"></span><span id="updTransition"><span class="annot"><span class="annottext">updTransition :: forall c. Crypto c =&gt; TransitionRule (UPDN c)
+</span><a href="Cardano.Protocol.TPraos.Rules.Updn.html#updTransition"><span class="hs-identifier hs-var hs-var">updTransition</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnEnv"><span class="hs-identifier hs-type">UpdnEnv</span></a></span><span> </span><span id="local-6989586621679309359"><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309359"><span class="hs-identifier hs-var">eta</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnState"><span class="hs-identifier hs-type">UpdnState</span></a></span><span> </span><span id="local-6989586621679309360"><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309360"><span class="hs-identifier hs-var">eta_v</span></a></span></span><span> </span><span id="local-6989586621679309361"><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309361"><span class="hs-identifier hs-var">eta_c</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679309362"><span class="annot"><span class="annottext">Signal (UPDN c)
+</span><a href="#local-6989586621679309362"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Rule (UPDN c) 'Transition (RuleContext 'Transition (UPDN c))
+F (Clause (UPDN c) 'Transition) (TRC (UPDN c))
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679309364"><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679309364"><span class="hs-identifier hs-var">ei</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BaseM (UPDN c) (EpochInfo Identity)
+-&gt; Rule (UPDN c) 'Transition (EpochInfo Identity)
+forall sts a (ctx :: RuleType).
+STS sts =&gt;
+BaseM sts a -&gt; Rule sts ctx a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#liftSTS"><span class="hs-identifier hs-var">liftSTS</span></a></span><span> </span><span class="annot"><span class="annottext">(BaseM (UPDN c) (EpochInfo Identity)
+ -&gt; Rule (UPDN c) 'Transition (EpochInfo Identity))
+-&gt; BaseM (UPDN c) (EpochInfo Identity)
+-&gt; Rule (UPDN c) 'Transition (EpochInfo Identity)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Globals -&gt; EpochInfo Identity)
+-&gt; ReaderT Globals Identity (EpochInfo Identity)
+forall (m :: * -&gt; *) r a. Monad m =&gt; (r -&gt; a) -&gt; ReaderT r m a
+</span><span class="hs-identifier hs-var">asks</span></span><span> </span><span class="annot"><span class="annottext">Globals -&gt; EpochInfo Identity
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#epochInfoPure"><span class="hs-identifier hs-var">epochInfoPure</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679309367"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679309367"><span class="hs-identifier hs-var">sp</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BaseM (UPDN c) Word64 -&gt; Rule (UPDN c) 'Transition Word64
+forall sts a (ctx :: RuleType).
+STS sts =&gt;
+BaseM sts a -&gt; Rule sts ctx a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#liftSTS"><span class="hs-identifier hs-var">liftSTS</span></a></span><span> </span><span class="annot"><span class="annottext">(BaseM (UPDN c) Word64 -&gt; Rule (UPDN c) 'Transition Word64)
+-&gt; BaseM (UPDN c) Word64 -&gt; Rule (UPDN c) 'Transition Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Globals -&gt; Word64) -&gt; ReaderT Globals Identity Word64
+forall (m :: * -&gt; *) r a. Monad m =&gt; (r -&gt; a) -&gt; ReaderT r m a
+</span><span class="hs-identifier hs-var">asks</span></span><span> </span><span class="annot"><span class="annottext">Globals -&gt; Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#stabilityWindow"><span class="hs-identifier hs-var">stabilityWindow</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679309369"><span class="annot"><span class="annottext">curEpochNo :: EpochNo
+</span><a href="#local-6989586621679309369"><span class="hs-identifier hs-var hs-var">curEpochNo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; EpochInfo Identity -&gt; SlotNo -&gt; EpochNo
+EpochInfo Identity -&gt; SlotNo -&gt; EpochNo
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html#epochInfoEpoch"><span class="hs-identifier hs-var">epochInfoEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679309364"><span class="hs-identifier hs-var">ei</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+Signal (UPDN c)
+</span><a href="#local-6989586621679309362"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-66"></span><span>      </span><span id="local-6989586621679309371"><span class="annot"><span class="annottext">nextEpochNo :: EpochNo
+</span><a href="#local-6989586621679309371"><span class="hs-identifier hs-var hs-var">nextEpochNo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochInterval -&gt; EpochNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#addEpochInterval"><span class="hs-identifier hs-var">addEpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679309369"><span class="hs-identifier hs-var">curEpochNo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; EpochInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier hs-var">EpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>      </span><span id="local-6989586621679309374"><span class="annot"><span class="annottext">firstSlotNextEpoch :: SlotNo
+</span><a href="#local-6989586621679309374"><span class="hs-identifier hs-var hs-var">firstSlotNextEpoch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; EpochInfo Identity -&gt; EpochNo -&gt; SlotNo
+EpochInfo Identity -&gt; EpochNo -&gt; SlotNo
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html#epochInfoFirst"><span class="hs-identifier hs-var">epochInfoFirst</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679309364"><span class="hs-identifier hs-var">ei</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679309371"><span class="hs-identifier hs-var">nextEpochNo</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="annottext">Event (UPDN c) -&gt; Rule (UPDN c) 'Transition ()
+forall sts (ctx :: RuleType). Event sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#tellEvent"><span class="hs-identifier hs-var">tellEvent</span></a></span><span> </span><span class="annot"><span class="annottext">(Event (UPDN c) -&gt; Rule (UPDN c) 'Transition ())
+-&gt; Event (UPDN c) -&gt; Rule (UPDN c) 'Transition ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; UpdnEvent c
+forall c. EpochNo -&gt; UpdnEvent c
+</span><a href="Cardano.Protocol.TPraos.Rules.Updn.html#NewEpoch"><span class="hs-identifier hs-var">NewEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679309371"><span class="hs-identifier hs-var">nextEpochNo</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">UpdnState -&gt; F (Clause (UPDN c) 'Transition) UpdnState
+forall a. a -&gt; F (Clause (UPDN c) 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(UpdnState -&gt; F (Clause (UPDN c) 'Transition) UpdnState)
+-&gt; UpdnState -&gt; F (Clause (UPDN c) 'Transition) UpdnState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">Nonce -&gt; Nonce -&gt; UpdnState
+</span><a href="Cardano.Protocol.TPraos.Rules.Updn.html#UpdnState"><span class="hs-identifier hs-var">UpdnState</span></a></span><span>
+</span><span id="line-71"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309360"><span class="hs-identifier hs-var">eta_v</span></a></span><span> </span><span class="annot"><span class="annottext">Nonce -&gt; Nonce -&gt; Nonce
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#%2B52"><span class="hs-operator hs-var">&#11090;</span></a></span><span> </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309359"><span class="hs-identifier hs-var">eta</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">SlotNo
+Signal (UPDN c)
+</span><a href="#local-6989586621679309362"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; Duration -&gt; SlotNo
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html#%2B%2A"><span class="hs-operator hs-var">+*</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Duration
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-var">Duration</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679309367"><span class="hs-identifier hs-var">sp</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; SlotNo -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679309374"><span class="hs-identifier hs-var">firstSlotNextEpoch</span></a></span><span>
+</span><span id="line-73"></span><span>          </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309360"><span class="hs-identifier hs-var">eta_v</span></a></span><span> </span><span class="annot"><span class="annottext">Nonce -&gt; Nonce -&gt; Nonce
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#%2B52"><span class="hs-operator hs-var">&#11090;</span></a></span><span> </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309359"><span class="hs-identifier hs-var">eta</span></a></span><span>
+</span><span id="line-74"></span><span>          </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Nonce
+</span><a href="#local-6989586621679309361"><span class="hs-identifier hs-var">eta_c</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span></pre></body></html>

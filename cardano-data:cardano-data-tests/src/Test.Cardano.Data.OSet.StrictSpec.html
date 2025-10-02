@@ -1,0 +1,630 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Data.OSet.StrictSpec</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier">natVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">forM_</span></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html"><span class="hs-identifier">Data.OSet.Strict</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#empty"><span class="hs-identifier">empty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#StrictSeq"><span class="hs-identifier">StrictSeq</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#%3E%3C"><span class="hs-operator">(&gt;&lt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier">fromList</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">elems</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">empty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Data.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.RoundTrip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#cborTrip"><span class="hs-identifier">cborTrip</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#embedTripSpec"><span class="hs-identifier">embedTripSpec</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#roundTripCborSpec"><span class="hs-identifier">roundTripCborSpec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.html"><span class="hs-identifier">Test.Hspec</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html"><span class="hs-identifier">Test.Hspec.QuickCheck</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-0.6.5.0-93d953419cb1c92a619e6b41c8dfd419c15e4e8719454ba5605130782609f930/share/doc/html/src/Test.QuickCheck.Classes.html"><span class="hs-identifier">Test.QuickCheck.Classes</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="annot"><a href="Test.Cardano.Data.OSet.StrictSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-22"></span><span id="spec"><span class="annot"><span class="annottext">spec :: Spec
+</span><a href="Test.Cardano.Data.OSet.StrictSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;OSet.Strict&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;membership checks work&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-25"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (OSet Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;unconsed&quot;</span></span><span> </span><span class="annot"><span class="annottext">((OSet Int -&gt; IO ()) -&gt; Spec) -&gt; (OSet Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679219226"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219226"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219226"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-26"></span><span>        </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>        </span><span id="local-6989586621679219228"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219228"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-type">:&lt;|:</span></a></span><span> </span><span id="local-6989586621679219230"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219230"><span class="hs-identifier hs-var">_xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219228"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; (Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; OSet Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#member"><span class="hs-operator hs-var">`member`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219226"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (OSet Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;unsnoced&quot;</span></span><span> </span><span class="annot"><span class="annottext">((OSet Int -&gt; IO ()) -&gt; Spec) -&gt; (OSet Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679219233"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219233"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219233"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-29"></span><span>        </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>        </span><span id="local-6989586621679219234"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219234"><span class="hs-identifier hs-var">_xs</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-type">:|&gt;:</span></a></span><span> </span><span id="local-6989586621679219236"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219236"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219236"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; (Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; OSet Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#member"><span class="hs-operator hs-var">`member`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219233"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;when cons-ing&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-32"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (OSet Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;adding a duplicate results in a no-op&quot;</span></span><span> </span><span class="annot"><span class="annottext">((OSet Int -&gt; IO ()) -&gt; Spec) -&gt; (OSet Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679219237"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219237"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-33"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219237"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-34"></span><span>          </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>          </span><span id="local-6989586621679219238"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219238"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-type">:&lt;|:</span></a></span><span> </span><span id="local-6989586621679219239"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219239"><span class="hs-identifier hs-var">_xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219237"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219238"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219237"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-36"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219237"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-37"></span><span>          </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>          </span><span id="local-6989586621679219242"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219242"><span class="hs-identifier hs-var">_xs</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-type">:|&gt;:</span></a></span><span> </span><span id="local-6989586621679219243"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219243"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219237"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219243"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219237"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ((OSet Int, Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;new values get added&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OSet Int, Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OSet Int, Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679219244"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219244"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679219245"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219245"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-40"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219245"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OSet Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#member"><span class="hs-operator hs-var">`member`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219244"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-41"></span><span>          </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219245"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219244"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219244"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-42"></span><span>          </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219245"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219244"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219245"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-var">:&lt;|:</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219244"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;when snoc-ing&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-44"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (OSet Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;adding a duplicate results in a no-op&quot;</span></span><span> </span><span class="annot"><span class="annottext">((OSet Int -&gt; IO ()) -&gt; Spec) -&gt; (OSet Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679219246"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219246"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219246"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-46"></span><span>          </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>          </span><span id="local-6989586621679219247"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219247"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-type">:&lt;|:</span></a></span><span> </span><span id="local-6989586621679219248"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219248"><span class="hs-identifier hs-var">_xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219246"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219246"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219247"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-48"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219246"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-49"></span><span>          </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>          </span><span id="local-6989586621679219250"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219250"><span class="hs-identifier hs-var">_xs</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-type">:|&gt;:</span></a></span><span> </span><span id="local-6989586621679219251"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219251"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219246"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219246"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219251"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ((OSet Int, Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;new values get added&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OSet Int, Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OSet Int, Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679219252"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219252"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679219253"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219253"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-52"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219253"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OSet Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#member"><span class="hs-operator hs-var">`member`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219252"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-53"></span><span>          </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219252"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219253"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219252"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-54"></span><span>          </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219252"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219253"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219252"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-var">:|&gt;:</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219253"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mappend preserves uniqueness&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (OSet Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mappending with itself should be a no-op&quot;</span></span><span> </span><span class="annot"><span class="annottext">((OSet Int -&gt; IO ()) -&gt; Spec) -&gt; (OSet Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679219254"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219254"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>        </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219254"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var">|&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219254"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219254"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219254"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3E%3C%7C"><span class="hs-operator hs-var">&gt;&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219254"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219254"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ((OSet Int, OSet Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mappending with duplicates: left-preserving&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OSet Int, OSet Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OSet Int, OSet Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679219257"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219257"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679219258"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219258"><span class="hs-identifier hs-var">j</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-60"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219258"><span class="hs-identifier hs-var">j</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-61"></span><span>          </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219257"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219257"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var">|&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219258"><span class="hs-identifier hs-var">j</span></a></span><span>
+</span><span id="line-62"></span><span>          </span><span id="local-6989586621679219259"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219259"><span class="hs-identifier hs-var">j'</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3A%3C%7C%3A"><span class="hs-operator hs-type">:&lt;|:</span></a></span><span> </span><span id="local-6989586621679219260"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219260"><span class="hs-identifier hs-var">_js</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219257"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var">|&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219258"><span class="hs-identifier hs-var">j</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219257"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%7C%3E"><span class="hs-operator hs-var">|&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219259"><span class="hs-identifier hs-var">j'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var">|&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219258"><span class="hs-identifier hs-var">j</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ((OSet Int, OSet Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mappending with duplicates: right-preserving&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OSet Int, OSet Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OSet Int, OSet Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679219261"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219261"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679219262"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219262"><span class="hs-identifier hs-var">j</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-64"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219261"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-65"></span><span>          </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219261"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3E%3C%7C"><span class="hs-operator hs-var">&gt;&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219262"><span class="hs-identifier hs-var">j</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219262"><span class="hs-identifier hs-var">j</span></a></span><span>
+</span><span id="line-66"></span><span>          </span><span id="local-6989586621679219263"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219263"><span class="hs-identifier hs-var">_is</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3A%7C%3E%3A"><span class="hs-operator hs-type">:|&gt;:</span></a></span><span> </span><span id="local-6989586621679219264"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219264"><span class="hs-identifier hs-var">i'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219261"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3E%3C%7C"><span class="hs-operator hs-var">&gt;&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219262"><span class="hs-identifier hs-var">j</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219261"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3E%3C%7C"><span class="hs-operator hs-var">&gt;&lt;|</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679219264"><span class="hs-identifier hs-var">i'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3C%7C"><span class="hs-operator hs-var">&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219262"><span class="hs-identifier hs-var">j</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="annottext">String
+-&gt; ((OSet Int, OSet Int, StrictSeq Int, Set Int) -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;operations preserve invariant&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((OSet Int, OSet Int, StrictSeq Int, Set Int) -&gt; IO ()) -&gt; Spec)
+-&gt; ((OSet Int, OSet Int, StrictSeq Int, Set Int) -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-68"></span><span>      </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679219265"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219265"><span class="hs-identifier hs-var">oset</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679219266"><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219266"><span class="hs-identifier hs-var">oset'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679219267"><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679219267"><span class="hs-identifier hs-var">sseq</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679219268"><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679219268"><span class="hs-identifier hs-var">set</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#StrictSeq"><span class="hs-identifier hs-type">StrictSeq</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-69"></span><span>        </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219265"><span class="hs-identifier hs-var">oset</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%7C%3E%3C"><span class="hs-operator hs-var">|&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219266"><span class="hs-identifier hs-var">oset'</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; (OSet Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; Bool
+forall a. Ord a =&gt; OSet a -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219265"><span class="hs-identifier hs-var">oset</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; OSet Int -&gt; OSet Int
+forall a. Ord a =&gt; OSet a -&gt; OSet a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#%3E%3C%7C"><span class="hs-operator hs-var">&gt;&lt;|</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219266"><span class="hs-identifier hs-var">oset'</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; (OSet Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; Bool
+forall a. Ord a =&gt; OSet a -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; OSet Int
+forall a. Ord a =&gt; StrictSeq a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#fromStrictSeq"><span class="hs-identifier hs-var">fromStrictSeq</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679219267"><span class="hs-identifier hs-var">sseq</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; (OSet Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; Bool
+forall a. Ord a =&gt; OSet a -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-72"></span><span>        </span><span class="annot"><span class="annottext">Set Int -&gt; OSet Int
+forall a. Set a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#fromSet"><span class="hs-identifier hs-var">fromSet</span></a></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679219268"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; (OSet Int -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; Bool
+forall a. Ord a =&gt; OSet a -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#invariantHolds%27"><span class="hs-identifier hs-var">invariantHolds'</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fromList preserves order&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Set Int -&gt; IO ()) -&gt; Spec) -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-74"></span><span>      </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679219272"><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679219272"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679219273"><span class="annot"><span class="annottext">sseq :: StrictSeq Int
+</span><a href="#local-6989586621679219273"><span class="hs-identifier hs-var hs-var">sseq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; StrictSeq Int
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">SSeq.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; StrictSeq Int) -&gt; [Int] -&gt; StrictSeq Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set Int -&gt; [Int]
+forall a. Set a -&gt; [a]
+</span><span class="hs-identifier hs-var">elems</span></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679219272"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-76"></span><span>         </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">OSet Int -&gt; StrictSeq Int
+forall a. OSet a -&gt; StrictSeq a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#toStrictSeq"><span class="hs-identifier hs-var">toStrictSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int] -&gt; OSet Int
+forall a. Ord a =&gt; [a] -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set Int -&gt; [Int]
+forall a. Set a -&gt; [a]
+</span><span class="hs-identifier hs-var">elems</span></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679219272"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; StrictSeq Int -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679219273"><span class="hs-identifier hs-var">sseq</span></a></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fromStrictSeqDuplicates&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;with duplicates&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Set Int -&gt; IO ()) -&gt; Spec) -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679219276"><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679219276"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679219277"><span class="annot"><span class="annottext">sseq :: StrictSeq Int
+</span><a href="#local-6989586621679219277"><span class="hs-identifier hs-var hs-var">sseq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; StrictSeq Int
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">SSeq.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; StrictSeq Int) -&gt; [Int] -&gt; StrictSeq Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set Int -&gt; [Int]
+forall a. Set a -&gt; [a]
+</span><span class="hs-identifier hs-var">elems</span></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679219276"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-80"></span><span>            </span><span id="local-6989586621679219278"><span class="annot"><span class="annottext">oset :: OSet Int
+</span><a href="#local-6989586621679219278"><span class="hs-identifier hs-var hs-var">oset</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; OSet Int
+forall a. Ord a =&gt; StrictSeq a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#fromStrictSeq"><span class="hs-identifier hs-var">fromStrictSeq</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679219277"><span class="hs-identifier hs-var">sseq</span></a></span><span>
+</span><span id="line-81"></span><span>         </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; (Set Int, OSet Int)
+forall a. Ord a =&gt; StrictSeq a -&gt; (Set a, OSet a)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#fromStrictSeqDuplicates"><span class="hs-identifier hs-var">fromStrictSeqDuplicates</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679219277"><span class="hs-identifier hs-var">sseq</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; StrictSeq Int -&gt; StrictSeq Int
+forall a. StrictSeq a -&gt; StrictSeq a -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#%3E%3C"><span class="hs-operator hs-var">&gt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679219277"><span class="hs-identifier hs-var">sseq</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Set Int, OSet Int) -&gt; (Set Int, OSet Int) -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679219276"><span class="hs-identifier hs-var">set</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219278"><span class="hs-identifier hs-var">oset</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;without duplicates&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Set Int -&gt; IO ()) -&gt; Spec) -&gt; (Set Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679219280"><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679219280"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-83"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679219281"><span class="annot"><span class="annottext">sseq :: StrictSeq Int
+</span><a href="#local-6989586621679219281"><span class="hs-identifier hs-var hs-var">sseq</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; StrictSeq Int
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">SSeq.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([Int] -&gt; StrictSeq Int) -&gt; [Int] -&gt; StrictSeq Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set Int -&gt; [Int]
+forall a. Set a -&gt; [a]
+</span><span class="hs-identifier hs-var">elems</span></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679219280"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-84"></span><span>            </span><span id="local-6989586621679219282"><span class="annot"><span class="annottext">oset :: OSet Int
+</span><a href="#local-6989586621679219282"><span class="hs-identifier hs-var hs-var">oset</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; OSet Int
+forall a. Ord a =&gt; StrictSeq a -&gt; OSet a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#fromStrictSeq"><span class="hs-identifier hs-var">fromStrictSeq</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679219281"><span class="hs-identifier hs-var">sseq</span></a></span><span>
+</span><span id="line-85"></span><span>         </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">StrictSeq Int -&gt; (Set Int, OSet Int)
+forall a. Ord a =&gt; StrictSeq a -&gt; (Set a, OSet a)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#fromStrictSeqDuplicates"><span class="hs-identifier hs-var">fromStrictSeqDuplicates</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq Int
+</span><a href="#local-6989586621679219281"><span class="hs-identifier hs-var">sseq</span></a></span><span> </span><span class="annot"><span class="annottext">(Set Int, OSet Int) -&gt; (Set Int, OSet Int) -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set Int
+forall a. Set a
+</span><span class="hs-identifier hs-var">empty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">OSet Int
+</span><a href="#local-6989586621679219282"><span class="hs-identifier hs-var">oset</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CBOR round-trip&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-87"></span><span>      </span><span class="annot"><span class="annottext">forall t. (Show t, Eq t, Arbitrary t, EncCBOR t, DecCBOR t) =&gt; Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#roundTripCborSpec"><span class="hs-identifier hs-var">roundTripCborSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>      </span><span class="annot"><span class="annottext">forall t. (Show t, Eq t, Arbitrary t, EncCBOR t, DecCBOR t) =&gt; Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#roundTripCborSpec"><span class="hs-identifier hs-var">roundTripCborSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><span class="annottext">[Version] -&gt; (Version -&gt; Spec) -&gt; Spec
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><span class="hs-identifier hs-var">forM_</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">9</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Version
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">((Version -&gt; Spec) -&gt; Spec) -&gt; (Version -&gt; Spec) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679219284"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679219284"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>        </span><span class="annot"><span class="annottext">Version
+-&gt; Version
+-&gt; Trip (Set Word) (OSet Word)
+-&gt; (OSet Word -&gt; Set Word -&gt; IO ())
+-&gt; Spec
+forall a b.
+(Show a, Typeable a, Typeable b, Arbitrary a, Eq b,
+ HasCallStack) =&gt;
+Version -&gt; Version -&gt; Trip a b -&gt; (b -&gt; a -&gt; IO ()) -&gt; Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#embedTripSpec"><span class="hs-identifier hs-var">embedTripSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679219284"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679219284"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (EncCBOR a, DecCBOR b) =&gt; Trip a b
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#cborTrip"><span class="hs-identifier hs-var">cborTrip</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((OSet Word -&gt; Set Word -&gt; IO ()) -&gt; Spec)
+-&gt; (OSet Word -&gt; Set Word -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-91"></span><span>          </span><span class="hs-glyph">\</span><span id="local-6989586621679219285"><span class="annot"><span class="annottext">OSet Word
+</span><a href="#local-6989586621679219285"><span class="hs-identifier hs-var">oset</span></a></span></span><span> </span><span id="local-6989586621679219286"><span class="annot"><span class="annottext">Set Word
+</span><a href="#local-6989586621679219286"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Set Word
+</span><a href="#local-6989586621679219286"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="annot"><span class="annottext">Set Word -&gt; Set Word -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Word -&gt; Set Word
+forall a. OSet a -&gt; Set a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#toSet"><span class="hs-identifier hs-var">toSet</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Word
+</span><a href="#local-6989586621679219285"><span class="hs-identifier hs-var">oset</span></a></span><span>
+</span><span id="line-92"></span><span>        </span><span class="annot"><span class="annottext">Version
+-&gt; Version
+-&gt; Trip (OSet Word) (Set Word)
+-&gt; (Set Word -&gt; OSet Word -&gt; IO ())
+-&gt; Spec
+forall a b.
+(Show a, Typeable a, Typeable b, Arbitrary a, Eq b,
+ HasCallStack) =&gt;
+Version -&gt; Version -&gt; Trip a b -&gt; (b -&gt; a -&gt; IO ()) -&gt; Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#embedTripSpec"><span class="hs-identifier hs-var">embedTripSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679219284"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679219284"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (EncCBOR a, DecCBOR b) =&gt; Trip a b
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.RoundTrip.html#cborTrip"><span class="hs-identifier hs-var">cborTrip</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Set Word -&gt; OSet Word -&gt; IO ()) -&gt; Spec)
+-&gt; (Set Word -&gt; OSet Word -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-93"></span><span>          </span><span class="hs-glyph">\</span><span id="local-6989586621679219288"><span class="annot"><span class="annottext">Set Word
+</span><a href="#local-6989586621679219288"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span id="local-6989586621679219289"><span class="annot"><span class="annottext">OSet Word
+</span><a href="#local-6989586621679219289"><span class="hs-identifier hs-var">oset</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OSet Word -&gt; Set Word
+forall a. OSet a -&gt; Set a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#toSet"><span class="hs-identifier hs-var">toSet</span></a></span><span> </span><span class="annot"><span class="annottext">OSet Word
+</span><a href="#local-6989586621679219289"><span class="hs-identifier hs-var">oset</span></a></span><span> </span><span class="annot"><span class="annottext">Set Word -&gt; Set Word -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Set Word
+</span><a href="#local-6989586621679219288"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#context"><span class="hs-identifier hs-var">context</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Typeclass laws&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; IO () -&gt; SpecM (Arg (IO ())) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Type&quot;</span></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; SpecM (Arg (IO ())) ())
+-&gt; IO () -&gt; SpecM (Arg (IO ())) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><span class="annottext">Proxy (OSet Int) -&gt; [Proxy (OSet Int) -&gt; Laws] -&gt; IO ()
+forall a. Proxy a -&gt; [Proxy a -&gt; Laws] -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Base.html#lawsCheckOne"><span class="hs-identifier hs-var">lawsCheckOne</span></a></span><span>
+</span><span id="line-97"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy (OSet Int)
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.OSet.Strict.html#OSet"><span class="hs-identifier hs-type">OSet</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Proxy (OSet Int) -&gt; Laws
+forall a. (Eq a, Arbitrary a, Show a) =&gt; Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Eq.html#eqLaws"><span class="hs-identifier hs-var">eqLaws</span></a></span><span>
+</span><span id="line-99"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy (OSet Int) -&gt; Laws
+forall a. (Ord a, Arbitrary a, Show a) =&gt; Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Ord.html#ordLaws"><span class="hs-identifier hs-var">ordLaws</span></a></span><span>
+</span><span id="line-100"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy (OSet Int) -&gt; Laws
+forall a.
+(IsList a, Show a, Show (Item a), Arbitrary a, Arbitrary (Item a),
+ Eq a) =&gt;
+Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Base.IsList.html#isListLaws"><span class="hs-identifier hs-var">isListLaws</span></a></span><span>
+</span><span id="line-101"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy (OSet Int) -&gt; Laws
+forall a.
+(Semigroup a, Eq a, Arbitrary a, Show a) =&gt;
+Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Semigroup.html#semigroupLaws"><span class="hs-identifier hs-var">semigroupLaws</span></a></span><span>
+</span><span id="line-102"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy (OSet Int) -&gt; Laws
+forall a. (Monoid a, Eq a, Arbitrary a, Show a) =&gt; Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Monoid.html#monoidLaws"><span class="hs-identifier hs-var">monoidLaws</span></a></span><span>
+</span><span id="line-103"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy (OSet Int) -&gt; Laws
+forall a.
+(Semigroup a, Monoid a, Eq a, Arbitrary a, Show a) =&gt;
+Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Monoid.html#semigroupMonoidLaws"><span class="hs-identifier hs-var">semigroupMonoidLaws</span></a></span><span>
+</span><span id="line-104"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-105"></span></pre></body></html>

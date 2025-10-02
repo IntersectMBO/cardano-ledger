@@ -1,0 +1,232 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Dijkstra.Genesis</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier">DijkstraGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ToKeyValuePairs"><span class="hs-identifier">ToKeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Coders.html"><span class="hs-identifier">Cardano.Ledger.Binary.Coders</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Era.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.PParams.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Dijkstra.PParams.html#UpgradeDijkstraPParams"><span class="hs-identifier">UpgradeDijkstraPParams</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#EraGenesis"><span class="hs-identifier">EraGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Identity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Identity</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">newtype</span><span> </span><span id="DijkstraGenesis"><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-var">DijkstraGenesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DijkstraGenesis"><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-var">DijkstraGenesis</span></a></span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="dgUpgradePParams"><span class="annot"><span class="annottext">DijkstraGenesis -&gt; UpgradeDijkstraPParams Identity DijkstraEra
+</span><a href="Cardano.Ledger.Dijkstra.Genesis.html#dgUpgradePParams"><span class="hs-identifier hs-var hs-var">dgUpgradePParams</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.PParams.html#UpgradeDijkstraPParams"><span class="hs-identifier hs-type">UpgradeDijkstraPParams</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679349682"><span id="local-6989586621679349687"><span class="annot"><span class="annottext">DijkstraGenesis -&gt; DijkstraGenesis -&gt; Bool
+(DijkstraGenesis -&gt; DijkstraGenesis -&gt; Bool)
+-&gt; (DijkstraGenesis -&gt; DijkstraGenesis -&gt; Bool)
+-&gt; Eq DijkstraGenesis
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: DijkstraGenesis -&gt; DijkstraGenesis -&gt; Bool
+== :: DijkstraGenesis -&gt; DijkstraGenesis -&gt; Bool
+$c/= :: DijkstraGenesis -&gt; DijkstraGenesis -&gt; Bool
+/= :: DijkstraGenesis -&gt; DijkstraGenesis -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679349693"><span id="local-6989586621679349699"><span id="local-6989586621679349703"><span class="annot"><span class="annottext">Int -&gt; DijkstraGenesis -&gt; ShowS
+[DijkstraGenesis] -&gt; ShowS
+DijkstraGenesis -&gt; String
+(Int -&gt; DijkstraGenesis -&gt; ShowS)
+-&gt; (DijkstraGenesis -&gt; String)
+-&gt; ([DijkstraGenesis] -&gt; ShowS)
+-&gt; Show DijkstraGenesis
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DijkstraGenesis -&gt; ShowS
+showsPrec :: Int -&gt; DijkstraGenesis -&gt; ShowS
+$cshow :: DijkstraGenesis -&gt; String
+show :: DijkstraGenesis -&gt; String
+$cshowList :: [DijkstraGenesis] -&gt; ShowS
+showList :: [DijkstraGenesis] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679349707"><span id="local-6989586621679349709"><span class="annot"><span class="annottext">(forall x. DijkstraGenesis -&gt; Rep DijkstraGenesis x)
+-&gt; (forall x. Rep DijkstraGenesis x -&gt; DijkstraGenesis)
+-&gt; Generic DijkstraGenesis
+forall x. Rep DijkstraGenesis x -&gt; DijkstraGenesis
+forall x. DijkstraGenesis -&gt; Rep DijkstraGenesis x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. DijkstraGenesis -&gt; Rep DijkstraGenesis x
+from :: forall x. DijkstraGenesis -&gt; Rep DijkstraGenesis x
+$cto :: forall x. Rep DijkstraGenesis x -&gt; DijkstraGenesis
+to :: forall x. Rep DijkstraGenesis x -&gt; DijkstraGenesis
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679349713"><span id="local-6989586621679349718"><span id="local-6989586621679349722"><span class="annot"><span class="annottext">Context -&gt; DijkstraGenesis -&gt; IO (Maybe ThunkInfo)
+Proxy DijkstraGenesis -&gt; String
+(Context -&gt; DijkstraGenesis -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; DijkstraGenesis -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy DijkstraGenesis -&gt; String)
+-&gt; NoThunks DijkstraGenesis
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; DijkstraGenesis -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; DijkstraGenesis -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; DijkstraGenesis -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; DijkstraGenesis -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy DijkstraGenesis -&gt; String
+showTypeOf :: Proxy DijkstraGenesis -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679349728"><span id="local-6989586621679349733"><span id="local-6989586621679349737"><span id="local-6989586621679349741"><span id="local-6989586621679349745"><span class="annot"><span class="annottext">[DijkstraGenesis] -&gt; Value
+[DijkstraGenesis] -&gt; Encoding
+DijkstraGenesis -&gt; Bool
+DijkstraGenesis -&gt; Value
+DijkstraGenesis -&gt; Encoding
+(DijkstraGenesis -&gt; Value)
+-&gt; (DijkstraGenesis -&gt; Encoding)
+-&gt; ([DijkstraGenesis] -&gt; Value)
+-&gt; ([DijkstraGenesis] -&gt; Encoding)
+-&gt; (DijkstraGenesis -&gt; Bool)
+-&gt; ToJSON DijkstraGenesis
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: DijkstraGenesis -&gt; Value
+toJSON :: DijkstraGenesis -&gt; Value
+$ctoEncoding :: DijkstraGenesis -&gt; Encoding
+toEncoding :: DijkstraGenesis -&gt; Encoding
+$ctoJSONList :: [DijkstraGenesis] -&gt; Value
+toJSONList :: [DijkstraGenesis] -&gt; Value
+$ctoEncodingList :: [DijkstraGenesis] -&gt; Encoding
+toEncodingList :: [DijkstraGenesis] -&gt; Encoding
+$comitField :: DijkstraGenesis -&gt; Bool
+omitField :: DijkstraGenesis -&gt; Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679349751"><span id="local-6989586621679349756"><span id="local-6989586621679349760"><span class="annot"><span class="annottext">Maybe DijkstraGenesis
+Value -&gt; Parser [DijkstraGenesis]
+Value -&gt; Parser DijkstraGenesis
+(Value -&gt; Parser DijkstraGenesis)
+-&gt; (Value -&gt; Parser [DijkstraGenesis])
+-&gt; Maybe DijkstraGenesis
+-&gt; FromJSON DijkstraGenesis
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser DijkstraGenesis
+parseJSON :: Value -&gt; Parser DijkstraGenesis
+$cparseJSONList :: Value -&gt; Parser [DijkstraGenesis]
+parseJSONList :: Value -&gt; Parser [DijkstraGenesis]
+$comittedField :: Maybe DijkstraGenesis
+omittedField :: Maybe DijkstraGenesis
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679349768"><span class="annot"><span class="annottext">(forall e kv. KeyValue e kv =&gt; DijkstraGenesis -&gt; [kv])
+-&gt; ToKeyValuePairs DijkstraGenesis
+forall a.
+(forall e kv. KeyValue e kv =&gt; a -&gt; [kv]) -&gt; ToKeyValuePairs a
+forall e kv. KeyValue e kv =&gt; DijkstraGenesis -&gt; [kv]
+$ctoKeyValuePairs :: forall e kv. KeyValue e kv =&gt; DijkstraGenesis -&gt; [kv]
+toKeyValuePairs :: forall e kv. KeyValue e kv =&gt; DijkstraGenesis -&gt; [kv]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ToKeyValuePairs"><span class="hs-identifier hs-var hs-var hs-var hs-var">ToKeyValuePairs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679349777"><span class="annot"><span class="annottext">DijkstraGenesis -&gt; ()
+(DijkstraGenesis -&gt; ()) -&gt; NFData DijkstraGenesis
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: DijkstraGenesis -&gt; ()
+rnf :: DijkstraGenesis -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#EraGenesis"><span class="hs-identifier hs-type">EraGenesis</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Genesis"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#Genesis"><span class="hs-identifier hs-var">Genesis</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-type">DijkstraGenesis</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679349793"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-type">DijkstraGenesis</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679349806"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s DijkstraGenesis
+</span><a href="#local-6989586621679349806"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><span class="annottext">forall era t s. Era era =&gt; Decoder s t -&gt; Decoder s t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraDecoder"><span class="hs-identifier hs-var">eraDecoder</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="annot"><span class="annottext">(Decoder s DijkstraGenesis -&gt; Decoder s DijkstraGenesis)
+-&gt; Decoder s DijkstraGenesis -&gt; Decoder s DijkstraGenesis
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><span class="annottext">Decode ('Closed 'Dense) DijkstraGenesis
+-&gt; Decoder s DijkstraGenesis
+forall t (w :: Wrapped) s. Typeable t =&gt; Decode w t -&gt; Decoder s t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#decode"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">(Decode ('Closed 'Dense) DijkstraGenesis
+ -&gt; Decoder s DijkstraGenesis)
+-&gt; Decode ('Closed 'Dense) DijkstraGenesis
+-&gt; Decoder s DijkstraGenesis
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><span class="annottext">(UpgradeDijkstraPParams Identity DijkstraEra -&gt; DijkstraGenesis)
+-&gt; Decode
+     ('Closed 'Dense)
+     (UpgradeDijkstraPParams Identity DijkstraEra -&gt; DijkstraGenesis)
+forall t. t -&gt; Decode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#RecD"><span class="hs-identifier hs-var">RecD</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeDijkstraPParams Identity DijkstraEra -&gt; DijkstraGenesis
+</span><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-var">DijkstraGenesis</span></a></span><span>
+</span><span id="line-44"></span><span>          </span><span class="annot"><span class="annottext">Decode
+  ('Closed 'Dense)
+  (UpgradeDijkstraPParams Identity DijkstraEra -&gt; DijkstraGenesis)
+-&gt; Decode
+     ('Closed Any) (UpgradeDijkstraPParams Identity DijkstraEra)
+-&gt; Decode ('Closed 'Dense) DijkstraGenesis
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) (UpgradeDijkstraPParams Identity DijkstraEra)
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679349817"><span id="local-6989586621679349821"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-type">DijkstraGenesis</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679349829"><span class="annot"><span class="annottext">toCBOR :: DijkstraGenesis -&gt; Encoding
+</span><a href="#local-6989586621679349829"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span id="local-6989586621679349831"><span class="annot"><span class="annottext">dg :: DijkstraGenesis
+</span><a href="#local-6989586621679349831"><span class="hs-identifier hs-var">dg</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-type">DijkstraGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeDijkstraPParams Identity DijkstraEra
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-type">DijkstraGenesis</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679349832"><span class="annot"><span class="annottext">UpgradeDijkstraPParams Identity DijkstraEra
+dgUpgradePParams :: DijkstraGenesis -&gt; UpgradeDijkstraPParams Identity DijkstraEra
+dgUpgradePParams :: UpgradeDijkstraPParams Identity DijkstraEra
+</span><a href="Cardano.Ledger.Dijkstra.Genesis.html#dgUpgradePParams"><span class="hs-glyph hs-var hs-var">..</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DijkstraGenesis
+</span><a href="#local-6989586621679349831"><span class="hs-identifier hs-var">dg</span></a></span><span>
+</span><span id="line-49"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">forall era t. (Era era, EncCBOR t) =&gt; t -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#toEraCBOR"><span class="hs-identifier hs-var">toEraCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; Encoding)
+-&gt; (Encode ('Closed 'Dense) DijkstraGenesis -&gt; Encoding)
+-&gt; Encode ('Closed 'Dense) DijkstraGenesis
+-&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Encode ('Closed 'Dense) DijkstraGenesis -&gt; Encoding
+forall (w :: Wrapped) t. Encode w t -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">(Encode ('Closed 'Dense) DijkstraGenesis -&gt; Encoding)
+-&gt; Encode ('Closed 'Dense) DijkstraGenesis -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-50"></span><span>          </span><span class="annot"><span class="annottext">(UpgradeDijkstraPParams Identity DijkstraEra -&gt; DijkstraGenesis)
+-&gt; Encode
+     ('Closed 'Dense)
+     (UpgradeDijkstraPParams Identity DijkstraEra -&gt; DijkstraGenesis)
+forall t. t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Rec"><span class="hs-identifier hs-var">Rec</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeDijkstraPParams Identity DijkstraEra -&gt; DijkstraGenesis
+</span><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-var">DijkstraGenesis</span></a></span><span>
+</span><span id="line-51"></span><span>            </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Dense)
+  (UpgradeDijkstraPParams Identity DijkstraEra -&gt; DijkstraGenesis)
+-&gt; Encode
+     ('Closed 'Dense) (UpgradeDijkstraPParams Identity DijkstraEra)
+-&gt; Encode ('Closed 'Dense) DijkstraGenesis
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeDijkstraPParams Identity DijkstraEra
+-&gt; Encode
+     ('Closed 'Dense) (UpgradeDijkstraPParams Identity DijkstraEra)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeDijkstraPParams Identity DijkstraEra
+</span><a href="#local-6989586621679349832"><span class="hs-identifier hs-var">dgUpgradePParams</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679349842"><span id="local-6989586621679349847"><span id="local-6989586621679349850"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-type">DijkstraGenesis</span></a></span></span></span></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679349856"><span id="local-6989586621679349861"><span id="local-6989586621679349864"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-type">DijkstraGenesis</span></a></span></span></span></span><span>
+</span><span id="line-56"></span></pre></body></html>

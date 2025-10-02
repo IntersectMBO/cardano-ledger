@@ -1,0 +1,304 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Imp.EpochSpec</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Imp.EpochSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier">EpochInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#addEpochInterval"><span class="hs-identifier">addEpochInterval</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#esLStateL"><span class="hs-identifier">esLStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#lsCertStateL"><span class="hs-identifier">lsCertStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#lsUTxOStateL"><span class="hs-identifier">lsUTxOStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesELL"><span class="hs-identifier">nesELL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEsL"><span class="hs-identifier">nesEsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#totalObligation"><span class="hs-identifier">totalObligation</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#utxosDepositedL"><span class="hs-identifier">utxosDepositedL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#utxosGovStateL"><span class="hs-identifier">utxosGovStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html"><span class="hs-identifier">Cardano.Ledger.Val</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#Val"><span class="hs-identifier">Val</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Imp.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Imp.Common</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.ImpTest.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.ImpTest</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Imp.EpochSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679739150"><span class="annot"><a href="#local-6989586621679739150"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.ImpTest.html#ShelleyEraImp"><span class="hs-identifier hs-type">ShelleyEraImp</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679739150"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#SpecWith"><span class="hs-identifier hs-type">SpecWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Internal.html#ImpInit"><span class="hs-identifier hs-type">ImpInit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.ImpTest.html#LedgerSpec"><span class="hs-identifier hs-type">LedgerSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679739150"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span id="spec"><span class="annot"><span class="annottext">spec :: forall era.
+ShelleyEraImp era =&gt;
+SpecWith (ImpInit (LedgerSpec era))
+</span><a href="Test.Cardano.Ledger.Shelley.Imp.EpochSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; SpecWith (ImpInit (LedgerSpec era))
+-&gt; SpecWith (ImpInit (LedgerSpec era))
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;EPOCH&quot;</span></span><span> </span><span class="annot"><span class="annottext">(SpecWith (ImpInit (LedgerSpec era))
+ -&gt; SpecWith (ImpInit (LedgerSpec era)))
+-&gt; SpecWith (ImpInit (LedgerSpec era))
+-&gt; SpecWith (ImpInit (LedgerSpec era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><span class="annottext">String
+-&gt; ImpM (LedgerSpec era) ()
+-&gt; SpecWith (Arg (ImpM (LedgerSpec era) ()))
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Runs basic transaction&quot;</span></span><span> </span><span class="annot"><span class="annottext">(ImpM (LedgerSpec era) ()
+ -&gt; SpecWith (Arg (ImpM (LedgerSpec era) ())))
+-&gt; ImpM (LedgerSpec era) ()
+-&gt; SpecWith (Arg (ImpM (LedgerSpec era) ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-keyword">do</span><span>
+</span><span id="line-30"></span><span>      </span><span id="local-6989586621679739342"><span class="annot"><span class="annottext">CertState era
+</span><a href="#local-6989586621679739342"><span class="hs-identifier hs-var">certState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SimpleGetter (NewEpochState era) (CertState era)
+-&gt; ImpTestM era (CertState era)
+forall era a. SimpleGetter (NewEpochState era) a -&gt; ImpTestM era a
+</span><a href="Test.Cardano.Ledger.Shelley.ImpTest.html#getsNES"><span class="hs-identifier hs-var">getsNES</span></a></span><span> </span><span class="annot"><span class="annottext">(SimpleGetter (NewEpochState era) (CertState era)
+ -&gt; ImpTestM era (CertState era))
+-&gt; SimpleGetter (NewEpochState era) (CertState era)
+-&gt; ImpTestM era (CertState era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(EpochState era -&gt; Const r (EpochState era))
+-&gt; NewEpochState era -&gt; Const r (NewEpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(EpochState era -&gt; f (EpochState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEsL"><span class="hs-identifier hs-var">nesEsL</span></a></span><span> </span><span class="annot"><span class="annottext">((EpochState era -&gt; Const r (EpochState era))
+ -&gt; NewEpochState era -&gt; Const r (NewEpochState era))
+-&gt; ((CertState era -&gt; Const r (CertState era))
+    -&gt; EpochState era -&gt; Const r (EpochState era))
+-&gt; (CertState era -&gt; Const r (CertState era))
+-&gt; NewEpochState era
+-&gt; Const r (NewEpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(LedgerState era -&gt; Const r (LedgerState era))
+-&gt; EpochState era -&gt; Const r (EpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(LedgerState era -&gt; f (LedgerState era))
+-&gt; EpochState era -&gt; f (EpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#esLStateL"><span class="hs-identifier hs-var">esLStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((LedgerState era -&gt; Const r (LedgerState era))
+ -&gt; EpochState era -&gt; Const r (EpochState era))
+-&gt; ((CertState era -&gt; Const r (CertState era))
+    -&gt; LedgerState era -&gt; Const r (LedgerState era))
+-&gt; (CertState era -&gt; Const r (CertState era))
+-&gt; EpochState era
+-&gt; Const r (EpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(CertState era -&gt; Const r (CertState era))
+-&gt; LedgerState era -&gt; Const r (LedgerState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(CertState era -&gt; f (CertState era))
+-&gt; LedgerState era -&gt; f (LedgerState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#lsCertStateL"><span class="hs-identifier hs-var">lsCertStateL</span></a></span><span>
+</span><span id="line-31"></span><span>      </span><span id="local-6989586621679739349"><span class="annot"><span class="annottext">GovState era
+</span><a href="#local-6989586621679739349"><span class="hs-identifier hs-var">govState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SimpleGetter (NewEpochState era) (GovState era)
+-&gt; ImpTestM era (GovState era)
+forall era a. SimpleGetter (NewEpochState era) a -&gt; ImpTestM era a
+</span><a href="Test.Cardano.Ledger.Shelley.ImpTest.html#getsNES"><span class="hs-identifier hs-var">getsNES</span></a></span><span> </span><span class="annot"><span class="annottext">(SimpleGetter (NewEpochState era) (GovState era)
+ -&gt; ImpTestM era (GovState era))
+-&gt; SimpleGetter (NewEpochState era) (GovState era)
+-&gt; ImpTestM era (GovState era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(EpochState era -&gt; Const r (EpochState era))
+-&gt; NewEpochState era -&gt; Const r (NewEpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(EpochState era -&gt; f (EpochState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEsL"><span class="hs-identifier hs-var">nesEsL</span></a></span><span> </span><span class="annot"><span class="annottext">((EpochState era -&gt; Const r (EpochState era))
+ -&gt; NewEpochState era -&gt; Const r (NewEpochState era))
+-&gt; ((GovState era -&gt; Const r (GovState era))
+    -&gt; EpochState era -&gt; Const r (EpochState era))
+-&gt; (GovState era -&gt; Const r (GovState era))
+-&gt; NewEpochState era
+-&gt; Const r (NewEpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(LedgerState era -&gt; Const r (LedgerState era))
+-&gt; EpochState era -&gt; Const r (EpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(LedgerState era -&gt; f (LedgerState era))
+-&gt; EpochState era -&gt; f (EpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#esLStateL"><span class="hs-identifier hs-var">esLStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((LedgerState era -&gt; Const r (LedgerState era))
+ -&gt; EpochState era -&gt; Const r (EpochState era))
+-&gt; ((GovState era -&gt; Const r (GovState era))
+    -&gt; LedgerState era -&gt; Const r (LedgerState era))
+-&gt; (GovState era -&gt; Const r (GovState era))
+-&gt; EpochState era
+-&gt; Const r (EpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(UTxOState era -&gt; Const r (UTxOState era))
+-&gt; LedgerState era -&gt; Const r (LedgerState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(UTxOState era -&gt; f (UTxOState era))
+-&gt; LedgerState era -&gt; f (LedgerState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#lsUTxOStateL"><span class="hs-identifier hs-var">lsUTxOStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((UTxOState era -&gt; Const r (UTxOState era))
+ -&gt; LedgerState era -&gt; Const r (LedgerState era))
+-&gt; ((GovState era -&gt; Const r (GovState era))
+    -&gt; UTxOState era -&gt; Const r (UTxOState era))
+-&gt; (GovState era -&gt; Const r (GovState era))
+-&gt; LedgerState era
+-&gt; Const r (LedgerState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(GovState era -&gt; Const r (GovState era))
+-&gt; UTxOState era -&gt; Const r (UTxOState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovState era -&gt; f (GovState era))
+-&gt; UTxOState era -&gt; f (UTxOState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#utxosGovStateL"><span class="hs-identifier hs-var">utxosGovStateL</span></a></span><span>
+</span><span id="line-32"></span><span>      </span><span class="annot"><span class="annottext">CertState era -&gt; GovState era -&gt; Coin
+forall era.
+(EraGov era, EraCertState era) =&gt;
+CertState era -&gt; GovState era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#totalObligation"><span class="hs-identifier hs-var">totalObligation</span></a></span><span> </span><span class="annot"><span class="annottext">CertState era
+</span><a href="#local-6989586621679739342"><span class="hs-identifier hs-var">certState</span></a></span><span> </span><span class="annot"><span class="annottext">GovState era
+</span><a href="#local-6989586621679739349"><span class="hs-identifier hs-var">govState</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Coin -&gt; ImpM (LedgerSpec era) ()
+forall (m :: * -&gt; *) a.
+(HasCallStack, MonadIO m, Show a, Eq a) =&gt;
+a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-lifted-0.10.0-3b9af14f4044ae8391bddf2d12815688264dd87b731d8f5b89bdb0b08f389286/share/doc/html/src/Test.Hspec.Expectations.Lifted.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+forall t. Val t =&gt; t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#zero"><span class="hs-identifier hs-var">zero</span></a></span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-keyword">do</span><span>
+</span><span id="line-34"></span><span>      </span><span id="local-6989586621679739356"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679739356"><span class="hs-identifier hs-var">deposited</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SimpleGetter (NewEpochState era) Coin -&gt; ImpTestM era Coin
+forall era a. SimpleGetter (NewEpochState era) a -&gt; ImpTestM era a
+</span><a href="Test.Cardano.Ledger.Shelley.ImpTest.html#getsNES"><span class="hs-identifier hs-var">getsNES</span></a></span><span> </span><span class="annot"><span class="annottext">(SimpleGetter (NewEpochState era) Coin -&gt; ImpTestM era Coin)
+-&gt; SimpleGetter (NewEpochState era) Coin -&gt; ImpTestM era Coin
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(EpochState era -&gt; Const r (EpochState era))
+-&gt; NewEpochState era -&gt; Const r (NewEpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(EpochState era -&gt; f (EpochState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEsL"><span class="hs-identifier hs-var">nesEsL</span></a></span><span> </span><span class="annot"><span class="annottext">((EpochState era -&gt; Const r (EpochState era))
+ -&gt; NewEpochState era -&gt; Const r (NewEpochState era))
+-&gt; ((Coin -&gt; Const r Coin)
+    -&gt; EpochState era -&gt; Const r (EpochState era))
+-&gt; (Coin -&gt; Const r Coin)
+-&gt; NewEpochState era
+-&gt; Const r (NewEpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(LedgerState era -&gt; Const r (LedgerState era))
+-&gt; EpochState era -&gt; Const r (EpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(LedgerState era -&gt; f (LedgerState era))
+-&gt; EpochState era -&gt; f (EpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#esLStateL"><span class="hs-identifier hs-var">esLStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((LedgerState era -&gt; Const r (LedgerState era))
+ -&gt; EpochState era -&gt; Const r (EpochState era))
+-&gt; ((Coin -&gt; Const r Coin)
+    -&gt; LedgerState era -&gt; Const r (LedgerState era))
+-&gt; (Coin -&gt; Const r Coin)
+-&gt; EpochState era
+-&gt; Const r (EpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(UTxOState era -&gt; Const r (UTxOState era))
+-&gt; LedgerState era -&gt; Const r (LedgerState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(UTxOState era -&gt; f (UTxOState era))
+-&gt; LedgerState era -&gt; f (LedgerState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#lsUTxOStateL"><span class="hs-identifier hs-var">lsUTxOStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((UTxOState era -&gt; Const r (UTxOState era))
+ -&gt; LedgerState era -&gt; Const r (LedgerState era))
+-&gt; ((Coin -&gt; Const r Coin)
+    -&gt; UTxOState era -&gt; Const r (UTxOState era))
+-&gt; (Coin -&gt; Const r Coin)
+-&gt; LedgerState era
+-&gt; Const r (LedgerState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Coin -&gt; Const r Coin) -&gt; UTxOState era -&gt; Const r (UTxOState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Coin -&gt; f Coin) -&gt; UTxOState era -&gt; f (UTxOState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#utxosDepositedL"><span class="hs-identifier hs-var">utxosDepositedL</span></a></span><span>
+</span><span id="line-35"></span><span>      </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679739356"><span class="hs-identifier hs-var">deposited</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Coin -&gt; ImpM (LedgerSpec era) ()
+forall (m :: * -&gt; *) a.
+(HasCallStack, MonadIO m, Show a, Eq a) =&gt;
+a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-lifted-0.10.0-3b9af14f4044ae8391bddf2d12815688264dd87b731d8f5b89bdb0b08f389286/share/doc/html/src/Test.Hspec.Expectations.Lifted.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+forall t. Val t =&gt; t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#zero"><span class="hs-identifier hs-var">zero</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Tx era -&gt; ImpM (LedgerSpec era) ()
+forall era.
+(HasCallStack, ShelleyEraImp era) =&gt;
+String -&gt; Tx era -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Shelley.ImpTest.html#submitTxAnn_"><span class="hs-identifier hs-var">submitTxAnn_</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;simple transaction&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Tx era -&gt; ImpM (LedgerSpec era) ())
+-&gt; Tx era -&gt; ImpM (LedgerSpec era) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxBody era -&gt; Tx era
+forall era. EraTx era =&gt; TxBody era -&gt; Tx era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTx"><span class="hs-identifier hs-var">mkBasicTx</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody era
+forall era. EraTxBody era =&gt; TxBody era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxBody"><span class="hs-identifier hs-var">mkBasicTxBody</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">ImpM (LedgerSpec era) ()
+forall era. (ShelleyEraImp era, HasCallStack) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Shelley.ImpTest.html#passEpoch"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><span class="annottext">String
+-&gt; ImpM (LedgerSpec era) ()
+-&gt; SpecWith (Arg (ImpM (LedgerSpec era) ()))
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Crosses epoch boundaries&quot;</span></span><span> </span><span class="annot"><span class="annottext">(ImpM (LedgerSpec era) ()
+ -&gt; SpecWith (Arg (ImpM (LedgerSpec era) ())))
+-&gt; ImpM (LedgerSpec era) ()
+-&gt; SpecWith (Arg (ImpM (LedgerSpec era) ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-40"></span><span>    </span><span id="local-6989586621679739365"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679739365"><span class="hs-identifier hs-var">startEpochNo</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SimpleGetter (NewEpochState era) EpochNo -&gt; ImpTestM era EpochNo
+forall era a. SimpleGetter (NewEpochState era) a -&gt; ImpTestM era a
+</span><a href="Test.Cardano.Ledger.Shelley.ImpTest.html#getsNES"><span class="hs-identifier hs-var">getsNES</span></a></span><span> </span><span class="annot"><span class="annottext">(EpochNo -&gt; Const r EpochNo)
+-&gt; NewEpochState era -&gt; Const r (NewEpochState era)
+SimpleGetter (NewEpochState era) EpochNo
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(EpochNo -&gt; f EpochNo)
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesELL"><span class="hs-identifier hs-var">nesELL</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Modifiers.html#Positive"><span class="hs-identifier hs-type">Positive</span></a></span><span> </span><span id="local-6989586621679739368"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679739368"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ImpM (LedgerSpec era) (Positive Word32)
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Random.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="annottext">Natural -&gt; ImpM (LedgerSpec era) ()
+forall era. ShelleyEraImp era =&gt; Natural -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Shelley.ImpTest.html#passNEpochs"><span class="hs-identifier hs-var">passNEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">(Natural -&gt; ImpM (LedgerSpec era) ())
+-&gt; Natural -&gt; ImpM (LedgerSpec era) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Natural
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679739368"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="annottext">SimpleGetter (NewEpochState era) EpochNo -&gt; ImpTestM era EpochNo
+forall era a. SimpleGetter (NewEpochState era) a -&gt; ImpTestM era a
+</span><a href="Test.Cardano.Ledger.Shelley.ImpTest.html#getsNES"><span class="hs-identifier hs-var">getsNES</span></a></span><span> </span><span class="annot"><span class="annottext">(EpochNo -&gt; Const r EpochNo)
+-&gt; NewEpochState era -&gt; Const r (NewEpochState era)
+SimpleGetter (NewEpochState era) EpochNo
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(EpochNo -&gt; f EpochNo)
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesELL"><span class="hs-identifier hs-var">nesELL</span></a></span><span> </span><span class="annot"><span class="annottext">ImpTestM era EpochNo -&gt; EpochNo -&gt; ImpM (LedgerSpec era) ()
+forall (m :: * -&gt; *) a.
+(HasCallStack, MonadIO m, Show a, Eq a) =&gt;
+m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-lifted-0.10.0-3b9af14f4044ae8391bddf2d12815688264dd87b731d8f5b89bdb0b08f389286/share/doc/html/src/Test.Hspec.Expectations.Lifted.html#shouldReturn"><span class="hs-operator hs-var">`shouldReturn`</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochInterval -&gt; EpochNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#addEpochInterval"><span class="hs-identifier hs-var">addEpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679739365"><span class="hs-identifier hs-var">startEpochNo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; EpochInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier hs-var">EpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679739368"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span></pre></body></html>

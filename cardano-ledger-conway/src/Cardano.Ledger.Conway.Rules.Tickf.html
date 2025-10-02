@@ -1,0 +1,291 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Conway.Rules.Tickf</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html#ConwayTICKF"><span class="hs-identifier">ConwayTICKF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.Rules.Tickf.html#ConwayTickfPredFailure"><span class="hs-identifier">ConwayTickfPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.Rules.Tickf.html#ConwayTickfEvent"><span class="hs-identifier">ConwayTickfEvent</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier">ShelleyBase</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier">SlotNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html"><span class="hs-identifier">Cardano.Ledger.Conway.Era</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Governance.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Governance</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Rules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Tick.html#solidifyNextEpochPParams"><span class="hs-identifier">solidifyNextEpochPParams</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.html"><span class="hs-identifier">Cardano.Ledger.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#SnapShots"><span class="hs-identifier">SnapShots</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#%24sel%3AssStakeMarkPoolDistr%3ASnapShots"><span class="hs-identifier">ssStakeMarkPoolDistr</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(&amp;)</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator">(.~)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- ==================================================</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">{------------------------------------------------------------------------------
+-- TICKF transition
+
+-- This is a variant on the TICK transition called only by the consensus layer
+to tick the ledger state to a future slot.
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">data</span><span> </span><span id="ConwayTickfPredFailure"><span class="annot"><a href="Cardano.Ledger.Conway.Rules.Tickf.html#ConwayTickfPredFailure"><span class="hs-identifier hs-var">ConwayTickfPredFailure</span></a></span></span><span> </span><span id="local-6989586621679614793"><span class="annot"><a href="#local-6989586621679614793"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679614795"><span id="local-6989586621679614797"><span class="annot"><span class="annottext">(forall x.
+ ConwayTickfPredFailure era -&gt; Rep (ConwayTickfPredFailure era) x)
+-&gt; (forall x.
+    Rep (ConwayTickfPredFailure era) x -&gt; ConwayTickfPredFailure era)
+-&gt; Generic (ConwayTickfPredFailure era)
+forall x.
+Rep (ConwayTickfPredFailure era) x -&gt; ConwayTickfPredFailure era
+forall x.
+ConwayTickfPredFailure era -&gt; Rep (ConwayTickfPredFailure era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x.
+Rep (ConwayTickfPredFailure era) x -&gt; ConwayTickfPredFailure era
+forall era x.
+ConwayTickfPredFailure era -&gt; Rep (ConwayTickfPredFailure era) x
+$cfrom :: forall era x.
+ConwayTickfPredFailure era -&gt; Rep (ConwayTickfPredFailure era) x
+from :: forall x.
+ConwayTickfPredFailure era -&gt; Rep (ConwayTickfPredFailure era) x
+$cto :: forall era x.
+Rep (ConwayTickfPredFailure era) x -&gt; ConwayTickfPredFailure era
+to :: forall x.
+Rep (ConwayTickfPredFailure era) x -&gt; ConwayTickfPredFailure era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span id="local-6989586621679614683"><span id="local-6989586621679614802"><span id="local-6989586621679614804"><span id="local-6989586621679614808"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614683"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Rules.Tickf.html#ConwayTickfPredFailure"><span class="hs-identifier hs-type">ConwayTickfPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614683"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span id="local-6989586621679614686"><span id="local-6989586621679614813"><span id="local-6989586621679614815"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614686"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Rules.Tickf.html#ConwayTickfPredFailure"><span class="hs-identifier hs-type">ConwayTickfPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614686"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679614707"><span id="local-6989586621679614820"><span id="local-6989586621679614824"><span id="local-6989586621679614830"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Rules.Tickf.html#ConwayTickfPredFailure"><span class="hs-identifier hs-type">ConwayTickfPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614707"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">data</span><span> </span><span id="ConwayTickfEvent"><span class="annot"><a href="Cardano.Ledger.Conway.Rules.Tickf.html#ConwayTickfEvent"><span class="hs-identifier hs-var">ConwayTickfEvent</span></a></span></span><span> </span><span id="local-6989586621679614847"><span class="annot"><a href="#local-6989586621679614847"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679614728"><span id="local-6989586621679614865"><span id="local-6989586621679614869"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#EraGov"><span class="hs-identifier hs-type">EraGov</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614728"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html#ConwayTICKF"><span class="hs-identifier hs-type">ConwayTICKF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614728"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="State"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html#ConwayTICKF"><span class="hs-identifier hs-type">ConwayTICKF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614728"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier hs-type">NewEpochState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614728"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signal"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-var">Signal</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html#ConwayTICKF"><span class="hs-identifier hs-type">ConwayTICKF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614728"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Environment"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html#ConwayTICKF"><span class="hs-identifier hs-type">ConwayTICKF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614728"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="BaseM"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#BaseM"><span class="hs-identifier hs-var">BaseM</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html#ConwayTICKF"><span class="hs-identifier hs-type">ConwayTICKF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614728"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier hs-type">ShelleyBase</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="PredicateFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-var">PredicateFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html#ConwayTICKF"><span class="hs-identifier hs-type">ConwayTICKF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614728"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Rules.Tickf.html#ConwayTickfPredFailure"><span class="hs-identifier hs-type">ConwayTickfPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614728"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Event"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Event"><span class="hs-identifier hs-var">Event</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html#ConwayTICKF"><span class="hs-identifier hs-type">ConwayTICKF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614728"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Rules.Tickf.html#ConwayTickfEvent"><span class="hs-identifier hs-type">ConwayTickfEvent</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679614728"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679614881"><span class="annot"><span class="annottext">initialRules :: [InitialRule (ConwayTICKF era)]
+</span><a href="#local-6989586621679614881"><span class="hs-identifier hs-var hs-var hs-var hs-var">initialRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679614912"><span class="annot"><span class="annottext">transitionRules :: [TransitionRule (ConwayTICKF era)]
+</span><a href="#local-6989586621679614912"><span class="hs-identifier hs-var hs-var hs-var hs-var">transitionRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TransitionRule (ConwayTICKF era)
+-&gt; [TransitionRule (ConwayTICKF era)]
+forall a. a -&gt; [a]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(TransitionRule (ConwayTICKF era)
+ -&gt; [TransitionRule (ConwayTICKF era)])
+-&gt; TransitionRule (ConwayTICKF era)
+-&gt; [TransitionRule (ConwayTICKF era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679614915"><span class="annot"><span class="annottext">State (ConwayTICKF era)
+</span><a href="#local-6989586621679614915"><span class="hs-identifier hs-var">nes0</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679614916"><span class="annot"><span class="annottext">Signal (ConwayTICKF era)
+</span><a href="#local-6989586621679614916"><span class="hs-identifier hs-var">slot</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Rule
+  (ConwayTICKF era)
+  'Transition
+  (RuleContext 'Transition (ConwayTICKF era))
+F (Clause (ConwayTICKF era) 'Transition) (TRC (ConwayTICKF era))
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">-- This whole function is a specialization of an inlined 'NEWEPOCH'.</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- The ledger view, 'LedgerView', is built entirely from the 'nesPd' and 'esPp' and</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-comment">-- 'dsGenDelegs', so the correctness of 'validatingTickTransitionFORECAST' only</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">-- depends on getting these three fields correct.</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679614918"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679614918"><span class="hs-identifier hs-var">curEpochNo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679614919"><span class="annot"><span class="annottext">NewEpochState era
+</span><a href="#local-6989586621679614919"><span class="hs-identifier hs-var">nes</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BaseM (ConwayTICKF era) (EpochNo, NewEpochState era)
+-&gt; Rule (ConwayTICKF era) 'Transition (EpochNo, NewEpochState era)
+forall sts a (ctx :: RuleType).
+STS sts =&gt;
+BaseM sts a -&gt; Rule sts ctx a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#liftSTS"><span class="hs-identifier hs-var">liftSTS</span></a></span><span> </span><span class="annot"><span class="annottext">(BaseM (ConwayTICKF era) (EpochNo, NewEpochState era)
+ -&gt; Rule (ConwayTICKF era) 'Transition (EpochNo, NewEpochState era))
+-&gt; BaseM (ConwayTICKF era) (EpochNo, NewEpochState era)
+-&gt; Rule (ConwayTICKF era) 'Transition (EpochNo, NewEpochState era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">NewEpochState era
+-&gt; SlotNo -&gt; ShelleyBase (EpochNo, NewEpochState era)
+forall era.
+EraGov era =&gt;
+NewEpochState era
+-&gt; SlotNo -&gt; ShelleyBase (EpochNo, NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Tick.html#solidifyNextEpochPParams"><span class="hs-identifier hs-var">solidifyNextEpochPParams</span></a></span><span> </span><span class="annot"><span class="annottext">State (ConwayTICKF era)
+NewEpochState era
+</span><a href="#local-6989586621679614915"><span class="hs-identifier hs-var">nes0</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+Signal (ConwayTICKF era)
+</span><a href="#local-6989586621679614916"><span class="hs-identifier hs-var">slot</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679614921"><span class="annot"><span class="annottext">es :: EpochState era
+</span><a href="#local-6989586621679614921"><span class="hs-identifier hs-var hs-var">es</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState era -&gt; EpochState era
+forall era. NewEpochState era -&gt; EpochState era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEs"><span class="hs-identifier hs-var">nesEs</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState era
+</span><a href="#local-6989586621679614919"><span class="hs-identifier hs-var">nes</span></a></span><span>
+</span><span id="line-71"></span><span>        </span><span id="local-6989586621679614923"><span class="annot"><span class="annottext">ss :: SnapShots
+</span><a href="#local-6989586621679614923"><span class="hs-identifier hs-var hs-var">ss</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochState era -&gt; SnapShots
+forall era. EpochState era -&gt; SnapShots
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#esSnapshots"><span class="hs-identifier hs-var">esSnapshots</span></a></span><span> </span><span class="annot"><span class="annottext">EpochState era
+</span><a href="#local-6989586621679614921"><span class="hs-identifier hs-var">es</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">-- the relevant 'NEWEPOCH' logic</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679614925"><span class="annot"><span class="annottext">pd' :: PoolDistr
+</span><a href="#local-6989586621679614925"><span class="hs-identifier hs-var hs-var">pd'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SnapShots -&gt; PoolDistr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#%24sel%3AssStakeMarkPoolDistr%3ASnapShots"><span class="hs-identifier hs-var">ssStakeMarkPoolDistr</span></a></span><span> </span><span class="annot"><span class="annottext">SnapShots
+</span><a href="#local-6989586621679614923"><span class="hs-identifier hs-var">ss</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679614918"><span class="hs-identifier hs-var">curEpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo
+forall a. Enum a =&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">succ</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NewEpochState era -&gt; EpochNo
+forall era. NewEpochState era -&gt; EpochNo
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEL"><span class="hs-identifier hs-var">nesEL</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState era
+</span><a href="#local-6989586621679614919"><span class="hs-identifier hs-var">nes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>      </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">NewEpochState era
+-&gt; F (Clause (ConwayTICKF era) 'Transition) (NewEpochState era)
+forall a. a -&gt; F (Clause (ConwayTICKF era) 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">NewEpochState era
+</span><a href="#local-6989586621679614919"><span class="hs-identifier hs-var">nes</span></a></span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679614929"><span class="annot"><span class="annottext">govState :: GovState era
+</span><a href="#local-6989586621679614929"><span class="hs-identifier hs-var hs-var">govState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState era
+</span><a href="#local-6989586621679614919"><span class="hs-identifier hs-var">nes</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState era
+-&gt; Getting (GovState era) (NewEpochState era) (GovState era)
+-&gt; GovState era
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (GovState era) (NewEpochState era) (GovState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovState era -&gt; f (GovState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#newEpochStateGovStateL"><span class="hs-identifier hs-var">newEpochStateGovStateL</span></a></span><span>
+</span><span id="line-80"></span><span>        </span><span class="hs-comment">-- We can skip 'SNAP'; we already have the equivalent pd'.</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>        </span><span class="hs-comment">-- We can skip 'POOLREAP';</span><span>
+</span><span id="line-83"></span><span>        </span><span class="hs-comment">-- we don't need to do the checks:</span><span>
+</span><span id="line-84"></span><span>        </span><span class="hs-comment">-- if the checks would fail, then the node will fail in the 'TICK' rule</span><span>
+</span><span id="line-85"></span><span>        </span><span class="hs-comment">-- if it ever then node tries to validate blocks for which the</span><span>
+</span><span id="line-86"></span><span>        </span><span class="hs-comment">-- return value here was used to validate their headers.</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span>        </span><span class="annot"><span class="annottext">NewEpochState era
+-&gt; F (Clause (ConwayTICKF era) 'Transition) (NewEpochState era)
+forall a. a -&gt; F (Clause (ConwayTICKF era) 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(NewEpochState era
+ -&gt; F (Clause (ConwayTICKF era) 'Transition) (NewEpochState era))
+-&gt; NewEpochState era
+-&gt; F (Clause (ConwayTICKF era) 'Transition) (NewEpochState era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span>
+</span><span id="line-89"></span><span>          </span><span class="annot"><span class="annottext">NewEpochState era
+</span><a href="#local-6989586621679614919"><span class="hs-identifier hs-var">nes</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesPd"><span class="hs-identifier hs-var">nesPd</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679614925"><span class="hs-identifier hs-type">pd'</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-90"></span><span>            </span><span class="annot"><span class="annottext">NewEpochState era
+-&gt; (NewEpochState era -&gt; NewEpochState era) -&gt; NewEpochState era
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(GovState era -&gt; Identity (GovState era))
+-&gt; NewEpochState era -&gt; Identity (NewEpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovState era -&gt; f (GovState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#newEpochStateGovStateL"><span class="hs-identifier hs-var">newEpochStateGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((GovState era -&gt; Identity (GovState era))
+ -&gt; NewEpochState era -&gt; Identity (NewEpochState era))
+-&gt; ((PParams era -&gt; Identity (PParams era))
+    -&gt; GovState era -&gt; Identity (GovState era))
+-&gt; (PParams era -&gt; Identity (PParams era))
+-&gt; NewEpochState era
+-&gt; Identity (NewEpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(PParams era -&gt; Identity (PParams era))
+-&gt; GovState era -&gt; Identity (GovState era)
+forall era. EraGov era =&gt; Lens' (GovState era) (PParams era)
+Lens' (GovState era) (PParams era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#curPParamsGovStateL"><span class="hs-identifier hs-var">curPParamsGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((PParams era -&gt; Identity (PParams era))
+ -&gt; NewEpochState era -&gt; Identity (NewEpochState era))
+-&gt; PParams era -&gt; NewEpochState era -&gt; NewEpochState era
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">GovState era -&gt; PParams era
+forall era. EraGov era =&gt; GovState era -&gt; PParams era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#nextEpochPParams"><span class="hs-identifier hs-var">nextEpochPParams</span></a></span><span> </span><span class="annot"><span class="annottext">GovState era
+</span><a href="#local-6989586621679614929"><span class="hs-identifier hs-var">govState</span></a></span><span>
+</span><span id="line-91"></span><span>            </span><span class="annot"><span class="annottext">NewEpochState era
+-&gt; (NewEpochState era -&gt; NewEpochState era) -&gt; NewEpochState era
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(GovState era -&gt; Identity (GovState era))
+-&gt; NewEpochState era -&gt; Identity (NewEpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovState era -&gt; f (GovState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#newEpochStateGovStateL"><span class="hs-identifier hs-var">newEpochStateGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((GovState era -&gt; Identity (GovState era))
+ -&gt; NewEpochState era -&gt; Identity (NewEpochState era))
+-&gt; ((PParams era -&gt; Identity (PParams era))
+    -&gt; GovState era -&gt; Identity (GovState era))
+-&gt; (PParams era -&gt; Identity (PParams era))
+-&gt; NewEpochState era
+-&gt; Identity (NewEpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(PParams era -&gt; Identity (PParams era))
+-&gt; GovState era -&gt; Identity (GovState era)
+forall era. EraGov era =&gt; Lens' (GovState era) (PParams era)
+Lens' (GovState era) (PParams era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#prevPParamsGovStateL"><span class="hs-identifier hs-var">prevPParamsGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((PParams era -&gt; Identity (PParams era))
+ -&gt; NewEpochState era -&gt; Identity (NewEpochState era))
+-&gt; PParams era -&gt; NewEpochState era -&gt; NewEpochState era
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovState era
+</span><a href="#local-6989586621679614929"><span class="hs-identifier hs-var">govState</span></a></span><span> </span><span class="annot"><span class="annottext">GovState era
+-&gt; Getting (PParams era) (GovState era) (PParams era)
+-&gt; PParams era
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (PParams era) (GovState era) (PParams era)
+forall era. EraGov era =&gt; Lens' (GovState era) (PParams era)
+Lens' (GovState era) (PParams era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#curPParamsGovStateL"><span class="hs-identifier hs-var">curPParamsGovStateL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>            </span><span class="annot"><span class="annottext">NewEpochState era
+-&gt; (NewEpochState era -&gt; NewEpochState era) -&gt; NewEpochState era
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(GovState era -&gt; Identity (GovState era))
+-&gt; NewEpochState era -&gt; Identity (NewEpochState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovState era -&gt; f (GovState era))
+-&gt; NewEpochState era -&gt; f (NewEpochState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#newEpochStateGovStateL"><span class="hs-identifier hs-var">newEpochStateGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((GovState era -&gt; Identity (GovState era))
+ -&gt; NewEpochState era -&gt; Identity (NewEpochState era))
+-&gt; ((FuturePParams era -&gt; Identity (FuturePParams era))
+    -&gt; GovState era -&gt; Identity (GovState era))
+-&gt; (FuturePParams era -&gt; Identity (FuturePParams era))
+-&gt; NewEpochState era
+-&gt; Identity (NewEpochState era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(FuturePParams era -&gt; Identity (FuturePParams era))
+-&gt; GovState era -&gt; Identity (GovState era)
+forall era. EraGov era =&gt; Lens' (GovState era) (FuturePParams era)
+Lens' (GovState era) (FuturePParams era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#futurePParamsGovStateL"><span class="hs-identifier hs-var">futurePParamsGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((FuturePParams era -&gt; Identity (FuturePParams era))
+ -&gt; NewEpochState era -&gt; Identity (NewEpochState era))
+-&gt; FuturePParams era -&gt; NewEpochState era -&gt; NewEpochState era
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">FuturePParams era
+forall era. FuturePParams era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#NoPParamsUpdate"><span class="hs-identifier hs-var">NoPParamsUpdate</span></a></span><span>
+</span><span id="line-93"></span></pre></body></html>

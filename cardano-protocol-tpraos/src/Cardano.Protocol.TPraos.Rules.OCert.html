@@ -1,0 +1,358 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Protocol.TPraos.Rules.OCert</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OCERT"><span class="hs-identifier">OCERT</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier">PredicateFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Protocol.TPraos.OCert.html#OCertEnv"><span class="hs-identifier">OCertEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OcertPredicateFailure"><span class="hs-identifier">OcertPredicateFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.KES.html"><span class="hs-identifier">Cardano.Crypto.KES</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.KES.Class.html#Signable"><span class="hs-identifier">Signable</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.KES.Class.html#verifySignedKES"><span class="hs-identifier">verifySignedKES</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Protocol.Crypto.html"><span class="hs-identifier">Cardano.Protocol.Crypto</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.BHeader.html"><span class="hs-identifier">Cardano.Protocol.TPraos.BHeader</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.OCert.html"><span class="hs-identifier">Cardano.Protocol.TPraos.OCert</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Reader</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">asks</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.SetAlgebra.html"><span class="hs-identifier">Control.SetAlgebra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.SetAlgebra.html#eval"><span class="hs-identifier">eval</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#singleton"><span class="hs-identifier">singleton</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#%2A03"><span class="hs-operator">(&#10755;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">data</span><span> </span><span id="OCERT"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OCERT"><span class="hs-identifier hs-var">OCERT</span></a></span></span><span> </span><span id="local-6989586621679307388"><span class="annot"><a href="#local-6989586621679307388"><span class="hs-identifier hs-type">c</span></a></span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">data</span><span> </span><span id="OcertPredicateFailure"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OcertPredicateFailure"><span class="hs-identifier hs-var">OcertPredicateFailure</span></a></span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="KESBeforeStartOCERT"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#KESBeforeStartOCERT"><span class="hs-identifier hs-var">KESBeforeStartOCERT</span></a></span></span><span>
+</span><span id="line-34"></span><span>      </span><span class="annot"><a href="Cardano.Protocol.TPraos.OCert.html#KESPeriod"><span class="hs-identifier hs-type">KESPeriod</span></a></span><span> </span><span class="hs-comment">-- OCert Start KES Period</span><span>
+</span><span id="line-35"></span><span>      </span><span class="annot"><a href="Cardano.Protocol.TPraos.OCert.html#KESPeriod"><span class="hs-identifier hs-type">KESPeriod</span></a></span><span> </span><span class="hs-comment">-- Current KES Period</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="KESAfterEndOCERT"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#KESAfterEndOCERT"><span class="hs-identifier hs-var">KESAfterEndOCERT</span></a></span></span><span>
+</span><span id="line-37"></span><span>      </span><span class="annot"><a href="Cardano.Protocol.TPraos.OCert.html#KESPeriod"><span class="hs-identifier hs-type">KESPeriod</span></a></span><span> </span><span class="hs-comment">-- Current KES Period</span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><a href="Cardano.Protocol.TPraos.OCert.html#KESPeriod"><span class="hs-identifier hs-type">KESPeriod</span></a></span><span> </span><span class="hs-comment">-- OCert Start KES Period</span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-comment">-- Max KES Key Evolutions</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="CounterTooSmallOCERT"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#CounterTooSmallOCERT"><span class="hs-identifier hs-var">CounterTooSmallOCERT</span></a></span></span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-comment">-- last KES counter used</span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-comment">-- current KES counter</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="InvalidSignatureOCERT"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#InvalidSignatureOCERT"><span class="hs-identifier hs-var">InvalidSignatureOCERT</span></a></span></span><span>
+</span><span id="line-44"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-comment">-- OCert counter</span><span>
+</span><span id="line-45"></span><span>      </span><span class="annot"><a href="Cardano.Protocol.TPraos.OCert.html#KESPeriod"><span class="hs-identifier hs-type">KESPeriod</span></a></span><span> </span><span class="hs-comment">-- OCert KES period</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="InvalidKesSignatureOCERT"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#InvalidKesSignatureOCERT"><span class="hs-identifier hs-var">InvalidKesSignatureOCERT</span></a></span></span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span> </span><span class="hs-comment">-- current KES Period</span><span>
+</span><span id="line-48"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span> </span><span class="hs-comment">-- KES start period</span><span>
+</span><span id="line-49"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span> </span><span class="hs-comment">-- expected KES evolutions</span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-comment">-- error message given by Consensus Layer</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="NoCounterForKeyHashOCERT"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#NoCounterForKeyHashOCERT"><span class="hs-identifier hs-var">NoCounterForKeyHashOCERT</span></a></span></span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#BlockIssuer"><span class="hs-identifier hs-type">BlockIssuer</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- stake pool key hash</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679307396"><span id="local-6989586621679307425"><span id="local-6989586621679307429"><span class="annot"><span class="annottext">Int -&gt; OcertPredicateFailure -&gt; ShowS
+[OcertPredicateFailure] -&gt; ShowS
+OcertPredicateFailure -&gt; String
+(Int -&gt; OcertPredicateFailure -&gt; ShowS)
+-&gt; (OcertPredicateFailure -&gt; String)
+-&gt; ([OcertPredicateFailure] -&gt; ShowS)
+-&gt; Show OcertPredicateFailure
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; OcertPredicateFailure -&gt; ShowS
+showsPrec :: Int -&gt; OcertPredicateFailure -&gt; ShowS
+$cshow :: OcertPredicateFailure -&gt; String
+show :: OcertPredicateFailure -&gt; String
+$cshowList :: [OcertPredicateFailure] -&gt; ShowS
+showList :: [OcertPredicateFailure] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679307434"><span id="local-6989586621679307456"><span class="annot"><span class="annottext">OcertPredicateFailure -&gt; OcertPredicateFailure -&gt; Bool
+(OcertPredicateFailure -&gt; OcertPredicateFailure -&gt; Bool)
+-&gt; (OcertPredicateFailure -&gt; OcertPredicateFailure -&gt; Bool)
+-&gt; Eq OcertPredicateFailure
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: OcertPredicateFailure -&gt; OcertPredicateFailure -&gt; Bool
+== :: OcertPredicateFailure -&gt; OcertPredicateFailure -&gt; Bool
+$c/= :: OcertPredicateFailure -&gt; OcertPredicateFailure -&gt; Bool
+/= :: OcertPredicateFailure -&gt; OcertPredicateFailure -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679307462"><span id="local-6989586621679307464"><span class="annot"><span class="annottext">(forall x. OcertPredicateFailure -&gt; Rep OcertPredicateFailure x)
+-&gt; (forall x. Rep OcertPredicateFailure x -&gt; OcertPredicateFailure)
+-&gt; Generic OcertPredicateFailure
+forall x. Rep OcertPredicateFailure x -&gt; OcertPredicateFailure
+forall x. OcertPredicateFailure -&gt; Rep OcertPredicateFailure x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. OcertPredicateFailure -&gt; Rep OcertPredicateFailure x
+from :: forall x. OcertPredicateFailure -&gt; Rep OcertPredicateFailure x
+$cto :: forall x. Rep OcertPredicateFailure x -&gt; OcertPredicateFailure
+to :: forall x. Rep OcertPredicateFailure x -&gt; OcertPredicateFailure
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679307468"><span id="local-6989586621679307472"><span id="local-6989586621679307478"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OcertPredicateFailure"><span class="hs-identifier hs-type">OcertPredicateFailure</span></a></span></span></span></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679307287"><span id="local-6989586621679307559"><span id="local-6989586621679307564"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307287"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.KES.Class.html#Signable"><span class="hs-identifier hs-type">Signable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#KES"><span class="hs-identifier hs-type">KES</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307287"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.BHeader.html#BHBody"><span class="hs-identifier hs-type">BHBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307287"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OCERT"><span class="hs-identifier hs-type">OCERT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307287"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="State"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OCERT"><span class="hs-identifier hs-type">OCERT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307287"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#BlockIssuer"><span class="hs-identifier hs-type">BlockIssuer</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signal"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-var">Signal</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OCERT"><span class="hs-identifier hs-type">OCERT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307287"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.BHeader.html#BHeader"><span class="hs-identifier hs-type">BHeader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307287"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Environment"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OCERT"><span class="hs-identifier hs-type">OCERT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307287"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.OCert.html#OCertEnv"><span class="hs-identifier hs-type">OCertEnv</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="BaseM"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#BaseM"><span class="hs-identifier hs-var">BaseM</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OCERT"><span class="hs-identifier hs-type">OCERT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307287"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier hs-type">ShelleyBase</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="PredicateFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-var">PredicateFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OCERT"><span class="hs-identifier hs-type">OCERT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307287"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OcertPredicateFailure"><span class="hs-identifier hs-type">OcertPredicateFailure</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679307574"><span class="annot"><span class="annottext">initialRules :: [InitialRule (OCERT c)]
+</span><a href="#local-6989586621679307574"><span class="hs-identifier hs-var hs-var hs-var hs-var">initialRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Map (KeyHash 'BlockIssuer) Word64
+-&gt; F (Clause (OCERT c) 'Initial)
+     (Map (KeyHash 'BlockIssuer) Word64)
+forall a. a -&gt; F (Clause (OCERT c) 'Initial) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'BlockIssuer) Word64
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679307579"><span class="annot"><span class="annottext">transitionRules :: [TransitionRule (OCERT c)]
+</span><a href="#local-6989586621679307579"><span class="hs-identifier hs-var hs-var hs-var hs-var">transitionRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TransitionRule (OCERT c)
+forall c.
+(Crypto c, Signable (KES c) (BHBody c)) =&gt;
+TransitionRule (OCERT c)
+</span><a href="Cardano.Protocol.TPraos.Rules.OCert.html#ocertTransition"><span class="hs-identifier hs-var">ocertTransition</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span id="local-6989586621679307297"><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#ocertTransition"><span class="hs-identifier hs-type">ocertTransition</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307297"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.KES.Class.html#Signable"><span class="hs-identifier hs-type">Signable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#KES"><span class="hs-identifier hs-type">KES</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307297"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.BHeader.html#BHBody"><span class="hs-identifier hs-type">BHBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307297"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TransitionRule"><span class="hs-identifier hs-type">TransitionRule</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.Rules.OCert.html#OCERT"><span class="hs-identifier hs-type">OCERT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679307297"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-77"></span><span id="ocertTransition"><span class="annot"><span class="annottext">ocertTransition :: forall c.
+(Crypto c, Signable (KES c) (BHBody c)) =&gt;
+TransitionRule (OCERT c)
+</span><a href="Cardano.Protocol.TPraos.Rules.OCert.html#ocertTransition"><span class="hs-identifier hs-var hs-var">ocertTransition</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><span class="annottext">Rule (OCERT c) 'Transition (RuleContext 'Transition (OCERT c))
+F (Clause (OCERT c) 'Transition) (TRC (OCERT c))
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span> </span><span class="annot"><span class="annottext">F (Clause (OCERT c) 'Transition) (TRC (OCERT c))
+-&gt; (TRC (OCERT c)
+    -&gt; F (Clause (OCERT c) 'Transition)
+         (Map (KeyHash 'BlockIssuer) Word64))
+-&gt; F (Clause (OCERT c) 'Transition)
+     (Map (KeyHash 'BlockIssuer) Word64)
+forall a b.
+F (Clause (OCERT c) 'Transition) a
+-&gt; (a -&gt; F (Clause (OCERT c) 'Transition) b)
+-&gt; F (Clause (OCERT c) 'Transition) b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679307638"><span class="annot"><span class="annottext">Environment (OCERT c)
+</span><a href="#local-6989586621679307638"><span class="hs-identifier hs-var">env</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679307639"><span class="annot"><span class="annottext">State (OCERT c)
+</span><a href="#local-6989586621679307639"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.BHeader.html#BHeader"><span class="hs-identifier hs-type">BHeader</span></a></span><span> </span><span id="local-6989586621679307641"><span class="annot"><span class="annottext">BHBody c
+</span><a href="#local-6989586621679307641"><span class="hs-identifier hs-var">bhb</span></a></span></span><span> </span><span id="local-6989586621679307642"><span class="annot"><span class="annottext">SignedKES (KES c) (BHBody c)
+</span><a href="#local-6989586621679307642"><span class="hs-identifier hs-var">sigma</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Cardano.Protocol.TPraos.OCert.html#OCert"><span class="hs-identifier hs-type">OCert</span></a></span><span> </span><span id="local-6989586621679307644"><span class="annot"><span class="annottext">VerKeyKES (KES c)
+</span><a href="#local-6989586621679307644"><span class="hs-identifier hs-var">vk_hot</span></a></span></span><span> </span><span id="local-6989586621679307645"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679307645"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679307646"><span class="annot"><span class="annottext">c0 :: KESPeriod
+</span><a href="#local-6989586621679307646"><span class="hs-identifier hs-var">c0</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.OCert.html#KESPeriod"><span class="hs-identifier hs-type">KESPeriod</span></a></span><span> </span><span id="local-6989586621679307648"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307648"><span class="hs-identifier hs-var">c0_</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679307649"><span class="annot"><span class="annottext">SignedDSIGN DSIGN (OCertSignable c)
+</span><a href="#local-6989586621679307649"><span class="hs-identifier hs-var">tau</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BHBody c -&gt; OCert c
+forall c. BHBody c -&gt; OCert c
+</span><a href="Cardano.Protocol.TPraos.BHeader.html#bheaderOCert"><span class="hs-identifier hs-var">bheaderOCert</span></a></span><span> </span><span class="annot"><span class="annottext">BHBody c
+</span><a href="#local-6989586621679307641"><span class="hs-identifier hs-var">bhb</span></a></span><span>
+</span><span id="line-80"></span><span>        </span><span id="local-6989586621679307651"><span class="annot"><span class="annottext">vkcold :: VKey 'BlockIssuer
+</span><a href="#local-6989586621679307651"><span class="hs-identifier hs-var hs-var">vkcold</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BHBody c -&gt; VKey 'BlockIssuer
+forall c. BHBody c -&gt; VKey 'BlockIssuer
+</span><a href="Cardano.Protocol.TPraos.BHeader.html#bheaderVk"><span class="hs-identifier hs-var">bheaderVk</span></a></span><span> </span><span class="annot"><span class="annottext">BHBody c
+</span><a href="#local-6989586621679307641"><span class="hs-identifier hs-var">bhb</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span id="local-6989586621679307653"><span class="annot"><span class="annottext">hk :: KeyHash 'BlockIssuer
+</span><a href="#local-6989586621679307653"><span class="hs-identifier hs-var hs-var">hk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VKey 'BlockIssuer -&gt; KeyHash 'BlockIssuer
+forall (kd :: KeyRole). VKey kd -&gt; KeyHash kd
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#hashKey"><span class="hs-identifier hs-var">hashKey</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'BlockIssuer
+</span><a href="#local-6989586621679307651"><span class="hs-identifier hs-var">vkcold</span></a></span><span>
+</span><span id="line-82"></span><span>        </span><span id="local-6989586621679307655"><span class="annot"><span class="annottext">s :: SlotNo
+</span><a href="#local-6989586621679307655"><span class="hs-identifier hs-var hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BHBody c -&gt; SlotNo
+forall c. BHBody c -&gt; SlotNo
+</span><a href="Cardano.Protocol.TPraos.BHeader.html#bheaderSlotNo"><span class="hs-identifier hs-var">bheaderSlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">BHBody c
+</span><a href="#local-6989586621679307641"><span class="hs-identifier hs-var">bhb</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679307657"><span class="annot"><span class="annottext">kp :: KESPeriod
+</span><a href="#local-6989586621679307657"><span class="hs-identifier hs-var">kp</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Protocol.TPraos.OCert.html#KESPeriod"><span class="hs-identifier hs-type">KESPeriod</span></a></span><span> </span><span id="local-6989586621679307658"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307658"><span class="hs-identifier hs-var">kp_</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BaseM (OCERT c) KESPeriod -&gt; Rule (OCERT c) 'Transition KESPeriod
+forall sts a (ctx :: RuleType).
+STS sts =&gt;
+BaseM sts a -&gt; Rule sts ctx a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#liftSTS"><span class="hs-identifier hs-var">liftSTS</span></a></span><span> </span><span class="annot"><span class="annottext">(BaseM (OCERT c) KESPeriod -&gt; Rule (OCERT c) 'Transition KESPeriod)
+-&gt; BaseM (OCERT c) KESPeriod
+-&gt; Rule (OCERT c) 'Transition KESPeriod
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; ShelleyBase KESPeriod
+</span><a href="Cardano.Protocol.TPraos.OCert.html#kesPeriod"><span class="hs-identifier hs-var">kesPeriod</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679307655"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span>    </span><span id="local-6989586621679307661"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679307661"><span class="hs-identifier hs-var">maxKESiterations</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BaseM (OCERT c) Word64 -&gt; Rule (OCERT c) 'Transition Word64
+forall sts a (ctx :: RuleType).
+STS sts =&gt;
+BaseM sts a -&gt; Rule sts ctx a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#liftSTS"><span class="hs-identifier hs-var">liftSTS</span></a></span><span> </span><span class="annot"><span class="annottext">(BaseM (OCERT c) Word64 -&gt; Rule (OCERT c) 'Transition Word64)
+-&gt; BaseM (OCERT c) Word64 -&gt; Rule (OCERT c) 'Transition Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Globals -&gt; Word64) -&gt; ReaderT Globals Identity Word64
+forall (m :: * -&gt; *) r a. Monad m =&gt; (r -&gt; a) -&gt; ReaderT r m a
+</span><span class="hs-identifier hs-var">asks</span></span><span> </span><span class="annot"><span class="annottext">Globals -&gt; Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#maxKESEvo"><span class="hs-identifier hs-var">maxKESEvo</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><span class="annottext">KESPeriod
+</span><a href="#local-6989586621679307646"><span class="hs-identifier hs-var">c0</span></a></span><span> </span><span class="annot"><span class="annottext">KESPeriod -&gt; KESPeriod -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">KESPeriod
+</span><a href="#local-6989586621679307657"><span class="hs-identifier hs-var">kp</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure (OCERT c) -&gt; Rule (OCERT c) 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">KESPeriod -&gt; KESPeriod -&gt; OcertPredicateFailure
+</span><a href="Cardano.Protocol.TPraos.Rules.OCert.html#KESBeforeStartOCERT"><span class="hs-identifier hs-var">KESBeforeStartOCERT</span></a></span><span> </span><span class="annot"><span class="annottext">KESPeriod
+</span><a href="#local-6989586621679307646"><span class="hs-identifier hs-var">c0</span></a></span><span> </span><span class="annot"><span class="annottext">KESPeriod
+</span><a href="#local-6989586621679307657"><span class="hs-identifier hs-var">kp</span></a></span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307658"><span class="hs-identifier hs-var">kp_</span></a></span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307648"><span class="hs-identifier hs-var">c0_</span></a></span><span>
+</span><span id="line-90"></span><span>        </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Word
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679307661"><span class="hs-identifier hs-var">maxKESiterations</span></a></span><span>
+</span><span id="line-91"></span><span>          </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure (OCERT c) -&gt; Rule (OCERT c) 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">KESPeriod -&gt; KESPeriod -&gt; Word64 -&gt; OcertPredicateFailure
+</span><a href="Cardano.Protocol.TPraos.Rules.OCert.html#KESAfterEndOCERT"><span class="hs-identifier hs-var">KESAfterEndOCERT</span></a></span><span> </span><span class="annot"><span class="annottext">KESPeriod
+</span><a href="#local-6989586621679307657"><span class="hs-identifier hs-var">kp</span></a></span><span> </span><span class="annot"><span class="annottext">KESPeriod
+</span><a href="#local-6989586621679307646"><span class="hs-identifier hs-var">c0</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679307661"><span class="hs-identifier hs-var">maxKESiterations</span></a></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679307667"><span class="annot"><span class="annottext">t :: Word
+</span><a href="#local-6989586621679307667"><span class="hs-identifier hs-var hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307658"><span class="hs-identifier hs-var">kp_</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307648"><span class="hs-identifier hs-var">c0_</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307658"><span class="hs-identifier hs-var">kp_</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Word
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307648"><span class="hs-identifier hs-var">c0_</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-comment">-- this is required to prevent an</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">-- arithmetic underflow, in the</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-comment">-- case of kp_ &lt; c0_ we get the</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-comment">-- above `KESBeforeStartOCERT`</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">-- predicate failure in the</span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-comment">-- transition.</span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">VKey 'BlockIssuer
+-&gt; OCertSignable c -&gt; SignedDSIGN DSIGN (OCertSignable c) -&gt; Bool
+forall a (kd :: KeyRole).
+Signable DSIGN a =&gt;
+VKey kd -&gt; a -&gt; SignedDSIGN DSIGN a -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#verifySignedDSIGN"><span class="hs-identifier hs-var">verifySignedDSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'BlockIssuer
+</span><a href="#local-6989586621679307651"><span class="hs-identifier hs-var">vkcold</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OCert c -&gt; OCertSignable c
+forall c. OCert c -&gt; OCertSignable c
+</span><a href="Cardano.Protocol.TPraos.OCert.html#ocertToSignable"><span class="hs-identifier hs-var">ocertToSignable</span></a></span><span> </span><span class="annot"><span class="annottext">(OCert c -&gt; OCertSignable c) -&gt; OCert c -&gt; OCertSignable c
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">BHBody c -&gt; OCert c
+forall c. BHBody c -&gt; OCert c
+</span><a href="Cardano.Protocol.TPraos.BHeader.html#bheaderOCert"><span class="hs-identifier hs-var">bheaderOCert</span></a></span><span> </span><span class="annot"><span class="annottext">BHBody c
+</span><a href="#local-6989586621679307641"><span class="hs-identifier hs-var">bhb</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SignedDSIGN DSIGN (OCertSignable c)
+</span><a href="#local-6989586621679307649"><span class="hs-identifier hs-var">tau</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure (OCERT c) -&gt; Rule (OCERT c) 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; KESPeriod -&gt; OcertPredicateFailure
+</span><a href="Cardano.Protocol.TPraos.Rules.OCert.html#InvalidSignatureOCERT"><span class="hs-identifier hs-var">InvalidSignatureOCERT</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679307645"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">KESPeriod
+</span><a href="#local-6989586621679307646"><span class="hs-identifier hs-var">c0</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><span class="annottext">ContextKES (KES c)
+-&gt; VerKeyKES (KES c)
+-&gt; Word
+-&gt; BHBody c
+-&gt; SignedKES (KES c) (BHBody c)
+-&gt; Either String ()
+forall v a.
+(KESAlgorithm v, Signable v a) =&gt;
+ContextKES v
+-&gt; VerKeyKES v -&gt; Word -&gt; a -&gt; SignedKES v a -&gt; Either String ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.KES.Class.html#verifySignedKES"><span class="hs-identifier hs-var">verifySignedKES</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">VerKeyKES (KES c)
+</span><a href="#local-6989586621679307644"><span class="hs-identifier hs-var">vk_hot</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307667"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">BHBody c
+</span><a href="#local-6989586621679307641"><span class="hs-identifier hs-var">bhb</span></a></span><span> </span><span class="annot"><span class="annottext">SignedKES (KES c) (BHBody c)
+</span><a href="#local-6989586621679307642"><span class="hs-identifier hs-var">sigma</span></a></span><span> </span><span class="annot"><span class="annottext">Either String ()
+-&gt; (String -&gt; PredicateFailure (OCERT c))
+-&gt; Rule (OCERT c) 'Transition ()
+forall e sts (ctx :: RuleType).
+Either e () -&gt; (e -&gt; PredicateFailure sts) -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21%3A"><span class="hs-operator hs-var">?!:</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word -&gt; Word -&gt; String -&gt; OcertPredicateFailure
+</span><a href="Cardano.Protocol.TPraos.Rules.OCert.html#InvalidKesSignatureOCERT"><span class="hs-identifier hs-var">InvalidKesSignatureOCERT</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307658"><span class="hs-identifier hs-var">kp_</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307648"><span class="hs-identifier hs-var">c0_</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679307667"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">OCertEnv
+-&gt; Map (KeyHash 'BlockIssuer) Word64
+-&gt; KeyHash 'BlockIssuer
+-&gt; Maybe Word64
+</span><a href="Cardano.Protocol.TPraos.OCert.html#currentIssueNo"><span class="hs-identifier hs-var">currentIssueNo</span></a></span><span> </span><span class="annot"><span class="annottext">Environment (OCERT c)
+OCertEnv
+</span><a href="#local-6989586621679307638"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'BlockIssuer) Word64
+State (OCERT c)
+</span><a href="#local-6989586621679307639"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'BlockIssuer
+</span><a href="#local-6989586621679307653"><span class="hs-identifier hs-var">hk</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-103"></span><span>      </span><span class="annot"><span class="annottext">Maybe Word64
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-104"></span><span>        </span><span class="annot"><span class="annottext">PredicateFailure (OCERT c) -&gt; Rule (OCERT c) 'Transition ()
+forall sts (ctx :: RuleType).
+PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#failBecause"><span class="hs-identifier hs-var">failBecause</span></a></span><span> </span><span class="annot"><span class="annottext">(PredicateFailure (OCERT c) -&gt; Rule (OCERT c) 'Transition ())
+-&gt; PredicateFailure (OCERT c) -&gt; Rule (OCERT c) 'Transition ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">KeyHash 'BlockIssuer -&gt; OcertPredicateFailure
+</span><a href="Cardano.Protocol.TPraos.Rules.OCert.html#NoCounterForKeyHashOCERT"><span class="hs-identifier hs-var">NoCounterForKeyHashOCERT</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'BlockIssuer
+</span><a href="#local-6989586621679307653"><span class="hs-identifier hs-var">hk</span></a></span><span>
+</span><span id="line-105"></span><span>        </span><span class="annot"><span class="annottext">Map (KeyHash 'BlockIssuer) Word64
+-&gt; F (Clause (OCERT c) 'Transition)
+     (Map (KeyHash 'BlockIssuer) Word64)
+forall a. a -&gt; F (Clause (OCERT c) 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'BlockIssuer) Word64
+State (OCERT c)
+</span><a href="#local-6989586621679307639"><span class="hs-identifier hs-var">cs</span></a></span><span>
+</span><span id="line-106"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679307673"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679307673"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-107"></span><span>        </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679307673"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679307645"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure (OCERT c) -&gt; Rule (OCERT c) 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; OcertPredicateFailure
+</span><a href="Cardano.Protocol.TPraos.Rules.OCert.html#CounterTooSmallOCERT"><span class="hs-identifier hs-var">CounterTooSmallOCERT</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679307673"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679307645"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-108"></span><span>        </span><span class="annot"><span class="annottext">Map (KeyHash 'BlockIssuer) Word64
+-&gt; F (Clause (OCERT c) 'Transition)
+     (Map (KeyHash 'BlockIssuer) Word64)
+forall a. a -&gt; F (Clause (OCERT c) 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Exp (Map (KeyHash 'BlockIssuer) Word64)
+-&gt; Map (KeyHash 'BlockIssuer) Word64
+forall s t. Embed s t =&gt; Exp t -&gt; s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.SetAlgebra.html#eval"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (KeyHash 'BlockIssuer) Word64
+State (OCERT c)
+</span><a href="#local-6989586621679307639"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'BlockIssuer) Word64
+-&gt; Exp (Single (KeyHash 'BlockIssuer) Word64)
+-&gt; Exp (Map (KeyHash 'BlockIssuer) Word64)
+forall k s1 (f :: * -&gt; * -&gt; *) v s2 (g :: * -&gt; * -&gt; *).
+(Ord k, HasExp s1 (f k v), HasExp s2 (g k v)) =&gt;
+s1 -&gt; s2 -&gt; Exp (f k v)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#%2A03"><span class="hs-operator hs-var">&#10755;</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'BlockIssuer
+-&gt; Word64 -&gt; Exp (Single (KeyHash 'BlockIssuer) Word64)
+forall k v. Ord k =&gt; k -&gt; v -&gt; Exp (Single k v)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'BlockIssuer
+</span><a href="#local-6989586621679307653"><span class="hs-identifier hs-var">hk</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679307645"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span></pre></body></html>

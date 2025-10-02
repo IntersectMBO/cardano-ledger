@@ -1,0 +1,208 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ConformanceSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ConformanceSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ADDRHASH"><span class="hs-identifier">ADDRHASH</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html"><span class="hs-identifier">Cardano.Ledger.TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier">TxId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.List</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">isInfixOf</span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Typeable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Typeable</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">typeRep</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecNormalize"><span class="hs-identifier">SpecNormalize</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier">SpecTranslate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.Utils.html#hashToInteger"><span class="hs-identifier">hashToInteger</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.Utils.html#integerToHash"><span class="hs-identifier">integerToHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#runSpecTransM"><span class="hs-identifier">runSpecTransM</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#vkeyFromInteger"><span class="hs-identifier">vkeyFromInteger</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#vkeyToInteger"><span class="hs-identifier">vkeyToInteger</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.Spec.Conway.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.Spec.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ConformanceSpec.html#hashDisplayProp"><span class="hs-identifier hs-type">hashDisplayProp</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679465118"><span class="annot"><a href="#local-6989586621679465118"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679465118"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679465118"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier hs-type">SpecTranslate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679465118"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecNormalize"><span class="hs-identifier hs-type">SpecNormalize</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecRep"><span class="hs-identifier hs-type">SpecRep</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679465118"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier hs-type">ToExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecRep"><span class="hs-identifier hs-type">SpecRep</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679465118"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier hs-type">ToExpr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679465118"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-36"></span><span id="hashDisplayProp"><span class="annot"><span class="annottext">hashDisplayProp :: forall a.
+(Typeable a, Arbitrary a, SpecTranslate () a,
+ SpecNormalize (SpecRep a), ToExpr (SpecRep a), ToExpr a) =&gt;
+Spec
+</span><a href="Test.Cardano.Ledger.Conformance.ConformanceSpec.html#hashDisplayProp"><span class="hs-identifier hs-var hs-var">hashDisplayProp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Gen Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TypeRep -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">(TypeRep -&gt; String) -&gt; TypeRep -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Proxy a -&gt; TypeRep
+forall {k} (proxy :: k -&gt; *) (a :: k).
+Typeable a =&gt;
+proxy a -&gt; TypeRep
+</span><span class="hs-identifier hs-var">typeRep</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679465118"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Gen Property -&gt; Spec) -&gt; Gen Property -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679465267"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679465267"><span class="hs-identifier hs-var">someHash</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679465118"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621679465278"><span class="annot"><span class="annottext">specRes :: SpecRep a
+</span><a href="#local-6989586621679465278"><span class="hs-identifier hs-var hs-var">specRes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">() -&gt; SpecTransM () (SpecRep a) -&gt; Either Text (SpecRep a)
+forall ctx a. ctx -&gt; SpecTransM ctx a -&gt; Either Text a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#runSpecTransM"><span class="hs-identifier hs-var">runSpecTransM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SpecRep a -&gt; SpecRep a
+forall a. SpecNormalize a =&gt; a -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#specNormalize"><span class="hs-identifier hs-var">specNormalize</span></a></span><span> </span><span class="annot"><span class="annottext">(SpecRep a -&gt; SpecRep a)
+-&gt; SpecTransM () (SpecRep a) -&gt; SpecTransM () (SpecRep a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; SpecTransM () (SpecRep a)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679465267"><span class="hs-identifier hs-var">someHash</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-41"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679465282"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679465282"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; SpecRep a
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; SpecRep a) -&gt; String -&gt; SpecRep a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Failed to translate hash: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679465282"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-42"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679465284"><span class="annot"><span class="annottext">SpecRep a
+</span><a href="#local-6989586621679465284"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SpecRep a
+</span><a href="#local-6989586621679465284"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="annottext">Property -&gt; Gen Property
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="annottext">(Property -&gt; Gen Property)
+-&gt; (Bool -&gt; Property) -&gt; Bool -&gt; Gen Property
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Property
+forall prop. Testable prop =&gt; String -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#counterexample"><span class="hs-identifier hs-var">counterexample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;impl expr: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; String
+forall a. ToExpr a =&gt; a -&gt; String
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#showExpr"><span class="hs-identifier hs-var">showExpr</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679465267"><span class="hs-identifier hs-var">someHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">(Property -&gt; Property) -&gt; (Bool -&gt; Property) -&gt; Bool -&gt; Property
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Bool -&gt; Property
+forall prop. Testable prop =&gt; String -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#counterexample"><span class="hs-identifier hs-var">counterexample</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;spec expr: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">SpecRep a -&gt; String
+forall a. ToExpr a =&gt; a -&gt; String
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#showExpr"><span class="hs-identifier hs-var">showExpr</span></a></span><span> </span><span class="annot"><span class="annottext">SpecRep a
+</span><a href="#local-6989586621679465278"><span class="hs-identifier hs-var">specRes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">(Bool -&gt; Gen Property) -&gt; Bool -&gt; Gen Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; String -&gt; String
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">takeWhile</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&quot;'</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; String -&gt; String
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">dropWhile</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Char -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&quot;'</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SpecRep a -&gt; String
+forall a. ToExpr a =&gt; a -&gt; String
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#showExpr"><span class="hs-identifier hs-var">showExpr</span></a></span><span> </span><span class="annot"><span class="annottext">SpecRep a
+</span><a href="#local-6989586621679465278"><span class="hs-identifier hs-var">specRes</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Bool
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; Bool
+</span><span class="hs-operator hs-var">`isInfixOf`</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; String
+forall a. ToExpr a =&gt; a -&gt; String
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#showExpr"><span class="hs-identifier hs-var">showExpr</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679465267"><span class="hs-identifier hs-var">someHash</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- TODO think of a more sensible way to test this</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ConformanceSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-51"></span><span id="spec"><span class="annot"><span class="annottext">spec :: Spec
+</span><a href="Test.Cardano.Ledger.Conformance.ConformanceSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Translation&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Hashes are displayed in the same way in the implementation and in the spec&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-54"></span><span>      </span><span class="annot"><span class="annottext">forall a.
+(Typeable a, Arbitrary a, SpecTranslate () a,
+ SpecNormalize (SpecRep a), ToExpr (SpecRep a), ToExpr a) =&gt;
+Spec
+</span><a href="Test.Cardano.Ledger.Conformance.ConformanceSpec.html#hashDisplayProp"><span class="hs-identifier hs-var">hashDisplayProp</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Utility properties&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (VKey Any -&gt; Property) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;vkeyToInteger and vkeyFromInteger are inverses&quot;</span></span><span> </span><span class="annot"><span class="annottext">((VKey Any -&gt; Property) -&gt; Spec) -&gt; (VKey Any -&gt; Property) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-57"></span><span>        </span><span class="hs-glyph">\</span><span id="local-6989586621679465292"><span class="annot"><span class="annottext">VKey Any
+</span><a href="#local-6989586621679465292"><span class="hs-identifier hs-var">vk</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Maybe (VKey Any)
+forall (kd :: KeyRole). TxId -&gt; Maybe (VKey kd)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#vkeyFromInteger"><span class="hs-identifier hs-var">vkeyFromInteger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VKey Any -&gt; TxId
+forall (kd :: KeyRole). VKey kd -&gt; TxId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#vkeyToInteger"><span class="hs-identifier hs-var">vkeyToInteger</span></a></span><span> </span><span class="annot"><span class="annottext">VKey Any
+</span><a href="#local-6989586621679465292"><span class="hs-identifier hs-var">vk</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe (VKey Any) -&gt; Maybe (VKey Any) -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">VKey Any -&gt; Maybe (VKey Any)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">VKey Any
+</span><a href="#local-6989586621679465292"><span class="hs-identifier hs-var">vk</span></a></span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (Hash ADDRHASH Any -&gt; Property) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;hashToInteger and integerToHash are inverses&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Hash ADDRHASH Any -&gt; Property) -&gt; Spec)
+-&gt; (Hash ADDRHASH Any -&gt; Property) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-59"></span><span>        </span><span class="hs-glyph">\</span><span id="local-6989586621679465294"><span class="annot"><span class="annottext">Hash ADDRHASH Any
+</span><a href="#local-6989586621679465294"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Maybe (Hash ADDRHASH Any)
+forall h a. HashAlgorithm h =&gt; TxId -&gt; Maybe (Hash h a)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.Utils.html#integerToHash"><span class="hs-identifier hs-var">integerToHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. Hash a b -&gt; TxId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conformance-9.9.9.9/doc/html/cardano-ledger-conformance/src/Test.Cardano.Ledger.Conformance.Utils.html#hashToInteger"><span class="hs-identifier hs-var">hashToInteger</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ADDRHASH"><span class="hs-identifier hs-type">ADDRHASH</span></a></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH Any
+</span><a href="#local-6989586621679465294"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe (Hash ADDRHASH Any) -&gt; Maybe (Hash ADDRHASH Any) -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH Any -&gt; Maybe (Hash ADDRHASH Any)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH Any
+</span><a href="#local-6989586621679465294"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-60"></span></pre></body></html>

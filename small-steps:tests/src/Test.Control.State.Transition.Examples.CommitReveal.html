@@ -1,0 +1,954 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Control.State.Transition.Examples.CommitReveal</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.html"><span class="hs-identifier">Cardano.Crypto.Hash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier">Hash</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#HashAlgorithm"><span class="hs-identifier">HashAlgorithm</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Short.html"><span class="hs-identifier">Cardano.Crypto.Hash.Short</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Short.html#ShortHash"><span class="hs-identifier">ShortHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#hashEncCBOR"><span class="hs-identifier">hashEncCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier">Environment</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier">PredicateFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier">STS</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier">Signal</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier">State</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier">TRC</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#initialRules"><span class="hs-identifier">initialRules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier">judgmentContext</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#transitionRules"><span class="hs-identifier">transitionRules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator">(?!)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Kind</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Type</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/Unique-0.4.8.0-0f9566ea13af541ccc1007d1b2398fdf37f8d95035e06e4af930763cbb819ca8/share/doc/html/src/Data.List.Unique.html"><span class="hs-identifier">Data.List.Unique</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/Unique-0.4.8.0-0f9566ea13af541ccc1007d1b2398fdf37f8d95035e06e4af930763cbb819ca8/share/doc/html/src/Data.List.Unique.html#allUnique"><span class="hs-identifier">allUnique</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Typeable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Typeable</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html"><span class="hs-identifier">Test.Control.State.Transition.Trace</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Trace</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.Generator.QuickCheck.html"><span class="hs-identifier">Test.Control.State.Transition.Trace.Generator.QuickCheck</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS.Gen</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.html"><span class="hs-identifier">Test.QuickCheck</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier">Arbitrary</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier">Property</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier">arbitrary</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#choose"><span class="hs-identifier">choose</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#elements"><span class="hs-identifier">elements</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#oneof"><span class="hs-identifier">oneof</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#shrink"><span class="hs-identifier">shrink</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#withMaxSuccess"><span class="hs-identifier">withMaxSuccess</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prelude</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">id</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- | Commit-reveal transition system, where data hashes are committed and then</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- revealed.</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- The first type parameter denotes the type of hash algorithm used.</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- The second parameter denotes the structure used to associate a commit to its</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- hash. See 'CRSt'</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- The third parameter is the data that will be associated to the 'Commit'</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- signal.</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">data</span><span> </span><span id="CR"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CR"><span class="hs-identifier hs-var">CR</span></a></span></span><span> </span><span id="local-6989586621679220533"><span class="annot"><a href="#local-6989586621679220533"><span class="hs-identifier hs-type">hashAlgo</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679220534"><span class="annot"><a href="#local-6989586621679220534"><span class="hs-identifier hs-type">hashToDataMap</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679220535"><span class="annot"><a href="#local-6989586621679220535"><span class="hs-identifier hs-type">commitData</span></a></span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><span class="hs-comment">-- | Commit-reveal transition system state.</span></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">data</span><span> </span><span id="CRSt"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSt"><span class="hs-identifier hs-var">CRSt</span></a></span></span><span> </span><span id="local-6989586621679220298"><span class="annot"><a href="#local-6989586621679220298"><span class="hs-identifier hs-type">hashAlgo</span></a></span></span><span> </span><span id="local-6989586621679220299"><span class="annot"><a href="#local-6989586621679220299"><span class="hs-identifier hs-type">hashToDataMap</span></a></span></span><span> </span><span id="local-6989586621679220300"><span class="annot"><a href="#local-6989586621679220300"><span class="hs-identifier hs-type">commitData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CRSt"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSt"><span class="hs-identifier hs-var">CRSt</span></a></span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="hashToData"><span class="annot"><span class="annottext">forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+CRSt hashAlgo hashToDataMap commitData
+-&gt; hashToDataMap (Hash hashAlgo Data) commitData
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#hashToData"><span class="hs-identifier hs-var hs-var">hashToData</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679220299"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220298"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679220300"><span class="hs-identifier hs-type">commitData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-comment">-- ^ Part of the state used to associate data to the hash that was committed.</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-comment">-- This is used only by the generators, so 'hashToDataMap' will be</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-comment">-- instantiated to a 'Map' in the generators, for testing purposes; and it</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-comment">-- will be instantiated to 'NoOpMap' in an eventual implementation.</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-comment">-- Here 'hashToData' is an example of a phantom variable, which wouldn't be</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-comment">-- present in the formal specification, but it is needed in the executable</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-comment">-- spec to be able to generate traces.</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="committedHashes"><span class="annot"><span class="annottext">forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+CRSt hashAlgo hashToDataMap commitData -&gt; Set (Hash hashAlgo Data)
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#committedHashes"><span class="hs-identifier hs-var hs-var">committedHashes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220298"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span id="local-6989586621679220317"><span id="local-6989586621679220318"><span id="local-6989586621679220319"><span id="local-6989586621679220541"><span id="local-6989586621679220547"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679220317"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220318"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679220319"><span class="hs-identifier hs-type">commitData</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSt"><span class="hs-identifier hs-type">CRSt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220318"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220317"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220319"><span class="hs-identifier hs-type">commitData</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span id="local-6989586621679220328"><span id="local-6989586621679220329"><span id="local-6989586621679220330"><span id="local-6989586621679220554"><span id="local-6989586621679220562"><span id="local-6989586621679220566"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679220328"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220329"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679220330"><span class="hs-identifier hs-type">commitData</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSt"><span class="hs-identifier hs-type">CRSt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220329"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220328"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220330"><span class="hs-identifier hs-type">commitData</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">class</span><span> </span><span id="MapLike"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#MapLike"><span class="hs-identifier hs-var">MapLike</span></a></span></span><span> </span><span id="local-6989586621679220337"><span class="annot"><a href="#local-6989586621679220337"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679220335"><span class="annot"><a href="#local-6989586621679220335"><span class="hs-identifier hs-type">k</span></a></span></span><span> </span><span id="local-6989586621679220336"><span class="annot"><a href="#local-6989586621679220336"><span class="hs-identifier hs-type">v</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>  </span><span id="insert"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#insert"><span class="hs-identifier hs-type">insert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679220335"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679220336"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679220337"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220335"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220336"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679220337"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220335"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220336"><span class="hs-identifier hs-type">v</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>  </span><span id="delete"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#delete"><span class="hs-identifier hs-type">delete</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679220335"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679220337"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220335"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220336"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679220337"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220335"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220336"><span class="hs-identifier hs-type">v</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">data</span><span> </span><span id="NoOpMap"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#NoOpMap"><span class="hs-identifier hs-var">NoOpMap</span></a></span></span><span> </span><span id="local-6989586621679220340"><span class="annot"><a href="#local-6989586621679220340"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621679220341"><span class="annot"><a href="#local-6989586621679220341"><span class="hs-identifier hs-type">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NoOpMap"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#NoOpMap"><span class="hs-identifier hs-var">NoOpMap</span></a></span></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- | This is the 'MapLike' instance one would use if the executable spec would</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- be used in an implementation (where no generators are needed).</span><span>
+</span><span id="line-95"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679220338"><span id="local-6989586621679220339"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#MapLike"><span class="hs-identifier hs-type">MapLike</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#NoOpMap"><span class="hs-identifier hs-type">NoOpMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220338"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220339"><span class="hs-identifier hs-type">b</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679220576"><span class="annot"><span class="annottext">insert :: a -&gt; b -&gt; NoOpMap a b -&gt; NoOpMap a b
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#insert"><span class="hs-identifier hs-var hs-var hs-var hs-var">insert</span></a></span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">NoOpMap a b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NoOpMap a b
+forall a b. NoOpMap a b
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#NoOpMap"><span class="hs-identifier hs-var">NoOpMap</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679220577"><span class="annot"><span class="annottext">delete :: a -&gt; NoOpMap a b -&gt; NoOpMap a b
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#delete"><span class="hs-identifier hs-var hs-var hs-var hs-var">delete</span></a></span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">NoOpMap a b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NoOpMap a b
+forall a b. NoOpMap a b
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#NoOpMap"><span class="hs-identifier hs-var">NoOpMap</span></a></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679220344"><span id="local-6989586621679220345"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679220344"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#MapLike"><span class="hs-identifier hs-type">MapLike</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679220344"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220345"><span class="hs-identifier hs-type">v</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679220583"><span class="annot"><span class="annottext">insert :: k -&gt; v -&gt; Map k v -&gt; Map k v
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#insert"><span class="hs-identifier hs-var hs-var hs-var hs-var">insert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; v -&gt; Map k v -&gt; Map k v
+forall k v. Ord k =&gt; k -&gt; v -&gt; Map k v -&gt; Map k v
+</span><span class="hs-identifier hs-var">Map.insert</span></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span>  </span><span id="local-6989586621679220586"><span class="annot"><span class="annottext">delete :: k -&gt; Map k v -&gt; Map k v
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#delete"><span class="hs-identifier hs-var hs-var hs-var hs-var">delete</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k v -&gt; Map k v
+forall k v. Ord k =&gt; k -&gt; Map k v -&gt; Map k v
+</span><span class="hs-identifier hs-var">Map.delete</span></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-keyword">data</span><span> </span><span id="CRSignal"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSignal"><span class="hs-identifier hs-var">CRSignal</span></a></span></span><span> </span><span id="local-6989586621679220460"><span class="annot"><a href="#local-6989586621679220460"><span class="hs-identifier hs-type">hashAlgo</span></a></span></span><span> </span><span id="local-6989586621679220461"><span class="annot"><a href="#local-6989586621679220461"><span class="hs-identifier hs-type">commitData</span></a></span></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Commit"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Commit"><span class="hs-identifier hs-var">Commit</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220460"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679220461"><span class="hs-identifier hs-type">commitData</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Reveal"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Reveal"><span class="hs-identifier hs-var">Reveal</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679220595"><span id="local-6989586621679220601"><span id="local-6989586621679220606"><span id="local-6989586621679220609"><span id="local-6989586621679220612"><span id="local-6989586621679220615"><span id="local-6989586621679220618"><span class="annot"><span class="annottext">Eq (CRSignal hashAlgo commitData)
+Eq (CRSignal hashAlgo commitData) =&gt;
+(CRSignal hashAlgo commitData
+ -&gt; CRSignal hashAlgo commitData -&gt; Ordering)
+-&gt; (CRSignal hashAlgo commitData
+    -&gt; CRSignal hashAlgo commitData -&gt; Bool)
+-&gt; (CRSignal hashAlgo commitData
+    -&gt; CRSignal hashAlgo commitData -&gt; Bool)
+-&gt; (CRSignal hashAlgo commitData
+    -&gt; CRSignal hashAlgo commitData -&gt; Bool)
+-&gt; (CRSignal hashAlgo commitData
+    -&gt; CRSignal hashAlgo commitData -&gt; Bool)
+-&gt; (CRSignal hashAlgo commitData
+    -&gt; CRSignal hashAlgo commitData -&gt; CRSignal hashAlgo commitData)
+-&gt; (CRSignal hashAlgo commitData
+    -&gt; CRSignal hashAlgo commitData -&gt; CRSignal hashAlgo commitData)
+-&gt; Ord (CRSignal hashAlgo commitData)
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Ordering
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; CRSignal hashAlgo commitData
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall hashAlgo commitData.
+Ord commitData =&gt;
+Eq (CRSignal hashAlgo commitData)
+forall hashAlgo commitData.
+Ord commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+forall hashAlgo commitData.
+Ord commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Ordering
+forall hashAlgo commitData.
+Ord commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; CRSignal hashAlgo commitData
+$ccompare :: forall hashAlgo commitData.
+Ord commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Ordering
+compare :: CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Ordering
+$c&lt; :: forall hashAlgo commitData.
+Ord commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+&lt; :: CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+$c&lt;= :: forall hashAlgo commitData.
+Ord commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+&lt;= :: CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+$c&gt; :: forall hashAlgo commitData.
+Ord commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+&gt; :: CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+$c&gt;= :: forall hashAlgo commitData.
+Ord commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+&gt;= :: CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+$cmax :: forall hashAlgo commitData.
+Ord commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; CRSignal hashAlgo commitData
+max :: CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; CRSignal hashAlgo commitData
+$cmin :: forall hashAlgo commitData.
+Ord commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; CRSignal hashAlgo commitData
+min :: CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; CRSignal hashAlgo commitData
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220624"><span id="local-6989586621679220630"><span class="annot"><span class="annottext">CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+(CRSignal hashAlgo commitData
+ -&gt; CRSignal hashAlgo commitData -&gt; Bool)
+-&gt; (CRSignal hashAlgo commitData
+    -&gt; CRSignal hashAlgo commitData -&gt; Bool)
+-&gt; Eq (CRSignal hashAlgo commitData)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall hashAlgo commitData.
+Eq commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+$c== :: forall hashAlgo commitData.
+Eq commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+== :: CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+$c/= :: forall hashAlgo commitData.
+Eq commitData =&gt;
+CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+/= :: CRSignal hashAlgo commitData
+-&gt; CRSignal hashAlgo commitData -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220634"><span id="local-6989586621679220641"><span id="local-6989586621679220644"><span class="annot"><span class="annottext">Int -&gt; CRSignal hashAlgo commitData -&gt; ShowS
+[CRSignal hashAlgo commitData] -&gt; ShowS
+CRSignal hashAlgo commitData -&gt; String
+(Int -&gt; CRSignal hashAlgo commitData -&gt; ShowS)
+-&gt; (CRSignal hashAlgo commitData -&gt; String)
+-&gt; ([CRSignal hashAlgo commitData] -&gt; ShowS)
+-&gt; Show (CRSignal hashAlgo commitData)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall hashAlgo commitData.
+Show commitData =&gt;
+Int -&gt; CRSignal hashAlgo commitData -&gt; ShowS
+forall hashAlgo commitData.
+Show commitData =&gt;
+[CRSignal hashAlgo commitData] -&gt; ShowS
+forall hashAlgo commitData.
+Show commitData =&gt;
+CRSignal hashAlgo commitData -&gt; String
+$cshowsPrec :: forall hashAlgo commitData.
+Show commitData =&gt;
+Int -&gt; CRSignal hashAlgo commitData -&gt; ShowS
+showsPrec :: Int -&gt; CRSignal hashAlgo commitData -&gt; ShowS
+$cshow :: forall hashAlgo commitData.
+Show commitData =&gt;
+CRSignal hashAlgo commitData -&gt; String
+show :: CRSignal hashAlgo commitData -&gt; String
+$cshowList :: forall hashAlgo commitData.
+Show commitData =&gt;
+[CRSignal hashAlgo commitData] -&gt; ShowS
+showList :: [CRSignal hashAlgo commitData] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span id="local-6989586621679220357"><span id="local-6989586621679220358"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#isCommit"><span class="hs-identifier hs-type">isCommit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSignal"><span class="hs-identifier hs-type">CRSignal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220357"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220358"><span class="hs-identifier hs-type">commitData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span></span><span>
+</span><span id="line-111"></span><span id="isCommit"><span class="annot"><span class="annottext">isCommit :: forall hashAlgo commitData. CRSignal hashAlgo commitData -&gt; Bool
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#isCommit"><span class="hs-identifier hs-var hs-var">isCommit</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Commit"><span class="hs-identifier hs-type">Commit</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-112"></span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#isCommit"><span class="hs-identifier hs-var">isCommit</span></a></span><span> </span><span class="annot"><span class="annottext">CRSignal hashAlgo commitData
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-keyword">newtype</span><span> </span><span id="Data"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-var">Data</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Data"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-var">Data</span></a></span></span><span> </span><span class="hs-special">{</span><span id="getData"><span class="annot"><span class="annottext">Data -&gt; (Id, Int)
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#getData"><span class="hs-identifier hs-var hs-var">getData</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Id"><span class="hs-identifier hs-type">Id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">}</span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679220650"><span id="local-6989586621679220657"><span class="annot"><span class="annottext">Data -&gt; Data -&gt; Bool
+(Data -&gt; Data -&gt; Bool) -&gt; (Data -&gt; Data -&gt; Bool) -&gt; Eq Data
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Data -&gt; Data -&gt; Bool
+== :: Data -&gt; Data -&gt; Bool
+$c/= :: Data -&gt; Data -&gt; Bool
+/= :: Data -&gt; Data -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220665"><span id="local-6989586621679220672"><span id="local-6989586621679220675"><span class="annot"><span class="annottext">Int -&gt; Data -&gt; ShowS
+[Data] -&gt; ShowS
+Data -&gt; String
+(Int -&gt; Data -&gt; ShowS)
+-&gt; (Data -&gt; String) -&gt; ([Data] -&gt; ShowS) -&gt; Show Data
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Data -&gt; ShowS
+showsPrec :: Int -&gt; Data -&gt; ShowS
+$cshow :: Data -&gt; String
+show :: Data -&gt; String
+$cshowList :: [Data] -&gt; ShowS
+showList :: [Data] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220682"><span id="local-6989586621679220691"><span id="local-6989586621679220699"><span class="annot"><span class="annottext">Typeable Data
+Typeable Data =&gt;
+(Data -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Data -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [Data] -&gt; Size)
+-&gt; EncCBOR Data
+Data -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Data] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Data -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+$cencCBOR :: Data -&gt; Encoding
+encCBOR :: Data -&gt; Encoding
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Data -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Data -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Data] -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Data] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220711"><span id="local-6989586621679220718"><span id="local-6989586621679220724"><span id="local-6989586621679220730"><span id="local-6989586621679220736"><span id="local-6989586621679220742"><span id="local-6989586621679220748"><span class="annot"><span class="annottext">Eq Data
+Eq Data =&gt;
+(Data -&gt; Data -&gt; Ordering)
+-&gt; (Data -&gt; Data -&gt; Bool)
+-&gt; (Data -&gt; Data -&gt; Bool)
+-&gt; (Data -&gt; Data -&gt; Bool)
+-&gt; (Data -&gt; Data -&gt; Bool)
+-&gt; (Data -&gt; Data -&gt; Data)
+-&gt; (Data -&gt; Data -&gt; Data)
+-&gt; Ord Data
+Data -&gt; Data -&gt; Bool
+Data -&gt; Data -&gt; Ordering
+Data -&gt; Data -&gt; Data
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Data -&gt; Data -&gt; Ordering
+compare :: Data -&gt; Data -&gt; Ordering
+$c&lt; :: Data -&gt; Data -&gt; Bool
+&lt; :: Data -&gt; Data -&gt; Bool
+$c&lt;= :: Data -&gt; Data -&gt; Bool
+&lt;= :: Data -&gt; Data -&gt; Bool
+$c&gt; :: Data -&gt; Data -&gt; Bool
+&gt; :: Data -&gt; Data -&gt; Bool
+$c&gt;= :: Data -&gt; Data -&gt; Bool
+&gt;= :: Data -&gt; Data -&gt; Bool
+$cmax :: Data -&gt; Data -&gt; Data
+max :: Data -&gt; Data -&gt; Data
+$cmin :: Data -&gt; Data -&gt; Data
+min :: Data -&gt; Data -&gt; Data
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220755"><span id="local-6989586621679220762"><span class="annot"><span class="annottext">Gen Data
+Gen Data -&gt; (Data -&gt; [Data]) -&gt; Arbitrary Data
+Data -&gt; [Data]
+forall a. Gen a -&gt; (a -&gt; [a]) -&gt; Arbitrary a
+$carbitrary :: Gen Data
+arbitrary :: Gen Data
+$cshrink :: Data -&gt; [Data]
+shrink :: Data -&gt; [Data]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Arbitrary</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-keyword">newtype</span><span> </span><span id="Id"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Id"><span class="hs-identifier hs-var">Id</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Id"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Id"><span class="hs-identifier hs-var">Id</span></a></span></span><span> </span><span class="hs-special">{</span><span id="getId"><span class="annot"><span class="annottext">Id -&gt; Int
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#getId"><span class="hs-identifier hs-var hs-var">getId</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">}</span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679220774"><span id="local-6989586621679220778"><span class="annot"><span class="annottext">Id -&gt; Id -&gt; Bool
+(Id -&gt; Id -&gt; Bool) -&gt; (Id -&gt; Id -&gt; Bool) -&gt; Eq Id
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Id -&gt; Id -&gt; Bool
+== :: Id -&gt; Id -&gt; Bool
+$c/= :: Id -&gt; Id -&gt; Bool
+/= :: Id -&gt; Id -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220782"><span id="local-6989586621679220786"><span id="local-6989586621679220789"><span class="annot"><span class="annottext">Int -&gt; Id -&gt; ShowS
+[Id] -&gt; ShowS
+Id -&gt; String
+(Int -&gt; Id -&gt; ShowS)
+-&gt; (Id -&gt; String) -&gt; ([Id] -&gt; ShowS) -&gt; Show Id
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Id -&gt; ShowS
+showsPrec :: Int -&gt; Id -&gt; ShowS
+$cshow :: Id -&gt; String
+show :: Id -&gt; String
+$cshowList :: [Id] -&gt; ShowS
+showList :: [Id] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220794"><span id="local-6989586621679220800"><span id="local-6989586621679220806"><span class="annot"><span class="annottext">Typeable Id
+Typeable Id =&gt;
+(Id -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Id -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Id] -&gt; Size)
+-&gt; EncCBOR Id
+Id -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Id] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Id -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+$cencCBOR :: Id -&gt; Encoding
+encCBOR :: Id -&gt; Encoding
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Id -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Id -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Id] -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Id] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220812"><span id="local-6989586621679220816"><span id="local-6989586621679220820"><span id="local-6989586621679220824"><span id="local-6989586621679220828"><span id="local-6989586621679220832"><span id="local-6989586621679220836"><span class="annot"><span class="annottext">Eq Id
+Eq Id =&gt;
+(Id -&gt; Id -&gt; Ordering)
+-&gt; (Id -&gt; Id -&gt; Bool)
+-&gt; (Id -&gt; Id -&gt; Bool)
+-&gt; (Id -&gt; Id -&gt; Bool)
+-&gt; (Id -&gt; Id -&gt; Bool)
+-&gt; (Id -&gt; Id -&gt; Id)
+-&gt; (Id -&gt; Id -&gt; Id)
+-&gt; Ord Id
+Id -&gt; Id -&gt; Bool
+Id -&gt; Id -&gt; Ordering
+Id -&gt; Id -&gt; Id
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Id -&gt; Id -&gt; Ordering
+compare :: Id -&gt; Id -&gt; Ordering
+$c&lt; :: Id -&gt; Id -&gt; Bool
+&lt; :: Id -&gt; Id -&gt; Bool
+$c&lt;= :: Id -&gt; Id -&gt; Bool
+&lt;= :: Id -&gt; Id -&gt; Bool
+$c&gt; :: Id -&gt; Id -&gt; Bool
+&gt; :: Id -&gt; Id -&gt; Bool
+$c&gt;= :: Id -&gt; Id -&gt; Bool
+&gt;= :: Id -&gt; Id -&gt; Bool
+$cmax :: Id -&gt; Id -&gt; Id
+max :: Id -&gt; Id -&gt; Id
+$cmin :: Id -&gt; Id -&gt; Id
+min :: Id -&gt; Id -&gt; Id
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220840"><span id="local-6989586621679220844"><span class="annot"><span class="annottext">Gen Id
+Gen Id -&gt; (Id -&gt; [Id]) -&gt; Arbitrary Id
+Id -&gt; [Id]
+forall a. Gen a -&gt; (a -&gt; [a]) -&gt; Arbitrary a
+$carbitrary :: Gen Id
+arbitrary :: Gen Id
+$cshrink :: Id -&gt; [Id]
+shrink :: Id -&gt; [Id]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Arbitrary</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">data</span><span> </span><span id="CRPredicateFailure"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRPredicateFailure"><span class="hs-identifier hs-var">CRPredicateFailure</span></a></span></span><span> </span><span id="local-6989586621679220437"><span class="annot"><a href="#local-6989586621679220437"><span class="hs-identifier hs-type">hashAlgo</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679220438"><span class="annot"><a href="#local-6989586621679220438"><span class="hs-identifier hs-type">hashToDataMap</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679220439"><span class="annot"><a href="#local-6989586621679220439"><span class="hs-identifier hs-type">commitData</span></a></span></span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="InvalidReveal"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#InvalidReveal"><span class="hs-identifier hs-var">InvalidReveal</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="AlreadyComitted"><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#AlreadyComitted"><span class="hs-identifier hs-var">AlreadyComitted</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220437"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679220850"><span id="local-6989586621679220854"><span class="annot"><span class="annottext">CRPredicateFailure hashAlgo hashToDataMap commitData
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; Bool
+(CRPredicateFailure hashAlgo hashToDataMap commitData
+ -&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; Bool)
+-&gt; (CRPredicateFailure hashAlgo hashToDataMap commitData
+    -&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; Bool)
+-&gt; Eq (CRPredicateFailure hashAlgo hashToDataMap commitData)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+CRPredicateFailure hashAlgo hashToDataMap commitData
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; Bool
+$c== :: forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+CRPredicateFailure hashAlgo hashToDataMap commitData
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; Bool
+== :: CRPredicateFailure hashAlgo hashToDataMap commitData
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; Bool
+$c/= :: forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+CRPredicateFailure hashAlgo hashToDataMap commitData
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; Bool
+/= :: CRPredicateFailure hashAlgo hashToDataMap commitData
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220858"><span id="local-6989586621679220864"><span id="local-6989586621679220868"><span class="annot"><span class="annottext">Int
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; ShowS
+[CRPredicateFailure hashAlgo hashToDataMap commitData] -&gt; ShowS
+CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; String
+(Int
+ -&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; ShowS)
+-&gt; (CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; String)
+-&gt; ([CRPredicateFailure hashAlgo hashToDataMap commitData]
+    -&gt; ShowS)
+-&gt; Show (CRPredicateFailure hashAlgo hashToDataMap commitData)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+Int
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; ShowS
+forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+[CRPredicateFailure hashAlgo hashToDataMap commitData] -&gt; ShowS
+forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; String
+$cshowsPrec :: forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+Int
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; ShowS
+showsPrec :: Int
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; ShowS
+$cshow :: forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; String
+show :: CRPredicateFailure hashAlgo hashToDataMap commitData -&gt; String
+$cshowList :: forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+[CRPredicateFailure hashAlgo hashToDataMap commitData] -&gt; ShowS
+showList :: [CRPredicateFailure hashAlgo hashToDataMap commitData] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621679220410"><span id="local-6989586621679220411"><span id="local-6989586621679220412"><span id="local-6989586621679220890"><span id="local-6989586621679220894"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#HashAlgorithm"><span class="hs-identifier hs-type">HashAlgorithm</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220410"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679220411"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679220412"><span class="hs-identifier hs-type">commitData</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#MapLike"><span class="hs-identifier hs-type">MapLike</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220411"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220410"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679220412"><span class="hs-identifier hs-type">commitData</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Monoid</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679220411"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220410"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679220412"><span class="hs-identifier hs-type">commitData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CR"><span class="hs-identifier hs-type">CR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220410"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220411"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220412"><span class="hs-identifier hs-type">commitData</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Environment"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CR"><span class="hs-identifier hs-type">CR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220410"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220411"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220412"><span class="hs-identifier hs-type">commitData</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-keyword">type</span><span>
+</span><span id="line-137"></span><span>    </span><span id="State"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CR"><span class="hs-identifier hs-type">CR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220410"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220411"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220412"><span class="hs-identifier hs-type">commitData</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-138"></span><span>      </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSt"><span class="hs-identifier hs-type">CRSt</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220410"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220411"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220412"><span class="hs-identifier hs-type">commitData</span></a></span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-keyword">type</span><span>
+</span><span id="line-141"></span><span>    </span><span id="Signal"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-var">Signal</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CR"><span class="hs-identifier hs-type">CR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220410"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220411"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220412"><span class="hs-identifier hs-type">commitData</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-142"></span><span>      </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSignal"><span class="hs-identifier hs-type">CRSignal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220410"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220412"><span class="hs-identifier hs-type">commitData</span></a></span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-keyword">type</span><span>
+</span><span id="line-145"></span><span>    </span><span id="PredicateFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-var">PredicateFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CR"><span class="hs-identifier hs-type">CR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220410"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220411"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220412"><span class="hs-identifier hs-type">commitData</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRPredicateFailure"><span class="hs-identifier hs-type">CRPredicateFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220410"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220411"><span class="hs-identifier hs-type">hashToDataMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220412"><span class="hs-identifier hs-type">commitData</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span>  </span><span id="local-6989586621679220905"><span class="annot"><span class="annottext">initialRules :: [InitialRule (CR hashAlgo hashToDataMap commitData)]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#initialRules"><span class="hs-identifier hs-var hs-var hs-var hs-var">initialRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">CRSt hashAlgo hashToDataMap commitData
+-&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Initial)
+     (CRSt hashAlgo hashToDataMap commitData)
+forall a.
+a -&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Initial) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(CRSt hashAlgo hashToDataMap commitData
+ -&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Initial)
+      (CRSt hashAlgo hashToDataMap commitData))
+-&gt; CRSt hashAlgo hashToDataMap commitData
+-&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Initial)
+     (CRSt hashAlgo hashToDataMap commitData)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span>
+</span><span id="line-150"></span><span>        </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSt"><span class="hs-identifier hs-type">CRSt</span></a></span><span>
+</span><span id="line-151"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">hashToData :: hashToDataMap (Hash hashAlgo Data) commitData
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#hashToData"><span class="hs-identifier hs-var">hashToData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">hashToDataMap (Hash hashAlgo Data) commitData
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-152"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">committedHashes :: Set (Hash hashAlgo Data)
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#committedHashes"><span class="hs-identifier hs-var">committedHashes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set (Hash hashAlgo Data)
+forall a. Set a
+</span><span class="hs-identifier hs-var">Set.empty</span></span><span>
+</span><span id="line-153"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span>  </span><span id="local-6989586621679220930"><span class="annot"><span class="annottext">transitionRules :: [TransitionRule (CR hashAlgo hashToDataMap commitData)]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#transitionRules"><span class="hs-identifier hs-var hs-var hs-var hs-var">transitionRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-158"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSt"><span class="hs-identifier hs-type">CRSt</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679220931"><span class="annot"><span class="annottext">hashToDataMap (Hash hashAlgo Data) commitData
+hashToData :: forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+CRSt hashAlgo hashToDataMap commitData
+-&gt; hashToDataMap (Hash hashAlgo Data) commitData
+hashToData :: hashToDataMap (Hash hashAlgo Data) commitData
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#hashToData"><span class="hs-identifier hs-var hs-var">hashToData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220932"><span class="annot"><span class="annottext">Set (Hash hashAlgo Data)
+committedHashes :: forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+CRSt hashAlgo hashToDataMap commitData -&gt; Set (Hash hashAlgo Data)
+committedHashes :: Set (Hash hashAlgo Data)
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#committedHashes"><span class="hs-identifier hs-var hs-var">committedHashes</span></a></span></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220933"><span class="annot"><span class="annottext">Signal (CR hashAlgo hashToDataMap commitData)
+</span><a href="#local-6989586621679220933"><span class="hs-identifier hs-var">crSignal</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Rule
+  (CR hashAlgo hashToDataMap commitData)
+  'Transition
+  (RuleContext 'Transition (CR hashAlgo hashToDataMap commitData))
+F (Clause (CR hashAlgo hashToDataMap commitData) 'Transition)
+  (TRC (CR hashAlgo hashToDataMap commitData))
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span>
+</span><span id="line-159"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Signal (CR hashAlgo hashToDataMap commitData)
+</span><a href="#local-6989586621679220933"><span class="hs-identifier hs-var">crSignal</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-160"></span><span>          </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Commit"><span class="hs-identifier hs-type">Commit</span></a></span><span> </span><span id="local-6989586621679220934"><span class="annot"><span class="annottext">Hash hashAlgo Data
+</span><a href="#local-6989586621679220934"><span class="hs-identifier hs-var">dataHash</span></a></span></span><span> </span><span id="local-6989586621679220935"><span class="annot"><span class="annottext">commitData
+</span><a href="#local-6989586621679220935"><span class="hs-identifier hs-var">commitData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-161"></span><span>            </span><span class="annot"><span class="annottext">Hash hashAlgo Data
+</span><a href="#local-6989586621679220934"><span class="hs-identifier hs-var">dataHash</span></a></span><span> </span><span class="annot"><span class="annottext">Hash hashAlgo Data -&gt; Set (Hash hashAlgo Data) -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Bool
+</span><span class="hs-operator hs-var">`Set.notMember`</span></span><span> </span><span class="annot"><span class="annottext">Set (Hash hashAlgo Data)
+</span><a href="#local-6989586621679220932"><span class="hs-identifier hs-var">committedHashes</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+-&gt; PredicateFailure (CR hashAlgo hashToDataMap commitData)
+-&gt; Rule (CR hashAlgo hashToDataMap commitData) 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">Hash hashAlgo Data
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData
+forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+Hash hashAlgo Data
+-&gt; CRPredicateFailure hashAlgo hashToDataMap commitData
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#AlreadyComitted"><span class="hs-identifier hs-var">AlreadyComitted</span></a></span><span> </span><span class="annot"><span class="annottext">Hash hashAlgo Data
+</span><a href="#local-6989586621679220934"><span class="hs-identifier hs-var">dataHash</span></a></span><span>
+</span><span id="line-162"></span><span>            </span><span class="annot"><span class="annottext">CRSt hashAlgo hashToDataMap commitData
+-&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Transition)
+     (CRSt hashAlgo hashToDataMap commitData)
+forall a.
+a
+-&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(CRSt hashAlgo hashToDataMap commitData
+ -&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Transition)
+      (CRSt hashAlgo hashToDataMap commitData))
+-&gt; CRSt hashAlgo hashToDataMap commitData
+-&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Transition)
+     (CRSt hashAlgo hashToDataMap commitData)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span>
+</span><span id="line-163"></span><span>              </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSt"><span class="hs-identifier hs-type">CRSt</span></a></span><span>
+</span><span id="line-164"></span><span>                </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">hashToData :: hashToDataMap (Hash hashAlgo Data) commitData
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#hashToData"><span class="hs-identifier hs-var">hashToData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash hashAlgo Data
+-&gt; commitData
+-&gt; hashToDataMap (Hash hashAlgo Data) commitData
+-&gt; hashToDataMap (Hash hashAlgo Data) commitData
+forall (m :: * -&gt; * -&gt; *) k v.
+MapLike m k v =&gt;
+k -&gt; v -&gt; m k v -&gt; m k v
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#insert"><span class="hs-identifier hs-var">insert</span></a></span><span> </span><span class="annot"><span class="annottext">Hash hashAlgo Data
+</span><a href="#local-6989586621679220934"><span class="hs-identifier hs-var">dataHash</span></a></span><span> </span><span class="annot"><span class="annottext">commitData
+</span><a href="#local-6989586621679220935"><span class="hs-identifier hs-var">commitData</span></a></span><span> </span><span class="annot"><span class="annottext">hashToDataMap (Hash hashAlgo Data) commitData
+</span><a href="#local-6989586621679220931"><span class="hs-identifier hs-var">hashToData</span></a></span><span>
+</span><span id="line-165"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">committedHashes :: Set (Hash hashAlgo Data)
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#committedHashes"><span class="hs-identifier hs-var">committedHashes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash hashAlgo Data
+-&gt; Set (Hash hashAlgo Data) -&gt; Set (Hash hashAlgo Data)
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.insert</span></span><span> </span><span class="annot"><span class="annottext">Hash hashAlgo Data
+</span><a href="#local-6989586621679220934"><span class="hs-identifier hs-var">dataHash</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Hash hashAlgo Data)
+</span><a href="#local-6989586621679220932"><span class="hs-identifier hs-var">committedHashes</span></a></span><span>
+</span><span id="line-166"></span><span>                </span><span class="hs-special">}</span><span>
+</span><span id="line-167"></span><span>          </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Reveal"><span class="hs-identifier hs-type">Reveal</span></a></span><span> </span><span id="local-6989586621679220938"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679220938"><span class="hs-identifier hs-var">someData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-168"></span><span>            </span><span class="annot"><span class="annottext">Version -&gt; Data -&gt; Hash hashAlgo Data
+forall h a.
+(HashAlgorithm h, EncCBOR a) =&gt;
+Version -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#hashEncCBOR"><span class="hs-identifier hs-var">hashEncCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">minBound</span></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679220938"><span class="hs-identifier hs-var">someData</span></a></span><span>
+</span><span id="line-169"></span><span>              </span><span class="annot"><span class="annottext">Hash hashAlgo Data -&gt; Set (Hash hashAlgo Data) -&gt; Bool
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Bool
+</span><span class="hs-operator hs-var">`Set.member`</span></span><span> </span><span class="annot"><span class="annottext">Set (Hash hashAlgo Data)
+</span><a href="#local-6989586621679220932"><span class="hs-identifier hs-var">committedHashes</span></a></span><span>
+</span><span id="line-170"></span><span>              </span><span class="annot"><span class="annottext">Bool
+-&gt; PredicateFailure (CR hashAlgo hashToDataMap commitData)
+-&gt; Rule (CR hashAlgo hashToDataMap commitData) 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">Data -&gt; CRPredicateFailure hashAlgo hashToDataMap commitData
+forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+Data -&gt; CRPredicateFailure hashAlgo hashToDataMap commitData
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#InvalidReveal"><span class="hs-identifier hs-var">InvalidReveal</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679220938"><span class="hs-identifier hs-var">someData</span></a></span><span>
+</span><span id="line-171"></span><span>            </span><span class="annot"><span class="annottext">CRSt hashAlgo hashToDataMap commitData
+-&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Transition)
+     (CRSt hashAlgo hashToDataMap commitData)
+forall a.
+a
+-&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(CRSt hashAlgo hashToDataMap commitData
+ -&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Transition)
+      (CRSt hashAlgo hashToDataMap commitData))
+-&gt; CRSt hashAlgo hashToDataMap commitData
+-&gt; F (Clause (CR hashAlgo hashToDataMap commitData) 'Transition)
+     (CRSt hashAlgo hashToDataMap commitData)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span>
+</span><span id="line-172"></span><span>              </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSt"><span class="hs-identifier hs-type">CRSt</span></a></span><span>
+</span><span id="line-173"></span><span>                </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">hashToData :: hashToDataMap (Hash hashAlgo Data) commitData
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#hashToData"><span class="hs-identifier hs-var">hashToData</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-174"></span><span>                    </span><span class="annot"><span class="annottext">Hash hashAlgo Data
+-&gt; hashToDataMap (Hash hashAlgo Data) commitData
+-&gt; hashToDataMap (Hash hashAlgo Data) commitData
+forall (m :: * -&gt; * -&gt; *) k v. MapLike m k v =&gt; k -&gt; m k v -&gt; m k v
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#delete"><span class="hs-identifier hs-var">delete</span></a></span><span>
+</span><span id="line-175"></span><span>                      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; Data -&gt; Hash hashAlgo Data
+forall h a.
+(HashAlgorithm h, EncCBOR a) =&gt;
+Version -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#hashEncCBOR"><span class="hs-identifier hs-var">hashEncCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">minBound</span></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679220938"><span class="hs-identifier hs-var">someData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>                      </span><span class="annot"><span class="annottext">hashToDataMap (Hash hashAlgo Data) commitData
+</span><a href="#local-6989586621679220931"><span class="hs-identifier hs-var">hashToData</span></a></span><span>
+</span><span id="line-177"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">committedHashes :: Set (Hash hashAlgo Data)
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#committedHashes"><span class="hs-identifier hs-var">committedHashes</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-178"></span><span>                    </span><span class="annot"><span class="annottext">Hash hashAlgo Data
+-&gt; Set (Hash hashAlgo Data) -&gt; Set (Hash hashAlgo Data)
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.delete</span></span><span>
+</span><span id="line-179"></span><span>                      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; Data -&gt; Hash hashAlgo Data
+forall h a.
+(HashAlgorithm h, EncCBOR a) =&gt;
+Version -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#hashEncCBOR"><span class="hs-identifier hs-var">hashEncCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">minBound</span></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679220938"><span class="hs-identifier hs-var">someData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>                      </span><span class="annot"><span class="annottext">Set (Hash hashAlgo Data)
+</span><a href="#local-6989586621679220932"><span class="hs-identifier hs-var">committedHashes</span></a></span><span>
+</span><span id="line-181"></span><span>                </span><span class="hs-special">}</span><span>
+</span><span id="line-182"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-185"></span><span>  </span><span id="local-6989586621679220293"><span id="local-6989586621679220950"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#HashAlgorithm"><span class="hs-identifier hs-type">HashAlgorithm</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220293"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-186"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-type">STS.Gen.HasTrace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CR"><span class="hs-identifier hs-type">CR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679220293"><span class="hs-identifier hs-type">hashAlgo</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-187"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-188"></span><span>  </span><span id="local-6989586621679220967"><span class="annot"><span class="annottext">envGen :: HasCallStack =&gt; () -&gt; Gen (Environment (CR hashAlgo Map Data))
+</span><a href="#local-6989586621679220967"><span class="hs-identifier hs-var hs-var hs-var hs-var">envGen</span></a></span></span><span> </span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; Gen ()
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span>  </span><span id="local-6989586621679220978"><span class="annot"><span class="annottext">sigGen :: HasCallStack =&gt;
+()
+-&gt; Environment (CR hashAlgo Map Data)
+-&gt; State (CR hashAlgo Map Data)
+-&gt; Gen (Signal (CR hashAlgo Map Data))
+</span><a href="#local-6989586621679220978"><span class="hs-identifier hs-var hs-var hs-var hs-var">sigGen</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSt"><span class="hs-identifier hs-type">CRSt</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679220980"><span class="annot"><span class="annottext">Map (Hash hashAlgo Data) Data
+hashToData :: forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+CRSt hashAlgo hashToDataMap commitData
+-&gt; hashToDataMap (Hash hashAlgo Data) commitData
+hashToData :: Map (Hash hashAlgo Data) Data
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#hashToData"><span class="hs-identifier hs-var hs-var">hashToData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679220981"><span class="annot"><span class="annottext">Set (Hash hashAlgo Data)
+committedHashes :: forall hashAlgo (hashToDataMap :: * -&gt; * -&gt; *) commitData.
+CRSt hashAlgo hashToDataMap commitData -&gt; Set (Hash hashAlgo Data)
+committedHashes :: Set (Hash hashAlgo Data)
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#committedHashes"><span class="hs-identifier hs-var hs-var">committedHashes</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Set (Hash hashAlgo Data) -&gt; Bool
+forall a. Set a -&gt; Bool
+</span><span class="hs-identifier hs-var">Set.null</span></span><span> </span><span class="annot"><span class="annottext">Set (Hash hashAlgo Data)
+</span><a href="#local-6989586621679220981"><span class="hs-identifier hs-var">committedHashes</span></a></span><span>
+</span><span id="line-192"></span><span>      </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Gen (Signal (CR hashAlgo Map Data))
+Gen (CRSignal hashAlgo Data)
+</span><a href="#local-6989586621679220983"><span class="hs-identifier hs-var">genCommit</span></a></span><span>
+</span><span id="line-193"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">[Gen (CRSignal hashAlgo Data)] -&gt; Gen (CRSignal hashAlgo Data)
+forall a. HasCallStack =&gt; [Gen a] -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#oneof"><span class="hs-identifier hs-var">oneof</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Gen (CRSignal hashAlgo Data)
+</span><a href="#local-6989586621679220983"><span class="hs-identifier hs-var">genCommit</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Gen (CRSignal hashAlgo Data)
+</span><a href="#local-6989586621679220984"><span class="hs-identifier hs-var">genReveal</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-195"></span><span>      </span><span id="local-6989586621679220983"><span class="annot"><span class="annottext">genCommit :: Gen (CRSignal hashAlgo Data)
+</span><a href="#local-6989586621679220983"><span class="hs-identifier hs-var hs-var">genCommit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-196"></span><span>        </span><span id="local-6989586621679221002"><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679221002"><span class="hs-identifier hs-var">id</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Id
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Id"><span class="hs-identifier hs-var">Id</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Id) -&gt; Gen Int -&gt; Gen Id
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Int
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-197"></span><span>        </span><span id="local-6989586621679221004"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679221004"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Int, Int) -&gt; Gen Int
+forall a. Random a =&gt; (a, a) -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#choose"><span class="hs-identifier hs-var">choose</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-198"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679221005"><span class="annot"><span class="annottext">newData :: Data
+</span><a href="#local-6989586621679221005"><span class="hs-identifier hs-var hs-var">newData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Id, Int) -&gt; Data
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-var">Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Id
+</span><a href="#local-6989586621679221002"><span class="hs-identifier hs-var">id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679221004"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-199"></span><span>        </span><span class="annot"><span class="annottext">CRSignal hashAlgo Data -&gt; Gen (CRSignal hashAlgo Data)
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(CRSignal hashAlgo Data -&gt; Gen (CRSignal hashAlgo Data))
+-&gt; CRSignal hashAlgo Data -&gt; Gen (CRSignal hashAlgo Data)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="annot"><span class="annottext">Hash hashAlgo Data -&gt; Data -&gt; CRSignal hashAlgo Data
+forall hashAlgo commitData.
+Hash hashAlgo Data -&gt; commitData -&gt; CRSignal hashAlgo commitData
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Commit"><span class="hs-identifier hs-var">Commit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; Data -&gt; Hash hashAlgo Data
+forall h a.
+(HashAlgorithm h, EncCBOR a) =&gt;
+Version -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#hashEncCBOR"><span class="hs-identifier hs-var">hashEncCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">minBound</span></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679221005"><span class="hs-identifier hs-var">newData</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679221005"><span class="hs-identifier hs-var">newData</span></a></span><span>
+</span><span id="line-200"></span><span>      </span><span id="local-6989586621679220984"><span class="annot"><span class="annottext">genReveal :: Gen (CRSignal hashAlgo Data)
+</span><a href="#local-6989586621679220984"><span class="hs-identifier hs-var hs-var">genReveal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-201"></span><span>        </span><span id="local-6989586621679221006"><span class="annot"><span class="annottext">Hash hashAlgo Data
+</span><a href="#local-6989586621679221006"><span class="hs-identifier hs-var">hashToReveal</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Hash hashAlgo Data] -&gt; Gen (Hash hashAlgo Data)
+forall a. HasCallStack =&gt; [a] -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#elements"><span class="hs-identifier hs-var">elements</span></a></span><span> </span><span class="annot"><span class="annottext">([Hash hashAlgo Data] -&gt; Gen (Hash hashAlgo Data))
+-&gt; [Hash hashAlgo Data] -&gt; Gen (Hash hashAlgo Data)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set (Hash hashAlgo Data) -&gt; [Hash hashAlgo Data]
+forall a. Set a -&gt; [a]
+</span><span class="hs-identifier hs-var">Set.toList</span></span><span> </span><span class="annot"><span class="annottext">Set (Hash hashAlgo Data)
+</span><a href="#local-6989586621679220981"><span class="hs-identifier hs-var">committedHashes</span></a></span><span>
+</span><span id="line-202"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679221008"><span class="annot"><span class="annottext">dataToReveal :: Data
+</span><a href="#local-6989586621679221008"><span class="hs-identifier hs-var hs-var">dataToReveal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (Hash hashAlgo Data) Data
+</span><a href="#local-6989586621679220980"><span class="hs-identifier hs-var">hashToData</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Hash hashAlgo Data) Data -&gt; Hash hashAlgo Data -&gt; Data
+forall k a. Ord k =&gt; Map k a -&gt; k -&gt; a
+</span><span class="hs-operator hs-var">Map.!</span></span><span> </span><span class="annot"><span class="annottext">Hash hashAlgo Data
+</span><a href="#local-6989586621679221006"><span class="hs-identifier hs-var">hashToReveal</span></a></span><span>
+</span><span id="line-203"></span><span>        </span><span class="annot"><span class="annottext">CRSignal hashAlgo Data -&gt; Gen (CRSignal hashAlgo Data)
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(CRSignal hashAlgo Data -&gt; Gen (CRSignal hashAlgo Data))
+-&gt; CRSignal hashAlgo Data -&gt; Gen (CRSignal hashAlgo Data)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; CRSignal hashAlgo Data
+forall hashAlgo commitData. Data -&gt; CRSignal hashAlgo commitData
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Reveal"><span class="hs-identifier hs-var">Reveal</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679221008"><span class="hs-identifier hs-var">dataToReveal</span></a></span><span>
+</span><span id="line-204"></span><span>
+</span><span id="line-205"></span><span>  </span><span id="local-6989586621679221017"><span class="annot"><span class="annottext">shrinkSignal :: HasCallStack =&gt;
+Signal (CR hashAlgo Map Data) -&gt; [Signal (CR hashAlgo Map Data)]
+</span><a href="#local-6989586621679221017"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkSignal</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Commit"><span class="hs-identifier hs-type">Commit</span></a></span><span> </span><span class="annot"><span class="annottext">Hash hashAlgo Data
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679221019"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679221019"><span class="hs-identifier hs-var">someData</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-206"></span><span>    </span><span class="annot"><span class="annottext">Data -&gt; CRSignal hashAlgo Data
+forall {hashAlgo}.
+HashAlgorithm hashAlgo =&gt;
+Data -&gt; CRSignal hashAlgo Data
+</span><a href="#local-6989586621679221020"><span class="hs-identifier hs-var">recalculateCommit</span></a></span><span> </span><span class="annot"><span class="annottext">(Data -&gt; CRSignal hashAlgo Data)
+-&gt; [Data] -&gt; [CRSignal hashAlgo Data]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; [Data]
+forall a. Arbitrary a =&gt; a -&gt; [a]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#shrink"><span class="hs-identifier hs-var">shrink</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679221019"><span class="hs-identifier hs-var">someData</span></a></span><span>
+</span><span id="line-207"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-208"></span><span>      </span><span id="local-6989586621679221020"><span class="annot"><span class="annottext">recalculateCommit :: Data -&gt; CRSignal hashAlgo Data
+</span><a href="#local-6989586621679221020"><span class="hs-identifier hs-var hs-var">recalculateCommit</span></a></span></span><span> </span><span id="local-6989586621679221029"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679221029"><span class="hs-identifier hs-var">shrunkData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-209"></span><span>        </span><span class="annot"><span class="annottext">Hash hashAlgo Data -&gt; Data -&gt; CRSignal hashAlgo Data
+forall hashAlgo commitData.
+Hash hashAlgo Data -&gt; commitData -&gt; CRSignal hashAlgo commitData
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Commit"><span class="hs-identifier hs-var">Commit</span></a></span><span>
+</span><span id="line-210"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; Data -&gt; Hash hashAlgo Data
+forall h a.
+(HashAlgorithm h, EncCBOR a) =&gt;
+Version -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#hashEncCBOR"><span class="hs-identifier hs-var">hashEncCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">minBound</span></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679221029"><span class="hs-identifier hs-var">shrunkData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-211"></span><span>          </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679221029"><span class="hs-identifier hs-var">shrunkData</span></a></span><span>
+</span><span id="line-212"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.Generator.QuickCheck.html#shrinkSignal"><span class="hs-identifier hs-var">shrinkSignal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Reveal"><span class="hs-identifier hs-type">Reveal</span></a></span><span> </span><span id="local-6989586621679221030"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679221030"><span class="hs-identifier hs-var">someData</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Data -&gt; CRSignal hashAlgo Data
+forall hashAlgo commitData. Data -&gt; CRSignal hashAlgo commitData
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Reveal"><span class="hs-identifier hs-var">Reveal</span></a></span><span> </span><span class="annot"><span class="annottext">(Data -&gt; CRSignal hashAlgo Data)
+-&gt; [Data] -&gt; [CRSignal hashAlgo Data]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; [Data]
+forall a. Arbitrary a =&gt; a -&gt; [a]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#shrink"><span class="hs-identifier hs-var">shrink</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679221030"><span class="hs-identifier hs-var">someData</span></a></span><span>
+</span><span id="line-213"></span><span>
+</span><span id="line-214"></span><span class="hs-comment">-- | Check that unique data is generated. This is supposed to fail, since</span><span>
+</span><span id="line-215"></span><span class="hs-comment">-- there's nothing in the STS that prevents two commits of the same data. The</span><span>
+</span><span id="line-216"></span><span class="hs-comment">-- resulting minimal counterexample should be a trace of the form:</span><span>
+</span><span id="line-217"></span><span class="hs-comment">--</span><span>
+</span><span id="line-218"></span><span class="hs-comment">-- &gt; commit (hash d0) -&gt; reveal d0 -&gt; commit (hash d0)</span><span>
+</span><span id="line-219"></span><span class="hs-comment">--</span><span>
+</span><span id="line-220"></span><span class="hs-comment">-- where it shouldn't be possible to shrink @d0@ any further.</span><span>
+</span><span id="line-221"></span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#prop_qc_UniqueData"><span class="hs-identifier hs-type">prop_qc_UniqueData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-222"></span><span id="prop_qc_UniqueData"><span class="annot"><span class="annottext">prop_qc_UniqueData :: Property
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#prop_qc_UniqueData"><span class="hs-identifier hs-var hs-var">prop_qc_UniqueData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-223"></span><span>  </span><span class="annot"><span class="annottext">forall sts traceGenEnv prop.
+(HasTrace sts traceGenEnv, Testable prop,
+ Show (Environment sts)) =&gt;
+BaseEnv sts
+-&gt; Word64 -&gt; traceGenEnv -&gt; (Trace sts -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.Generator.QuickCheck.html#forAllTrace"><span class="hs-identifier hs-var">STS.Gen.forAllTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CR"><span class="hs-identifier hs-type">CR</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Short.html#ShortHash"><span class="hs-identifier hs-type">ShortHash</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-224"></span><span>    </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-225"></span><span>    </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">100</span></span><span>
+</span><span id="line-226"></span><span>    </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-227"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[CRSignal ShortHash Data] -&gt; Bool
+</span><a href="#local-6989586621679221033"><span class="hs-identifier hs-var">noDuplicatedData</span></a></span><span> </span><span class="annot"><span class="annottext">([CRSignal ShortHash Data] -&gt; Bool)
+-&gt; (Trace (CR ShortHash Map Data) -&gt; [CRSignal ShortHash Data])
+-&gt; Trace (CR ShortHash Map Data)
+-&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">TraceOrder
+-&gt; Trace (CR ShortHash Map Data)
+-&gt; [Signal (CR ShortHash Map Data)]
+forall s. TraceOrder -&gt; Trace s -&gt; [Signal s]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#traceSignals"><span class="hs-identifier hs-var">Trace.traceSignals</span></a></span><span> </span><span class="annot"><span class="annottext">TraceOrder
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#OldestFirst"><span class="hs-identifier hs-var">Trace.OldestFirst</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-229"></span><span>    </span><span class="annot"><a href="#local-6989586621679221033"><span class="hs-identifier hs-type">noDuplicatedData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CRSignal"><span class="hs-identifier hs-type">CRSignal</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Short.html#ShortHash"><span class="hs-identifier hs-type">ShortHash</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-230"></span><span>    </span><span id="local-6989586621679221033"><span class="annot"><span class="annottext">noDuplicatedData :: [CRSignal ShortHash Data] -&gt; Bool
+</span><a href="#local-6989586621679221033"><span class="hs-identifier hs-var hs-var">noDuplicatedData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[CRSignal ShortHash Data] -&gt; Bool
+forall a. Ord a =&gt; [a] -&gt; Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/Unique-0.4.8.0-0f9566ea13af541ccc1007d1b2398fdf37f8d95035e06e4af930763cbb819ca8/share/doc/html/src/Data.List.Unique.html#allUnique"><span class="hs-identifier hs-var">allUnique</span></a></span><span> </span><span class="annot"><span class="annottext">([CRSignal ShortHash Data] -&gt; Bool)
+-&gt; ([CRSignal ShortHash Data] -&gt; [CRSignal ShortHash Data])
+-&gt; [CRSignal ShortHash Data]
+-&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(CRSignal ShortHash Data -&gt; Bool)
+-&gt; [CRSignal ShortHash Data] -&gt; [CRSignal ShortHash Data]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">filter</span></span><span> </span><span class="annot"><span class="annottext">CRSignal ShortHash Data -&gt; Bool
+forall hashAlgo commitData. CRSignal hashAlgo commitData -&gt; Bool
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#isCommit"><span class="hs-identifier hs-var">isCommit</span></a></span><span>
+</span><span id="line-231"></span><span>
+</span><span id="line-232"></span><span class="hs-comment">-- | Check that only valid signals are generated.</span><span>
+</span><span id="line-233"></span><span class="hs-comment">--</span><span>
+</span><span id="line-234"></span><span class="hs-comment">-- This property should fail since the generators don't check that the generated</span><span>
+</span><span id="line-235"></span><span class="hs-comment">-- commits are unique. The resulting minimal counterexample should be a trace of</span><span>
+</span><span id="line-236"></span><span class="hs-comment">-- the form:</span><span>
+</span><span id="line-237"></span><span class="hs-comment">--</span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- &gt; commit (hash d0) -&gt; commit (hash d0)</span><span>
+</span><span id="line-239"></span><span class="hs-comment">--</span><span>
+</span><span id="line-240"></span><span class="hs-comment">-- where it shouldn't be possible to shrink @d0@ any further.</span><span>
+</span><span id="line-241"></span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#prop_qc_OnlyValidSignals"><span class="hs-identifier hs-type">prop_qc_OnlyValidSignals</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-242"></span><span id="prop_qc_OnlyValidSignals"><span class="annot"><span class="annottext">prop_qc_OnlyValidSignals :: Property
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#prop_qc_OnlyValidSignals"><span class="hs-identifier hs-var hs-var">prop_qc_OnlyValidSignals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-243"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; Property -&gt; Property
+forall prop. Testable prop =&gt; Int -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#withMaxSuccess"><span class="hs-identifier hs-var">withMaxSuccess</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5000</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Property) -&gt; Property -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-comment">-- We need to test a large</span><span>
+</span><span id="line-244"></span><span>  </span><span class="hs-comment">-- number of times to make sure</span><span>
+</span><span id="line-245"></span><span>  </span><span class="hs-comment">-- we get a collision in the</span><span>
+</span><span id="line-246"></span><span>  </span><span class="hs-comment">-- generated data</span><span>
+</span><span id="line-247"></span><span>    </span><span class="annot"><span class="annottext">forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, Show (Environment sts),
+ Show (Signal sts)) =&gt;
+BaseEnv sts -&gt; Word64 -&gt; traceGenEnv -&gt; Property
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.Generator.QuickCheck.html#onlyValidSignalsAreGenerated"><span class="hs-identifier hs-var">STS.Gen.onlyValidSignalsAreGenerated</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#CR"><span class="hs-identifier hs-type">CR</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Short.html#ShortHash"><span class="hs-identifier hs-type">ShortHash</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">150</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-248"></span></pre></body></html>

@@ -1,0 +1,2141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedLists #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Babbage.Arbitrary</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.html"><span class="hs-identifier">Cardano.Ledger.Babbage</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Core.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Core</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.PParams.html"><span class="hs-identifier">Cardano.Ledger.Babbage.PParams</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Rules.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Rules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Rules.Utxo.html#BabbageUtxoPredFailure"><span class="hs-identifier">BabbageUtxoPredFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Rules.Utxow.html#BabbageUtxowPredFailure"><span class="hs-identifier">BabbageUtxowPredFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Transition.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Transition</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier">TransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.TxBody.html"><span class="hs-identifier">Cardano.Ledger.Babbage.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.TxOut.html#BabbageTxOut"><span class="hs-identifier">BabbageTxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.TxInfo.html"><span class="hs-identifier">Cardano.Ledger.Babbage.TxInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.TxInfo.html#BabbageContextError"><span class="hs-identifier">BabbageContextError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier">StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.html"><span class="hs-identifier">Cardano.Ledger.Plutus</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier">STS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier">PredicateFailure</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Identity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Identity</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.html"><span class="hs-identifier">Generic.Random</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.Internal.Generic.html#genericArbitraryU"><span class="hs-identifier">genericArbitraryU</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/l/testlib/doc/html/cardano-ledger-alonzo/src/Test.Cardano.Ledger.Alonzo.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Core.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Arbitrary.html#genValidCostModels"><span class="hs-identifier">genValidCostModels</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.html"><span class="hs-identifier">Test.QuickCheck</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span id="local-6989586621679679499"><span id="local-6989586621679679504"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.PParams.html#CoinPerByte"><span class="hs-identifier hs-type">CoinPerByte</span></a></span></span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679679280"><span id="local-6989586621679679511"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.PParams.html#BabbagePParams"><span class="hs-identifier hs-type">BabbagePParams</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="annot"><a href="#local-6989586621679679280"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679679573"><span class="annot"><span class="annottext">arbitrary :: Gen (BabbagePParams Identity era)
+</span><a href="#local-6989586621679679573"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="annottext">HKD Identity Coin
+-&gt; HKD Identity Coin
+-&gt; HKD Identity Word32
+-&gt; HKD Identity Word32
+-&gt; HKD Identity Word16
+-&gt; HKD Identity Coin
+-&gt; HKD Identity (CompactForm Coin)
+-&gt; HKD Identity EpochInterval
+-&gt; HKD Identity Word16
+-&gt; HKD Identity NonNegativeInterval
+-&gt; HKD Identity UnitInterval
+-&gt; HKD Identity UnitInterval
+-&gt; HKD Identity ProtVer
+-&gt; HKD Identity Coin
+-&gt; HKD Identity CoinPerByte
+-&gt; HKD Identity CostModels
+-&gt; HKD Identity Prices
+-&gt; HKD Identity OrdExUnits
+-&gt; HKD Identity OrdExUnits
+-&gt; HKD Identity Natural
+-&gt; HKD Identity Natural
+-&gt; HKD Identity Natural
+-&gt; BabbagePParams Identity era
+Coin
+-&gt; Coin
+-&gt; Word32
+-&gt; Word32
+-&gt; Word16
+-&gt; Coin
+-&gt; CompactForm Coin
+-&gt; EpochInterval
+-&gt; Word16
+-&gt; NonNegativeInterval
+-&gt; UnitInterval
+-&gt; UnitInterval
+-&gt; ProtVer
+-&gt; Coin
+-&gt; CoinPerByte
+-&gt; CostModels
+-&gt; Prices
+-&gt; OrdExUnits
+-&gt; OrdExUnits
+-&gt; Natural
+-&gt; Natural
+-&gt; Natural
+-&gt; BabbagePParams Identity era
+forall (f :: * -&gt; *) era.
+HKD f Coin
+-&gt; HKD f Coin
+-&gt; HKD f Word32
+-&gt; HKD f Word32
+-&gt; HKD f Word16
+-&gt; HKD f Coin
+-&gt; HKD f (CompactForm Coin)
+-&gt; HKD f EpochInterval
+-&gt; HKD f Word16
+-&gt; HKD f NonNegativeInterval
+-&gt; HKD f UnitInterval
+-&gt; HKD f UnitInterval
+-&gt; HKD f ProtVer
+-&gt; HKD f Coin
+-&gt; HKD f CoinPerByte
+-&gt; HKD f CostModels
+-&gt; HKD f Prices
+-&gt; HKD f OrdExUnits
+-&gt; HKD f OrdExUnits
+-&gt; HKD f Natural
+-&gt; HKD f Natural
+-&gt; HKD f Natural
+-&gt; BabbagePParams f era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.PParams.html#BabbagePParams"><span class="hs-identifier hs-var">BabbagePParams</span></a></span><span>
+</span><span id="line-35"></span><span>      </span><span class="annot"><span class="annottext">(Coin
+ -&gt; Coin
+ -&gt; Word32
+ -&gt; Word32
+ -&gt; Word16
+ -&gt; Coin
+ -&gt; CompactForm Coin
+ -&gt; EpochInterval
+ -&gt; Word16
+ -&gt; NonNegativeInterval
+ -&gt; UnitInterval
+ -&gt; UnitInterval
+ -&gt; ProtVer
+ -&gt; Coin
+ -&gt; CoinPerByte
+ -&gt; CostModels
+ -&gt; Prices
+ -&gt; OrdExUnits
+ -&gt; OrdExUnits
+ -&gt; Natural
+ -&gt; Natural
+ -&gt; Natural
+ -&gt; BabbagePParams Identity era)
+-&gt; Gen Coin
+-&gt; Gen
+     (Coin
+      -&gt; Word32
+      -&gt; Word32
+      -&gt; Word16
+      -&gt; Coin
+      -&gt; CompactForm Coin
+      -&gt; EpochInterval
+      -&gt; Word16
+      -&gt; NonNegativeInterval
+      -&gt; UnitInterval
+      -&gt; UnitInterval
+      -&gt; ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Coin
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-36"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Coin
+   -&gt; Word32
+   -&gt; Word32
+   -&gt; Word16
+   -&gt; Coin
+   -&gt; CompactForm Coin
+   -&gt; EpochInterval
+   -&gt; Word16
+   -&gt; NonNegativeInterval
+   -&gt; UnitInterval
+   -&gt; UnitInterval
+   -&gt; ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen Coin
+-&gt; Gen
+     (Word32
+      -&gt; Word32
+      -&gt; Word16
+      -&gt; Coin
+      -&gt; CompactForm Coin
+      -&gt; EpochInterval
+      -&gt; Word16
+      -&gt; NonNegativeInterval
+      -&gt; UnitInterval
+      -&gt; UnitInterval
+      -&gt; ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Coin
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-37"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Word32
+   -&gt; Word32
+   -&gt; Word16
+   -&gt; Coin
+   -&gt; CompactForm Coin
+   -&gt; EpochInterval
+   -&gt; Word16
+   -&gt; NonNegativeInterval
+   -&gt; UnitInterval
+   -&gt; UnitInterval
+   -&gt; ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen Word32
+-&gt; Gen
+     (Word32
+      -&gt; Word16
+      -&gt; Coin
+      -&gt; CompactForm Coin
+      -&gt; EpochInterval
+      -&gt; Word16
+      -&gt; NonNegativeInterval
+      -&gt; UnitInterval
+      -&gt; UnitInterval
+      -&gt; ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Word32
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Word32
+   -&gt; Word16
+   -&gt; Coin
+   -&gt; CompactForm Coin
+   -&gt; EpochInterval
+   -&gt; Word16
+   -&gt; NonNegativeInterval
+   -&gt; UnitInterval
+   -&gt; UnitInterval
+   -&gt; ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen Word32
+-&gt; Gen
+     (Word16
+      -&gt; Coin
+      -&gt; CompactForm Coin
+      -&gt; EpochInterval
+      -&gt; Word16
+      -&gt; NonNegativeInterval
+      -&gt; UnitInterval
+      -&gt; UnitInterval
+      -&gt; ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Word32
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Word16
+   -&gt; Coin
+   -&gt; CompactForm Coin
+   -&gt; EpochInterval
+   -&gt; Word16
+   -&gt; NonNegativeInterval
+   -&gt; UnitInterval
+   -&gt; UnitInterval
+   -&gt; ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen Word16
+-&gt; Gen
+     (Coin
+      -&gt; CompactForm Coin
+      -&gt; EpochInterval
+      -&gt; Word16
+      -&gt; NonNegativeInterval
+      -&gt; UnitInterval
+      -&gt; UnitInterval
+      -&gt; ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Word16
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-40"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Coin
+   -&gt; CompactForm Coin
+   -&gt; EpochInterval
+   -&gt; Word16
+   -&gt; NonNegativeInterval
+   -&gt; UnitInterval
+   -&gt; UnitInterval
+   -&gt; ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen Coin
+-&gt; Gen
+     (CompactForm Coin
+      -&gt; EpochInterval
+      -&gt; Word16
+      -&gt; NonNegativeInterval
+      -&gt; UnitInterval
+      -&gt; UnitInterval
+      -&gt; ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Coin
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (CompactForm Coin
+   -&gt; EpochInterval
+   -&gt; Word16
+   -&gt; NonNegativeInterval
+   -&gt; UnitInterval
+   -&gt; UnitInterval
+   -&gt; ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen (CompactForm Coin)
+-&gt; Gen
+     (EpochInterval
+      -&gt; Word16
+      -&gt; NonNegativeInterval
+      -&gt; UnitInterval
+      -&gt; UnitInterval
+      -&gt; ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (CompactForm Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (EpochInterval
+   -&gt; Word16
+   -&gt; NonNegativeInterval
+   -&gt; UnitInterval
+   -&gt; UnitInterval
+   -&gt; ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen EpochInterval
+-&gt; Gen
+     (Word16
+      -&gt; NonNegativeInterval
+      -&gt; UnitInterval
+      -&gt; UnitInterval
+      -&gt; ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen EpochInterval
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Word16
+   -&gt; NonNegativeInterval
+   -&gt; UnitInterval
+   -&gt; UnitInterval
+   -&gt; ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen Word16
+-&gt; Gen
+     (NonNegativeInterval
+      -&gt; UnitInterval
+      -&gt; UnitInterval
+      -&gt; ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Word16
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-44"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (NonNegativeInterval
+   -&gt; UnitInterval
+   -&gt; UnitInterval
+   -&gt; ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen NonNegativeInterval
+-&gt; Gen
+     (UnitInterval
+      -&gt; UnitInterval
+      -&gt; ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen NonNegativeInterval
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-45"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (UnitInterval
+   -&gt; UnitInterval
+   -&gt; ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen UnitInterval
+-&gt; Gen
+     (UnitInterval
+      -&gt; ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen UnitInterval
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (UnitInterval
+   -&gt; ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen UnitInterval
+-&gt; Gen
+     (ProtVer
+      -&gt; Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen UnitInterval
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (ProtVer
+   -&gt; Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen ProtVer
+-&gt; Gen
+     (Coin
+      -&gt; CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen ProtVer
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-48"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Coin
+   -&gt; CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen Coin
+-&gt; Gen
+     (CoinPerByte
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Coin
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (CoinPerByte
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen CoinPerByte
+-&gt; Gen
+     (CostModels
+      -&gt; Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen CoinPerByte
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (CostModels
+   -&gt; Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen CostModels
+-&gt; Gen
+     (Prices
+      -&gt; OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set Language -&gt; Gen CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Arbitrary.html#genValidCostModels"><span class="hs-identifier hs-var">genValidCostModels</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Item (Set Language)
+Language
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#PlutusV1"><span class="hs-identifier hs-var">PlutusV1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Item (Set Language)
+Language
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#PlutusV2"><span class="hs-identifier hs-var">PlutusV2</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Prices
+   -&gt; OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen Prices
+-&gt; Gen
+     (OrdExUnits
+      -&gt; OrdExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Prices
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (OrdExUnits
+   -&gt; OrdExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; BabbagePParams Identity era)
+-&gt; Gen OrdExUnits
+-&gt; Gen
+     (OrdExUnits
+      -&gt; Natural -&gt; Natural -&gt; Natural -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen OrdExUnits
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (OrdExUnits
+   -&gt; Natural -&gt; Natural -&gt; Natural -&gt; BabbagePParams Identity era)
+-&gt; Gen OrdExUnits
+-&gt; Gen
+     (Natural -&gt; Natural -&gt; Natural -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen OrdExUnits
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-54"></span><span>      </span><span class="annot"><span class="annottext">Gen (Natural -&gt; Natural -&gt; Natural -&gt; BabbagePParams Identity era)
+-&gt; Gen Natural
+-&gt; Gen (Natural -&gt; Natural -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Natural
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-55"></span><span>      </span><span class="annot"><span class="annottext">Gen (Natural -&gt; Natural -&gt; BabbagePParams Identity era)
+-&gt; Gen Natural -&gt; Gen (Natural -&gt; BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Natural
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">Gen (Natural -&gt; BabbagePParams Identity era)
+-&gt; Gen Natural -&gt; Gen (BabbagePParams Identity era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Natural
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679679304"><span id="local-6989586621679679581"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.PParams.html#BabbagePParams"><span class="hs-identifier hs-type">BabbagePParams</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">StrictMaybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679304"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679679648"><span class="annot"><span class="annottext">arbitrary :: Gen (BabbagePParams StrictMaybe era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="annottext">StrictMaybe Coin
+-&gt; StrictMaybe Coin
+-&gt; StrictMaybe Word32
+-&gt; StrictMaybe Word32
+-&gt; StrictMaybe Word16
+-&gt; StrictMaybe Coin
+-&gt; StrictMaybe (CompactForm Coin)
+-&gt; StrictMaybe EpochInterval
+-&gt; StrictMaybe Word16
+-&gt; StrictMaybe NonNegativeInterval
+-&gt; StrictMaybe UnitInterval
+-&gt; StrictMaybe UnitInterval
+-&gt; StrictMaybe ProtVer
+-&gt; StrictMaybe Coin
+-&gt; StrictMaybe CoinPerByte
+-&gt; StrictMaybe CostModels
+-&gt; StrictMaybe Prices
+-&gt; StrictMaybe OrdExUnits
+-&gt; StrictMaybe OrdExUnits
+-&gt; StrictMaybe Natural
+-&gt; StrictMaybe Natural
+-&gt; StrictMaybe Natural
+-&gt; BabbagePParams StrictMaybe era
+HKD StrictMaybe Coin
+-&gt; HKD StrictMaybe Coin
+-&gt; HKD StrictMaybe Word32
+-&gt; HKD StrictMaybe Word32
+-&gt; HKD StrictMaybe Word16
+-&gt; HKD StrictMaybe Coin
+-&gt; HKD StrictMaybe (CompactForm Coin)
+-&gt; HKD StrictMaybe EpochInterval
+-&gt; HKD StrictMaybe Word16
+-&gt; HKD StrictMaybe NonNegativeInterval
+-&gt; HKD StrictMaybe UnitInterval
+-&gt; HKD StrictMaybe UnitInterval
+-&gt; HKD StrictMaybe ProtVer
+-&gt; HKD StrictMaybe Coin
+-&gt; HKD StrictMaybe CoinPerByte
+-&gt; HKD StrictMaybe CostModels
+-&gt; HKD StrictMaybe Prices
+-&gt; HKD StrictMaybe OrdExUnits
+-&gt; HKD StrictMaybe OrdExUnits
+-&gt; HKD StrictMaybe Natural
+-&gt; HKD StrictMaybe Natural
+-&gt; HKD StrictMaybe Natural
+-&gt; BabbagePParams StrictMaybe era
+forall (f :: * -&gt; *) era.
+HKD f Coin
+-&gt; HKD f Coin
+-&gt; HKD f Word32
+-&gt; HKD f Word32
+-&gt; HKD f Word16
+-&gt; HKD f Coin
+-&gt; HKD f (CompactForm Coin)
+-&gt; HKD f EpochInterval
+-&gt; HKD f Word16
+-&gt; HKD f NonNegativeInterval
+-&gt; HKD f UnitInterval
+-&gt; HKD f UnitInterval
+-&gt; HKD f ProtVer
+-&gt; HKD f Coin
+-&gt; HKD f CoinPerByte
+-&gt; HKD f CostModels
+-&gt; HKD f Prices
+-&gt; HKD f OrdExUnits
+-&gt; HKD f OrdExUnits
+-&gt; HKD f Natural
+-&gt; HKD f Natural
+-&gt; HKD f Natural
+-&gt; BabbagePParams f era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.PParams.html#BabbagePParams"><span class="hs-identifier hs-var">BabbagePParams</span></a></span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">(StrictMaybe Coin
+ -&gt; StrictMaybe Coin
+ -&gt; StrictMaybe Word32
+ -&gt; StrictMaybe Word32
+ -&gt; StrictMaybe Word16
+ -&gt; StrictMaybe Coin
+ -&gt; StrictMaybe (CompactForm Coin)
+ -&gt; StrictMaybe EpochInterval
+ -&gt; StrictMaybe Word16
+ -&gt; StrictMaybe NonNegativeInterval
+ -&gt; StrictMaybe UnitInterval
+ -&gt; StrictMaybe UnitInterval
+ -&gt; StrictMaybe ProtVer
+ -&gt; StrictMaybe Coin
+ -&gt; StrictMaybe CoinPerByte
+ -&gt; StrictMaybe CostModels
+ -&gt; StrictMaybe Prices
+ -&gt; StrictMaybe OrdExUnits
+ -&gt; StrictMaybe OrdExUnits
+ -&gt; StrictMaybe Natural
+ -&gt; StrictMaybe Natural
+ -&gt; StrictMaybe Natural
+ -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Coin)
+-&gt; Gen
+     (StrictMaybe Coin
+      -&gt; StrictMaybe Word32
+      -&gt; StrictMaybe Word32
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe (CompactForm Coin)
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-62"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Coin
+   -&gt; StrictMaybe Word32
+   -&gt; StrictMaybe Word32
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe (CompactForm Coin)
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Coin)
+-&gt; Gen
+     (StrictMaybe Word32
+      -&gt; StrictMaybe Word32
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe (CompactForm Coin)
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Word32
+   -&gt; StrictMaybe Word32
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe (CompactForm Coin)
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Word32)
+-&gt; Gen
+     (StrictMaybe Word32
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe (CompactForm Coin)
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Word32)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Word32
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe (CompactForm Coin)
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Word32)
+-&gt; Gen
+     (StrictMaybe Word16
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe (CompactForm Coin)
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Word32)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Word16
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe (CompactForm Coin)
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Word16)
+-&gt; Gen
+     (StrictMaybe Coin
+      -&gt; StrictMaybe (CompactForm Coin)
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Word16)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Coin
+   -&gt; StrictMaybe (CompactForm Coin)
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Coin)
+-&gt; Gen
+     (StrictMaybe (CompactForm Coin)
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe (CompactForm Coin)
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe (CompactForm Coin))
+-&gt; Gen
+     (StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe (CompactForm Coin))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-68"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe EpochInterval)
+-&gt; Gen
+     (StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe EpochInterval)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-69"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Word16)
+-&gt; Gen
+     (StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Word16)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe NonNegativeInterval)
+-&gt; Gen
+     (StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe NonNegativeInterval)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-71"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe UnitInterval)
+-&gt; Gen
+     (StrictMaybe UnitInterval
+      -&gt; StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe UnitInterval)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-72"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe UnitInterval
+   -&gt; StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe UnitInterval)
+-&gt; Gen
+     (StrictMaybe ProtVer
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe UnitInterval)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-73"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe ProtVer
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe ProtVer)
+-&gt; Gen
+     (StrictMaybe Coin
+      -&gt; StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe ProtVer)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Coin
+   -&gt; StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Coin)
+-&gt; Gen
+     (StrictMaybe CoinPerByte
+      -&gt; StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe CoinPerByte
+   -&gt; StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe CoinPerByte)
+-&gt; Gen
+     (StrictMaybe CostModels
+      -&gt; StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe CoinPerByte)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe CostModels
+   -&gt; StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe CostModels)
+-&gt; Gen
+     (StrictMaybe Prices
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">[Gen (StrictMaybe CostModels)] -&gt; Gen (StrictMaybe CostModels)
+forall a. HasCallStack =&gt; [Gen a] -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#oneof"><span class="hs-identifier hs-var">oneof</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">StrictMaybe CostModels -&gt; Gen (StrictMaybe CostModels)
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe CostModels
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; StrictMaybe CostModels
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">(CostModels -&gt; StrictMaybe CostModels)
+-&gt; Gen CostModels -&gt; Gen (StrictMaybe CostModels)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set Language -&gt; Gen CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Arbitrary.html#genValidCostModels"><span class="hs-identifier hs-var">genValidCostModels</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Item (Set Language)
+Language
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#PlutusV1"><span class="hs-identifier hs-var">PlutusV1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Item (Set Language)
+Language
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#PlutusV2"><span class="hs-identifier hs-var">PlutusV2</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Prices
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Prices)
+-&gt; Gen
+     (StrictMaybe OrdExUnits
+      -&gt; StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Prices)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe OrdExUnits
+   -&gt; StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe OrdExUnits)
+-&gt; Gen
+     (StrictMaybe OrdExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe OrdExUnits)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-79"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe OrdExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe OrdExUnits)
+-&gt; Gen
+     (StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe OrdExUnits)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-80"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Natural)
+-&gt; Gen
+     (StrictMaybe Natural
+      -&gt; StrictMaybe Natural -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Natural)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-81"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Natural
+   -&gt; StrictMaybe Natural -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Natural)
+-&gt; Gen (StrictMaybe Natural -&gt; BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Natural)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">Gen (StrictMaybe Natural -&gt; BabbagePParams StrictMaybe era)
+-&gt; Gen (StrictMaybe Natural)
+-&gt; Gen (BabbagePParams StrictMaybe era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Natural)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679679654"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.TxInfo.html#TxOutSource"><span class="hs-identifier hs-type">TxOutSource</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621679679707"><span class="annot"><span class="annottext">arbitrary :: Gen TxOutSource
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen TxOutSource
+forall a. (GArbitrary UnsizedOpts a, GUniformWeight a) =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.Internal.Generic.html#genericArbitraryU"><span class="hs-identifier hs-var">genericArbitraryU</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621679679381"><span id="local-6989586621679679712"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679381"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#PlutusPurpose"><span class="hs-identifier hs-type">PlutusPurpose</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AsIx"><span class="hs-identifier hs-type">AsIx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679381"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.TxInfo.html#BabbageContextError"><span class="hs-identifier hs-type">BabbageContextError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679381"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679679810"><span class="annot"><span class="annottext">arbitrary :: Gen (BabbageContextError era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen (BabbageContextError era)
+forall a. (GArbitrary UnsizedOpts a, GUniformWeight a) =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.Internal.Generic.html#genericArbitraryU"><span class="hs-identifier hs-var">genericArbitraryU</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679679396"><span id="local-6989586621679679817"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxOut"><span class="hs-identifier hs-type">EraTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679396"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679396"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679396"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#EraRule"><span class="hs-identifier hs-type">EraRule</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;UTXOS&quot;</span></span><span> </span><span class="annot"><a href="#local-6989586621679679396"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Rules.Utxo.html#BabbageUtxoPredFailure"><span class="hs-identifier hs-type">BabbageUtxoPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679396"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>  </span><span id="local-6989586621679679902"><span class="annot"><span class="annottext">arbitrary :: Gen (BabbageUtxoPredFailure era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen (BabbageUtxoPredFailure era)
+forall a. (GArbitrary UnsizedOpts a, GUniformWeight a) =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.Internal.Generic.html#genericArbitraryU"><span class="hs-identifier hs-var">genericArbitraryU</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-106"></span><span>  </span><span id="local-6989586621679679416"><span id="local-6989586621679679910"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679416"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#EraRule"><span class="hs-identifier hs-type">EraRule</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;UTXO&quot;</span></span><span> </span><span class="annot"><a href="#local-6989586621679679416"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#TxCert"><span class="hs-identifier hs-type">TxCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679416"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#PlutusPurpose"><span class="hs-identifier hs-type">PlutusPurpose</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AsItem"><span class="hs-identifier hs-type">AsItem</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679416"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#PlutusPurpose"><span class="hs-identifier hs-type">PlutusPurpose</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AsIx"><span class="hs-identifier hs-type">AsIx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679416"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Rules.Utxow.html#BabbageUtxowPredFailure"><span class="hs-identifier hs-type">BabbageUtxowPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679416"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-114"></span><span>  </span><span id="local-6989586621679680012"><span class="annot"><span class="annottext">arbitrary :: Gen (BabbageUtxowPredFailure era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen (BabbageUtxowPredFailure era)
+forall a. (GArbitrary UnsizedOpts a, GUniformWeight a) =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.Internal.Generic.html#genericArbitraryU"><span class="hs-identifier hs-var">genericArbitraryU</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-117"></span><span>  </span><span id="local-6989586621679679439"><span id="local-6989586621679680018"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxOut"><span class="hs-identifier hs-type">EraTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679439"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679439"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679439"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-121"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.TxOut.html#BabbageTxOut"><span class="hs-identifier hs-type">BabbageTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679679439"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-123"></span><span>  </span><span id="local-6989586621679680045"><span class="annot"><span class="annottext">arbitrary :: Gen (BabbageTxOut era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><span class="annottext">Addr
+-&gt; Value era
+-&gt; Datum era
+-&gt; StrictMaybe (Script era)
+-&gt; BabbageTxOut era
+forall era.
+(Era era, Val (Value era), HasCallStack) =&gt;
+Addr
+-&gt; Value era
+-&gt; Datum era
+-&gt; StrictMaybe (Script era)
+-&gt; BabbageTxOut era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.TxOut.html#BabbageTxOut"><span class="hs-identifier hs-var">BabbageTxOut</span></a></span><span>
+</span><span id="line-125"></span><span>      </span><span class="annot"><span class="annottext">(Addr
+ -&gt; Value era
+ -&gt; Datum era
+ -&gt; StrictMaybe (Script era)
+ -&gt; BabbageTxOut era)
+-&gt; Gen Addr
+-&gt; Gen
+     (Value era
+      -&gt; Datum era -&gt; StrictMaybe (Script era) -&gt; BabbageTxOut era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Addr
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-126"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Value era
+   -&gt; Datum era -&gt; StrictMaybe (Script era) -&gt; BabbageTxOut era)
+-&gt; Gen (Value era)
+-&gt; Gen (Datum era -&gt; StrictMaybe (Script era) -&gt; BabbageTxOut era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; Gen (Value era) -&gt; Gen (Value era)
+forall a. (Int -&gt; Int) -&gt; Gen a -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#scale"><span class="hs-identifier hs-var">scale</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">15</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Gen (Value era)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-127"></span><span>      </span><span class="annot"><span class="annottext">Gen (Datum era -&gt; StrictMaybe (Script era) -&gt; BabbageTxOut era)
+-&gt; Gen (Datum era)
+-&gt; Gen (StrictMaybe (Script era) -&gt; BabbageTxOut era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Datum era)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-128"></span><span>      </span><span class="annot"><span class="annottext">Gen (StrictMaybe (Script era) -&gt; BabbageTxOut era)
+-&gt; Gen (StrictMaybe (Script era)) -&gt; Gen (BabbageTxOut era)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe (Script era))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679680051"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621679680145"><span class="annot"><span class="annottext">arbitrary :: Gen (TxBody BabbageEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-132"></span><span>    </span><span class="annot"><span class="annottext">Set TxIn
+-&gt; Set TxIn
+-&gt; Set TxIn
+-&gt; StrictSeq (Sized (TxOut BabbageEra))
+-&gt; StrictMaybe (Sized (TxOut BabbageEra))
+-&gt; StrictMaybe Coin
+-&gt; StrictSeq (TxCert BabbageEra)
+-&gt; Withdrawals
+-&gt; Coin
+-&gt; ValidityInterval
+-&gt; StrictMaybe (Update BabbageEra)
+-&gt; Set (KeyHash 'Witness)
+-&gt; MultiAsset
+-&gt; StrictMaybe ScriptIntegrityHash
+-&gt; StrictMaybe TxAuxDataHash
+-&gt; StrictMaybe Network
+-&gt; TxBody BabbageEra
+Set TxIn
+-&gt; Set TxIn
+-&gt; Set TxIn
+-&gt; StrictSeq (Sized (BabbageTxOut BabbageEra))
+-&gt; StrictMaybe (Sized (BabbageTxOut BabbageEra))
+-&gt; StrictMaybe Coin
+-&gt; StrictSeq (ShelleyTxCert BabbageEra)
+-&gt; Withdrawals
+-&gt; Coin
+-&gt; ValidityInterval
+-&gt; StrictMaybe (Update BabbageEra)
+-&gt; Set (KeyHash 'Witness)
+-&gt; MultiAsset
+-&gt; StrictMaybe ScriptIntegrityHash
+-&gt; StrictMaybe TxAuxDataHash
+-&gt; StrictMaybe Network
+-&gt; TxBody BabbageEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.TxBody.html#BabbageTxBody"><span class="hs-identifier hs-var">BabbageTxBody</span></a></span><span>
+</span><span id="line-133"></span><span>      </span><span class="annot"><span class="annottext">(Set TxIn
+ -&gt; Set TxIn
+ -&gt; Set TxIn
+ -&gt; StrictSeq (Sized (BabbageTxOut BabbageEra))
+ -&gt; StrictMaybe (Sized (BabbageTxOut BabbageEra))
+ -&gt; StrictMaybe Coin
+ -&gt; StrictSeq (ShelleyTxCert BabbageEra)
+ -&gt; Withdrawals
+ -&gt; Coin
+ -&gt; ValidityInterval
+ -&gt; StrictMaybe (Update BabbageEra)
+ -&gt; Set (KeyHash 'Witness)
+ -&gt; MultiAsset
+ -&gt; StrictMaybe ScriptIntegrityHash
+ -&gt; StrictMaybe TxAuxDataHash
+ -&gt; StrictMaybe Network
+ -&gt; TxBody BabbageEra)
+-&gt; Gen (Set TxIn)
+-&gt; Gen
+     (Set TxIn
+      -&gt; Set TxIn
+      -&gt; StrictSeq (Sized (BabbageTxOut BabbageEra))
+      -&gt; StrictMaybe (Sized (BabbageTxOut BabbageEra))
+      -&gt; StrictMaybe Coin
+      -&gt; StrictSeq (ShelleyTxCert BabbageEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; StrictMaybe (Update BabbageEra)
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Set TxIn)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-134"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Set TxIn
+   -&gt; Set TxIn
+   -&gt; StrictSeq (Sized (BabbageTxOut BabbageEra))
+   -&gt; StrictMaybe (Sized (BabbageTxOut BabbageEra))
+   -&gt; StrictMaybe Coin
+   -&gt; StrictSeq (ShelleyTxCert BabbageEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; StrictMaybe (Update BabbageEra)
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen (Set TxIn)
+-&gt; Gen
+     (Set TxIn
+      -&gt; StrictSeq (Sized (BabbageTxOut BabbageEra))
+      -&gt; StrictMaybe (Sized (BabbageTxOut BabbageEra))
+      -&gt; StrictMaybe Coin
+      -&gt; StrictSeq (ShelleyTxCert BabbageEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; StrictMaybe (Update BabbageEra)
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Set TxIn)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-135"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Set TxIn
+   -&gt; StrictSeq (Sized (BabbageTxOut BabbageEra))
+   -&gt; StrictMaybe (Sized (BabbageTxOut BabbageEra))
+   -&gt; StrictMaybe Coin
+   -&gt; StrictSeq (ShelleyTxCert BabbageEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; StrictMaybe (Update BabbageEra)
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen (Set TxIn)
+-&gt; Gen
+     (StrictSeq (Sized (BabbageTxOut BabbageEra))
+      -&gt; StrictMaybe (Sized (BabbageTxOut BabbageEra))
+      -&gt; StrictMaybe Coin
+      -&gt; StrictSeq (ShelleyTxCert BabbageEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; StrictMaybe (Update BabbageEra)
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Set TxIn)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-136"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictSeq (Sized (BabbageTxOut BabbageEra))
+   -&gt; StrictMaybe (Sized (BabbageTxOut BabbageEra))
+   -&gt; StrictMaybe Coin
+   -&gt; StrictSeq (ShelleyTxCert BabbageEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; StrictMaybe (Update BabbageEra)
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen (StrictSeq (Sized (BabbageTxOut BabbageEra)))
+-&gt; Gen
+     (StrictMaybe (Sized (BabbageTxOut BabbageEra))
+      -&gt; StrictMaybe Coin
+      -&gt; StrictSeq (ShelleyTxCert BabbageEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; StrictMaybe (Update BabbageEra)
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictSeq (Sized (BabbageTxOut BabbageEra)))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-137"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe (Sized (BabbageTxOut BabbageEra))
+   -&gt; StrictMaybe Coin
+   -&gt; StrictSeq (ShelleyTxCert BabbageEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; StrictMaybe (Update BabbageEra)
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen (StrictMaybe (Sized (BabbageTxOut BabbageEra)))
+-&gt; Gen
+     (StrictMaybe Coin
+      -&gt; StrictSeq (ShelleyTxCert BabbageEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; StrictMaybe (Update BabbageEra)
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe (Sized (BabbageTxOut BabbageEra)))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-138"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Coin
+   -&gt; StrictSeq (ShelleyTxCert BabbageEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; StrictMaybe (Update BabbageEra)
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen (StrictMaybe Coin)
+-&gt; Gen
+     (StrictSeq (ShelleyTxCert BabbageEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; StrictMaybe (Update BabbageEra)
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-139"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictSeq (ShelleyTxCert BabbageEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; StrictMaybe (Update BabbageEra)
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen (StrictSeq (ShelleyTxCert BabbageEra))
+-&gt; Gen
+     (Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; StrictMaybe (Update BabbageEra)
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictSeq (ShelleyTxCert BabbageEra))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-140"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; StrictMaybe (Update BabbageEra)
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen Withdrawals
+-&gt; Gen
+     (Coin
+      -&gt; ValidityInterval
+      -&gt; StrictMaybe (Update BabbageEra)
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Withdrawals
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-141"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Coin
+   -&gt; ValidityInterval
+   -&gt; StrictMaybe (Update BabbageEra)
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen Coin
+-&gt; Gen
+     (ValidityInterval
+      -&gt; StrictMaybe (Update BabbageEra)
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Coin
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-142"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (ValidityInterval
+   -&gt; StrictMaybe (Update BabbageEra)
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen ValidityInterval
+-&gt; Gen
+     (StrictMaybe (Update BabbageEra)
+      -&gt; Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen ValidityInterval
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-143"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe (Update BabbageEra)
+   -&gt; Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen (StrictMaybe (Update BabbageEra))
+-&gt; Gen
+     (Set (KeyHash 'Witness)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int)
+-&gt; Gen (StrictMaybe (Update BabbageEra))
+-&gt; Gen (StrictMaybe (Update BabbageEra))
+forall a. (Int -&gt; Int) -&gt; Gen a -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#scale"><span class="hs-identifier hs-var">scale</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">15</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe (Update BabbageEra))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Set (KeyHash 'Witness)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen (Set (KeyHash 'Witness))
+-&gt; Gen
+     (MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Set (KeyHash 'Witness))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-145"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen MultiAsset
+-&gt; Gen
+     (StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; Gen MultiAsset -&gt; Gen MultiAsset
+forall a. (Int -&gt; Int) -&gt; Gen a -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#scale"><span class="hs-identifier hs-var">scale</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">15</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Gen MultiAsset
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; TxBody BabbageEra)
+-&gt; Gen (StrictMaybe ScriptIntegrityHash)
+-&gt; Gen
+     (StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe ScriptIntegrityHash)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-147"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network -&gt; TxBody BabbageEra)
+-&gt; Gen (StrictMaybe TxAuxDataHash)
+-&gt; Gen (StrictMaybe Network -&gt; TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe TxAuxDataHash)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><span class="annottext">Gen (StrictMaybe Network -&gt; TxBody BabbageEra)
+-&gt; Gen (StrictMaybe Network) -&gt; Gen (TxBody BabbageEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Network)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span id="local-6989586621679680148"><span id="local-6989586621679680153"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span id="local-6989586621679680158"><span id="local-6989586621679680166"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-153"></span></pre></body></html>

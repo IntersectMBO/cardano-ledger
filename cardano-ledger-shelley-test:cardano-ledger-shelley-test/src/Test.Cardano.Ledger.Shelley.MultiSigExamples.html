@@ -1,0 +1,961 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Shelley.MultiSigExamples</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#applyTxWithScript"><span class="hs-identifier">applyTxWithScript</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceOnly"><span class="hs-identifier">aliceOnly</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#bobOnly"><span class="hs-identifier">bobOnly</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBob"><span class="hs-identifier">aliceAndBob</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceOrBob"><span class="hs-identifier">aliceOrBob</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBobOrCarl"><span class="hs-identifier">aliceAndBobOrCarl</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBobOrCarlAndDaria"><span class="hs-identifier">aliceAndBobOrCarlAndDaria</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBobOrCarlOrDaria"><span class="hs-identifier">aliceAndBobOrCarlOrDaria</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.html"><span class="hs-identifier">Cardano.Crypto.Hash</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Hash</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html"><span class="hs-identifier">Cardano.Ledger.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier">Addr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier">Addr</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Network"><span class="hs-identifier">Network</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier">StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier">maybeToStrictMaybe</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkTxIxPartial"><span class="hs-identifier">mkTxIxPartial</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#KeyHashObj"><span class="hs-identifier">KeyHashObj</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#ScriptHashObj"><span class="hs-identifier">ScriptHashObj</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefBase"><span class="hs-identifier">StakeRefBase</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier">asWitness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.html"><span class="hs-identifier">Cardano.Ledger.Shelley</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Core.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Core</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#LedgerState"><span class="hs-identifier">LedgerState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#UTxOState"><span class="hs-identifier">UTxOState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.NewEpochState.html#genesisState"><span class="hs-identifier">genesisState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Rules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Era.html#ShelleyUTXOW"><span class="hs-identifier">ShelleyUTXOW</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#UtxoEnv"><span class="hs-identifier">UtxoEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#MultiSig"><span class="hs-identifier">MultiSig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#ShelleyEraScript"><span class="hs-identifier">ShelleyEraScript</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireAllOf"><span class="hs-identifier">RequireAllOf</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireAnyOf"><span class="hs-identifier">RequireAnyOf</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireMOf"><span class="hs-identifier">RequireMOf</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireSignature"><span class="hs-identifier">RequireSignature</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.html"><span class="hs-identifier">Cardano.Ledger.Shelley.State</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxAuxData.html"><span class="hs-identifier">Cardano.Ledger.Shelley.TxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxAuxData.html#ShelleyTxAuxData"><span class="hs-identifier">ShelleyTxAuxData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxBody.html"><span class="hs-identifier">Cardano.Ledger.Shelley.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier">TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxBody.html#ShelleyTxBody"><span class="hs-identifier">ShelleyTxBody</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxWits.html"><span class="hs-identifier">Cardano.Ledger.Shelley.TxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier">ShelleyTxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html"><span class="hs-identifier">Cardano.Ledger.Slot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier">SlotNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html"><span class="hs-identifier">Cardano.Ledger.TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier">TxId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier">TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html"><span class="hs-identifier">Cardano.Ledger.Val</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Val</span></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.html"><span class="hs-identifier">Data.Default</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#Default"><span class="hs-identifier">Default</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#def"><span class="hs-identifier">def</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fold</span></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.List.NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NonEmpty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">empty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">fromList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#StrictSeq"><span class="hs-identifier">StrictSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">StrictSeq</span></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html"><span class="hs-identifier">Test.Cardano.Ledger.Core.KeyPair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier">KeyPair</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#mkWitnessesVKey"><span class="hs-identifier">mkWitnessesVKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Examples.Cast</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Cast</span></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Generator.Core.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Generator.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Generator.Core.html#genesisCoins"><span class="hs-identifier">genesisCoins</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Generator.EraGen.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Generator.EraGen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Generator.EraGen.html#genesisId"><span class="hs-identifier">genesisId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Utils</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- Multi-Signature tests</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- This compile-time test asserts that the script hash and key hash use the</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- same hash size and indeed hash function. We do this by checking we can</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- type-check the following code that converts between them by using the hash</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- casting function which changes what the hash is of, without changing the</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- hashing algorithm.</span><span>
+</span><span id="line-81"></span><span class="hs-comment">--</span><span>
+</span><span id="line-82"></span><span id="local-6989586621679370390"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#_assertScriptHashSizeMatchesAddrHashSize"><span class="hs-identifier hs-type">_assertScriptHashSizeMatchesAddrHashSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370390"><span class="hs-identifier hs-type">r</span></a></span></span><span>
+</span><span id="line-83"></span><span id="_assertScriptHashSizeMatchesAddrHashSize"><span class="annot"><span class="annottext">_assertScriptHashSizeMatchesAddrHashSize :: forall (r :: KeyRole). ScriptHash -&gt; KeyHash r
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#_assertScriptHashSizeMatchesAddrHashSize"><span class="hs-identifier hs-var hs-var">_assertScriptHashSizeMatchesAddrHashSize</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span> </span><span id="local-6989586621679370757"><span class="annot"><span class="annottext">Hash ADDRHASH EraIndependentScript
+</span><a href="#local-6989586621679370757"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-var">KeyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hash ADDRHASH EraIndependentScript
+-&gt; Hash ADDRHASH (VerKeyDSIGN DSIGN)
+forall h a b. Hash h a -&gt; Hash h b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#castHash"><span class="hs-identifier hs-var">Hash.castHash</span></a></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH EraIndependentScript
+</span><a href="#local-6989586621679370757"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- Multi-signature scripts</span><span>
+</span><span id="line-86"></span><span id="local-6989586621679370402"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-type">singleKeyOnly</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#ShelleyEraScript"><span class="hs-identifier hs-type">ShelleyEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370402"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#NativeScript"><span class="hs-identifier hs-type">NativeScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370402"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-87"></span><span id="singleKeyOnly"><span class="annot"><span class="annottext">singleKeyOnly :: forall era. ShelleyEraScript era =&gt; Addr -&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-var hs-var">singleKeyOnly</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#KeyHashObj"><span class="hs-identifier hs-type">KeyHashObj</span></a></span><span> </span><span id="local-6989586621679370767"><span class="annot"><span class="annottext">KeyHash 'Payment
+</span><a href="#local-6989586621679370767"><span class="hs-identifier hs-var">pk</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StakeReference
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KeyHash 'Witness -&gt; NativeScript era
+forall era.
+ShelleyEraScript era =&gt;
+KeyHash 'Witness -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireSignature"><span class="hs-identifier hs-var">RequireSignature</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyHash 'Witness -&gt; NativeScript era)
+-&gt; KeyHash 'Witness -&gt; NativeScript era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">KeyHash 'Payment -&gt; KeyHash 'Witness
+forall (a :: KeyRole -&gt; *) (r :: KeyRole).
+HasKeyRole a =&gt;
+a r -&gt; a 'Witness
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier hs-var">asWitness</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'Payment
+</span><a href="#local-6989586621679370767"><span class="hs-identifier hs-var">pk</span></a></span><span>
+</span><span id="line-88"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-var">singleKeyOnly</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; NativeScript era
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;use VKey address&quot;</span></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span id="local-6989586621679370420"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceOnly"><span class="hs-identifier hs-type">aliceOnly</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#ShelleyEraScript"><span class="hs-identifier hs-type">ShelleyEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370420"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#NativeScript"><span class="hs-identifier hs-type">NativeScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370420"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-91"></span><span id="aliceOnly"><span class="annot"><span class="annottext">aliceOnly :: forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceOnly"><span class="hs-identifier hs-var hs-var">aliceOnly</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; NativeScript era
+forall era. ShelleyEraScript era =&gt; Addr -&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-var">singleKeyOnly</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#aliceAddr"><span class="hs-identifier hs-var">Cast.aliceAddr</span></a></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span id="local-6989586621679370772"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#bobOnly"><span class="hs-identifier hs-type">bobOnly</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#ShelleyEraScript"><span class="hs-identifier hs-type">ShelleyEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370772"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#NativeScript"><span class="hs-identifier hs-type">NativeScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370772"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-94"></span><span id="bobOnly"><span class="annot"><span class="annottext">bobOnly :: forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#bobOnly"><span class="hs-identifier hs-var hs-var">bobOnly</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; NativeScript era
+forall era. ShelleyEraScript era =&gt; Addr -&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-var">singleKeyOnly</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#bobAddr"><span class="hs-identifier hs-var">Cast.bobAddr</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span id="local-6989586621679370776"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceOrBob"><span class="hs-identifier hs-type">aliceOrBob</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#ShelleyEraScript"><span class="hs-identifier hs-type">ShelleyEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370776"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#NativeScript"><span class="hs-identifier hs-type">NativeScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370776"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-97"></span><span id="aliceOrBob"><span class="annot"><span class="annottext">aliceOrBob :: forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceOrBob"><span class="hs-identifier hs-var hs-var">aliceOrBob</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq (NativeScript era) -&gt; NativeScript era
+forall era.
+ShelleyEraScript era =&gt;
+StrictSeq (NativeScript era) -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireAnyOf"><span class="hs-identifier hs-var">RequireAnyOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[NativeScript era] -&gt; StrictSeq (NativeScript era)
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">StrictSeq.fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">NativeScript era
+forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceOnly"><span class="hs-identifier hs-var">aliceOnly</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; NativeScript era
+forall era. ShelleyEraScript era =&gt; Addr -&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-var">singleKeyOnly</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#bobAddr"><span class="hs-identifier hs-var">Cast.bobAddr</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span id="local-6989586621679370782"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBob"><span class="hs-identifier hs-type">aliceAndBob</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#ShelleyEraScript"><span class="hs-identifier hs-type">ShelleyEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370782"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#NativeScript"><span class="hs-identifier hs-type">NativeScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370782"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-100"></span><span id="aliceAndBob"><span class="annot"><span class="annottext">aliceAndBob :: forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBob"><span class="hs-identifier hs-var hs-var">aliceAndBob</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq (NativeScript era) -&gt; NativeScript era
+forall era.
+ShelleyEraScript era =&gt;
+StrictSeq (NativeScript era) -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireAllOf"><span class="hs-identifier hs-var">RequireAllOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[NativeScript era] -&gt; StrictSeq (NativeScript era)
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">StrictSeq.fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">NativeScript era
+forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceOnly"><span class="hs-identifier hs-var">aliceOnly</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; NativeScript era
+forall era. ShelleyEraScript era =&gt; Addr -&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-var">singleKeyOnly</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#bobAddr"><span class="hs-identifier hs-var">Cast.bobAddr</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span id="local-6989586621679370787"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBobOrCarl"><span class="hs-identifier hs-type">aliceAndBobOrCarl</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#ShelleyEraScript"><span class="hs-identifier hs-type">ShelleyEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370787"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#NativeScript"><span class="hs-identifier hs-type">NativeScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370787"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-103"></span><span id="aliceAndBobOrCarl"><span class="annot"><span class="annottext">aliceAndBobOrCarl :: forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBobOrCarl"><span class="hs-identifier hs-var hs-var">aliceAndBobOrCarl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; StrictSeq (NativeScript era) -&gt; NativeScript era
+forall era.
+ShelleyEraScript era =&gt;
+Int -&gt; StrictSeq (NativeScript era) -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireMOf"><span class="hs-identifier hs-var">RequireMOf</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[NativeScript era] -&gt; StrictSeq (NativeScript era)
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">StrictSeq.fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">NativeScript era
+forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBob"><span class="hs-identifier hs-var">aliceAndBob</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; NativeScript era
+forall era. ShelleyEraScript era =&gt; Addr -&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-var">singleKeyOnly</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#carlAddr"><span class="hs-identifier hs-var">Cast.carlAddr</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span id="local-6989586621679370793"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBobOrCarlAndDaria"><span class="hs-identifier hs-type">aliceAndBobOrCarlAndDaria</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#ShelleyEraScript"><span class="hs-identifier hs-type">ShelleyEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370793"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#NativeScript"><span class="hs-identifier hs-type">NativeScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370793"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-106"></span><span id="aliceAndBobOrCarlAndDaria"><span class="annot"><span class="annottext">aliceAndBobOrCarlAndDaria :: forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBobOrCarlAndDaria"><span class="hs-identifier hs-var hs-var">aliceAndBobOrCarlAndDaria</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-107"></span><span>  </span><span class="annot"><span class="annottext">StrictSeq (NativeScript era) -&gt; NativeScript era
+forall era.
+ShelleyEraScript era =&gt;
+StrictSeq (NativeScript era) -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireAnyOf"><span class="hs-identifier hs-var">RequireAnyOf</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (NativeScript era) -&gt; NativeScript era)
+-&gt; StrictSeq (NativeScript era) -&gt; NativeScript era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-108"></span><span>    </span><span class="annot"><span class="annottext">[NativeScript era] -&gt; StrictSeq (NativeScript era)
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">StrictSeq.fromList</span></a></span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">NativeScript era
+forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBob"><span class="hs-identifier hs-var">aliceAndBob</span></a></span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StrictSeq (NativeScript era) -&gt; NativeScript era
+forall era.
+ShelleyEraScript era =&gt;
+StrictSeq (NativeScript era) -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireAllOf"><span class="hs-identifier hs-var">RequireAllOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[NativeScript era] -&gt; StrictSeq (NativeScript era)
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">StrictSeq.fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Addr -&gt; NativeScript era
+forall era. ShelleyEraScript era =&gt; Addr -&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-var">singleKeyOnly</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#carlAddr"><span class="hs-identifier hs-var">Cast.carlAddr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; NativeScript era
+forall era. ShelleyEraScript era =&gt; Addr -&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-var">singleKeyOnly</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#dariaAddr"><span class="hs-identifier hs-var">Cast.dariaAddr</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span id="local-6989586621679370801"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBobOrCarlOrDaria"><span class="hs-identifier hs-type">aliceAndBobOrCarlOrDaria</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#ShelleyEraScript"><span class="hs-identifier hs-type">ShelleyEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370801"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#NativeScript"><span class="hs-identifier hs-type">NativeScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370801"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-116"></span><span id="aliceAndBobOrCarlOrDaria"><span class="annot"><span class="annottext">aliceAndBobOrCarlOrDaria :: forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBobOrCarlOrDaria"><span class="hs-identifier hs-var hs-var">aliceAndBobOrCarlOrDaria</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-117"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; StrictSeq (NativeScript era) -&gt; NativeScript era
+forall era.
+ShelleyEraScript era =&gt;
+Int -&gt; StrictSeq (NativeScript era) -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireMOf"><span class="hs-identifier hs-var">RequireMOf</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">(StrictSeq (NativeScript era) -&gt; NativeScript era)
+-&gt; StrictSeq (NativeScript era) -&gt; NativeScript era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[NativeScript era] -&gt; StrictSeq (NativeScript era)
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">StrictSeq.fromList</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">NativeScript era
+forall era. ShelleyEraScript era =&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceAndBob"><span class="hs-identifier hs-var">aliceAndBob</span></a></span><span>
+</span><span id="line-121"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StrictSeq (NativeScript era) -&gt; NativeScript era
+forall era.
+ShelleyEraScript era =&gt;
+StrictSeq (NativeScript era) -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireAnyOf"><span class="hs-identifier hs-var">RequireAnyOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[NativeScript era] -&gt; StrictSeq (NativeScript era)
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">StrictSeq.fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Addr -&gt; NativeScript era
+forall era. ShelleyEraScript era =&gt; Addr -&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-var">singleKeyOnly</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#carlAddr"><span class="hs-identifier hs-var">Cast.carlAddr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; NativeScript era
+forall era. ShelleyEraScript era =&gt; Addr -&gt; NativeScript era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#singleKeyOnly"><span class="hs-identifier hs-var">singleKeyOnly</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#dariaAddr"><span class="hs-identifier hs-var">Cast.dariaAddr</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#initTxBody"><span class="hs-identifier hs-type">initTxBody</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span>
+</span><span id="line-127"></span><span id="initTxBody"><span class="annot"><span class="annottext">initTxBody :: [(Addr, Value ShelleyEra)] -&gt; TxBody ShelleyEra
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#initTxBody"><span class="hs-identifier hs-var hs-var">initTxBody</span></a></span></span><span> </span><span id="local-6989586621679370809"><span class="annot"><span class="annottext">[(Addr, Value ShelleyEra)]
+</span><a href="#local-6989586621679370809"><span class="hs-identifier hs-var">addrs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><span class="annottext">Set TxIn
+-&gt; StrictSeq (TxOut ShelleyEra)
+-&gt; StrictSeq (TxCert ShelleyEra)
+-&gt; Withdrawals
+-&gt; Coin
+-&gt; SlotNo
+-&gt; StrictMaybe (Update ShelleyEra)
+-&gt; StrictMaybe TxAuxDataHash
+-&gt; TxBody ShelleyEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxBody.html#ShelleyTxBody"><span class="hs-identifier hs-var">ShelleyTxBody</span></a></span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[TxIn] -&gt; Set TxIn
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TxId -&gt; TxIx -&gt; TxIn
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Generator.EraGen.html#genesisId"><span class="hs-identifier hs-var">genesisId</span></a></span><span> </span><span class="annot"><span class="annottext">TxIx
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">minBound</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; TxIx -&gt; TxIn
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Generator.EraGen.html#genesisId"><span class="hs-identifier hs-var">genesisId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; TxIx
+Integer -&gt; TxIx
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkTxIxPartial"><span class="hs-identifier hs-var">mkTxIxPartial</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[TxOut ShelleyEra] -&gt; StrictSeq (TxOut ShelleyEra)
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">StrictSeq.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([TxOut ShelleyEra] -&gt; StrictSeq (TxOut ShelleyEra))
+-&gt; [TxOut ShelleyEra] -&gt; StrictSeq (TxOut ShelleyEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">((Addr, Value ShelleyEra) -&gt; ShelleyTxOut ShelleyEra)
+-&gt; [(Addr, Value ShelleyEra)] -&gt; [ShelleyTxOut ShelleyEra]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Addr -&gt; Value ShelleyEra -&gt; ShelleyTxOut ShelleyEra)
+-&gt; (Addr, Value ShelleyEra) -&gt; ShelleyTxOut ShelleyEra
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><span class="hs-identifier hs-var">uncurry</span></span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Value ShelleyEra -&gt; TxOut ShelleyEra
+Addr -&gt; Value ShelleyEra -&gt; ShelleyTxOut ShelleyEra
+forall era.
+(EraTxOut era, HasCallStack) =&gt;
+Addr -&gt; Value era -&gt; TxOut era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxOut"><span class="hs-identifier hs-var">mkBasicTxOut</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Addr, Value ShelleyEra)]
+</span><a href="#local-6989586621679370809"><span class="hs-identifier hs-var">addrs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><span class="annottext">StrictSeq (TxCert ShelleyEra)
+StrictSeq (ShelleyTxCert ShelleyEra)
+forall a. StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span>
+</span><span id="line-132"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map RewardAccount Coin -&gt; Withdrawals
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Withdrawals"><span class="hs-identifier hs-var">Withdrawals</span></a></span><span> </span><span class="annot"><span class="annottext">Map RewardAccount Coin
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-var">SlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><span class="annottext">StrictMaybe (Update ShelleyEra)
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><span class="annottext">StrictMaybe TxAuxDataHash
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#makeTxBody"><span class="hs-identifier hs-type">makeTxBody</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-141"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Withdrawals"><span class="hs-identifier hs-type">Withdrawals</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-142"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span>
+</span><span id="line-143"></span><span id="makeTxBody"><span class="annot"><span class="annottext">makeTxBody :: [TxIn]
+-&gt; [(Addr, Value ShelleyEra)] -&gt; Withdrawals -&gt; TxBody ShelleyEra
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#makeTxBody"><span class="hs-identifier hs-var hs-var">makeTxBody</span></a></span></span><span> </span><span id="local-6989586621679370820"><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621679370820"><span class="hs-identifier hs-var">inp</span></a></span></span><span> </span><span id="local-6989586621679370821"><span class="annot"><span class="annottext">[(Addr, Value ShelleyEra)]
+</span><a href="#local-6989586621679370821"><span class="hs-identifier hs-var">addrCs</span></a></span></span><span> </span><span id="local-6989586621679370822"><span class="annot"><span class="annottext">Withdrawals
+</span><a href="#local-6989586621679370822"><span class="hs-identifier hs-var">wdrl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-144"></span><span>  </span><span class="annot"><span class="annottext">Set TxIn
+-&gt; StrictSeq (TxOut ShelleyEra)
+-&gt; StrictSeq (TxCert ShelleyEra)
+-&gt; Withdrawals
+-&gt; Coin
+-&gt; SlotNo
+-&gt; StrictMaybe (Update ShelleyEra)
+-&gt; StrictMaybe TxAuxDataHash
+-&gt; TxBody ShelleyEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxBody.html#ShelleyTxBody"><span class="hs-identifier hs-var">ShelleyTxBody</span></a></span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[TxIn] -&gt; Set TxIn
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621679370820"><span class="hs-identifier hs-var">inp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ShelleyTxOut ShelleyEra] -&gt; StrictSeq (ShelleyTxOut ShelleyEra)
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">StrictSeq.fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">(Addr -&gt; Coin -&gt; ShelleyTxOut ShelleyEra)
+-&gt; (Addr, Coin) -&gt; ShelleyTxOut ShelleyEra
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><span class="hs-identifier hs-var">uncurry</span></span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Value ShelleyEra -&gt; TxOut ShelleyEra
+Addr -&gt; Coin -&gt; ShelleyTxOut ShelleyEra
+forall era.
+(EraTxOut era, HasCallStack) =&gt;
+Addr -&gt; Value era -&gt; TxOut era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxOut"><span class="hs-identifier hs-var">mkBasicTxOut</span></a></span><span> </span><span class="annot"><span class="annottext">(Addr, Coin)
+</span><a href="#local-6989586621679370823"><span class="hs-identifier hs-var">addrC</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679370823"><span class="annot"><span class="annottext">(Addr, Coin)
+</span><a href="#local-6989586621679370823"><span class="hs-identifier hs-var">addrC</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Addr, Value ShelleyEra)]
+[(Addr, Coin)]
+</span><a href="#local-6989586621679370821"><span class="hs-identifier hs-var">addrCs</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>    </span><span class="annot"><span class="annottext">StrictSeq (TxCert ShelleyEra)
+StrictSeq (ShelleyTxCert ShelleyEra)
+forall a. StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#Empty"><span class="hs-identifier hs-var">Empty</span></a></span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><span class="annottext">Withdrawals
+</span><a href="#local-6989586621679370822"><span class="hs-identifier hs-var">wdrl</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-var">SlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="annottext">StrictMaybe (Update ShelleyEra)
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-152"></span><span>    </span><span class="annot"><span class="annottext">StrictMaybe TxAuxDataHash
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#makeTx"><span class="hs-identifier hs-type">makeTx</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-155"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-157"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#MultiSig"><span class="hs-identifier hs-type">MultiSig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-158"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxAuxData.html#ShelleyTxAuxData"><span class="hs-identifier hs-type">ShelleyTxAuxData</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-159"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span>
+</span><span id="line-160"></span><span id="makeTx"><span class="annot"><span class="annottext">makeTx :: TxBody ShelleyEra
+-&gt; [KeyPair 'Witness]
+-&gt; Map ScriptHash (MultiSig ShelleyEra)
+-&gt; Maybe (ShelleyTxAuxData ShelleyEra)
+-&gt; Tx ShelleyEra
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#makeTx"><span class="hs-identifier hs-var hs-var">makeTx</span></a></span></span><span> </span><span id="local-6989586621679370825"><span class="annot"><span class="annottext">TxBody ShelleyEra
+</span><a href="#local-6989586621679370825"><span class="hs-identifier hs-var">txBody</span></a></span></span><span> </span><span id="local-6989586621679370826"><span class="annot"><span class="annottext">[KeyPair 'Witness]
+</span><a href="#local-6989586621679370826"><span class="hs-identifier hs-var">keyPairs</span></a></span></span><span> </span><span id="local-6989586621679370827"><span class="annot"><span class="annottext">Map ScriptHash (MultiSig ShelleyEra)
+</span><a href="#local-6989586621679370827"><span class="hs-identifier hs-var">msigs</span></a></span></span><span> </span><span id="local-6989586621679370828"><span class="annot"><span class="annottext">Maybe (ShelleyTxAuxData ShelleyEra)
+</span><a href="#local-6989586621679370828"><span class="hs-identifier hs-var">auxData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><span class="annottext">TxBody ShelleyEra -&gt; Tx ShelleyEra
+forall era. EraTx era =&gt; TxBody era -&gt; Tx era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTx"><span class="hs-identifier hs-var">mkBasicTx</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ShelleyEra
+</span><a href="#local-6989586621679370825"><span class="hs-identifier hs-var">txBody</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span class="annot"><span class="annottext">Tx ShelleyEra -&gt; (Tx ShelleyEra -&gt; Tx ShelleyEra) -&gt; Tx ShelleyEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(TxWits ShelleyEra -&gt; Identity (TxWits ShelleyEra))
+-&gt; Tx ShelleyEra -&gt; Identity (Tx ShelleyEra)
+(ShelleyTxWits ShelleyEra -&gt; Identity (ShelleyTxWits ShelleyEra))
+-&gt; Tx ShelleyEra -&gt; Identity (Tx ShelleyEra)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxWits era)
+Lens' (Tx ShelleyEra) (TxWits ShelleyEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-var">witsTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((ShelleyTxWits ShelleyEra -&gt; Identity (ShelleyTxWits ShelleyEra))
+ -&gt; Tx ShelleyEra -&gt; Identity (Tx ShelleyEra))
+-&gt; ShelleyTxWits ShelleyEra -&gt; Tx ShelleyEra -&gt; Tx ShelleyEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyTxWits ShelleyEra
+</span><a href="#local-6989586621679370833"><span class="hs-identifier hs-var">txWits</span></a></span><span>
+</span><span id="line-163"></span><span>    </span><span class="annot"><span class="annottext">Tx ShelleyEra -&gt; (Tx ShelleyEra -&gt; Tx ShelleyEra) -&gt; Tx ShelleyEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe (TxAuxData ShelleyEra)
+ -&gt; Identity (StrictMaybe (TxAuxData ShelleyEra)))
+-&gt; Tx ShelleyEra -&gt; Identity (Tx ShelleyEra)
+(StrictMaybe (ShelleyTxAuxData ShelleyEra)
+ -&gt; Identity (StrictMaybe (ShelleyTxAuxData ShelleyEra)))
+-&gt; Tx ShelleyEra -&gt; Identity (Tx ShelleyEra)
+forall era.
+EraTx era =&gt;
+Lens' (Tx era) (StrictMaybe (TxAuxData era))
+Lens' (Tx ShelleyEra) (StrictMaybe (TxAuxData ShelleyEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#auxDataTxL"><span class="hs-identifier hs-var">auxDataTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictMaybe (ShelleyTxAuxData ShelleyEra)
+  -&gt; Identity (StrictMaybe (ShelleyTxAuxData ShelleyEra)))
+ -&gt; Tx ShelleyEra -&gt; Identity (Tx ShelleyEra))
+-&gt; StrictMaybe (ShelleyTxAuxData ShelleyEra)
+-&gt; Tx ShelleyEra
+-&gt; Tx ShelleyEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (ShelleyTxAuxData ShelleyEra)
+-&gt; StrictMaybe (ShelleyTxAuxData ShelleyEra)
+forall a. Maybe a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier hs-var">maybeToStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (ShelleyTxAuxData ShelleyEra)
+</span><a href="#local-6989586621679370828"><span class="hs-identifier hs-var">auxData</span></a></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-165"></span><span>    </span><span class="annot"><a href="#local-6989586621679370833"><span class="hs-identifier hs-type">txWits</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span id="local-6989586621679370833"><span class="annot"><span class="annottext">txWits :: ShelleyTxWits ShelleyEra
+</span><a href="#local-6989586621679370833"><span class="hs-identifier hs-var hs-var">txWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-167"></span><span>      </span><span class="annot"><span class="annottext">TxWits ShelleyEra
+forall era. EraTxWits era =&gt; TxWits era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxWits"><span class="hs-identifier hs-var">mkBasicTxWits</span></a></span><span>
+</span><span id="line-168"></span><span>        </span><span class="annot"><span class="annottext">TxWits ShelleyEra
+-&gt; (TxWits ShelleyEra -&gt; TxWits ShelleyEra) -&gt; TxWits ShelleyEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(Set (WitVKey 'Witness) -&gt; Identity (Set (WitVKey 'Witness)))
+-&gt; TxWits ShelleyEra -&gt; Identity (TxWits ShelleyEra)
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Set (WitVKey 'Witness))
+Lens' (TxWits ShelleyEra) (Set (WitVKey 'Witness))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#addrTxWitsL"><span class="hs-identifier hs-var">addrTxWitsL</span></a></span><span> </span><span class="annot"><span class="annottext">((Set (WitVKey 'Witness) -&gt; Identity (Set (WitVKey 'Witness)))
+ -&gt; TxWits ShelleyEra -&gt; Identity (TxWits ShelleyEra))
+-&gt; Set (WitVKey 'Witness) -&gt; TxWits ShelleyEra -&gt; TxWits ShelleyEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody
+-&gt; [KeyPair 'Witness] -&gt; Set (WitVKey 'Witness)
+forall (kr :: KeyRole).
+SafeHash EraIndependentTxBody
+-&gt; [KeyPair kr] -&gt; Set (WitVKey 'Witness)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#mkWitnessesVKey"><span class="hs-identifier hs-var">mkWitnessesVKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ShelleyEra -&gt; SafeHash EraIndependentTxBody
+forall x i. HashAnnotated x i =&gt; x -&gt; SafeHash i
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#hashAnnotated"><span class="hs-identifier hs-var">hashAnnotated</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ShelleyEra
+</span><a href="#local-6989586621679370825"><span class="hs-identifier hs-var">txBody</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[KeyPair 'Witness]
+</span><a href="#local-6989586621679370826"><span class="hs-identifier hs-var">keyPairs</span></a></span><span>
+</span><span id="line-169"></span><span>        </span><span class="annot"><span class="annottext">TxWits ShelleyEra
+-&gt; (TxWits ShelleyEra -&gt; ShelleyTxWits ShelleyEra)
+-&gt; ShelleyTxWits ShelleyEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(Map ScriptHash (Script ShelleyEra)
+ -&gt; Identity (Map ScriptHash (Script ShelleyEra)))
+-&gt; TxWits ShelleyEra -&gt; Identity (TxWits ShelleyEra)
+(Map ScriptHash (Script ShelleyEra)
+ -&gt; Identity (Map ScriptHash (MultiSig ShelleyEra)))
+-&gt; TxWits ShelleyEra -&gt; Identity (ShelleyTxWits ShelleyEra)
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Map ScriptHash (Script era))
+Lens' (TxWits ShelleyEra) (Map ScriptHash (Script ShelleyEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#scriptTxWitsL"><span class="hs-identifier hs-var">scriptTxWitsL</span></a></span><span> </span><span class="annot"><span class="annottext">((Map ScriptHash (Script ShelleyEra)
+  -&gt; Identity (Map ScriptHash (MultiSig ShelleyEra)))
+ -&gt; TxWits ShelleyEra -&gt; Identity (ShelleyTxWits ShelleyEra))
+-&gt; Map ScriptHash (MultiSig ShelleyEra)
+-&gt; TxWits ShelleyEra
+-&gt; ShelleyTxWits ShelleyEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (MultiSig ShelleyEra)
+</span><a href="#local-6989586621679370827"><span class="hs-identifier hs-var">msigs</span></a></span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceInitCoin"><span class="hs-identifier hs-type">aliceInitCoin</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span>
+</span><span id="line-172"></span><span id="aliceInitCoin"><span class="annot"><span class="annottext">aliceInitCoin :: Coin
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceInitCoin"><span class="hs-identifier hs-var hs-var">aliceInitCoin</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">10000</span></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#bobInitCoin"><span class="hs-identifier hs-type">bobInitCoin</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span>
+</span><span id="line-175"></span><span id="bobInitCoin"><span class="annot"><span class="annottext">bobInitCoin :: Coin
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#bobInitCoin"><span class="hs-identifier hs-var hs-var">bobInitCoin</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1000</span></span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#genesis"><span class="hs-identifier hs-type">genesis</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679370471"><span class="annot"><a href="#local-6989586621679370471"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxOut"><span class="hs-identifier hs-type">EraTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370471"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#EraGov"><span class="hs-identifier hs-type">EraGov</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370471"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-181"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Stake.html#EraStake"><span class="hs-identifier hs-type">EraStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370471"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-182"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier hs-type">EraCertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370471"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-183"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-184"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#LedgerState"><span class="hs-identifier hs-type">LedgerState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370471"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-185"></span><span id="genesis"><span class="annot"><span class="annottext">genesis :: forall era.
+(EraTxOut era, EraGov era, EraStake era, EraCertState era) =&gt;
+LedgerState era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#genesis"><span class="hs-identifier hs-var hs-var">genesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair -&gt; UTxO era -&gt; LedgerState era
+forall era.
+(EraGov era, EraCertState era, EraStake era) =&gt;
+Map (KeyHash 'Genesis) GenDelegPair -&gt; UTxO era -&gt; LedgerState era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.NewEpochState.html#genesisState"><span class="hs-identifier hs-var">genesisState</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+forall k a. Map k a
+</span><a href="#local-6989586621679370861"><span class="hs-identifier hs-var">genDelegs0</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO era
+</span><a href="#local-6989586621679370862"><span class="hs-identifier hs-var">utxo0</span></a></span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-187"></span><span>    </span><span id="local-6989586621679370861"><span class="annot"><span class="annottext">genDelegs0 :: Map k a
+</span><a href="#local-6989586621679370861"><span class="hs-identifier hs-var hs-var">genDelegs0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span>
+</span><span id="line-188"></span><span>    </span><span id="local-6989586621679370862"><span class="annot"><span class="annottext">utxo0 :: UTxO era
+</span><a href="#local-6989586621679370862"><span class="hs-identifier hs-var hs-var">utxo0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-189"></span><span>      </span><span class="annot"><span class="annottext">forall era. TxId -&gt; [TxOut era] -&gt; UTxO era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Generator.Core.html#genesisCoins"><span class="hs-identifier hs-var">genesisCoins</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679370471"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-190"></span><span>        </span><span class="annot"><span class="annottext">TxId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Generator.EraGen.html#genesisId"><span class="hs-identifier hs-var">genesisId</span></a></span><span>
+</span><span id="line-191"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Value era -&gt; TxOut era
+forall era.
+(EraTxOut era, HasCallStack) =&gt;
+Addr -&gt; Value era -&gt; TxOut era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxOut"><span class="hs-identifier hs-var">mkBasicTxOut</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#aliceAddr"><span class="hs-identifier hs-var">Cast.aliceAddr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coin -&gt; Value era
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">Val.inject</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceInitCoin"><span class="hs-identifier hs-var">aliceInitCoin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-192"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Value era -&gt; TxOut era
+forall era.
+(EraTxOut era, HasCallStack) =&gt;
+Addr -&gt; Value era -&gt; TxOut era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxOut"><span class="hs-identifier hs-var">mkBasicTxOut</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#bobAddr"><span class="hs-identifier hs-var">Cast.bobAddr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coin -&gt; Value era
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">Val.inject</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#bobInitCoin"><span class="hs-identifier hs-var">bobInitCoin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-193"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span id="local-6989586621679370484"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#initPParams"><span class="hs-identifier hs-type">initPParams</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#EraPParams"><span class="hs-identifier hs-type">EraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370484"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679370484"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-196"></span><span id="initPParams"><span class="annot"><span class="annottext">initPParams :: forall era. EraPParams era =&gt; PParams era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#initPParams"><span class="hs-identifier hs-var hs-var">initPParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-197"></span><span>  </span><span class="annot"><span class="annottext">PParams era
+forall era. EraPParams era =&gt; PParams era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#emptyPParams"><span class="hs-identifier hs-var">emptyPParams</span></a></span><span>
+</span><span id="line-198"></span><span>    </span><span class="annot"><span class="annottext">PParams era -&gt; (PParams era -&gt; PParams era) -&gt; PParams era
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; Identity Word32)
+-&gt; PParams era -&gt; Identity (PParams era)
+forall era. EraPParams era =&gt; Lens' (PParams era) Word32
+Lens' (PParams era) Word32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMaxTxSizeL"><span class="hs-identifier hs-var">ppMaxTxSizeL</span></a></span><span> </span><span class="annot"><span class="annottext">((Word32 -&gt; Identity Word32)
+ -&gt; PParams era -&gt; Identity (PParams era))
+-&gt; Word32 -&gt; PParams era -&gt; PParams era
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">1000</span></span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- | Create an initial UTxO state where Alice has 'aliceInitCoin' and Bob</span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- 'bobInitCoin' to spend. Then create and apply a transaction which, if</span><span>
+</span><span id="line-202"></span><span class="hs-comment">-- 'aliceKeep' is greater than 0, gives that amount to Alice and creates outputs</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- locked by a script for each pair of script, coin value in 'msigs'.</span><span>
+</span><span id="line-204"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#initialUTxOState"><span class="hs-identifier hs-type">initialUTxOState</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-205"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-206"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#MultiSig"><span class="hs-identifier hs-type">MultiSig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-207"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-208"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span>
+</span><span id="line-209"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Era.html#ShelleyUTXOW"><span class="hs-identifier hs-type">ShelleyUTXOW</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-210"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#UTxOState"><span class="hs-identifier hs-type">UTxOState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-211"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-212"></span><span id="initialUTxOState"><span class="annot"><span class="annottext">initialUTxOState :: Coin
+-&gt; [(MultiSig ShelleyEra, Coin)]
+-&gt; (TxId,
+    Either
+      (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+      (UTxOState ShelleyEra))
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#initialUTxOState"><span class="hs-identifier hs-var hs-var">initialUTxOState</span></a></span></span><span> </span><span id="local-6989586621679370874"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679370874"><span class="hs-identifier hs-var">aliceKeep</span></a></span></span><span> </span><span id="local-6989586621679370875"><span class="annot"><span class="annottext">[(MultiSig ShelleyEra, Coin)]
+</span><a href="#local-6989586621679370875"><span class="hs-identifier hs-var">msigs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-213"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679370876"><span class="annot"><span class="annottext">addresses :: [(Addr, Coin)]
+</span><a href="#local-6989586621679370876"><span class="hs-identifier hs-var hs-var">addresses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-214"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#aliceAddr"><span class="hs-identifier hs-var">Cast.aliceAddr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679370874"><span class="hs-identifier hs-var">aliceKeep</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Integer -&gt; Bool) -&gt; Coin -&gt; Coin -&gt; Bool
+forall t. Val t =&gt; (Integer -&gt; Integer -&gt; Bool) -&gt; t -&gt; t -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#pointwise"><span class="hs-identifier hs-var">Val.pointwise</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">(&gt;)</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679370874"><span class="hs-identifier hs-var">aliceKeep</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">]</span><span>
+</span><span id="line-215"></span><span>          </span><span class="annot"><span class="annottext">[(Addr, Coin)] -&gt; [(Addr, Coin)] -&gt; [(Addr, Coin)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">((MultiSig ShelleyEra, Coin) -&gt; (Addr, Coin))
+-&gt; [(MultiSig ShelleyEra, Coin)] -&gt; [(Addr, Coin)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span>
+</span><span id="line-216"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679370879"><span class="annot"><span class="annottext">MultiSig ShelleyEra
+</span><a href="#local-6989586621679370879"><span class="hs-identifier hs-var">msig</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679370880"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679370880"><span class="hs-identifier hs-var">era</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-217"></span><span>                </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Network -&gt; Credential 'Payment -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span>
+</span><span id="line-218"></span><span>                    </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span>
+</span><span id="line-219"></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScriptHash -&gt; Credential 'Payment
+forall (kr :: KeyRole). ScriptHash -&gt; Credential kr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#ScriptHashObj"><span class="hs-identifier hs-var">ScriptHashObj</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptHash -&gt; Credential 'Payment)
+-&gt; ScriptHash -&gt; Credential 'Payment
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">hashScript</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="annot"><span class="annottext">Script ShelleyEra
+MultiSig ShelleyEra
+</span><a href="#local-6989586621679370879"><span class="hs-identifier hs-var">msig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-220"></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefBase"><span class="hs-identifier hs-var">StakeRefBase</span></a></span><span> </span><span class="annot"><span class="annottext">(StakeCredential -&gt; StakeReference)
+-&gt; StakeCredential -&gt; StakeReference
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; StakeCredential
+forall (kr :: KeyRole). ScriptHash -&gt; Credential kr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#ScriptHashObj"><span class="hs-identifier hs-var">ScriptHashObj</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptHash -&gt; StakeCredential) -&gt; ScriptHash -&gt; StakeCredential
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">hashScript</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="annot"><span class="annottext">Script ShelleyEra
+MultiSig ShelleyEra
+</span><a href="#local-6989586621679370879"><span class="hs-identifier hs-var">msig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-221"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679370880"><span class="hs-identifier hs-var">era</span></a></span><span>
+</span><span id="line-222"></span><span>                </span><span class="hs-special">)</span><span>
+</span><span id="line-223"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-224"></span><span>            </span><span class="annot"><span class="annottext">[(MultiSig ShelleyEra, Coin)]
+</span><a href="#local-6989586621679370875"><span class="hs-identifier hs-var">msigs</span></a></span><span>
+</span><span id="line-225"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679370883"><span class="annot"><span class="annottext">tx :: Tx ShelleyEra
+</span><a href="#local-6989586621679370883"><span class="hs-identifier hs-var hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-226"></span><span>            </span><span class="annot"><span class="annottext">TxBody ShelleyEra
+-&gt; [KeyPair 'Witness]
+-&gt; Map ScriptHash (MultiSig ShelleyEra)
+-&gt; Maybe (ShelleyTxAuxData ShelleyEra)
+-&gt; Tx ShelleyEra
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#makeTx"><span class="hs-identifier hs-var">makeTx</span></a></span><span>
+</span><span id="line-227"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Addr, Value ShelleyEra)] -&gt; TxBody ShelleyEra
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#initTxBody"><span class="hs-identifier hs-var">initTxBody</span></a></span><span> </span><span class="annot"><span class="annottext">[(Addr, Value ShelleyEra)]
+[(Addr, Coin)]
+</span><a href="#local-6989586621679370876"><span class="hs-identifier hs-var">addresses</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyPair 'Payment -&gt; KeyPair 'Witness
+forall (a :: KeyRole -&gt; *) (r :: KeyRole).
+HasKeyRole a =&gt;
+a r -&gt; a 'Witness
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier hs-var">asWitness</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyPair 'Payment -&gt; KeyPair 'Witness)
+-&gt; [KeyPair 'Payment] -&gt; [KeyPair 'Witness]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">KeyPair 'Payment
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#alicePay"><span class="hs-identifier hs-var">Cast.alicePay</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KeyPair 'Payment
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#bobPay"><span class="hs-identifier hs-var">Cast.bobPay</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-229"></span><span>              </span><span class="annot"><span class="annottext">Map ScriptHash (MultiSig ShelleyEra)
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span>
+</span><span id="line-230"></span><span>              </span><span class="annot"><span class="annottext">Maybe (ShelleyTxAuxData ShelleyEra)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-231"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Tx ShelleyEra -&gt; TxId
+forall era. EraTx era =&gt; Tx era -&gt; TxId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#txIdTx"><span class="hs-identifier hs-var">txIdTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx ShelleyEra
+</span><a href="#local-6989586621679370883"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-232"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ShelleyBase
+  (Either
+     (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+     (UTxOState ShelleyEra))
+-&gt; Either
+     (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+     (UTxOState ShelleyEra)
+forall a. ShelleyBase a -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#runShelleyBase"><span class="hs-identifier hs-var">runShelleyBase</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyBase
+   (Either
+      (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+      (UTxOState ShelleyEra))
+ -&gt; Either
+      (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+      (UTxOState ShelleyEra))
+-&gt; ShelleyBase
+     (Either
+        (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+        (UTxOState ShelleyEra))
+-&gt; Either
+     (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+     (UTxOState ShelleyEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-233"></span><span>              </span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *) (rtype :: RuleType).
+(STS s, RuleTypeRep rtype, m ~ BaseM s) =&gt;
+RuleContext rtype s
+-&gt; m (Either (NonEmpty (PredicateFailure s)) (State s))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#applySTSTest"><span class="hs-identifier hs-var">applySTSTest</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Era.html#ShelleyUTXOW"><span class="hs-identifier hs-type">ShelleyUTXOW</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-234"></span><span>                </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">(Environment (ShelleyUTXOW ShelleyEra),
+ State (ShelleyUTXOW ShelleyEra), Signal (ShelleyUTXOW ShelleyEra))
+-&gt; TRC (ShelleyUTXOW ShelleyEra)
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span>
+</span><span id="line-235"></span><span>                    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">SlotNo
+-&gt; PParams ShelleyEra -&gt; CertState ShelleyEra -&gt; UtxoEnv ShelleyEra
+forall era. SlotNo -&gt; PParams era -&gt; CertState era -&gt; UtxoEnv era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#UtxoEnv"><span class="hs-identifier hs-var">UtxoEnv</span></a></span><span>
+</span><span id="line-236"></span><span>                        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-var">SlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-237"></span><span>                        </span><span class="annot"><span class="annottext">PParams ShelleyEra
+forall era. EraPParams era =&gt; PParams era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#initPParams"><span class="hs-identifier hs-var">initPParams</span></a></span><span>
+</span><span id="line-238"></span><span>                        </span><span class="annot"><span class="annottext">CertState ShelleyEra
+ShelleyCertState ShelleyEra
+forall a. Default a =&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#def"><span class="hs-identifier hs-var">def</span></a></span><span>
+</span><span id="line-239"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LedgerState ShelleyEra -&gt; UTxOState ShelleyEra
+forall era. LedgerState era -&gt; UTxOState era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#lsUTxOState"><span class="hs-identifier hs-var">lsUTxOState</span></a></span><span> </span><span class="annot"><span class="annottext">LedgerState ShelleyEra
+forall era.
+(EraTxOut era, EraGov era, EraStake era, EraCertState era) =&gt;
+LedgerState era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#genesis"><span class="hs-identifier hs-var">genesis</span></a></span><span>
+</span><span id="line-240"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Tx ShelleyEra
+Signal (ShelleyUTXOW ShelleyEra)
+</span><a href="#local-6989586621679370883"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-241"></span><span>                    </span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>                </span><span class="hs-special">)</span><span>
+</span><span id="line-243"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-244"></span><span>
+</span><span id="line-245"></span><span class="hs-comment">-- | Start from genesis, consume Alice's and Bob's coins, create an output</span><span>
+</span><span id="line-246"></span><span class="hs-comment">-- spendable by Alice if 'aliceKeep' is greater than 0. For each pair of script</span><span>
+</span><span id="line-247"></span><span class="hs-comment">-- and coin value in 'lockScripts' create an output of that value locked by the</span><span>
+</span><span id="line-248"></span><span class="hs-comment">-- script. Sign the transaction with keys in 'signers'. Then create an</span><span>
+</span><span id="line-249"></span><span class="hs-comment">-- transaction that uses the scripts in 'unlockScripts' (and the output for</span><span>
+</span><span id="line-250"></span><span class="hs-comment">-- 'aliceKeep' in the case of it being non-zero) to spend all funds back to</span><span>
+</span><span id="line-251"></span><span class="hs-comment">-- Alice. Return resulting UTxO state or collected errors</span><span>
+</span><span id="line-252"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#applyTxWithScript"><span class="hs-identifier hs-type">applyTxWithScript</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-253"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#MultiSig"><span class="hs-identifier hs-type">MultiSig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-254"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#MultiSig"><span class="hs-identifier hs-type">MultiSig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-255"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Withdrawals"><span class="hs-identifier hs-type">Withdrawals</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-256"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-257"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-258"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Era.html#ShelleyUTXOW"><span class="hs-identifier hs-type">ShelleyUTXOW</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#UTxOState"><span class="hs-identifier hs-type">UTxOState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-259"></span><span id="applyTxWithScript"><span class="annot"><span class="annottext">applyTxWithScript :: [(MultiSig ShelleyEra, Coin)]
+-&gt; [MultiSig ShelleyEra]
+-&gt; Withdrawals
+-&gt; Coin
+-&gt; [KeyPair 'Witness]
+-&gt; Either
+     (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+     (UTxOState ShelleyEra)
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#applyTxWithScript"><span class="hs-identifier hs-var hs-var">applyTxWithScript</span></a></span></span><span> </span><span id="local-6989586621679370893"><span class="annot"><span class="annottext">[(MultiSig ShelleyEra, Coin)]
+</span><a href="#local-6989586621679370893"><span class="hs-identifier hs-var">lockScripts</span></a></span></span><span> </span><span id="local-6989586621679370894"><span class="annot"><span class="annottext">[MultiSig ShelleyEra]
+</span><a href="#local-6989586621679370894"><span class="hs-identifier hs-var">unlockScripts</span></a></span></span><span> </span><span id="local-6989586621679370895"><span class="annot"><span class="annottext">Withdrawals
+</span><a href="#local-6989586621679370895"><span class="hs-identifier hs-var">wdrl</span></a></span></span><span> </span><span id="local-6989586621679370896"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679370896"><span class="hs-identifier hs-var">aliceKeep</span></a></span></span><span> </span><span id="local-6989586621679370897"><span class="annot"><span class="annottext">[KeyPair 'Witness]
+</span><a href="#local-6989586621679370897"><span class="hs-identifier hs-var">signers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either
+  (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+  (UTxOState ShelleyEra)
+Either
+  (NonEmpty (ShelleyUtxowPredFailure ShelleyEra))
+  (UTxOState ShelleyEra)
+</span><a href="#local-6989586621679370898"><span class="hs-identifier hs-var">utxoSt'</span></a></span><span>
+</span><span id="line-260"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-261"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679370899"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679370899"><span class="hs-identifier hs-var">txId</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679370900"><span class="annot"><span class="annottext">Either
+  (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+  (UTxOState ShelleyEra)
+</span><a href="#local-6989586621679370900"><span class="hs-identifier hs-var">initUtxo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin
+-&gt; [(MultiSig ShelleyEra, Coin)]
+-&gt; (TxId,
+    Either
+      (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+      (UTxOState ShelleyEra))
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#initialUTxOState"><span class="hs-identifier hs-var">initialUTxOState</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679370896"><span class="hs-identifier hs-var">aliceKeep</span></a></span><span> </span><span class="annot"><span class="annottext">[(MultiSig ShelleyEra, Coin)]
+</span><a href="#local-6989586621679370893"><span class="hs-identifier hs-var">lockScripts</span></a></span><span>
+</span><span id="line-262"></span><span>    </span><span id="local-6989586621679370901"><span class="annot"><span class="annottext">utxoSt :: UTxOState ShelleyEra
+</span><a href="#local-6989586621679370901"><span class="hs-identifier hs-var hs-var">utxoSt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either
+  (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+  (UTxOState ShelleyEra)
+</span><a href="#local-6989586621679370900"><span class="hs-identifier hs-var">initUtxo</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-263"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679370902"><span class="annot"><span class="annottext">UTxOState ShelleyEra
+</span><a href="#local-6989586621679370902"><span class="hs-identifier hs-var">utxoSt''</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">UTxOState ShelleyEra
+</span><a href="#local-6989586621679370902"><span class="hs-identifier hs-var">utxoSt''</span></a></span><span>
+</span><span id="line-264"></span><span>      </span><span class="annot"><span class="annottext">Either
+  (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+  (UTxOState ShelleyEra)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; UTxOState ShelleyEra
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; UTxOState ShelleyEra) -&gt; [Char] -&gt; UTxOState ShelleyEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;must fail test before: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Either
+  (NonEmpty (ShelleyUtxowPredFailure ShelleyEra))
+  (UTxOState ShelleyEra)
+-&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Either
+  (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+  (UTxOState ShelleyEra)
+Either
+  (NonEmpty (ShelleyUtxowPredFailure ShelleyEra))
+  (UTxOState ShelleyEra)
+</span><a href="#local-6989586621679370900"><span class="hs-identifier hs-var">initUtxo</span></a></span><span>
+</span><span id="line-265"></span><span>    </span><span id="local-6989586621679370904"><span class="annot"><span class="annottext">txbody :: TxBody ShelleyEra
+</span><a href="#local-6989586621679370904"><span class="hs-identifier hs-var hs-var">txbody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-266"></span><span>      </span><span class="annot"><span class="annottext">[TxIn]
+-&gt; [(Addr, Value ShelleyEra)] -&gt; Withdrawals -&gt; TxBody ShelleyEra
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#makeTxBody"><span class="hs-identifier hs-var">makeTxBody</span></a></span><span>
+</span><span id="line-267"></span><span>        </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621679370905"><span class="hs-identifier hs-var">inputs'</span></a></span><span>
+</span><span id="line-268"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#aliceAddr"><span class="hs-identifier hs-var">Cast.aliceAddr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Value ShelleyEra
+forall t s. Inject t s =&gt; t -&gt; s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier hs-var">Val.inject</span></a></span><span> </span><span class="annot"><span class="annottext">(Coin -&gt; Value ShelleyEra) -&gt; Coin -&gt; Value ShelleyEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#aliceInitCoin"><span class="hs-identifier hs-var">aliceInitCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Coin -&gt; Coin
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#bobInitCoin"><span class="hs-identifier hs-var">bobInitCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Coin -&gt; Coin
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Map RewardAccount Coin -&gt; Coin
+forall m. Monoid m =&gt; Map RewardAccount m -&gt; m
+forall (t :: * -&gt; *) m. (Foldable t, Monoid m) =&gt; t m -&gt; m
+</span><span class="hs-identifier hs-var">fold</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Withdrawals -&gt; Map RewardAccount Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#unWithdrawals"><span class="hs-identifier hs-var">unWithdrawals</span></a></span><span> </span><span class="annot"><span class="annottext">Withdrawals
+</span><a href="#local-6989586621679370895"><span class="hs-identifier hs-var">wdrl</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-269"></span><span>        </span><span class="annot"><span class="annottext">Withdrawals
+</span><a href="#local-6989586621679370895"><span class="hs-identifier hs-var">wdrl</span></a></span><span>
+</span><span id="line-270"></span><span>    </span><span id="local-6989586621679370905"><span class="annot"><span class="annottext">inputs' :: [TxIn]
+</span><a href="#local-6989586621679370905"><span class="hs-identifier hs-var hs-var">inputs'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-271"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; TxIx -&gt; TxIn
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679370899"><span class="hs-identifier hs-var">txId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; TxIx
+Integer -&gt; TxIx
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkTxIxPartial"><span class="hs-identifier hs-var">mkTxIxPartial</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679370907"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-272"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679370907"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679370907"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-273"></span><span>          </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">[(MultiSig ShelleyEra, Coin)] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[(MultiSig ShelleyEra, Coin)]
+</span><a href="#local-6989586621679370893"><span class="hs-identifier hs-var">lockScripts</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Integer -&gt; Bool) -&gt; Coin -&gt; Coin -&gt; Bool
+forall t. Val t =&gt; (Integer -&gt; Integer -&gt; Bool) -&gt; t -&gt; t -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#pointwise"><span class="hs-identifier hs-var">Val.pointwise</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">(&gt;)</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679370896"><span class="hs-identifier hs-var">aliceKeep</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">]</span><span>
+</span><span id="line-274"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-275"></span><span>    </span><span class="hs-comment">-- alice? + scripts</span><span>
+</span><span id="line-276"></span><span>    </span><span id="local-6989586621679370909"><span class="annot"><span class="annottext">tx :: Tx ShelleyEra
+</span><a href="#local-6989586621679370909"><span class="hs-identifier hs-var hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-277"></span><span>      </span><span class="annot"><span class="annottext">TxBody ShelleyEra
+-&gt; [KeyPair 'Witness]
+-&gt; Map ScriptHash (MultiSig ShelleyEra)
+-&gt; Maybe (ShelleyTxAuxData ShelleyEra)
+-&gt; Tx ShelleyEra
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#makeTx"><span class="hs-identifier hs-var">makeTx</span></a></span><span>
+</span><span id="line-278"></span><span>        </span><span class="annot"><span class="annottext">TxBody ShelleyEra
+</span><a href="#local-6989586621679370904"><span class="hs-identifier hs-var">txbody</span></a></span><span>
+</span><span id="line-279"></span><span>        </span><span class="annot"><span class="annottext">[KeyPair 'Witness]
+</span><a href="#local-6989586621679370897"><span class="hs-identifier hs-var">signers</span></a></span><span>
+</span><span id="line-280"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(ScriptHash, MultiSig ShelleyEra)]
+-&gt; Map ScriptHash (MultiSig ShelleyEra)
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="annot"><span class="annottext">([(ScriptHash, MultiSig ShelleyEra)]
+ -&gt; Map ScriptHash (MultiSig ShelleyEra))
+-&gt; [(ScriptHash, MultiSig ShelleyEra)]
+-&gt; Map ScriptHash (MultiSig ShelleyEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(MultiSig ShelleyEra -&gt; (ScriptHash, MultiSig ShelleyEra))
+-&gt; [MultiSig ShelleyEra] -&gt; [(ScriptHash, MultiSig ShelleyEra)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679370910"><span class="annot"><span class="annottext">MultiSig ShelleyEra
+</span><a href="#local-6989586621679370910"><span class="hs-identifier hs-var">scr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">hashScript</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="annot"><span class="annottext">Script ShelleyEra
+MultiSig ShelleyEra
+</span><a href="#local-6989586621679370910"><span class="hs-identifier hs-var">scr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MultiSig ShelleyEra
+</span><a href="#local-6989586621679370910"><span class="hs-identifier hs-var">scr</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[MultiSig ShelleyEra]
+</span><a href="#local-6989586621679370894"><span class="hs-identifier hs-var">unlockScripts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-281"></span><span>        </span><span class="annot"><span class="annottext">Maybe (ShelleyTxAuxData ShelleyEra)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-282"></span><span>    </span><span id="local-6989586621679370898"><span class="annot"><span class="annottext">utxoSt' :: Either
+  (NonEmpty (ShelleyUtxowPredFailure ShelleyEra))
+  (UTxOState ShelleyEra)
+</span><a href="#local-6989586621679370898"><span class="hs-identifier hs-var hs-var">utxoSt'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-283"></span><span>      </span><span class="annot"><span class="annottext">ShelleyBase
+  (Either
+     (NonEmpty (ShelleyUtxowPredFailure ShelleyEra))
+     (UTxOState ShelleyEra))
+-&gt; Either
+     (NonEmpty (ShelleyUtxowPredFailure ShelleyEra))
+     (UTxOState ShelleyEra)
+forall a. ShelleyBase a -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#runShelleyBase"><span class="hs-identifier hs-var">runShelleyBase</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyBase
+   (Either
+      (NonEmpty (ShelleyUtxowPredFailure ShelleyEra))
+      (UTxOState ShelleyEra))
+ -&gt; Either
+      (NonEmpty (ShelleyUtxowPredFailure ShelleyEra))
+      (UTxOState ShelleyEra))
+-&gt; ShelleyBase
+     (Either
+        (NonEmpty (ShelleyUtxowPredFailure ShelleyEra))
+        (UTxOState ShelleyEra))
+-&gt; Either
+     (NonEmpty (ShelleyUtxowPredFailure ShelleyEra))
+     (UTxOState ShelleyEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-284"></span><span>        </span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *) (rtype :: RuleType).
+(STS s, RuleTypeRep rtype, m ~ BaseM s) =&gt;
+RuleContext rtype s
+-&gt; m (Either (NonEmpty (PredicateFailure s)) (State s))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#applySTSTest"><span class="hs-identifier hs-var">applySTSTest</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Era.html#ShelleyUTXOW"><span class="hs-identifier hs-type">ShelleyUTXOW</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-285"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">(Environment (ShelleyUTXOW ShelleyEra),
+ State (ShelleyUTXOW ShelleyEra), Signal (ShelleyUTXOW ShelleyEra))
+-&gt; TRC (ShelleyUTXOW ShelleyEra)
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span>
+</span><span id="line-286"></span><span>              </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">SlotNo
+-&gt; PParams ShelleyEra -&gt; CertState ShelleyEra -&gt; UtxoEnv ShelleyEra
+forall era. SlotNo -&gt; PParams era -&gt; CertState era -&gt; UtxoEnv era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#UtxoEnv"><span class="hs-identifier hs-var">UtxoEnv</span></a></span><span>
+</span><span id="line-287"></span><span>                  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-var">SlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-288"></span><span>                  </span><span class="annot"><span class="annottext">PParams ShelleyEra
+forall era. EraPParams era =&gt; PParams era
+</span><a href="Test.Cardano.Ledger.Shelley.MultiSigExamples.html#initPParams"><span class="hs-identifier hs-var">initPParams</span></a></span><span>
+</span><span id="line-289"></span><span>                  </span><span class="annot"><span class="annottext">CertState ShelleyEra
+ShelleyCertState ShelleyEra
+forall a. Default a =&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#def"><span class="hs-identifier hs-var">def</span></a></span><span>
+</span><span id="line-290"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State (ShelleyUTXOW ShelleyEra)
+UTxOState ShelleyEra
+</span><a href="#local-6989586621679370901"><span class="hs-identifier hs-var">utxoSt</span></a></span><span>
+</span><span id="line-291"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Tx ShelleyEra
+Signal (ShelleyUTXOW ShelleyEra)
+</span><a href="#local-6989586621679370909"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-292"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-293"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-294"></span></pre></body></html>

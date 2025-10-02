@@ -1,0 +1,1032 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#tests"><span class="hs-identifier">tests</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Individual properties</span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#golden_json_ShelleyGenesis"><span class="hs-identifier">golden_json_ShelleyGenesis</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#golden_cbor_ShelleyGenesis"><span class="hs-identifier">golden_cbor_ShelleyGenesis</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#knownNonZeroBounded"><span class="hs-identifier">knownNonZeroBounded</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#textToDns"><span class="hs-identifier">textToDns</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#textToUrl"><span class="hs-identifier">textToUrl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#Tokens"><span class="hs-identifier">Tokens</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html"><span class="hs-identifier">Cardano.Ledger.Binary.Plain</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Plain</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#emptyPParams"><span class="hs-identifier">emptyPParams</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppDL"><span class="hs-identifier">ppDL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMaxBBSizeL"><span class="hs-identifier">ppMaxBBSizeL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMaxBHSizeL"><span class="hs-identifier">ppMaxBHSizeL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyRoleVRF"><span class="hs-identifier">KeyRoleVRF</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#VRFVerKeyHash"><span class="hs-identifier">VRFVerKeyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#hashKey"><span class="hs-identifier">hashKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.html"><span class="hs-identifier">Cardano.Ledger.Shelley</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.API.html"><span class="hs-identifier">Cardano.Ledger.Shelley.API</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Genesis</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/doc/html/cardano-protocol-tpraos/src/Cardano.Protocol.Crypto.html"><span class="hs-identifier">Cardano.Protocol.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#StandardCrypto"><span class="hs-identifier">StandardCrypto</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/doc/html/cardano-protocol-tpraos/src/Cardano.Protocol.Crypto.html#hashVerKeyVRF"><span class="hs-identifier">hashVerKeyVRF</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html"><span class="hs-identifier">Cardano.Slotting.Slot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochSize"><span class="hs-identifier">EpochSize</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Encoding.Internal.html#Encoding"><span class="hs-identifier">Encoding</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Char8</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">pack</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.ListMap.html"><span class="hs-identifier">Data.ListMap</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LM</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromJust</span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/scientific-0.3.8.0-5f850c777594318470c53a2050ab57cb8900a456ca5a9e00fd1403e4733337d0/share/doc/html/src/Data.Scientific.html"><span class="hs-identifier">Data.Scientific</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/scientific-0.3.8.0-5f850c777594318470c53a2050ab57cb8900a456ca5a9e00fd1403e4733337d0/share/doc/html/src/Data.Scientific.html#Scientific"><span class="hs-identifier">Scientific</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">StrictSeq</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Time.Clock.POSIX</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">posixSecondsToUTCTime</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Paths_cardano_ledger_shelley_test.html"><span class="hs-identifier">Paths_cardano_ledger_shelley_test</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Paths_cardano_ledger_shelley_test.html#getDataFileName"><span class="hs-identifier">getDataFileName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.TreeDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#CBORBytes"><span class="hs-identifier">CBORBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#CBORBytes"><span class="hs-identifier">CBORBytes</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Internal.html#ansiDocToString"><span class="hs-identifier">ansiDocToString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#diffExpr"><span class="hs-identifier">diffExpr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html"><span class="hs-identifier">Test.Cardano.Ledger.Core.KeyPair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#vKey"><span class="hs-identifier">vKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Examples.Cast</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Cast</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Generator.Core.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Generator.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.Crypto.VRF.html#VRFKeyPair"><span class="hs-identifier">VRFKeyPair</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Utils</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Arbitrary.html#RawSeed"><span class="hs-identifier">RawSeed</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#mkKeyPair"><span class="hs-identifier">mkKeyPair</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#mkVRFKeyPair"><span class="hs-identifier">mkVRFKeyPair</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Rational.html#unsafeBoundRational"><span class="hs-identifier">unsafeBoundRational</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.html"><span class="hs-identifier">Test.Tasty</span></a></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html"><span class="hs-identifier">Test.Tasty.HUnit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier">Assertion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertFailure"><span class="hs-identifier">assertFailure</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier">testCase</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#%40%3F%3D"><span class="hs-operator">(@?=)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span id="local-6989586621679375258"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#goldenTestJSON"><span class="hs-identifier hs-type">goldenTestJSON</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679375258"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679375258"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span></span><span>
+</span><span id="line-52"></span><span id="goldenTestJSON"><span class="annot"><span class="annottext">goldenTestJSON :: forall a. ToJSON a =&gt; a -&gt; FilePath -&gt; Assertion
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#goldenTestJSON"><span class="hs-identifier hs-var hs-var">goldenTestJSON</span></a></span></span><span> </span><span id="local-6989586621679375524"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679375524"><span class="hs-identifier hs-var">actual</span></a></span></span><span> </span><span id="local-6989586621679375525"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679375525"><span class="hs-identifier hs-var">expectedFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either FilePath Value
+forall a. FromJSON a =&gt; ByteString -&gt; Either FilePath a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html#eitherDecode%27"><span class="hs-identifier hs-var">eitherDecode'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679375524"><span class="hs-identifier hs-var">actual</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679375528"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679375528"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Assertion
+forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679375528"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679375530"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679375530"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.Internal.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>      </span><span id="local-6989586621679375531"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679375531"><span class="hs-identifier hs-var">expected</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; Value)
+-&gt; (Value -&gt; Value) -&gt; Either FilePath Value -&gt; Value
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><span class="hs-identifier hs-var">either</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Value
+forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span> </span><span class="annot"><span class="annottext">(Either FilePath Value -&gt; Value)
+-&gt; IO (Either FilePath Value) -&gt; IO Value
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO (Either FilePath Value)
+forall a. FromJSON a =&gt; FilePath -&gt; IO (Either FilePath a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html#eitherDecodeFileStrict"><span class="hs-identifier hs-var">eitherDecodeFileStrict</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679375525"><span class="hs-identifier hs-var">expectedFile</span></a></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679375530"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; Assertion
+forall a. (Eq a, Show a, HasCallStack) =&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#%40%3F%3D"><span class="hs-operator hs-var">@?=</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679375531"><span class="hs-identifier hs-var">expected</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#golden_json_ShelleyGenesis"><span class="hs-identifier hs-type">golden_json_ShelleyGenesis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span><span>
+</span><span id="line-60"></span><span id="golden_json_ShelleyGenesis"><span class="annot"><span class="annottext">golden_json_ShelleyGenesis :: Assertion
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#golden_json_ShelleyGenesis"><span class="hs-identifier hs-var hs-var">golden_json_ShelleyGenesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="annottext">ShelleyGenesis -&gt; FilePath -&gt; Assertion
+forall a. ToJSON a =&gt; a -&gt; FilePath -&gt; Assertion
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#goldenTestJSON"><span class="hs-identifier hs-var">goldenTestJSON</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyGenesis
+</span><a href="#local-6989586621679375536"><span class="hs-identifier hs-var">example</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; Assertion) -&gt; IO FilePath -&gt; Assertion
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><span class="hs-operator hs-var">=&lt;&lt;</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO FilePath
+</span><a href="Paths_cardano_ledger_shelley_test.html#getDataFileName"><span class="hs-identifier hs-var">getDataFileName</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;test/Golden/ShelleyGenesis&quot;</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><a href="#local-6989586621679375536"><span class="hs-identifier hs-type">example</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier hs-type">ShelleyGenesis</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span id="local-6989586621679375536"><span class="annot"><span class="annottext">example :: ShelleyGenesis
+</span><a href="#local-6989586621679375536"><span class="hs-identifier hs-var hs-var">example</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyGenesis
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#exampleShelleyGenesis"><span class="hs-identifier hs-var">exampleShelleyGenesis</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#golden_cbor_ShelleyGenesis"><span class="hs-identifier hs-type">golden_cbor_ShelleyGenesis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#Assertion"><span class="hs-identifier hs-type">Assertion</span></a></span><span>
+</span><span id="line-67"></span><span id="golden_cbor_ShelleyGenesis"><span class="annot"><span class="annottext">golden_cbor_ShelleyGenesis :: Assertion
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#golden_cbor_ShelleyGenesis"><span class="hs-identifier hs-var hs-var">golden_cbor_ShelleyGenesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; Assertion -&gt; Assertion
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><span class="hs-identifier hs-var">when</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679375540"><span class="hs-identifier hs-var">received</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679375542"><span class="hs-identifier hs-var">expected</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Assertion -&gt; Assertion) -&gt; Assertion -&gt; Assertion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">FilePath -&gt; Assertion
+forall a. HasCallStack =&gt; FilePath -&gt; IO a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertFailure"><span class="hs-identifier hs-var">assertFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; Assertion)
+-&gt; (Doc AnsiStyle -&gt; FilePath) -&gt; Doc AnsiStyle -&gt; Assertion
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; FilePath
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Internal.html#ansiDocToString"><span class="hs-identifier hs-var">ansiDocToString</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc AnsiStyle -&gt; Assertion) -&gt; Doc AnsiStyle -&gt; Assertion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-70"></span><span>      </span><span class="annot"><span class="annottext">CBORBytes -&gt; CBORBytes -&gt; Doc AnsiStyle
+forall a. ToExpr a =&gt; a -&gt; a -&gt; Doc AnsiStyle
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#diffExpr"><span class="hs-identifier hs-var">diffExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; CBORBytes
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#CBORBytes"><span class="hs-identifier hs-var">CBORBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679375542"><span class="hs-identifier hs-var">expected</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; CBORBytes
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#CBORBytes"><span class="hs-identifier hs-var">CBORBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679375540"><span class="hs-identifier hs-var">received</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><a href="#local-6989586621679375544"><span class="hs-identifier hs-type">example</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier hs-type">ShelleyGenesis</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679375544"><span class="annot"><span class="annottext">example :: ShelleyGenesis
+</span><a href="#local-6989586621679375544"><span class="hs-identifier hs-var hs-var">example</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyGenesis
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#exampleShelleyGenesis"><span class="hs-identifier hs-var">exampleShelleyGenesis</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>    </span><span id="local-6989586621679375540"><span class="annot"><span class="annottext">received :: ByteString
+</span><a href="#local-6989586621679375540"><span class="hs-identifier hs-var hs-var">received</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; ByteString
+forall a. ToCBOR a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.Serialize.html#serialize%27"><span class="hs-identifier hs-var">Plain.serialize'</span></a></span><span> </span><span class="annot"><span class="annottext">Tokens -&gt; Tokens
+</span><a href="#local-6989586621679375548"><span class="hs-identifier hs-var">expectedTokens</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span id="local-6989586621679375542"><span class="annot"><span class="annottext">expected :: ByteString
+</span><a href="#local-6989586621679375542"><span class="hs-identifier hs-var hs-var">expected</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyGenesis -&gt; ByteString
+forall a. ToCBOR a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.Serialize.html#serialize%27"><span class="hs-identifier hs-var">Plain.serialize'</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyGenesis
+</span><a href="#local-6989586621679375544"><span class="hs-identifier hs-var">example</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>    </span><span id="local-6989586621679375548"><span class="annot"><span class="annottext">expectedTokens :: Tokens -&gt; Tokens
+</span><a href="#local-6989586621679375548"><span class="hs-identifier hs-var hs-var">expectedTokens</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>      </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">15</span></span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2009</span></span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">44</span></span><span>
+</span><span id="line-83"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">83589000000000000</span></span><span> </span><span class="hs-comment">-- sgSystemStart</span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4036000900</span></span><span> </span><span class="hs-comment">-- sgNetworkMagic</span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-comment">-- sgNetworkId</span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-87"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">259</span></span><span>
+</span><span id="line-88"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span> </span><span class="hs-comment">-- sgActiveSlotsCoeff</span><span>
+</span><span id="line-89"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">120842</span></span><span> </span><span class="hs-comment">-- sgSecurityParam</span><span>
+</span><span id="line-90"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1215</span></span><span> </span><span class="hs-comment">-- sgEpochLength</span><span>
+</span><span id="line-91"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8541</span></span><span> </span><span class="hs-comment">-- sgSlotsPerKESPeriod</span><span>
+</span><span id="line-92"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">28899</span></span><span> </span><span class="hs-comment">-- sgMaxKESEvolutions</span><span>
+</span><span id="line-93"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8000000</span></span><span> </span><span class="hs-comment">-- sgSlotLength</span><span>
+</span><span id="line-94"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16991</span></span><span> </span><span class="hs-comment">-- sgUpdateQuorum</span><span>
+</span><span id="line-95"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">71</span></span><span> </span><span class="hs-comment">-- sgMaxLovelaceSupply</span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">17</span></span><span> </span><span class="hs-comment">-- sgProtocolParams</span><span>
+</span><span id="line-97"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-98"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">239857</span></span><span>
+</span><span id="line-100"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2048</span></span><span>
+</span><span id="line-101"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">17569</span></span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-103"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-104"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-105"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">100</span></span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkTag"><span class="hs-identifier hs-var">TkTag</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">30</span></span><span>
+</span><span id="line-107"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-108"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-109"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-110"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkTag"><span class="hs-identifier hs-var">TkTag</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">30</span></span><span>
+</span><span id="line-111"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-112"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-113"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-114"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkTag"><span class="hs-identifier hs-var">TkTag</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">30</span></span><span>
+</span><span id="line-115"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-116"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-117"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-118"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkTag"><span class="hs-identifier hs-var">TkTag</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">30</span></span><span>
+</span><span id="line-119"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-120"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">19</span></span><span>
+</span><span id="line-121"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span>
+</span><span id="line-122"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-123"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-124"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-125"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-126"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-127"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-128"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-129"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkMapLen"><span class="hs-identifier hs-var">TkMapLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-comment">-- sgGenDelegs</span><span>
+</span><span id="line-130"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span>
+</span><span id="line-131"></span><span>          </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;8\231\197\152j4\243\&amp;4\225\155q,\n\165%\DC4m\171\143\SI\248\137\178\173\SYN\137BA&quot;</span></span><span>
+</span><span id="line-132"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-133"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span>
+</span><span id="line-134"></span><span>          </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\230\150\r\214q\238\141s\222\SUB\131\209\&amp;4[f\DC1e\220\221\235\169\150#\190\239/\NAKz&quot;</span></span><span>
+</span><span id="line-135"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span>
+</span><span id="line-136"></span><span>          </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\252\227\FSo1\135S\RS\228\163\154\167C\194M\&quot;'_AZ\136\149\233\205\&quot;\195\f\138%\205\239\r&quot;</span></span><span>
+</span><span id="line-137"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkMapLen"><span class="hs-identifier hs-var">TkMapLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-comment">-- sgInitialFunds</span><span>
+</span><span id="line-138"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span>
+</span><span id="line-139"></span><span>          </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\NUL\225\186\222*\185FZ$\253^\170Ks\136\&amp;09\ETB3\143\133:H\177\SUB_\201\150J\245\202\147\251e\SYN\235\222=\NAK\v&gt;*\203\EM\tS'0\222\&amp;3\131/\251\&quot;\156\178\r&quot;</span></span><span>
+</span><span id="line-140"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">12157196</span></span><span>
+</span><span id="line-141"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-comment">-- sgStaking</span><span>
+</span><span id="line-142"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkMapLen"><span class="hs-identifier hs-var">TkMapLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-comment">-- sgsPools</span><span>
+</span><span id="line-143"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span>
+</span><span id="line-144"></span><span>          </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\245\131\164^IG\193\STX\t\ESC\150\ETB\SO\245\SO\240\207\142\219bfa\147\162\SYN2G\187&quot;</span></span><span>
+</span><span id="line-145"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">9</span></span><span> </span><span class="hs-comment">-- PoolParams</span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span>
+</span><span id="line-147"></span><span>          </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;N\DC3\f\v\222\183v\142\223.\143\133\NUL\DEL\213 s\227\220\CANq\244\196\DEL\157\252\169.&quot;</span></span><span>
+</span><span id="line-148"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span>
+</span><span id="line-149"></span><span>          </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;h\249\207\211:\200\240D\250\204fM\181\170\ESCs\192\176\245C[\133\231\181 \187/\SUB\146\240)\153&quot;</span></span><span>
+</span><span id="line-150"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-151"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-152"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkTag"><span class="hs-identifier hs-var">TkTag</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">30</span></span><span>
+</span><span id="line-153"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-154"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-155"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-156"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span>
+</span><span id="line-157"></span><span>          </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\224N\136\204-'\195d\170\249\ACKH\168}\251\149\248\238\DLE;\166\DEL\161\241/^\134\196*&quot;</span></span><span>
+</span><span id="line-158"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-159"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;N\136\204-'\195d\170\249\ACKH\168}\251\149\248\238\DLE;\166\DEL\161\241/^\134\196*&quot;</span></span><span>
+</span><span id="line-160"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-161"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-162"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-163"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1234</span></span><span>
+</span><span id="line-164"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\NUL\NUL\NUL\NUL&quot;</span></span><span>
+</span><span id="line-165"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\184\r\SOH \NUL\NUL\n\NUL\NUL\NUL\NUL\NUL#\SOH\NUL\NUL&quot;</span></span><span>
+</span><span id="line-166"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-167"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-168"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkNull"><span class="hs-identifier hs-var">TkNull</span></a></span><span>
+</span><span id="line-169"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkString"><span class="hs-identifier hs-var">TkString</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;cool.domain.com&quot;</span></span><span>
+</span><span id="line-170"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-171"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkInt"><span class="hs-identifier hs-var">TkInt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-172"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkString"><span class="hs-identifier hs-var">TkString</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;cool.domain.com&quot;</span></span><span>
+</span><span id="line-173"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-174"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkString"><span class="hs-identifier hs-var">TkString</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;best.pool.com&quot;</span></span><span>
+</span><span id="line-175"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;100ab{}100ab{}&quot;</span></span><span>
+</span><span id="line-176"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkMapLen"><span class="hs-identifier hs-var">TkMapLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-comment">-- sgsStake</span><span>
+</span><span id="line-177"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span>
+</span><span id="line-178"></span><span>          </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\131\161\146\222\192\232\218!\136\229 \208\197\&amp;6\166\154t|\241s\163\223\SYN\166\218\169M\134&quot;</span></span><span>
+</span><span id="line-179"></span><span>        </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; (Tokens -&gt; Tokens) -&gt; Tokens -&gt; Tokens
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBytes"><span class="hs-identifier hs-var">TkBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;d\158\218\130\191dM4\166\146_$\234LL6\210~Q\222\ESCD\239G\227V\v\231&quot;</span></span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- TODO - return a CBOR diff in the case of failure</span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#tests"><span class="hs-identifier hs-type">tests</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-184"></span><span id="tests"><span class="annot"><span class="annottext">tests :: TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#tests"><span class="hs-identifier hs-var hs-var">tests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-185"></span><span>  </span><span class="annot"><span class="annottext">FilePath -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-186"></span><span>    </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Shelley Genesis golden tests&quot;</span></span><span>
+</span><span id="line-187"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;ShelleyGenesis JSON golden test&quot;</span></span><span> </span><span class="annot"><span class="annottext">Assertion
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#golden_json_ShelleyGenesis"><span class="hs-identifier hs-var">golden_json_ShelleyGenesis</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;ShelleyGenesis CBOR golden test&quot;</span></span><span> </span><span class="annot"><span class="annottext">Assertion
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#golden_cbor_ShelleyGenesis"><span class="hs-identifier hs-var">golden_cbor_ShelleyGenesis</span></a></span><span>
+</span><span id="line-189"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-190"></span><span>
+</span><span id="line-191"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#exampleShelleyGenesis"><span class="hs-identifier hs-type">exampleShelleyGenesis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier hs-type">ShelleyGenesis</span></a></span><span>
+</span><span id="line-192"></span><span id="exampleShelleyGenesis"><span class="annot"><span class="annottext">exampleShelleyGenesis :: ShelleyGenesis
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis.html#exampleShelleyGenesis"><span class="hs-identifier hs-var hs-var">exampleShelleyGenesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-193"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier hs-type">ShelleyGenesis</span></a></span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">sgSystemStart :: UTCTime
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgSystemStart"><span class="hs-identifier hs-var">sgSystemStart</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">POSIXTime -&gt; UTCTime
+</span><span class="hs-identifier hs-var">posixSecondsToUTCTime</span></span><span> </span><span class="annot"><span class="annottext">(POSIXTime -&gt; UTCTime) -&gt; POSIXTime -&gt; UTCTime
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; POSIXTime
+forall a b. (Real a, Fractional b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">realToFrac</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1234566789</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgNetworkMagic :: Word32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgNetworkMagic"><span class="hs-identifier hs-var">sgNetworkMagic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">4036000900</span></span><span>
+</span><span id="line-196"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgNetworkId :: Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgNetworkId"><span class="hs-identifier hs-var">sgNetworkId</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">L.Testnet</span></a></span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgActiveSlotsCoeff :: PositiveUnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgActiveSlotsCoeff"><span class="hs-identifier hs-var">sgActiveSlotsCoeff</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; PositiveUnitInterval
+forall r.
+(HasCallStack, Typeable r, BoundedRational r) =&gt;
+Rational -&gt; r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Rational.html#unsafeBoundRational"><span class="hs-identifier hs-var">unsafeBoundRational</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">0.259</span></span><span>
+</span><span id="line-198"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgSecurityParam :: NonZero Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgSecurityParam"><span class="hs-identifier hs-var">sgSecurityParam</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a.
+(KnownNat n, 1 &lt;= n, WithinBounds n a, Num a) =&gt;
+NonZero a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#knownNonZeroBounded"><span class="hs-identifier hs-var">knownNonZeroBounded</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">120842</span></span><span>
+</span><span id="line-199"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgEpochLength :: EpochSize
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgEpochLength"><span class="hs-identifier hs-var">sgEpochLength</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; EpochSize
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochSize"><span class="hs-identifier hs-var">EpochSize</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1215</span></span><span>
+</span><span id="line-200"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgSlotsPerKESPeriod :: Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgSlotsPerKESPeriod"><span class="hs-identifier hs-var">sgSlotsPerKESPeriod</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">8541</span></span><span>
+</span><span id="line-201"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgMaxKESEvolutions :: Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgMaxKESEvolutions"><span class="hs-identifier hs-var">sgMaxKESEvolutions</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">28899</span></span><span>
+</span><span id="line-202"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgSlotLength :: NominalDiffTimeMicro
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgSlotLength"><span class="hs-identifier hs-var">sgSlotLength</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NominalDiffTimeMicro
+</span><span class="hs-number">8</span></span><span>
+</span><span id="line-203"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgUpdateQuorum :: Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgUpdateQuorum"><span class="hs-identifier hs-var">sgUpdateQuorum</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">16991</span></span><span>
+</span><span id="line-204"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgMaxLovelaceSupply :: Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgMaxLovelaceSupply"><span class="hs-identifier hs-var">sgMaxLovelaceSupply</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">71</span></span><span>
+</span><span id="line-205"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgProtocolParams :: PParams ShelleyEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgProtocolParams"><span class="hs-identifier hs-var">sgProtocolParams</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-206"></span><span>        </span><span class="annot"><span class="annottext">forall era. EraPParams era =&gt; PParams era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#emptyPParams"><span class="hs-identifier hs-var">emptyPParams</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span>
+</span><span id="line-207"></span><span>          </span><span class="annot"><span class="annottext">PParams ShelleyEra
+-&gt; (PParams ShelleyEra -&gt; PParams ShelleyEra) -&gt; PParams ShelleyEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(UnitInterval -&gt; Identity UnitInterval)
+-&gt; PParams ShelleyEra -&gt; Identity (PParams ShelleyEra)
+forall era.
+(EraPParams era, AtMostEra &quot;Alonzo&quot; era) =&gt;
+Lens' (PParams era) UnitInterval
+Lens' (PParams ShelleyEra) UnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppDL"><span class="hs-identifier hs-var">ppDL</span></a></span><span> </span><span class="annot"><span class="annottext">((UnitInterval -&gt; Identity UnitInterval)
+ -&gt; PParams ShelleyEra -&gt; Identity (PParams ShelleyEra))
+-&gt; UnitInterval -&gt; PParams ShelleyEra -&gt; PParams ShelleyEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; UnitInterval
+forall r.
+(HasCallStack, Typeable r, BoundedRational r) =&gt;
+Rational -&gt; r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Rational.html#unsafeBoundRational"><span class="hs-identifier hs-var">unsafeBoundRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Scientific -&gt; Rational
+forall a b. (Real a, Fractional b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">realToFrac</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Scientific
+</span><span class="hs-number">1.9e-2</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/scientific-0.3.8.0-5f850c777594318470c53a2050ab57cb8900a456ca5a9e00fd1403e4733337d0/share/doc/html/src/Data.Scientific.html#Scientific"><span class="hs-identifier hs-type">Scientific</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-208"></span><span>          </span><span class="annot"><span class="annottext">PParams ShelleyEra
+-&gt; (PParams ShelleyEra -&gt; PParams ShelleyEra) -&gt; PParams ShelleyEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; Identity Word32)
+-&gt; PParams ShelleyEra -&gt; Identity (PParams ShelleyEra)
+forall era. EraPParams era =&gt; Lens' (PParams era) Word32
+Lens' (PParams ShelleyEra) Word32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMaxBBSizeL"><span class="hs-identifier hs-var">ppMaxBBSizeL</span></a></span><span> </span><span class="annot"><span class="annottext">((Word32 -&gt; Identity Word32)
+ -&gt; PParams ShelleyEra -&gt; Identity (PParams ShelleyEra))
+-&gt; Word32 -&gt; PParams ShelleyEra -&gt; PParams ShelleyEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">239857</span></span><span>
+</span><span id="line-209"></span><span>          </span><span class="annot"><span class="annottext">PParams ShelleyEra
+-&gt; (PParams ShelleyEra -&gt; PParams ShelleyEra) -&gt; PParams ShelleyEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(Word16 -&gt; Identity Word16)
+-&gt; PParams ShelleyEra -&gt; Identity (PParams ShelleyEra)
+forall era. EraPParams era =&gt; Lens' (PParams era) Word16
+Lens' (PParams ShelleyEra) Word16
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMaxBHSizeL"><span class="hs-identifier hs-var">ppMaxBHSizeL</span></a></span><span> </span><span class="annot"><span class="annottext">((Word16 -&gt; Identity Word16)
+ -&gt; PParams ShelleyEra -&gt; Identity (PParams ShelleyEra))
+-&gt; Word16 -&gt; PParams ShelleyEra -&gt; PParams ShelleyEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">17569</span></span><span>
+</span><span id="line-210"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgGenDelegs"><span class="hs-identifier hs-var">sgGenDelegs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(KeyHash 'Genesis, GenDelegPair)]
+-&gt; Map (KeyHash 'Genesis) GenDelegPair
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyHash 'Genesis
+</span><a href="#local-6989586621679375596"><span class="hs-identifier hs-var">genesisVerKeyHash</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GenDelegPair
+</span><a href="#local-6989586621679375597"><span class="hs-identifier hs-var">genDelegPair</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-211"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgInitialFunds :: ListMap Addr Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgInitialFunds"><span class="hs-identifier hs-var">sgInitialFunds</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Addr, Coin)] -&gt; ListMap Addr Coin
+forall k v. [(k, v)] -&gt; ListMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.ListMap.html#ListMap"><span class="hs-identifier hs-var">LM.ListMap</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679375600"><span class="hs-identifier hs-var">initialFundedAddress</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679375601"><span class="hs-identifier hs-var">initialFunds</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-212"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgStaking :: ShelleyGenesisStaking
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgStaking"><span class="hs-identifier hs-var">sgStaking</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyGenesisStaking
+</span><a href="#local-6989586621679375603"><span class="hs-identifier hs-var">staking</span></a></span><span>
+</span><span id="line-213"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-214"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-215"></span><span>    </span><span class="hs-comment">-- hash of the genesis verification key</span><span>
+</span><span id="line-216"></span><span>    </span><span class="annot"><a href="#local-6989586621679375596"><span class="hs-identifier hs-type">genesisVerKeyHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">L.KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Genesis"><span class="hs-identifier hs-type">L.Genesis</span></a></span><span>
+</span><span id="line-217"></span><span>    </span><span id="local-6989586621679375596"><span class="annot"><span class="annottext">genesisVerKeyHash :: KeyHash 'Genesis
+</span><a href="#local-6989586621679375596"><span class="hs-identifier hs-var hs-var">genesisVerKeyHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash 'Genesis
+forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-var">L.KeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN)
+</span><span class="hs-string">&quot;38e7c5986a34f334e19b712c0aa525146dab8f0ff889b2ad16894241&quot;</span></span><span>
+</span><span id="line-218"></span><span>    </span><span class="hs-comment">-- hash of the delegators verififation key</span><span>
+</span><span id="line-219"></span><span>    </span><span id="local-6989586621679375597"><span class="annot"><span class="annottext">genDelegPair :: GenDelegPair
+</span><a href="#local-6989586621679375597"><span class="hs-identifier hs-var hs-var">genDelegPair</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KeyHash 'GenesisDelegate
+-&gt; VRFVerKeyHash 'GenDelegVRF -&gt; GenDelegPair
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#GenDelegPair"><span class="hs-identifier hs-var">L.GenDelegPair</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'GenesisDelegate
+</span><a href="#local-6989586621679375606"><span class="hs-identifier hs-var">delegVerKeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">VRFVerKeyHash 'GenDelegVRF
+</span><a href="#local-6989586621679375607"><span class="hs-identifier hs-var">delegVrfKeyHash</span></a></span><span>
+</span><span id="line-220"></span><span>    </span><span class="annot"><a href="#local-6989586621679375606"><span class="hs-identifier hs-type">delegVerKeyHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">L.KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#GenesisDelegate"><span class="hs-identifier hs-type">L.GenesisDelegate</span></a></span><span>
+</span><span id="line-221"></span><span>    </span><span id="local-6989586621679375606"><span class="annot"><span class="annottext">delegVerKeyHash :: KeyHash 'GenesisDelegate
+</span><a href="#local-6989586621679375606"><span class="hs-identifier hs-var hs-var">delegVerKeyHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash 'GenesisDelegate
+forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-var">L.KeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN)
+</span><span class="hs-string">&quot;e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a&quot;</span></span><span>
+</span><span id="line-222"></span><span>    </span><span class="annot"><a href="#local-6989586621679375607"><span class="hs-identifier hs-type">delegVrfKeyHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#VRFVerKeyHash"><span class="hs-identifier hs-type">VRFVerKeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#GenDelegVRF"><span class="hs-identifier hs-type">GenDelegVRF</span></a></span><span>
+</span><span id="line-223"></span><span>    </span><span id="local-6989586621679375607"><span class="annot"><span class="annottext">delegVrfKeyHash :: VRFVerKeyHash 'GenDelegVRF
+</span><a href="#local-6989586621679375607"><span class="hs-identifier hs-var hs-var">delegVrfKeyHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash HASH KeyRoleVRF -&gt; VRFVerKeyHash 'GenDelegVRF
+forall (r :: KeyRoleVRF). Hash HASH KeyRoleVRF -&gt; VRFVerKeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#VRFVerKeyHash"><span class="hs-identifier hs-var">VRFVerKeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH KeyRoleVRF
+</span><span class="hs-string">&quot;fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d&quot;</span></span><span>
+</span><span id="line-224"></span><span>    </span><span class="annot"><a href="#local-6989586621679375600"><span class="hs-identifier hs-type">initialFundedAddress</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">L.Addr</span></a></span><span>
+</span><span id="line-225"></span><span>    </span><span id="local-6989586621679375600"><span class="annot"><span class="annottext">initialFundedAddress :: Addr
+</span><a href="#local-6989586621679375600"><span class="hs-identifier hs-var hs-var">initialFundedAddress</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-226"></span><span>      </span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">L.Addr</span></a></span><span>
+</span><span id="line-227"></span><span>        </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">L.Testnet</span></a></span><span>
+</span><span id="line-228"></span><span>        </span><span class="annot"><span class="annottext">PaymentCredential
+forall {kr :: KeyRole}. Credential kr
+</span><a href="#local-6989586621679375610"><span class="hs-identifier hs-var">paymentCredential</span></a></span><span>
+</span><span id="line-229"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefBase"><span class="hs-identifier hs-var">L.StakeRefBase</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+forall {kr :: KeyRole}. Credential kr
+</span><a href="#local-6989586621679375612"><span class="hs-identifier hs-var">stakingCredential</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-230"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-231"></span><span>        </span><span id="local-6989586621679375610"><span class="annot"><span class="annottext">paymentCredential :: Credential kr
+</span><a href="#local-6989586621679375610"><span class="hs-identifier hs-var hs-var">paymentCredential</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-232"></span><span>          </span><span class="annot"><span class="annottext">KeyHash kr -&gt; Credential kr
+forall (kr :: KeyRole). KeyHash kr -&gt; Credential kr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#KeyHashObj"><span class="hs-identifier hs-var">L.KeyHashObj</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyHash kr -&gt; Credential kr) -&gt; KeyHash kr -&gt; Credential kr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-233"></span><span>            </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash kr
+forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-var">L.KeyHash</span></a></span><span>
+</span><span id="line-234"></span><span>              </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN)
+</span><span class="hs-string">&quot;e1bade2ab9465a24fd5eaa4b7388303917338f853a48b11a5fc9964a&quot;</span></span><span>
+</span><span id="line-235"></span><span>        </span><span id="local-6989586621679375612"><span class="annot"><span class="annottext">stakingCredential :: Credential kr
+</span><a href="#local-6989586621679375612"><span class="hs-identifier hs-var hs-var">stakingCredential</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-236"></span><span>          </span><span class="annot"><span class="annottext">KeyHash kr -&gt; Credential kr
+forall (kr :: KeyRole). KeyHash kr -&gt; Credential kr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#KeyHashObj"><span class="hs-identifier hs-var">L.KeyHashObj</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyHash kr -&gt; Credential kr) -&gt; KeyHash kr -&gt; Credential kr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-237"></span><span>            </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash kr
+forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-var">L.KeyHash</span></a></span><span>
+</span><span id="line-238"></span><span>              </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN)
+</span><span class="hs-string">&quot;f5ca93fb6516ebde3d150b3e2acb1909532730de33832ffb229cb20d&quot;</span></span><span>
+</span><span id="line-239"></span><span>    </span><span class="annot"><a href="#local-6989586621679375601"><span class="hs-identifier hs-type">initialFunds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span>
+</span><span id="line-240"></span><span>    </span><span id="local-6989586621679375601"><span class="annot"><span class="annottext">initialFunds :: Coin
+</span><a href="#local-6989586621679375601"><span class="hs-identifier hs-var hs-var">initialFunds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">L.Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">12157196</span></span><span>
+</span><span id="line-241"></span><span>    </span><span id="local-6989586621679375632"><span class="annot"><span class="annottext">relays :: StrictSeq StakePoolRelay
+</span><a href="#local-6989586621679375632"><span class="hs-identifier hs-var hs-var">relays</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-242"></span><span>      </span><span class="annot"><span class="annottext">[StakePoolRelay] -&gt; StrictSeq StakePoolRelay
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">StrictSeq.fromList</span></a></span><span>
+</span><span id="line-243"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">StrictMaybe Port
+-&gt; StrictMaybe IPv4 -&gt; StrictMaybe IPv6 -&gt; StakePoolRelay
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#SingleHostAddr"><span class="hs-identifier hs-var">L.SingleHostAddr</span></a></span><span>
+</span><span id="line-244"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Port -&gt; StrictMaybe Port
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">L.SJust</span></a></span><span> </span><span class="annot"><span class="annottext">(Port -&gt; StrictMaybe Port) -&gt; Port -&gt; StrictMaybe Port
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Port
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Port"><span class="hs-identifier hs-var">L.Port</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">1234</span></span><span class="hs-special">)</span><span>
+</span><span id="line-245"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IPv4 -&gt; StrictMaybe IPv4
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">L.SJust</span></a></span><span> </span><span class="annot"><span class="annottext">(IPv4 -&gt; StrictMaybe IPv4) -&gt; IPv4 -&gt; StrictMaybe IPv4
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IPv4
+forall a. Read a =&gt; FilePath -&gt; a
+</span><span class="hs-identifier hs-var">read</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;0.0.0.0&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-246"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IPv6 -&gt; StrictMaybe IPv6
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">L.SJust</span></a></span><span> </span><span class="annot"><span class="annottext">(IPv6 -&gt; StrictMaybe IPv6) -&gt; IPv6 -&gt; StrictMaybe IPv6
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IPv6
+forall a. Read a =&gt; FilePath -&gt; a
+</span><span class="hs-identifier hs-var">read</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;2001:db8:a::123&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-247"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StrictMaybe Port -&gt; DnsName -&gt; StakePoolRelay
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#SingleHostName"><span class="hs-identifier hs-var">L.SingleHostName</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Port
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">L.SNothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe DnsName -&gt; DnsName
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromJust</span></span><span> </span><span class="annot"><span class="annottext">(Maybe DnsName -&gt; DnsName) -&gt; Maybe DnsName -&gt; DnsName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Maybe DnsName
+forall (m :: * -&gt; *). MonadFail m =&gt; Int -&gt; Text -&gt; m DnsName
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#textToDns"><span class="hs-identifier hs-var">textToDns</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">64</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;cool.domain.com&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-248"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DnsName -&gt; StakePoolRelay
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#MultiHostName"><span class="hs-identifier hs-var">L.MultiHostName</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe DnsName -&gt; DnsName
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromJust</span></span><span> </span><span class="annot"><span class="annottext">(Maybe DnsName -&gt; DnsName) -&gt; Maybe DnsName -&gt; DnsName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Maybe DnsName
+forall (m :: * -&gt; *). MonadFail m =&gt; Int -&gt; Text -&gt; m DnsName
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#textToDns"><span class="hs-identifier hs-var">textToDns</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">64</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;cool.domain.com&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-249"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-250"></span><span>    </span><span class="annot"><a href="#local-6989586621679375641"><span class="hs-identifier hs-type">poolParams</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#PoolParams"><span class="hs-identifier hs-type">L.PoolParams</span></a></span><span>
+</span><span id="line-251"></span><span>    </span><span id="local-6989586621679375641"><span class="annot"><span class="annottext">poolParams :: PoolParams
+</span><a href="#local-6989586621679375641"><span class="hs-identifier hs-var hs-var">poolParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-252"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#PoolParams"><span class="hs-identifier hs-type">L.PoolParams</span></a></span><span>
+</span><span id="line-253"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ppId :: KeyHash 'StakePool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#ppId"><span class="hs-identifier hs-var">L.ppId</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VKey 'StakePool -&gt; KeyHash 'StakePool
+forall (kd :: KeyRole). VKey kd -&gt; KeyHash kd
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#hashKey"><span class="hs-identifier hs-var">hashKey</span></a></span><span> </span><span class="annot"><span class="annottext">(VKey 'StakePool -&gt; KeyHash 'StakePool)
+-&gt; ((SignKeyDSIGN DSIGN, VKey 'StakePool) -&gt; VKey 'StakePool)
+-&gt; (SignKeyDSIGN DSIGN, VKey 'StakePool)
+-&gt; KeyHash 'StakePool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(SignKeyDSIGN DSIGN, VKey 'StakePool) -&gt; VKey 'StakePool
+forall a b. (a, b) -&gt; b
+</span><span class="hs-identifier hs-var">snd</span></span><span> </span><span class="annot"><span class="annottext">((SignKeyDSIGN DSIGN, VKey 'StakePool) -&gt; KeyHash 'StakePool)
+-&gt; (SignKeyDSIGN DSIGN, VKey 'StakePool) -&gt; KeyHash 'StakePool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">RawSeed -&gt; (SignKeyDSIGN DSIGN, VKey 'StakePool)
+forall (kd :: KeyRole). RawSeed -&gt; (SignKeyDSIGN DSIGN, VKey kd)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#mkKeyPair"><span class="hs-identifier hs-var">mkKeyPair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64 -&gt; Word64 -&gt; Word64 -&gt; RawSeed
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Arbitrary.html#RawSeed"><span class="hs-identifier hs-var">RawSeed</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-254"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppVrf :: VRFVerKeyHash 'StakePoolVRF
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#ppVrf"><span class="hs-identifier hs-var">L.ppVrf</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-255"></span><span>            </span><span class="annot"><span class="annottext">forall c (r :: KeyRoleVRF).
+Crypto c =&gt;
+VerKeyVRF (VRF c) -&gt; VRFVerKeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/doc/html/cardano-protocol-tpraos/src/Cardano.Protocol.Crypto.html#hashVerKeyVRF"><span class="hs-identifier hs-var">hashVerKeyVRF</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#StandardCrypto"><span class="hs-identifier hs-type">StandardCrypto</span></a></span><span> </span><span class="annot"><span class="annottext">(VerKeyVRF PraosVRF -&gt; VRFVerKeyHash 'StakePoolVRF)
+-&gt; (VRFKeyPair StandardCrypto -&gt; VerKeyVRF PraosVRF)
+-&gt; VRFKeyPair StandardCrypto
+-&gt; VRFVerKeyHash 'StakePoolVRF
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">VRFKeyPair StandardCrypto -&gt; VerKeyVRF PraosVRF
+VRFKeyPair StandardCrypto -&gt; VerKeyVRF (VRF StandardCrypto)
+forall c. VRFKeyPair c -&gt; VerKeyVRF (VRF c)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.Crypto.VRF.html#vrfVerKey"><span class="hs-identifier hs-var">vrfVerKey</span></a></span><span> </span><span class="annot"><span class="annottext">(VRFKeyPair StandardCrypto -&gt; VRFVerKeyHash 'StakePoolVRF)
+-&gt; VRFKeyPair StandardCrypto -&gt; VRFVerKeyHash 'StakePoolVRF
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall c. Crypto c =&gt; RawSeed -&gt; VRFKeyPair c
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#mkVRFKeyPair"><span class="hs-identifier hs-var">mkVRFKeyPair</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#StandardCrypto"><span class="hs-identifier hs-type">StandardCrypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64 -&gt; Word64 -&gt; Word64 -&gt; RawSeed
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Arbitrary.html#RawSeed"><span class="hs-identifier hs-var">RawSeed</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-256"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppPledge :: Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#ppPledge"><span class="hs-identifier hs-var">L.ppPledge</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">L.Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-257"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppCost :: Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#ppCost"><span class="hs-identifier hs-var">L.ppCost</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">L.Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-258"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppMargin :: UnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#ppMargin"><span class="hs-identifier hs-var">L.ppMargin</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; UnitInterval
+forall r.
+(HasCallStack, Typeable r, BoundedRational r) =&gt;
+Rational -&gt; r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Rational.html#unsafeBoundRational"><span class="hs-identifier hs-var">unsafeBoundRational</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">0.25</span></span><span>
+</span><span id="line-259"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppRewardAccount :: RewardAccount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#ppRewardAccount"><span class="hs-identifier hs-var">L.ppRewardAccount</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Network -&gt; StakeCredential -&gt; RewardAccount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#RewardAccount"><span class="hs-identifier hs-var">L.RewardAccount</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">L.Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#aliceSHK"><span class="hs-identifier hs-var">Cast.aliceSHK</span></a></span><span>
+</span><span id="line-260"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppOwners :: Set (KeyHash 'Staking)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#ppOwners"><span class="hs-identifier hs-var">L.ppOwners</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KeyHash 'Staking -&gt; Set (KeyHash 'Staking)
+forall a. a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.singleton</span></span><span> </span><span class="annot"><span class="annottext">(KeyHash 'Staking -&gt; Set (KeyHash 'Staking))
+-&gt; KeyHash 'Staking -&gt; Set (KeyHash 'Staking)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">VKey 'Staking -&gt; KeyHash 'Staking
+forall (kd :: KeyRole). VKey kd -&gt; KeyHash kd
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#hashKey"><span class="hs-identifier hs-var">hashKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyPair 'Staking -&gt; VKey 'Staking
+forall (kd :: KeyRole). KeyPair kd -&gt; VKey kd
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#vKey"><span class="hs-identifier hs-var">vKey</span></a></span><span> </span><span class="annot"><span class="annottext">KeyPair 'Staking
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Examples.Cast.html#aliceStake"><span class="hs-identifier hs-var">Cast.aliceStake</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-261"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppRelays :: StrictSeq StakePoolRelay
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#ppRelays"><span class="hs-identifier hs-var">L.ppRelays</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq StakePoolRelay
+</span><a href="#local-6989586621679375632"><span class="hs-identifier hs-var">relays</span></a></span><span>
+</span><span id="line-262"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppMetadata :: StrictMaybe PoolMetadata
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#ppMetadata"><span class="hs-identifier hs-var">L.ppMetadata</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-263"></span><span>            </span><span class="annot"><span class="annottext">PoolMetadata -&gt; StrictMaybe PoolMetadata
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">L.SJust</span></a></span><span> </span><span class="annot"><span class="annottext">(PoolMetadata -&gt; StrictMaybe PoolMetadata)
+-&gt; PoolMetadata -&gt; StrictMaybe PoolMetadata
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-264"></span><span>              </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#PoolMetadata"><span class="hs-identifier hs-type">L.PoolMetadata</span></a></span><span>
+</span><span id="line-265"></span><span>                </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">pmUrl :: Url
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#pmUrl"><span class="hs-identifier hs-var">L.pmUrl</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Url -&gt; Url
+forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromJust</span></span><span> </span><span class="annot"><span class="annottext">(Maybe Url -&gt; Url) -&gt; Maybe Url -&gt; Url
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Maybe Url
+forall (m :: * -&gt; *). MonadFail m =&gt; Int -&gt; Text -&gt; m Url
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#textToUrl"><span class="hs-identifier hs-var">textToUrl</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">64</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;best.pool.com&quot;</span></span><span>
+</span><span id="line-266"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pmHash :: ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.StakePool.html#pmHash"><span class="hs-identifier hs-var">L.pmHash</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ByteString
+</span><span class="hs-identifier hs-var">BS.pack</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;100ab{}100ab{}&quot;</span></span><span>
+</span><span id="line-267"></span><span>                </span><span class="hs-special">}</span><span>
+</span><span id="line-268"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-269"></span><span>    </span><span id="local-6989586621679375603"><span class="annot"><span class="annottext">staking :: ShelleyGenesisStaking
+</span><a href="#local-6989586621679375603"><span class="hs-identifier hs-var hs-var">staking</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-270"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesisStaking"><span class="hs-identifier hs-type">ShelleyGenesisStaking</span></a></span><span>
+</span><span id="line-271"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">sgsPools :: ListMap (KeyHash 'StakePool) PoolParams
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgsPools"><span class="hs-identifier hs-var">sgsPools</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-272"></span><span>            </span><span class="annot"><span class="annottext">[(KeyHash 'StakePool, PoolParams)]
+-&gt; ListMap (KeyHash 'StakePool) PoolParams
+forall k v. [(k, v)] -&gt; ListMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.ListMap.html#ListMap"><span class="hs-identifier hs-var">LM.ListMap</span></a></span><span>
+</span><span id="line-273"></span><span>              </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash 'StakePool
+forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-var">L.KeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN)
+</span><span class="hs-string">&quot;f583a45e4947c102091b96170ef50ef0cf8edb62666193a2163247bb&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PoolParams
+</span><a href="#local-6989586621679375641"><span class="hs-identifier hs-var">poolParams</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-274"></span><span>              </span><span class="hs-special">]</span><span>
+</span><span id="line-275"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgsStake :: ListMap (KeyHash 'Staking) (KeyHash 'StakePool)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#sgsStake"><span class="hs-identifier hs-var">sgsStake</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-276"></span><span>            </span><span class="annot"><span class="annottext">[(KeyHash 'Staking, KeyHash 'StakePool)]
+-&gt; ListMap (KeyHash 'Staking) (KeyHash 'StakePool)
+forall k v. [(k, v)] -&gt; ListMap k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.ListMap.html#ListMap"><span class="hs-identifier hs-var">LM.ListMap</span></a></span><span>
+</span><span id="line-277"></span><span>              </span><span class="hs-special">[</span><span>
+</span><span id="line-278"></span><span>                </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash 'Staking
+forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-var">L.KeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN)
+</span><span class="hs-string">&quot;83a192dec0e8da2188e520d0c536a69a747cf173a3df16a6daa94d86&quot;</span></span><span>
+</span><span id="line-279"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash 'StakePool
+forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-var">L.KeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN)
+</span><span class="hs-string">&quot;649eda82bf644d34a6925f24ea4c4c36d27e51de1b44ef47e3560be7&quot;</span></span><span>
+</span><span id="line-280"></span><span>                </span><span class="hs-special">)</span><span>
+</span><span id="line-281"></span><span>              </span><span class="hs-special">]</span><span>
+</span><span id="line-282"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-283"></span></pre></body></html>

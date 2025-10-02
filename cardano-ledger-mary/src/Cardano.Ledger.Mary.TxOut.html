@@ -1,0 +1,192 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Mary.TxOut</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Mary.TxOut.html#scaledMinDeposit"><span class="hs-identifier">scaledMinDeposit</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Mary.Era.html"><span class="hs-identifier">Cardano.Ledger.Mary.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier">MaryEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Mary.PParams.html"><span class="hs-identifier">Cardano.Ledger.Mary.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html"><span class="hs-identifier">Cardano.Ledger.Shelley.TxOut</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#ShelleyTxOut"><span class="hs-identifier">ShelleyTxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#addrEitherShelleyTxOutL"><span class="hs-identifier">addrEitherShelleyTxOutL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#valueEitherShelleyTxOutL"><span class="hs-identifier">valueEitherShelleyTxOutL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html"><span class="hs-identifier">Cardano.Ledger.Val</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#Val"><span class="hs-identifier">Val</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#isAdaOnly"><span class="hs-identifier">isAdaOnly</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#size"><span class="hs-identifier">size</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#injectCompact"><span class="hs-identifier">injectCompact</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Coerce</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">coerce</span></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679282072"><span id="local-6989586621679282078"><span id="local-6989586621679282087"><span id="local-6989586621679282092"><span id="local-6989586621679282098"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxOut"><span class="hs-identifier hs-type">EraTxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TxOut"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#ShelleyTxOut"><span class="hs-identifier hs-type">ShelleyTxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>  </span><span id="local-6989586621679282151"><span class="annot"><span class="annottext">mkBasicTxOut :: HasCallStack =&gt; Addr -&gt; Value MaryEra -&gt; TxOut MaryEra
+</span><a href="#local-6989586621679282151"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkBasicTxOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Value MaryEra -&gt; TxOut MaryEra
+Addr -&gt; Value MaryEra -&gt; ShelleyTxOut MaryEra
+forall era.
+(HasCallStack, Era era, Val (Value era)) =&gt;
+Addr -&gt; Value era -&gt; ShelleyTxOut era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#ShelleyTxOut"><span class="hs-identifier hs-var">ShelleyTxOut</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>  </span><span id="local-6989586621679282157"><span class="annot"><span class="annottext">upgradeTxOut :: EraTxOut (PreviousEra MaryEra) =&gt;
+TxOut (PreviousEra MaryEra) -&gt; TxOut MaryEra
+</span><a href="#local-6989586621679282157"><span class="hs-identifier hs-var hs-var hs-var hs-var">upgradeTxOut</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#TxOutCompact"><span class="hs-identifier hs-type">TxOutCompact</span></a></span><span> </span><span id="local-6989586621679282160"><span class="annot"><span class="annottext">CompactAddr
+</span><a href="#local-6989586621679282160"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span id="local-6989586621679282161"><span class="annot"><span class="annottext">CompactForm (Value AllegraEra)
+</span><a href="#local-6989586621679282161"><span class="hs-identifier hs-var">cfval</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CompactAddr -&gt; CompactForm (Value MaryEra) -&gt; ShelleyTxOut MaryEra
+forall era.
+CompactAddr -&gt; CompactForm (Value era) -&gt; ShelleyTxOut era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#TxOutCompact"><span class="hs-identifier hs-var">TxOutCompact</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CompactAddr -&gt; CompactAddr
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">CompactAddr
+</span><a href="#local-6989586621679282160"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CompactForm Coin -&gt; CompactForm MaryValue
+forall t. Val t =&gt; CompactForm Coin -&gt; CompactForm t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#injectCompact"><span class="hs-identifier hs-var">injectCompact</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm (Value AllegraEra)
+CompactForm Coin
+</span><a href="#local-6989586621679282161"><span class="hs-identifier hs-var">cfval</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679282164"><span class="annot"><span class="annottext">addrEitherTxOutL :: Lens' (TxOut MaryEra) (Either Addr CompactAddr)
+</span><a href="#local-6989586621679282164"><span class="hs-identifier hs-var hs-var hs-var hs-var">addrEitherTxOutL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either Addr CompactAddr -&gt; f (Either Addr CompactAddr))
+-&gt; TxOut MaryEra -&gt; f (TxOut MaryEra)
+(Either Addr CompactAddr -&gt; f (Either Addr CompactAddr))
+-&gt; ShelleyTxOut MaryEra -&gt; f (ShelleyTxOut MaryEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Either Addr CompactAddr -&gt; f (Either Addr CompactAddr))
+-&gt; ShelleyTxOut era -&gt; f (ShelleyTxOut era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#addrEitherShelleyTxOutL"><span class="hs-identifier hs-var">addrEitherShelleyTxOutL</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#addrEitherTxOutL"><span class="hs-pragma hs-type">addrEitherTxOutL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>  </span><span id="local-6989586621679282170"><span class="annot"><span class="annottext">valueEitherTxOutL :: Lens'
+  (TxOut MaryEra)
+  (Either (Value MaryEra) (CompactForm (Value MaryEra)))
+</span><a href="#local-6989586621679282170"><span class="hs-identifier hs-var hs-var hs-var hs-var">valueEitherTxOutL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either (Value MaryEra) (CompactForm (Value MaryEra))
+ -&gt; f (Either (Value MaryEra) (CompactForm (Value MaryEra))))
+-&gt; TxOut MaryEra -&gt; f (TxOut MaryEra)
+(Either (Value MaryEra) (CompactForm (Value MaryEra))
+ -&gt; f (Either (Value MaryEra) (CompactForm (Value MaryEra))))
+-&gt; ShelleyTxOut MaryEra -&gt; f (ShelleyTxOut MaryEra)
+forall era.
+Val (Value era) =&gt;
+Lens'
+  (ShelleyTxOut era) (Either (Value era) (CompactForm (Value era)))
+Lens'
+  (ShelleyTxOut MaryEra)
+  (Either (Value MaryEra) (CompactForm (Value MaryEra)))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#valueEitherShelleyTxOutL"><span class="hs-identifier hs-var">valueEitherShelleyTxOutL</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#valueEitherTxOutL"><span class="hs-pragma hs-type">valueEitherTxOutL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679282182"><span class="annot"><span class="annottext">getMinCoinTxOut :: PParams MaryEra -&gt; TxOut MaryEra -&gt; Coin
+</span><a href="#local-6989586621679282182"><span class="hs-identifier hs-var hs-var hs-var hs-var">getMinCoinTxOut</span></a></span></span><span> </span><span id="local-6989586621679282184"><span class="annot"><span class="annottext">PParams MaryEra
+</span><a href="#local-6989586621679282184"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679282185"><span class="annot"><span class="annottext">TxOut MaryEra
+</span><a href="#local-6989586621679282185"><span class="hs-identifier hs-var">txOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value MaryEra -&gt; Coin -&gt; Coin
+forall v. Val v =&gt; v -&gt; Coin -&gt; Coin
+</span><a href="Cardano.Ledger.Mary.TxOut.html#scaledMinDeposit"><span class="hs-identifier hs-var">scaledMinDeposit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOut MaryEra
+ShelleyTxOut MaryEra
+</span><a href="#local-6989586621679282185"><span class="hs-identifier hs-var">txOut</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyTxOut MaryEra
+-&gt; Getting (Value MaryEra) (ShelleyTxOut MaryEra) (Value MaryEra)
+-&gt; Value MaryEra
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(Value MaryEra -&gt; Const (Value MaryEra) (Value MaryEra))
+-&gt; TxOut MaryEra -&gt; Const (Value MaryEra) (TxOut MaryEra)
+Getting (Value MaryEra) (ShelleyTxOut MaryEra) (Value MaryEra)
+forall era. EraTxOut era =&gt; Lens' (TxOut era) (Value era)
+Lens' (TxOut MaryEra) (Value MaryEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#valueTxOutL"><span class="hs-identifier hs-var">valueTxOutL</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams MaryEra
+</span><a href="#local-6989586621679282184"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">PParams MaryEra -&gt; Getting Coin (PParams MaryEra) Coin -&gt; Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Coin (PParams MaryEra) Coin
+forall era.
+(EraPParams era, AtMostEra &quot;Mary&quot; era) =&gt;
+Lens' (PParams era) Coin
+Lens' (PParams MaryEra) Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMinUTxOValueL"><span class="hs-identifier hs-var">ppMinUTxOValueL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | The `scaledMinDeposit` calculation uses the minUTxOValue protocol parameter</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- (passed to it as Coin mv) as a specification of &quot;the cost of making a</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- Shelley-sized UTxO entry&quot;, calculated here by &quot;utxoEntrySizeWithoutVal +</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- uint&quot;, using the constants in the &quot;where&quot; clause.  In the case when a UTxO</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- entry contains coins only (and the Shelley UTxO entry format is used - we</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- will extend this to be correct for other UTxO formats shortly), the deposit</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- should be exactly the minUTxOValue.  This is the &quot;inject (coin v) == v&quot; case.</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- Otherwise, we calculate the per-byte deposit by multiplying the minimum</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- deposit (which is for the number of Shelley UTxO-entry bytes) by the size of</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- a Shelley UTxO entry.  This is the &quot;(mv * (utxoEntrySizeWithoutVal + uint))&quot;</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- calculation.  We then calculate the total deposit required for making a UTxO</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- entry with a Val-class member v by dividing &quot;(mv * (utxoEntrySizeWithoutVal +</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- uint))&quot; by the estimated total size of the UTxO entry containing v, ie by</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- &quot;(utxoEntrySizeWithoutVal + size v)&quot;.  See the formal specification for</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- details.</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- This scaling function is right for UTxO, not EUTxO</span><span>
+</span><span id="line-52"></span><span id="local-6989586621679281999"><span class="annot"><a href="Cardano.Ledger.Mary.TxOut.html#scaledMinDeposit"><span class="hs-identifier hs-type">scaledMinDeposit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#Val"><span class="hs-identifier hs-type">Val</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679281999"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679281999"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span></span><span>
+</span><span id="line-53"></span><span id="scaledMinDeposit"><span class="annot"><span class="annottext">scaledMinDeposit :: forall v. Val v =&gt; v -&gt; Coin -&gt; Coin
+</span><a href="Cardano.Ledger.Mary.TxOut.html#scaledMinDeposit"><span class="hs-identifier hs-var hs-var">scaledMinDeposit</span></a></span></span><span> </span><span id="local-6989586621679282202"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679282202"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span> </span><span id="local-6989586621679282204"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679282204"><span class="hs-identifier hs-var">mv</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">v -&gt; Bool
+forall t. Val t =&gt; t -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#isAdaOnly"><span class="hs-identifier hs-var">isAdaOnly</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679282202"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679282204"><span class="hs-identifier hs-var">mv</span></a></span><span> </span><span class="hs-comment">-- without non-Coin assets, scaled deposit should be exactly minUTxOValue</span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-comment">-- The calculation should represent this equation</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-comment">-- minValueParameter / coinUTxOSize = actualMinValue / valueUTxOSize</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-comment">-- actualMinValue = (minValueParameter / coinUTxOSize) * valueUTxOSize</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Coin) -&gt; Integer -&gt; Coin
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">max</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679282204"><span class="hs-identifier hs-var">mv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679282206"><span class="hs-identifier hs-var">coinsPerUTxOWord</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679282208"><span class="hs-identifier hs-var">utxoEntrySizeWithoutVal</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">v -&gt; Integer
+forall t. Val t =&gt; t -&gt; Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#size"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679282202"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">-- lengths obtained from tracing on HeapWords of inputs and outputs</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-comment">-- obtained experimentally, and number used here</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">-- units are Word64s</span><span>
+</span><span id="line-63"></span><span>    </span><span id="local-6989586621679282211"><span class="annot"><span class="annottext">txoutLenNoVal :: Integer
+</span><a href="#local-6989586621679282211"><span class="hs-identifier hs-var hs-var">txoutLenNoVal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">14</span></span><span>
+</span><span id="line-64"></span><span>    </span><span id="local-6989586621679282213"><span class="annot"><span class="annottext">txinLen :: Integer
+</span><a href="#local-6989586621679282213"><span class="hs-identifier hs-var hs-var">txinLen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">7</span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">-- unpacked CompactCoin Word64 size in Word64s</span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><a href="#local-6989586621679282214"><span class="hs-identifier hs-type">coinSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-68"></span><span>    </span><span id="local-6989586621679282214"><span class="annot"><span class="annottext">coinSize :: Integer
+</span><a href="#local-6989586621679282214"><span class="hs-identifier hs-var hs-var">coinSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><a href="#local-6989586621679282208"><span class="hs-identifier hs-type">utxoEntrySizeWithoutVal</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-71"></span><span>    </span><span id="local-6989586621679282208"><span class="annot"><span class="annottext">utxoEntrySizeWithoutVal :: Integer
+</span><a href="#local-6989586621679282208"><span class="hs-identifier hs-var hs-var">utxoEntrySizeWithoutVal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">6</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679282211"><span class="hs-identifier hs-var">txoutLenNoVal</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679282213"><span class="hs-identifier hs-var">txinLen</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">-- how much ada does a Word64 of UTxO space cost, calculated from minAdaValue PP</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-comment">-- round down</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><a href="#local-6989586621679282206"><span class="hs-identifier hs-type">coinsPerUTxOWord</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-76"></span><span>    </span><span id="local-6989586621679282206"><span class="annot"><span class="annottext">coinsPerUTxOWord :: Integer
+</span><a href="#local-6989586621679282206"><span class="hs-identifier hs-var hs-var">coinsPerUTxOWord</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">quot</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679282204"><span class="hs-identifier hs-var">mv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679282208"><span class="hs-identifier hs-var">utxoEntrySizeWithoutVal</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679282214"><span class="hs-identifier hs-var">coinSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span></pre></body></html>

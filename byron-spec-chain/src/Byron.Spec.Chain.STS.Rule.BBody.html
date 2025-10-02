@@ -1,0 +1,752 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679237111"><span id="local-6989586621679237112"><span id="local-6989586621679237113"><span id="local-6989586621679237114"><span id="local-6989586621679237115"><span id="local-6989586621679237116"><span id="local-6989586621679237117"><span id="local-6989586621679237118"><span id="local-6989586621679237119"></span></span></span></span></span></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Byron.Spec.Chain.STS.Rule.BBody</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Block.html"><span class="hs-identifier">Byron.Spec.Chain.STS.Block</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Bupi.html"><span class="hs-identifier">Byron.Spec.Chain.STS.Rule.Bupi</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html"><span class="hs-identifier">Byron.Spec.Ledger.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#BlockCount"><span class="hs-identifier">BlockCount</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Epoch"><span class="hs-identifier">Epoch</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#hash"><span class="hs-identifier">hash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html"><span class="hs-identifier">Byron.Spec.Ledger.Delegation</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DELEG"><span class="hs-identifier">DELEG</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DIState"><span class="hs-identifier">DIState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSEnv"><span class="hs-identifier">DSEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSEnv"><span class="hs-identifier">DSEnv</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateDelegationMap"><span class="hs-identifier">_dIStateDelegationMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvAllowedDelegators"><span class="hs-identifier">_dSEnvAllowedDelegators</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvEpoch"><span class="hs-identifier">_dSEnvEpoch</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvK"><span class="hs-identifier">_dSEnvK</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvSlot"><span class="hs-identifier">_dSEnvSlot</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html"><span class="hs-identifier">Byron.Spec.Ledger.STS.UTXO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html#UTxOEnv"><span class="hs-identifier">UTxOEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html#UTxOEnv"><span class="hs-identifier">UTxOEnv</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html#pps"><span class="hs-identifier">pps</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html#utxo0"><span class="hs-identifier">utxo0</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html#UTxOState"><span class="hs-identifier">UTxOState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXOWS.html"><span class="hs-identifier">Byron.Spec.Ledger.STS.UTXOWS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier">UTXOWS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html"><span class="hs-identifier">Byron.Spec.Ledger.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier">UTxO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html"><span class="hs-identifier">Byron.Spec.Ledger.Update</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#PParams"><span class="hs-identifier">PParams</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#UPIState"><span class="hs-identifier">UPIState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#maxBkSz"><span class="hs-identifier">maxBkSz</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Embed"><span class="hs-identifier">Embed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier">Environment</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier">STS</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier">Signal</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier">State</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier">TRC</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#initialRules"><span class="hs-identifier">initialRules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier">judgmentContext</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#trans"><span class="hs-identifier">trans</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#transitionRules"><span class="hs-identifier">transitionRules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#wrapFailed"><span class="hs-identifier">wrapFailed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator">(?!)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/bimap-0.5.0-27098ee257ef2e554baff63313c57dc699014713bec5c50671e808ed86f54646/share/doc/html/src/Data.Bimap.html"><span class="hs-identifier">Data.Bimap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/bimap-0.5.0-27098ee257ef2e554baff63313c57dc699014713bec5c50671e808ed86f54646/share/doc/html/src/Data.Bimap.html#keys"><span class="hs-identifier">keys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Data</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Data</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">data</span><span> </span><span id="BBODY"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BBODY"><span class="hs-identifier hs-var">BBODY</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679237144"><span id="local-6989586621679237146"><span id="local-6989586621679237148"><span id="local-6989586621679237150"><span id="local-6989586621679237152"><span id="local-6989586621679237158"><span id="local-6989586621679237163"><span id="local-6989586621679237166"><span id="local-6989586621679237169"><span id="local-6989586621679237172"><span id="local-6989586621679237175"><span id="local-6989586621679237178"><span id="local-6989586621679237183"><span id="local-6989586621679237188"><span class="annot"><span class="annottext">Typeable BBODY
+Typeable BBODY =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; BBODY -&gt; c BBODY)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BBODY)
+-&gt; (BBODY -&gt; Constr)
+-&gt; (BBODY -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BBODY))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c BBODY))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; BBODY -&gt; BBODY)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BBODY -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BBODY -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BBODY -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BBODY -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; BBODY -&gt; m BBODY)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; BBODY -&gt; m BBODY)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; BBODY -&gt; m BBODY)
+-&gt; Data BBODY
+BBODY -&gt; Constr
+BBODY -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; BBODY -&gt; BBODY
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BBODY -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BBODY -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BBODY -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BBODY -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BBODY -&gt; m BBODY
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BBODY -&gt; m BBODY
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BBODY
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; BBODY -&gt; c BBODY
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BBODY)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c BBODY)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; BBODY -&gt; c BBODY
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; BBODY -&gt; c BBODY
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BBODY
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BBODY
+$ctoConstr :: BBODY -&gt; Constr
+toConstr :: BBODY -&gt; Constr
+$cdataTypeOf :: BBODY -&gt; DataType
+dataTypeOf :: BBODY -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BBODY)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BBODY)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c BBODY)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c BBODY)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; BBODY -&gt; BBODY
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; BBODY -&gt; BBODY
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BBODY -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BBODY -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BBODY -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BBODY -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BBODY -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; BBODY -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BBODY -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BBODY -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BBODY -&gt; m BBODY
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BBODY -&gt; m BBODY
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BBODY -&gt; m BBODY
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BBODY -&gt; m BBODY
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BBODY -&gt; m BBODY
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; BBODY -&gt; m BBODY
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><span class="hs-comment">-- | These `PredicateFailure`s are all throwable.</span></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">data</span><span> </span><span id="BbodyPredicateFailure"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BbodyPredicateFailure"><span class="hs-identifier hs-var">BbodyPredicateFailure</span></a></span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="InvalidBlockSize"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#InvalidBlockSize"><span class="hs-identifier hs-var">InvalidBlockSize</span></a></span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="InvalidUtxoHash"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#InvalidUtxoHash"><span class="hs-identifier hs-var">InvalidUtxoHash</span></a></span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="InvalidDelegationHash"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#InvalidDelegationHash"><span class="hs-identifier hs-var">InvalidDelegationHash</span></a></span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="InvalidUpdateProposalHash"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#InvalidUpdateProposalHash"><span class="hs-identifier hs-var">InvalidUpdateProposalHash</span></a></span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BUPIFailure"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BUPIFailure"><span class="hs-identifier hs-var">BUPIFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Bupi.html#BUPI"><span class="hs-identifier hs-type">BUPI</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="DelegationFailure"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#DelegationFailure"><span class="hs-identifier hs-var">DelegationFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DELEG"><span class="hs-identifier hs-type">DELEG</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="UTXOWSFailure"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#UTXOWSFailure"><span class="hs-identifier hs-var">UTXOWSFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-type">UTXOWS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679237201"><span id="local-6989586621679237209"><span class="annot"><span class="annottext">BbodyPredicateFailure -&gt; BbodyPredicateFailure -&gt; Bool
+(BbodyPredicateFailure -&gt; BbodyPredicateFailure -&gt; Bool)
+-&gt; (BbodyPredicateFailure -&gt; BbodyPredicateFailure -&gt; Bool)
+-&gt; Eq BbodyPredicateFailure
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: BbodyPredicateFailure -&gt; BbodyPredicateFailure -&gt; Bool
+== :: BbodyPredicateFailure -&gt; BbodyPredicateFailure -&gt; Bool
+$c/= :: BbodyPredicateFailure -&gt; BbodyPredicateFailure -&gt; Bool
+/= :: BbodyPredicateFailure -&gt; BbodyPredicateFailure -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679237214"><span id="local-6989586621679237226"><span id="local-6989586621679237230"><span class="annot"><span class="annottext">Int -&gt; BbodyPredicateFailure -&gt; ShowS
+[BbodyPredicateFailure] -&gt; ShowS
+BbodyPredicateFailure -&gt; String
+(Int -&gt; BbodyPredicateFailure -&gt; ShowS)
+-&gt; (BbodyPredicateFailure -&gt; String)
+-&gt; ([BbodyPredicateFailure] -&gt; ShowS)
+-&gt; Show BbodyPredicateFailure
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BbodyPredicateFailure -&gt; ShowS
+showsPrec :: Int -&gt; BbodyPredicateFailure -&gt; ShowS
+$cshow :: BbodyPredicateFailure -&gt; String
+show :: BbodyPredicateFailure -&gt; String
+$cshowList :: [BbodyPredicateFailure] -&gt; ShowS
+showList :: [BbodyPredicateFailure] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679237236"><span id="local-6989586621679237244"><span id="local-6989586621679237249"><span id="local-6989586621679237251"><span id="local-6989586621679237253"><span id="local-6989586621679237259"><span id="local-6989586621679237264"><span id="local-6989586621679237267"><span id="local-6989586621679237270"><span id="local-6989586621679237273"><span id="local-6989586621679237276"><span id="local-6989586621679237279"><span id="local-6989586621679237284"><span id="local-6989586621679237289"><span class="annot"><span class="annottext">Typeable BbodyPredicateFailure
+Typeable BbodyPredicateFailure =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g)
+ -&gt; BbodyPredicateFailure
+ -&gt; c BbodyPredicateFailure)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BbodyPredicateFailure)
+-&gt; (BbodyPredicateFailure -&gt; Constr)
+-&gt; (BbodyPredicateFailure -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BbodyPredicateFailure))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c BbodyPredicateFailure))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; BbodyPredicateFailure -&gt; BbodyPredicateFailure)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r
+    -&gt; (forall d. Data d =&gt; d -&gt; r')
+    -&gt; BbodyPredicateFailure
+    -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r
+    -&gt; (forall d. Data d =&gt; d -&gt; r')
+    -&gt; BbodyPredicateFailure
+    -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; BbodyPredicateFailure -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BbodyPredicateFailure -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; BbodyPredicateFailure -&gt; m BbodyPredicateFailure)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; BbodyPredicateFailure -&gt; m BbodyPredicateFailure)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; BbodyPredicateFailure -&gt; m BbodyPredicateFailure)
+-&gt; Data BbodyPredicateFailure
+BbodyPredicateFailure -&gt; Constr
+BbodyPredicateFailure -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; BbodyPredicateFailure -&gt; BbodyPredicateFailure
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BbodyPredicateFailure -&gt; u
+forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; BbodyPredicateFailure -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BbodyPredicateFailure -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BbodyPredicateFailure -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; BbodyPredicateFailure -&gt; m BbodyPredicateFailure
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; BbodyPredicateFailure -&gt; m BbodyPredicateFailure
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BbodyPredicateFailure
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; BbodyPredicateFailure
+-&gt; c BbodyPredicateFailure
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BbodyPredicateFailure)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c BbodyPredicateFailure)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; BbodyPredicateFailure
+-&gt; c BbodyPredicateFailure
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; BbodyPredicateFailure
+-&gt; c BbodyPredicateFailure
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BbodyPredicateFailure
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c BbodyPredicateFailure
+$ctoConstr :: BbodyPredicateFailure -&gt; Constr
+toConstr :: BbodyPredicateFailure -&gt; Constr
+$cdataTypeOf :: BbodyPredicateFailure -&gt; DataType
+dataTypeOf :: BbodyPredicateFailure -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BbodyPredicateFailure)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c BbodyPredicateFailure)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c BbodyPredicateFailure)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c BbodyPredicateFailure)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; BbodyPredicateFailure -&gt; BbodyPredicateFailure
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; BbodyPredicateFailure -&gt; BbodyPredicateFailure
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BbodyPredicateFailure -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BbodyPredicateFailure -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BbodyPredicateFailure -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; BbodyPredicateFailure -&gt; r
+$cgmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; BbodyPredicateFailure -&gt; [u]
+gmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; BbodyPredicateFailure -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BbodyPredicateFailure -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; BbodyPredicateFailure -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; BbodyPredicateFailure -&gt; m BbodyPredicateFailure
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; BbodyPredicateFailure -&gt; m BbodyPredicateFailure
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; BbodyPredicateFailure -&gt; m BbodyPredicateFailure
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; BbodyPredicateFailure -&gt; m BbodyPredicateFailure
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; BbodyPredicateFailure -&gt; m BbodyPredicateFailure
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; BbodyPredicateFailure -&gt; m BbodyPredicateFailure
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679237307"><span id="local-6989586621679237311"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BBODY"><span class="hs-identifier hs-type">BBODY</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-keyword">type</span><span>
+</span><span id="line-61"></span><span>    </span><span id="Environment"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BBODY"><span class="hs-identifier hs-type">BBODY</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Epoch"><span class="hs-identifier hs-type">Epoch</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#BlockCount"><span class="hs-identifier hs-type">BlockCount</span></a></span><span> </span><span class="hs-comment">-- Chain stability parameter</span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-keyword">type</span><span>
+</span><span id="line-70"></span><span>    </span><span id="State"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BBODY"><span class="hs-identifier hs-type">BBODY</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html#UTxOState"><span class="hs-identifier hs-type">UTxOState</span></a></span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DIState"><span class="hs-identifier hs-type">DIState</span></a></span><span>
+</span><span id="line-73"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#UPIState"><span class="hs-identifier hs-type">UPIState</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signal"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-var">Signal</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BBODY"><span class="hs-identifier hs-type">BBODY</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Block.html#Block"><span class="hs-identifier hs-type">Block</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="PredicateFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-var">PredicateFailure</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BBODY"><span class="hs-identifier hs-type">BBODY</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BbodyPredicateFailure"><span class="hs-identifier hs-type">BbodyPredicateFailure</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679237315"><span class="annot"><span class="annottext">initialRules :: [InitialRule BBODY]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#initialRules"><span class="hs-identifier hs-var hs-var hs-var hs-var">initialRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679237366"><span class="annot"><span class="annottext">transitionRules :: [TransitionRule BBODY]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#transitionRules"><span class="hs-identifier hs-var hs-var hs-var hs-var">transitionRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679237367"><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679237367"><span class="hs-identifier hs-var">ppsVal</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679237368"><span class="annot"><span class="annottext">Epoch
+</span><a href="#local-6989586621679237368"><span class="hs-identifier hs-var">e_n</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679237369"><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679237369"><span class="hs-identifier hs-var">utxoGenesis</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679237370"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679237370"><span class="hs-identifier hs-var">ngk</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679237371"><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679237371"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679237372"><span class="annot"><span class="annottext">UTxOState
+</span><a href="#local-6989586621679237372"><span class="hs-identifier hs-var">utxoSt</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679237373"><span class="annot"><span class="annottext">DIState
+</span><a href="#local-6989586621679237373"><span class="hs-identifier hs-var">ds</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679237374"><span class="annot"><span class="annottext">UPIState
+</span><a href="#local-6989586621679237374"><span class="hs-identifier hs-var">us</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679237375"><span class="annot"><span class="annottext">Signal BBODY
+</span><a href="#local-6989586621679237375"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Rule BBODY 'Transition (RuleContext 'Transition BBODY)
+F (Clause BBODY 'Transition) (TRC BBODY)
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span>
+</span><span id="line-85"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679237376"><span class="annot"><span class="annottext">bMax :: Natural
+</span><a href="#local-6989586621679237376"><span class="hs-identifier hs-var hs-var">bMax</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679237367"><span class="hs-identifier hs-var">ppsVal</span></a></span><span> </span><span class="annot"><span class="annottext">PParams -&gt; Getting Natural PParams Natural -&gt; Natural
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Natural PParams Natural
+Lens' PParams Natural
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#maxBkSz"><span class="hs-identifier hs-var">maxBkSz</span></a></span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">Block -&gt; Natural
+</span><a href="Byron.Spec.Chain.STS.Block.html#bSize"><span class="hs-identifier hs-var">bSize</span></a></span><span> </span><span class="annot"><span class="annottext">Signal BBODY
+Block
+</span><a href="#local-6989586621679237375"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679237376"><span class="hs-identifier hs-var">bMax</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure BBODY -&gt; Rule BBODY 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">PredicateFailure BBODY
+BbodyPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.BBody.html#InvalidBlockSize"><span class="hs-identifier hs-var">InvalidBlockSize</span></a></span><span>
+</span><span id="line-87"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679237379"><span class="annot"><span class="annottext">bh :: BlockHeader
+</span><a href="#local-6989586621679237379"><span class="hs-identifier hs-var hs-var">bh</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Signal BBODY
+Block
+</span><a href="#local-6989586621679237375"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Block -&gt; Getting BlockHeader Block BlockHeader -&gt; BlockHeader
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting BlockHeader Block BlockHeader
+Lens' Block BlockHeader
+</span><a href="Byron.Spec.Chain.STS.Block.html#bHeader"><span class="hs-identifier hs-var">bHeader</span></a></span><span>
+</span><span id="line-88"></span><span>        </span><span class="annot"><span class="annottext">[Tx] -&gt; Hash
+forall a. HasHash a =&gt; a -&gt; Hash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#hash"><span class="hs-identifier hs-var">hash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Signal BBODY
+Block
+</span><a href="#local-6989586621679237375"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Block -&gt; Getting BlockBody Block BlockBody -&gt; BlockBody
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting BlockBody Block BlockBody
+Lens' Block BlockBody
+</span><a href="Byron.Spec.Chain.STS.Block.html#bBody"><span class="hs-identifier hs-var">bBody</span></a></span><span> </span><span class="annot"><span class="annottext">BlockBody -&gt; Getting [Tx] BlockBody [Tx] -&gt; [Tx]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting [Tx] BlockBody [Tx]
+Lens' BlockBody [Tx]
+</span><a href="Byron.Spec.Chain.STS.Block.html#bUtxo"><span class="hs-identifier hs-var">bUtxo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Hash -&gt; Hash -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">BlockHeader
+</span><a href="#local-6989586621679237379"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader -&gt; Getting Hash BlockHeader Hash -&gt; Hash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Hash BlockHeader Hash
+Lens' BlockHeader Hash
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhUtxoHash"><span class="hs-identifier hs-var">bhUtxoHash</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure BBODY -&gt; Rule BBODY 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">PredicateFailure BBODY
+BbodyPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.BBody.html#InvalidUtxoHash"><span class="hs-identifier hs-var">InvalidUtxoHash</span></a></span><span>
+</span><span id="line-89"></span><span>        </span><span class="annot"><span class="annottext">[DCert] -&gt; Hash
+forall a. HasHash a =&gt; a -&gt; Hash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#hash"><span class="hs-identifier hs-var">hash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Signal BBODY
+Block
+</span><a href="#local-6989586621679237375"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Block -&gt; Getting BlockBody Block BlockBody -&gt; BlockBody
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting BlockBody Block BlockBody
+Lens' Block BlockBody
+</span><a href="Byron.Spec.Chain.STS.Block.html#bBody"><span class="hs-identifier hs-var">bBody</span></a></span><span> </span><span class="annot"><span class="annottext">BlockBody -&gt; Getting [DCert] BlockBody [DCert] -&gt; [DCert]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting [DCert] BlockBody [DCert]
+Lens' BlockBody [DCert]
+</span><a href="Byron.Spec.Chain.STS.Block.html#bDCerts"><span class="hs-identifier hs-var">bDCerts</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Hash -&gt; Hash -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">BlockHeader
+</span><a href="#local-6989586621679237379"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader -&gt; Getting Hash BlockHeader Hash -&gt; Hash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Hash BlockHeader Hash
+Lens' BlockHeader Hash
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhDlgHash"><span class="hs-identifier hs-var">bhDlgHash</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure BBODY -&gt; Rule BBODY 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">PredicateFailure BBODY
+BbodyPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.BBody.html#InvalidDelegationHash"><span class="hs-identifier hs-var">InvalidDelegationHash</span></a></span><span>
+</span><span id="line-90"></span><span>        </span><span class="annot"><span class="annottext">(Maybe UProp, [Vote]) -&gt; Hash
+forall a. HasHash a =&gt; a -&gt; Hash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#hash"><span class="hs-identifier hs-var">hash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Block -&gt; (Maybe UProp, [Vote])
+</span><a href="Byron.Spec.Chain.STS.Block.html#bUpdPayload"><span class="hs-identifier hs-var">bUpdPayload</span></a></span><span> </span><span class="annot"><span class="annottext">Signal BBODY
+Block
+</span><a href="#local-6989586621679237375"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Hash -&gt; Hash -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">BlockHeader
+</span><a href="#local-6989586621679237379"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader -&gt; Getting Hash BlockHeader Hash -&gt; Hash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Hash BlockHeader Hash
+Lens' BlockHeader Hash
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhUpdHash"><span class="hs-identifier hs-var">bhUpdHash</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure BBODY -&gt; Rule BBODY 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">PredicateFailure BBODY
+BbodyPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.BBody.html#InvalidUpdateProposalHash"><span class="hs-identifier hs-var">InvalidUpdateProposalHash</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>        </span><span id="local-6989586621679237388"><span class="annot"><span class="annottext">UPIState
+</span><a href="#local-6989586621679237388"><span class="hs-identifier hs-var">us'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-93"></span><span>          </span><span class="annot"><span class="annottext">forall sub super (rtype :: RuleType).
+Embed sub super =&gt;
+RuleContext rtype sub -&gt; Rule super rtype (State sub)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#trans"><span class="hs-identifier hs-var">trans</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Bupi.html#BUPI"><span class="hs-identifier hs-type">BUPI</span></a></span><span> </span><span class="annot"><span class="annottext">(RuleContext 'Transition BUPI
+ -&gt; Rule BBODY 'Transition (State BUPI))
+-&gt; RuleContext 'Transition BUPI
+-&gt; Rule BBODY 'Transition (State BUPI)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-94"></span><span>            </span><span class="annot"><span class="annottext">(Environment BUPI, State BUPI, Signal BUPI) -&gt; TRC BUPI
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span>
+</span><span id="line-95"></span><span>              </span><span class="hs-special">(</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlockHeader
+</span><a href="#local-6989586621679237379"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader -&gt; Getting Slot BlockHeader Slot -&gt; Slot
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Slot BlockHeader Slot
+Lens' BlockHeader Slot
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhSlot"><span class="hs-identifier hs-var">bhSlot</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DIState -&gt; Bimap VKeyGenesis VKey
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateDelegationMap"><span class="hs-identifier hs-var">_dIStateDelegationMap</span></a></span><span> </span><span class="annot"><span class="annottext">DIState
+</span><a href="#local-6989586621679237373"><span class="hs-identifier hs-var">ds</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679237371"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679237370"><span class="hs-identifier hs-var">ngk</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UPIState
+State BUPI
+</span><a href="#local-6989586621679237374"><span class="hs-identifier hs-var">us</span></a></span><span>
+</span><span id="line-97"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Signal BBODY
+Block
+</span><a href="#local-6989586621679237375"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Block -&gt; Getting BlockBody Block BlockBody -&gt; BlockBody
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting BlockBody Block BlockBody
+Lens' Block BlockBody
+</span><a href="Byron.Spec.Chain.STS.Block.html#bBody"><span class="hs-identifier hs-var">bBody</span></a></span><span> </span><span class="annot"><span class="annottext">BlockBody
+-&gt; Getting (Maybe UProp) BlockBody (Maybe UProp) -&gt; Maybe UProp
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Maybe UProp) BlockBody (Maybe UProp)
+Lens' BlockBody (Maybe UProp)
+</span><a href="Byron.Spec.Chain.STS.Block.html#bUpdProp"><span class="hs-identifier hs-var">bUpdProp</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Signal BBODY
+Block
+</span><a href="#local-6989586621679237375"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Block -&gt; Getting BlockBody Block BlockBody -&gt; BlockBody
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting BlockBody Block BlockBody
+Lens' Block BlockBody
+</span><a href="Byron.Spec.Chain.STS.Block.html#bBody"><span class="hs-identifier hs-var">bBody</span></a></span><span> </span><span class="annot"><span class="annottext">BlockBody -&gt; Getting [Vote] BlockBody [Vote] -&gt; [Vote]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting [Vote] BlockBody [Vote]
+Lens' BlockBody [Vote]
+</span><a href="Byron.Spec.Chain.STS.Block.html#bUpdVotes"><span class="hs-identifier hs-var">bUpdVotes</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Block -&gt; (ProtVer, VKey)
+</span><a href="Byron.Spec.Chain.STS.Block.html#bEndorsment"><span class="hs-identifier hs-var">bEndorsment</span></a></span><span> </span><span class="annot"><span class="annottext">Signal BBODY
+Block
+</span><a href="#local-6989586621679237375"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>        </span><span id="local-6989586621679237393"><span class="annot"><span class="annottext">DIState
+</span><a href="#local-6989586621679237393"><span class="hs-identifier hs-var">ds'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-100"></span><span>          </span><span class="annot"><span class="annottext">forall sub super (rtype :: RuleType).
+Embed sub super =&gt;
+RuleContext rtype sub -&gt; Rule super rtype (State sub)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#trans"><span class="hs-identifier hs-var">trans</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DELEG"><span class="hs-identifier hs-type">DELEG</span></a></span><span> </span><span class="annot"><span class="annottext">(RuleContext 'Transition DELEG
+ -&gt; Rule BBODY 'Transition (State DELEG))
+-&gt; RuleContext 'Transition DELEG
+-&gt; Rule BBODY 'Transition (State DELEG)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-101"></span><span>            </span><span class="annot"><span class="annottext">(Environment DELEG, State DELEG, Signal DELEG) -&gt; TRC DELEG
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span>
+</span><span id="line-102"></span><span>              </span><span class="hs-special">(</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSEnv"><span class="hs-identifier hs-type">DSEnv</span></a></span><span>
+</span><span id="line-103"></span><span>                    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">_dSEnvAllowedDelegators :: Set VKeyGenesis
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvAllowedDelegators"><span class="hs-identifier hs-var">_dSEnvAllowedDelegators</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-104"></span><span>                        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[VKeyGenesis] -&gt; Set VKeyGenesis
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">fromList</span></span><span> </span><span class="annot"><span class="annottext">([VKeyGenesis] -&gt; Set VKeyGenesis)
+-&gt; (DIState -&gt; [VKeyGenesis]) -&gt; DIState -&gt; Set VKeyGenesis
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; [VKeyGenesis]
+forall a b. Bimap a b -&gt; [a]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/bimap-0.5.0-27098ee257ef2e554baff63313c57dc699014713bec5c50671e808ed86f54646/share/doc/html/src/Data.Bimap.html#keys"><span class="hs-identifier hs-var">keys</span></a></span><span> </span><span class="annot"><span class="annottext">(Bimap VKeyGenesis VKey -&gt; [VKeyGenesis])
+-&gt; (DIState -&gt; Bimap VKeyGenesis VKey) -&gt; DIState -&gt; [VKeyGenesis]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">DIState -&gt; Bimap VKeyGenesis VKey
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateDelegationMap"><span class="hs-identifier hs-var">_dIStateDelegationMap</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">DIState
+</span><a href="#local-6989586621679237373"><span class="hs-identifier hs-var">ds</span></a></span><span>
+</span><span id="line-105"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dSEnvEpoch :: Epoch
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvEpoch"><span class="hs-identifier hs-var">_dSEnvEpoch</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Epoch
+</span><a href="#local-6989586621679237368"><span class="hs-identifier hs-var">e_n</span></a></span><span>
+</span><span id="line-106"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dSEnvSlot :: Slot
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvSlot"><span class="hs-identifier hs-var">_dSEnvSlot</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BlockHeader
+</span><a href="#local-6989586621679237379"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader -&gt; Getting Slot BlockHeader Slot -&gt; Slot
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Slot BlockHeader Slot
+Lens' BlockHeader Slot
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhSlot"><span class="hs-identifier hs-var">bhSlot</span></a></span><span>
+</span><span id="line-107"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dSEnvK :: BlockCount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvK"><span class="hs-identifier hs-var">_dSEnvK</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679237371"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-108"></span><span>                    </span><span class="hs-special">}</span><span>
+</span><span id="line-109"></span><span>                </span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DIState
+State DELEG
+</span><a href="#local-6989586621679237373"><span class="hs-identifier hs-var">ds</span></a></span><span>
+</span><span id="line-111"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Signal BBODY
+Block
+</span><a href="#local-6989586621679237375"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Block -&gt; Getting BlockBody Block BlockBody -&gt; BlockBody
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting BlockBody Block BlockBody
+Lens' Block BlockBody
+</span><a href="Byron.Spec.Chain.STS.Block.html#bBody"><span class="hs-identifier hs-var">bBody</span></a></span><span> </span><span class="annot"><span class="annottext">BlockBody -&gt; Getting [DCert] BlockBody [DCert] -&gt; [DCert]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting [DCert] BlockBody [DCert]
+Lens' BlockBody [DCert]
+</span><a href="Byron.Spec.Chain.STS.Block.html#bDCerts"><span class="hs-identifier hs-var">bDCerts</span></a></span><span>
+</span><span id="line-112"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>        </span><span id="local-6989586621679237395"><span class="annot"><span class="annottext">UTxOState
+</span><a href="#local-6989586621679237395"><span class="hs-identifier hs-var">utxoSt'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-114"></span><span>          </span><span class="annot"><span class="annottext">forall sub super (rtype :: RuleType).
+Embed sub super =&gt;
+RuleContext rtype sub -&gt; Rule super rtype (State sub)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#trans"><span class="hs-identifier hs-var">trans</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-type">UTXOWS</span></a></span><span> </span><span class="annot"><span class="annottext">(RuleContext 'Transition UTXOWS
+ -&gt; Rule BBODY 'Transition (State UTXOWS))
+-&gt; RuleContext 'Transition UTXOWS
+-&gt; Rule BBODY 'Transition (State UTXOWS)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-115"></span><span>            </span><span class="annot"><span class="annottext">(Environment UTXOWS, State UTXOWS, Signal UTXOWS) -&gt; TRC UTXOWS
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span>
+</span><span id="line-116"></span><span>              </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html#UTxOEnv"><span class="hs-identifier hs-type">UTxOEnv</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">utxo0 :: UTxO
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html#utxo0"><span class="hs-identifier hs-var">utxo0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679237369"><span class="hs-identifier hs-var">utxoGenesis</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pps :: PParams
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html#pps"><span class="hs-identifier hs-var">pps</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679237367"><span class="hs-identifier hs-var">ppsVal</span></a></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UTxOState
+State UTXOWS
+</span><a href="#local-6989586621679237372"><span class="hs-identifier hs-var">utxoSt</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Signal BBODY
+Block
+</span><a href="#local-6989586621679237375"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Block -&gt; Getting BlockBody Block BlockBody -&gt; BlockBody
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting BlockBody Block BlockBody
+Lens' Block BlockBody
+</span><a href="Byron.Spec.Chain.STS.Block.html#bBody"><span class="hs-identifier hs-var">bBody</span></a></span><span> </span><span class="annot"><span class="annottext">BlockBody -&gt; Getting [Tx] BlockBody [Tx] -&gt; [Tx]
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting [Tx] BlockBody [Tx]
+Lens' BlockBody [Tx]
+</span><a href="Byron.Spec.Chain.STS.Block.html#bUtxo"><span class="hs-identifier hs-var">bUtxo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span>        </span><span class="annot"><span class="annottext">(UTxOState, DIState, UPIState)
+-&gt; F (Clause BBODY 'Transition) (UTxOState, DIState, UPIState)
+forall a. a -&gt; F (Clause BBODY 'Transition) a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">((UTxOState, DIState, UPIState)
+ -&gt; F (Clause BBODY 'Transition) (UTxOState, DIState, UPIState))
+-&gt; (UTxOState, DIState, UPIState)
+-&gt; F (Clause BBODY 'Transition) (UTxOState, DIState, UPIState)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UTxOState
+</span><a href="#local-6989586621679237395"><span class="hs-identifier hs-var">utxoSt'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DIState
+</span><a href="#local-6989586621679237393"><span class="hs-identifier hs-var">ds'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UPIState
+</span><a href="#local-6989586621679237388"><span class="hs-identifier hs-var">us'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679237405"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Embed"><span class="hs-identifier hs-type">Embed</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Bupi.html#BUPI"><span class="hs-identifier hs-type">BUPI</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BBODY"><span class="hs-identifier hs-type">BBODY</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-122"></span><span>  </span><span id="local-6989586621679237410"><span class="annot"><span class="annottext">wrapFailed :: PredicateFailure BUPI -&gt; PredicateFailure BBODY
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#wrapFailed"><span class="hs-identifier hs-var hs-var hs-var hs-var">wrapFailed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure BUPI -&gt; PredicateFailure BBODY
+PredicateFailure BUPI -&gt; BbodyPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BUPIFailure"><span class="hs-identifier hs-var">BUPIFailure</span></a></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679237419"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Embed"><span class="hs-identifier hs-type">Embed</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DELEG"><span class="hs-identifier hs-type">DELEG</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BBODY"><span class="hs-identifier hs-type">BBODY</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-125"></span><span>  </span><span id="local-6989586621679237423"><span class="annot"><span class="annottext">wrapFailed :: PredicateFailure DELEG -&gt; PredicateFailure BBODY
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#wrapFailed"><span class="hs-identifier hs-var hs-var hs-var hs-var">wrapFailed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure DELEG -&gt; PredicateFailure BBODY
+PredicateFailure DELEG -&gt; BbodyPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.BBody.html#DelegationFailure"><span class="hs-identifier hs-var">DelegationFailure</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679237432"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Embed"><span class="hs-identifier hs-type">Embed</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-type">UTXOWS</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.BBody.html#BBODY"><span class="hs-identifier hs-type">BBODY</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-128"></span><span>  </span><span id="local-6989586621679237436"><span class="annot"><span class="annottext">wrapFailed :: PredicateFailure UTXOWS -&gt; PredicateFailure BBODY
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#wrapFailed"><span class="hs-identifier hs-var hs-var hs-var hs-var">wrapFailed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure UTXOWS -&gt; PredicateFailure BBODY
+PredicateFailure UTXOWS -&gt; BbodyPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.BBody.html#UTXOWSFailure"><span class="hs-identifier hs-var">UTXOWSFailure</span></a></span><span>
+</span><span id="line-129"></span></pre></body></html>

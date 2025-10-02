@@ -1,0 +1,217 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Main</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.html"><span class="hs-identifier">Cardano.Ledger.Allegra</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.html"><span class="hs-identifier">Cardano.Ledger.Alonzo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier">AlonzoEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.html"><span class="hs-identifier">Cardano.Ledger.Babbage</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier">BabbageEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.html"><span class="hs-identifier">Cardano.Ledger.Mary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier">MaryEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.html"><span class="hs-identifier">Data.Default</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#def"><span class="hs-identifier">def</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/l/testlib/doc/html/cardano-ledger-allegra/src/Test.Cardano.Ledger.Allegra.Binary.Annotator.html"><span class="hs-identifier">Test.Cardano.Ledger.Allegra.Binary.Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/l/testlib/doc/html/cardano-ledger-alonzo/src/Test.Cardano.Ledger.Alonzo.Binary.Annotator.html"><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Binary.Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Api.State.Imp.QuerySpec.html"><span class="hs-identifier">Test.Cardano.Ledger.Api.State.Imp.QuerySpec</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ImpQuery</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Api.State.Imp.QuerySpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Api.State.QuerySpec.html"><span class="hs-identifier">Test.Cardano.Ledger.Api.State.QuerySpec</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">StateQuery</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Api.State.QuerySpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Api.Tx.html"><span class="hs-identifier">Test.Cardano.Ledger.Api.Tx</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Tx</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Api.Tx.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Api.Tx.Body.html"><span class="hs-identifier">Test.Cardano.Ledger.Api.Tx.Body</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TxBody</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Api.Tx.Body.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Api.Tx.Out.html"><span class="hs-identifier">Test.Cardano.Ledger.Api.Tx.Out</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TxOut</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Api.Tx.Out.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/l/testlib/doc/html/cardano-ledger-api/src/Test.Cardano.Ledger.Api.Upgrade.html"><span class="hs-identifier">Test.Cardano.Ledger.Api.Upgrade</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/l/testlib/doc/html/cardano-ledger-api/src/Test.Cardano.Ledger.Api.Upgrade.html#BinaryUpgradeOpts"><span class="hs-identifier">BinaryUpgradeOpts</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/l/testlib/doc/html/cardano-ledger-api/src/Test.Cardano.Ledger.Api.Upgrade.html"><span class="hs-identifier">Test.Cardano.Ledger.Api.Upgrade</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Upgrade</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/l/testlib/doc/html/cardano-ledger-babbage/src/Test.Cardano.Ledger.Babbage.Binary.Annotator.html"><span class="hs-identifier">Test.Cardano.Ledger.Babbage.Binary.Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.Binary.Annotator.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Binary.Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/l/testlib/doc/html/cardano-ledger-dijkstra/src/Test.Cardano.Ledger.Dijkstra.Binary.Annotator.html"><span class="hs-identifier">Test.Cardano.Ledger.Dijkstra.Binary.Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/l/testlib/doc/html/cardano-ledger-dijkstra/src/Test.Cardano.Ledger.Dijkstra.TreeDiff.html"><span class="hs-identifier">Test.Cardano.Ledger.Dijkstra.TreeDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Imp.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Imp.Common</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/l/testlib/doc/html/cardano-ledger-mary/src/Test.Cardano.Ledger.Mary.Binary.Annotator.html"><span class="hs-identifier">Test.Cardano.Ledger.Mary.Binary.Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.ImpTest</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#LedgerSpec"><span class="hs-identifier">LedgerSpec</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#modifyImpInitProtVer"><span class="hs-identifier">modifyImpInitProtVer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- ====================================================================================</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Main.html#apiSpec"><span class="hs-identifier hs-type">apiSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-34"></span><span id="apiSpec"><span class="annot"><span class="annottext">apiSpec :: Spec
+</span><a href="Main.html#apiSpec"><span class="hs-identifier hs-var hs-var">apiSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;cardano-ledger-api&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Tx&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-37"></span><span>      </span><span class="annot"><span class="annottext">Spec
+</span><a href="Test.Cardano.Ledger.Api.Tx.html#spec"><span class="hs-identifier hs-var">Tx.spec</span></a></span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><span class="annottext">Spec
+</span><a href="Test.Cardano.Ledger.Api.Tx.Out.html#spec"><span class="hs-identifier hs-var">TxOut.spec</span></a></span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="annottext">Spec
+</span><a href="Test.Cardano.Ledger.Api.Tx.Body.html#spec"><span class="hs-identifier hs-var">TxBody.spec</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;State&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="annottext">Spec
+</span><a href="Test.Cardano.Ledger.Api.State.QuerySpec.html#spec"><span class="hs-identifier hs-var">StateQuery.spec</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Imp&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="annottext">forall t. ImpSpec t =&gt; SpecWith (ImpInit t) -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Internal.html#withImpInit"><span class="hs-identifier hs-var">withImpInit</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#LedgerSpec"><span class="hs-identifier hs-type">LedgerSpec</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(SpecWith (ImpInit (LedgerSpec ConwayEra)) -&gt; Spec)
+-&gt; SpecWith (ImpInit (LedgerSpec ConwayEra)) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-44"></span><span>        </span><span class="annot"><span class="annottext">[Version]
+-&gt; (Version -&gt; SpecWith (ImpInit (LedgerSpec ConwayEra)))
+-&gt; SpecWith (ImpInit (LedgerSpec ConwayEra))
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><span class="hs-identifier hs-var">forM_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; [Version]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVersions"><span class="hs-identifier hs-var">eraProtVersions</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Version -&gt; SpecWith (ImpInit (LedgerSpec ConwayEra)))
+ -&gt; SpecWith (ImpInit (LedgerSpec ConwayEra)))
+-&gt; (Version -&gt; SpecWith (ImpInit (LedgerSpec ConwayEra)))
+-&gt; SpecWith (ImpInit (LedgerSpec ConwayEra))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679286800"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679286800"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-45"></span><span>          </span><span class="annot"><span class="annottext">Version
+-&gt; SpecWith (ImpInit (LedgerSpec ConwayEra))
+-&gt; SpecWith (ImpInit (LedgerSpec ConwayEra))
+forall era.
+(ShelleyEraImp era, ShelleyEraImp era) =&gt;
+Version
+-&gt; SpecWith (ImpInit (LedgerSpec era))
+-&gt; SpecWith (ImpInit (LedgerSpec era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.ImpTest.html#modifyImpInitProtVer"><span class="hs-identifier hs-var">modifyImpInitProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679286800"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">(SpecWith (ImpInit (LedgerSpec ConwayEra))
+ -&gt; SpecWith (ImpInit (LedgerSpec ConwayEra)))
+-&gt; SpecWith (ImpInit (LedgerSpec ConwayEra))
+-&gt; SpecWith (ImpInit (LedgerSpec ConwayEra))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-46"></span><span>            </span><span class="annot"><span class="annottext">forall era. ConwayEraImp era =&gt; SpecWith (ImpInit (LedgerSpec era))
+</span><a href="Test.Cardano.Ledger.Api.State.Imp.QuerySpec.html#spec"><span class="hs-identifier hs-var">ImpQuery.spec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Upgrade&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-48"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(EraApi era, Arbitrary (TxOut (PreviousEra era)),
+ Arbitrary (TxCert (PreviousEra era)),
+ Arbitrary (TxAuxData (PreviousEra era)),
+ Arbitrary (TxWits (PreviousEra era)),
+ Arbitrary (TxBody (PreviousEra era)), EraTx (PreviousEra era),
+ Arbitrary (Tx (PreviousEra era)),
+ Arbitrary (Script (PreviousEra era)), HasCallStack,
+ ToExpr (Tx era), ToExpr (TxBody era), ToExpr (TxWits era),
+ ToExpr (TxAuxData era), DecCBOR (TxAuxData era),
+ DecCBOR (Script era), DecCBOR (TxWits era), DecCBOR (TxBody era),
+ DecCBOR (Tx era), EqRaw (Tx era)) =&gt;
+BinaryUpgradeOpts -&gt; Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/l/testlib/doc/html/cardano-ledger-api/src/Test.Cardano.Ledger.Api.Upgrade.html#spec"><span class="hs-identifier hs-var">Upgrade.spec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryUpgradeOpts
+forall a. Default a =&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#def"><span class="hs-identifier hs-var">def</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(EraApi era, Arbitrary (TxOut (PreviousEra era)),
+ Arbitrary (TxCert (PreviousEra era)),
+ Arbitrary (TxAuxData (PreviousEra era)),
+ Arbitrary (TxWits (PreviousEra era)),
+ Arbitrary (TxBody (PreviousEra era)), EraTx (PreviousEra era),
+ Arbitrary (Tx (PreviousEra era)),
+ Arbitrary (Script (PreviousEra era)), HasCallStack,
+ ToExpr (Tx era), ToExpr (TxBody era), ToExpr (TxWits era),
+ ToExpr (TxAuxData era), DecCBOR (TxAuxData era),
+ DecCBOR (Script era), DecCBOR (TxWits era), DecCBOR (TxBody era),
+ DecCBOR (Tx era), EqRaw (Tx era)) =&gt;
+BinaryUpgradeOpts -&gt; Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/l/testlib/doc/html/cardano-ledger-api/src/Test.Cardano.Ledger.Api.Upgrade.html#spec"><span class="hs-identifier hs-var">Upgrade.spec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryUpgradeOpts
+forall a. Default a =&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#def"><span class="hs-identifier hs-var">def</span></a></span><span>
+</span><span id="line-50"></span><span>      </span><span class="hs-comment">-- Scripts are not upgradeable from Mary through their CBOR instances, since</span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-comment">-- Mary had no concept of a prefix.</span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-comment">-- Transactions are also not upgradeable through deserialisation, though we</span><span>
+</span><span id="line-53"></span><span>      </span><span class="hs-comment">-- check them via the translateEra method</span><span>
+</span><span id="line-54"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(EraApi era, Arbitrary (TxOut (PreviousEra era)),
+ Arbitrary (TxCert (PreviousEra era)),
+ Arbitrary (TxAuxData (PreviousEra era)),
+ Arbitrary (TxWits (PreviousEra era)),
+ Arbitrary (TxBody (PreviousEra era)), EraTx (PreviousEra era),
+ Arbitrary (Tx (PreviousEra era)),
+ Arbitrary (Script (PreviousEra era)), HasCallStack,
+ ToExpr (Tx era), ToExpr (TxBody era), ToExpr (TxWits era),
+ ToExpr (TxAuxData era), DecCBOR (TxAuxData era),
+ DecCBOR (Script era), DecCBOR (TxWits era), DecCBOR (TxBody era),
+ DecCBOR (Tx era), EqRaw (Tx era)) =&gt;
+BinaryUpgradeOpts -&gt; Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/l/testlib/doc/html/cardano-ledger-api/src/Test.Cardano.Ledger.Api.Upgrade.html#spec"><span class="hs-identifier hs-var">Upgrade.spec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; BinaryUpgradeOpts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/l/testlib/doc/html/cardano-ledger-api/src/Test.Cardano.Ledger.Api.Upgrade.html#BinaryUpgradeOpts"><span class="hs-identifier hs-var">BinaryUpgradeOpts</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(EraApi era, Arbitrary (TxOut (PreviousEra era)),
+ Arbitrary (TxCert (PreviousEra era)),
+ Arbitrary (TxAuxData (PreviousEra era)),
+ Arbitrary (TxWits (PreviousEra era)),
+ Arbitrary (TxBody (PreviousEra era)), EraTx (PreviousEra era),
+ Arbitrary (Tx (PreviousEra era)),
+ Arbitrary (Script (PreviousEra era)), HasCallStack,
+ ToExpr (Tx era), ToExpr (TxBody era), ToExpr (TxWits era),
+ ToExpr (TxAuxData era), DecCBOR (TxAuxData era),
+ DecCBOR (Script era), DecCBOR (TxWits era), DecCBOR (TxBody era),
+ DecCBOR (Tx era), EqRaw (Tx era)) =&gt;
+BinaryUpgradeOpts -&gt; Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/l/testlib/doc/html/cardano-ledger-api/src/Test.Cardano.Ledger.Api.Upgrade.html#spec"><span class="hs-identifier hs-var">Upgrade.spec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryUpgradeOpts
+forall a. Default a =&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#def"><span class="hs-identifier hs-var">def</span></a></span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(EraApi era, Arbitrary (TxOut (PreviousEra era)),
+ Arbitrary (TxCert (PreviousEra era)),
+ Arbitrary (TxAuxData (PreviousEra era)),
+ Arbitrary (TxWits (PreviousEra era)),
+ Arbitrary (TxBody (PreviousEra era)), EraTx (PreviousEra era),
+ Arbitrary (Tx (PreviousEra era)),
+ Arbitrary (Script (PreviousEra era)), HasCallStack,
+ ToExpr (Tx era), ToExpr (TxBody era), ToExpr (TxWits era),
+ ToExpr (TxAuxData era), DecCBOR (TxAuxData era),
+ DecCBOR (Script era), DecCBOR (TxWits era), DecCBOR (TxBody era),
+ DecCBOR (Tx era), EqRaw (Tx era)) =&gt;
+BinaryUpgradeOpts -&gt; Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/l/testlib/doc/html/cardano-ledger-api/src/Test.Cardano.Ledger.Api.Upgrade.html#spec"><span class="hs-identifier hs-var">Upgrade.spec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryUpgradeOpts
+forall a. Default a =&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#def"><span class="hs-identifier hs-var">def</span></a></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(EraApi era, Arbitrary (TxOut (PreviousEra era)),
+ Arbitrary (TxCert (PreviousEra era)),
+ Arbitrary (TxAuxData (PreviousEra era)),
+ Arbitrary (TxWits (PreviousEra era)),
+ Arbitrary (TxBody (PreviousEra era)), EraTx (PreviousEra era),
+ Arbitrary (Tx (PreviousEra era)),
+ Arbitrary (Script (PreviousEra era)), HasCallStack,
+ ToExpr (Tx era), ToExpr (TxBody era), ToExpr (TxWits era),
+ ToExpr (TxAuxData era), DecCBOR (TxAuxData era),
+ DecCBOR (Script era), DecCBOR (TxWits era), DecCBOR (TxBody era),
+ DecCBOR (Tx era), EqRaw (Tx era)) =&gt;
+BinaryUpgradeOpts -&gt; Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/l/testlib/doc/html/cardano-ledger-api/src/Test.Cardano.Ledger.Api.Upgrade.html#spec"><span class="hs-identifier hs-var">Upgrade.spec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryUpgradeOpts
+forall a. Default a =&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#def"><span class="hs-identifier hs-var">def</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Main.html#main"><span class="hs-identifier hs-type">main</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span id="main"><span class="annot"><span class="annottext">IO ()
+</span><a href="Main.html#main"><span class="hs-identifier hs-var hs-var hs-var">main</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Spec -&gt; IO ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html#ledgerTestMain"><span class="hs-identifier hs-var">ledgerTestMain</span></a></span><span> </span><span class="annot"><span class="annottext">Spec
+</span><a href="Main.html#apiSpec"><span class="hs-identifier hs-var">apiSpec</span></a></span><span>
+</span><span id="line-61"></span></pre></body></html>

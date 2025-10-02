@@ -1,0 +1,42 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Foreign.API.html"><span class="hs-identifier">MAlonzo.Code.Ledger.Foreign.API</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Agda</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.ImpTest.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.ImpTest</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679510558"><span id="local-6989586621679510565"><span id="local-6989586621679510581"><span id="local-6989586621679510588"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecSpecRule"><span class="hs-identifier hs-type">ExecSpecRule</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;POOL&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>  </span><span id="local-6989586621679510662"><span class="annot"><span class="annottext">runAgdaRule :: HasCallStack =&gt;
+SpecTRC &quot;POOL&quot; ConwayEra
+-&gt; Either Text (SpecState &quot;POOL&quot; ConwayEra)
+</span><a href="#local-6989586621679510662"><span class="hs-identifier hs-var hs-var hs-var hs-var">runAgdaRule</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SpecEnvironment &quot;POOL&quot; ConwayEra
+ -&gt; SpecState &quot;POOL&quot; ConwayEra
+ -&gt; SpecSignal &quot;POOL&quot; ConwayEra
+ -&gt; ComputationResult Text (SpecState &quot;POOL&quot; ConwayEra))
+-&gt; SpecTRC &quot;POOL&quot; ConwayEra
+-&gt; Either Text (SpecState &quot;POOL&quot; ConwayEra)
+forall (rule :: Symbol) era.
+(SpecEnvironment rule era
+ -&gt; SpecState rule era
+ -&gt; SpecSignal rule era
+ -&gt; ComputationResult Text (SpecState rule era))
+-&gt; SpecTRC rule era -&gt; Either Text (SpecState rule era)
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#runFromAgdaFunction"><span class="hs-identifier hs-var">runFromAgdaFunction</span></a></span><span> </span><span class="annot"><span class="annottext">PParams -&gt; PState -&gt; DCert -&gt; T_ComputationResult_44 Text PState
+SpecEnvironment &quot;POOL&quot; ConwayEra
+-&gt; SpecState &quot;POOL&quot; ConwayEra
+-&gt; SpecSignal &quot;POOL&quot; ConwayEra
+-&gt; ComputationResult Text (SpecState &quot;POOL&quot; ConwayEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Certs.html#poolStep"><span class="hs-identifier hs-var">Agda.poolStep</span></a></span><span>
+</span><span id="line-22"></span></pre></body></html>

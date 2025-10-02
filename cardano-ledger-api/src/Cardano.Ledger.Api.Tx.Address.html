@@ -1,0 +1,234 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Api.Tx.Address</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Address</span></span><span>
+</span><span id="line-3"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier">Addr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#getNetwork"><span class="hs-identifier">getNetwork</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#BootstrapAddress"><span class="hs-identifier">BootstrapAddress</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#serialiseAddr"><span class="hs-identifier">serialiseAddr</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Strict decoders</span></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-comment">-- | Decoders below will only decode addresses that are allowed to be placed on chain</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-comment">-- today. Historically there were a few bugs in the decoder which allowed a few</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-comment">-- malformed addressed to be placed on chain. If you need backwards compatibility, reach</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-comment">-- out for `decodeAddrLenient`.</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#decodeAddr"><span class="hs-identifier">decodeAddr</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#decodeAddrEither"><span class="hs-identifier">decodeAddrEither</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrShort"><span class="hs-identifier">decodeAddrShort</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrShortEither"><span class="hs-identifier">decodeAddrShortEither</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><span class="hs-comment">-- ** Lenient decoders</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><span class="hs-comment">-- | These lenient decoders do not fail for addresses with known bugs</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#DecAddr"><span class="hs-identifier">DecAddr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrLenient"><span class="hs-identifier">decodeAddrLenient</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrLenientEither"><span class="hs-identifier">decodeAddrLenientEither</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Reward Account</span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#RewardAccount"><span class="hs-identifier">RewardAccount</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#serialiseRewardAccount"><span class="hs-identifier">serialiseRewardAccount</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#deserialiseRewardAccount"><span class="hs-identifier">deserialiseRewardAccount</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html"><span class="hs-identifier">Cardano.Ledger.Address</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Applicative</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(&lt;|&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/FailT-0.1.2.0-a6bfc8b1703d475e2ae00d40307128c8b38b30577dae60bdff0e62519ebdc06b/share/doc/html/src/Control.Monad.Trans.Fail.html"><span class="hs-identifier">Control.Monad.Trans.Fail</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/FailT-0.1.2.0-a6bfc8b1703d475e2ae00d40307128c8b38b30577dae60bdff0e62519ebdc06b/share/doc/html/src/Control.Monad.Trans.Fail.html#runFail"><span class="hs-identifier">runFail</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/FailT-0.1.2.0-a6bfc8b1703d475e2ae00d40307128c8b38b30577dae60bdff0e62519ebdc06b/share/doc/html/src/Control.Monad.Trans.Fail.html#runFailLast"><span class="hs-identifier">runFailLast</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.State.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">evalStateT</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">get</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Short</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ShortByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | Same as `decodeAddrShort`, but produces an `Either` result</span></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrShortEither"><span class="hs-identifier hs-type">decodeAddrShortEither</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">ShortByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span>
+</span><span id="line-43"></span><span id="decodeAddrShortEither"><span class="annot"><span class="annottext">decodeAddrShortEither :: ShortByteString -&gt; Either String Addr
+</span><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrShortEither"><span class="hs-identifier hs-var hs-var">decodeAddrShortEither</span></a></span></span><span> </span><span id="local-6989586621679317639"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679317639"><span class="hs-identifier hs-var">sbs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Fail String Addr -&gt; Either String Addr
+forall e a. (IsString e, Semigroup e) =&gt; Fail e a -&gt; Either e a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/FailT-0.1.2.0-a6bfc8b1703d475e2ae00d40307128c8b38b30577dae60bdff0e62519ebdc06b/share/doc/html/src/Control.Monad.Trans.Fail.html#runFail"><span class="hs-identifier hs-var">runFail</span></a></span><span> </span><span class="annot"><span class="annottext">(Fail String Addr -&gt; Either String Addr)
+-&gt; Fail String Addr -&gt; Either String Addr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StateT Int (FailT String Identity) Addr -&gt; Int -&gt; Fail String Addr
+forall (m :: * -&gt; *) s a. Monad m =&gt; StateT s m a -&gt; s -&gt; m a
+</span><span class="hs-identifier hs-var">evalStateT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShortByteString -&gt; StateT Int (FailT String Identity) Addr
+forall (m :: * -&gt; *) b.
+(MonadFail m, AddressBuffer b) =&gt;
+b -&gt; StateT Int m Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#decodeAddrStateT"><span class="hs-identifier hs-var">decodeAddrStateT</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679317639"><span class="hs-identifier hs-var">sbs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-44"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrShortEither"><span class="hs-pragma hs-type">decodeAddrShortEither</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><span class="hs-comment">-- | Same as `decodeAddr`, but works on `ShortByteString`</span></span><span>
+</span><span id="line-47"></span><span id="local-6989586621679317561"><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrShort"><span class="hs-identifier hs-type">decodeAddrShort</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">MonadFail</span></span><span> </span><span class="annot"><a href="#local-6989586621679317561"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">ShortByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="#local-6989586621679317561"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span></span><span>
+</span><span id="line-51"></span><span id="decodeAddrShort"><span class="annot"><span class="annottext">decodeAddrShort :: forall (m :: * -&gt; *). MonadFail m =&gt; ShortByteString -&gt; m Addr
+</span><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrShort"><span class="hs-identifier hs-var hs-var">decodeAddrShort</span></a></span></span><span> </span><span id="local-6989586621679317648"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679317648"><span class="hs-identifier hs-var">sbs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StateT Int m Addr -&gt; Int -&gt; m Addr
+forall (m :: * -&gt; *) s a. Monad m =&gt; StateT s m a -&gt; s -&gt; m a
+</span><span class="hs-identifier hs-var">evalStateT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShortByteString -&gt; StateT Int m Addr
+forall (m :: * -&gt; *) b.
+(MonadFail m, AddressBuffer b) =&gt;
+b -&gt; StateT Int m Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#decodeAddrStateT"><span class="hs-identifier hs-var">decodeAddrStateT</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679317648"><span class="hs-identifier hs-var">sbs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-52"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrShort"><span class="hs-pragma hs-type">decodeAddrShort</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><span class="hs-comment">-- | Decoded Address.</span></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">data</span><span> </span><span id="DecAddr"><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#DecAddr"><span class="hs-identifier hs-var">DecAddr</span></a></span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | Address was decoded with no problems</span></span><span>
+</span><span id="line-57"></span><span>    </span><span id="DecAddr"><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#DecAddr"><span class="hs-identifier hs-var">DecAddr</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Address was decoded, but it contains an invalid `Cardano.Ledger.Credential.Ptr`, which</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">-- means that address will be decoded with Ptr that has all values clamped to zero.</span><span>
+</span><span id="line-60"></span><span>    </span><span id="DecAddrBadPtr"><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#DecAddrBadPtr"><span class="hs-identifier hs-var">DecAddrBadPtr</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Address was decoded, but not all of input was consumed</span></span><span>
+</span><span id="line-62"></span><span>    </span><span id="DecAddrUnconsumed"><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#DecAddrUnconsumed"><span class="hs-identifier hs-var">DecAddrUnconsumed</span></a></span></span><span>
+</span><span id="line-63"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="hs-comment">-- | Left over bytes after consuming the input</span></span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679317653"><span id="local-6989586621679317661"><span class="annot"><span class="annottext">DecAddr -&gt; DecAddr -&gt; Bool
+(DecAddr -&gt; DecAddr -&gt; Bool)
+-&gt; (DecAddr -&gt; DecAddr -&gt; Bool) -&gt; Eq DecAddr
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: DecAddr -&gt; DecAddr -&gt; Bool
+== :: DecAddr -&gt; DecAddr -&gt; Bool
+$c/= :: DecAddr -&gt; DecAddr -&gt; Bool
+/= :: DecAddr -&gt; DecAddr -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679317666"><span id="local-6989586621679317678"><span id="local-6989586621679317682"><span class="annot"><span class="annottext">Int -&gt; DecAddr -&gt; ShowS
+[DecAddr] -&gt; ShowS
+DecAddr -&gt; String
+(Int -&gt; DecAddr -&gt; ShowS)
+-&gt; (DecAddr -&gt; String) -&gt; ([DecAddr] -&gt; ShowS) -&gt; Show DecAddr
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DecAddr -&gt; ShowS
+showsPrec :: Int -&gt; DecAddr -&gt; ShowS
+$cshow :: DecAddr -&gt; String
+show :: DecAddr -&gt; String
+$cshowList :: [DecAddr] -&gt; ShowS
+showList :: [DecAddr] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- | This is a lenient decoder that will disregard known bugs in the address</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- deserialization. This function is intended for clients that need to deal with</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- historical data that has already been placed on chain. If you also require information</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- on what exactly is bad in the address, or you would like to guard only against a</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- specific bug, you should use `decodeAddrLenientEither` instead.</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- @since 1.8.0</span><span>
+</span><span id="line-75"></span><span id="local-6989586621679317568"><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrLenient"><span class="hs-identifier hs-type">decodeAddrLenient</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">MonadFail</span></span><span> </span><span class="annot"><a href="#local-6989586621679317568"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="#local-6989586621679317568"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span></span><span>
+</span><span id="line-79"></span><span id="decodeAddrLenient"><span class="annot"><span class="annottext">decodeAddrLenient :: forall (m :: * -&gt; *). MonadFail m =&gt; ByteString -&gt; m Addr
+</span><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrLenient"><span class="hs-identifier hs-var hs-var">decodeAddrLenient</span></a></span></span><span> </span><span id="local-6989586621679317691"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679317691"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StateT Int m Addr -&gt; Int -&gt; m Addr
+forall (m :: * -&gt; *) s a. Monad m =&gt; StateT s m a -&gt; s -&gt; m a
+</span><span class="hs-identifier hs-var">evalStateT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; ByteString -&gt; StateT Int m Addr
+forall (m :: * -&gt; *) b.
+(MonadFail m, AddressBuffer b) =&gt;
+Bool -&gt; Bool -&gt; b -&gt; StateT Int m Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#decodeAddrStateLenientT"><span class="hs-identifier hs-var">decodeAddrStateLenientT</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679317691"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- | Decode an address and fail only for addresses that could have never been placed on</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- chain, while decoding addresses with information about potential problems in</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- them. Similar to `decodeAddrLenient`, this function is not intended for addresses that</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- will be placed into a new transaction.</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- @since 1.8.0</span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrLenientEither"><span class="hs-identifier hs-type">decodeAddrLenientEither</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Api.Tx.Address.html#DecAddr"><span class="hs-identifier hs-type">DecAddr</span></a></span><span>
+</span><span id="line-90"></span><span id="decodeAddrLenientEither"><span class="annot"><span class="annottext">decodeAddrLenientEither :: ByteString -&gt; Either String DecAddr
+</span><a href="Cardano.Ledger.Api.Tx.Address.html#decodeAddrLenientEither"><span class="hs-identifier hs-var hs-var">decodeAddrLenientEither</span></a></span></span><span> </span><span id="local-6989586621679317693"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679317693"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><span class="annottext">Fail String DecAddr -&gt; Either String DecAddr
+forall e a. IsString e =&gt; Fail e a -&gt; Either e a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/FailT-0.1.2.0-a6bfc8b1703d475e2ae00d40307128c8b38b30577dae60bdff0e62519ebdc06b/share/doc/html/src/Control.Monad.Trans.Fail.html#runFailLast"><span class="hs-identifier hs-var">runFailLast</span></a></span><span> </span><span class="annot"><span class="annottext">(Fail String DecAddr -&gt; Either String DecAddr)
+-&gt; Fail String DecAddr -&gt; Either String DecAddr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Addr -&gt; DecAddr
+</span><a href="Cardano.Ledger.Api.Tx.Address.html#DecAddr"><span class="hs-identifier hs-var">DecAddr</span></a></span><span> </span><span class="annot"><span class="annottext">(Addr -&gt; DecAddr) -&gt; Fail String Addr -&gt; Fail String DecAddr
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Fail String Addr
+forall (m :: * -&gt; *). MonadFail m =&gt; ByteString -&gt; m Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#decodeAddr"><span class="hs-identifier hs-var">decodeAddr</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679317693"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>      </span><span class="annot"><span class="annottext">Fail String DecAddr -&gt; Fail String DecAddr -&gt; Fail String DecAddr
+forall a.
+FailT String Identity a
+-&gt; FailT String Identity a -&gt; FailT String Identity a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><span class="hs-operator hs-var">&lt;|&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Addr -&gt; DecAddr
+</span><a href="Cardano.Ledger.Api.Tx.Address.html#DecAddrBadPtr"><span class="hs-identifier hs-var">DecAddrBadPtr</span></a></span><span> </span><span class="annot"><span class="annottext">(Addr -&gt; DecAddr) -&gt; Fail String Addr -&gt; Fail String DecAddr
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">StateT Int (FailT String Identity) Addr -&gt; Int -&gt; Fail String Addr
+forall (m :: * -&gt; *) s a. Monad m =&gt; StateT s m a -&gt; s -&gt; m a
+</span><span class="hs-identifier hs-var">evalStateT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+-&gt; Bool -&gt; ByteString -&gt; StateT Int (FailT String Identity) Addr
+forall (m :: * -&gt; *) b.
+(MonadFail m, AddressBuffer b) =&gt;
+Bool -&gt; Bool -&gt; b -&gt; StateT Int m Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#decodeAddrStateLenientT"><span class="hs-identifier hs-var">decodeAddrStateLenientT</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679317693"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>      </span><span class="annot"><span class="annottext">Fail String DecAddr -&gt; Fail String DecAddr -&gt; Fail String DecAddr
+forall a.
+FailT String Identity a
+-&gt; FailT String Identity a -&gt; FailT String Identity a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><span class="hs-operator hs-var">&lt;|&gt;</span></span><span> </span><span class="annot"><span class="annottext">Fail String DecAddr
+</span><a href="#local-6989586621679317695"><span class="hs-identifier hs-var">decodeWithUnconsumed</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>    </span><span id="local-6989586621679317695"><span class="annot"><span class="annottext">decodeWithUnconsumed :: Fail String DecAddr
+</span><a href="#local-6989586621679317695"><span class="hs-identifier hs-var hs-var">decodeWithUnconsumed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(StateT Int (FailT String Identity) DecAddr
+ -&gt; Int -&gt; Fail String DecAddr)
+-&gt; Int
+-&gt; StateT Int (FailT String Identity) DecAddr
+-&gt; Fail String DecAddr
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><span class="hs-identifier hs-var">flip</span></span><span> </span><span class="annot"><span class="annottext">StateT Int (FailT String Identity) DecAddr
+-&gt; Int -&gt; Fail String DecAddr
+forall (m :: * -&gt; *) s a. Monad m =&gt; StateT s m a -&gt; s -&gt; m a
+</span><span class="hs-identifier hs-var">evalStateT</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">(StateT Int (FailT String Identity) DecAddr -&gt; Fail String DecAddr)
+-&gt; StateT Int (FailT String Identity) DecAddr
+-&gt; Fail String DecAddr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-97"></span><span>      </span><span id="local-6989586621679317714"><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679317714"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool
+-&gt; Bool -&gt; ByteString -&gt; StateT Int (FailT String Identity) Addr
+forall (m :: * -&gt; *) b.
+(MonadFail m, AddressBuffer b) =&gt;
+Bool -&gt; Bool -&gt; b -&gt; StateT Int m Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#decodeAddrStateLenientT"><span class="hs-identifier hs-var">decodeAddrStateLenientT</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679317693"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-98"></span><span>      </span><span id="local-6989586621679317715"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679317715"><span class="hs-identifier hs-var">bytesConsumed</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StateT Int (FailT String Identity) Int
+forall (m :: * -&gt; *) s. Monad m =&gt; StateT s m s
+</span><span class="hs-identifier hs-var">get</span></span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">DecAddr -&gt; StateT Int (FailT String Identity) DecAddr
+forall a. a -&gt; StateT Int (FailT String Identity) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(DecAddr -&gt; StateT Int (FailT String Identity) DecAddr)
+-&gt; DecAddr -&gt; StateT Int (FailT String Identity) DecAddr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Addr -&gt; ByteString -&gt; DecAddr
+</span><a href="Cardano.Ledger.Api.Tx.Address.html#DecAddrUnconsumed"><span class="hs-identifier hs-var">DecAddrUnconsumed</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679317714"><span class="hs-identifier hs-var">addr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">BS.drop</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679317715"><span class="hs-identifier hs-var">bytesConsumed</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679317693"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span></pre></body></html>

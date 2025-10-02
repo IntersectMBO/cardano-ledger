@@ -1,0 +1,535 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE StandaloneKindSignatures #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Crypto.Signing.VerificationKey</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier">VerificationKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#formatFullVerificationKey"><span class="hs-identifier">formatFullVerificationKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#fullVerificationKeyF"><span class="hs-identifier">fullVerificationKeyF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#fullVerificationKeyHexF"><span class="hs-identifier">fullVerificationKeyHexF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#shortVerificationKeyHexF"><span class="hs-identifier">shortVerificationKeyHexF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#parseFullVerificationKey"><span class="hs-identifier">parseFullVerificationKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html"><span class="hs-identifier">Cardano.Crypto.Wallet</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CC</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier">Decoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier">Encoding</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeBytesCanonical"><span class="hs-identifier">decodeBytesCanonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#toCborError"><span class="hs-identifier">toCborError</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Error.html#toCborError"><span class="hs-identifier">toCborError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/base64-bytestring-1.2.1.0-7b9aab95be47d60d99336ab202f1466e113c77f97c3906c8a0a53a2a02e80d84/share/doc/html/src/Data.ByteString.Base64.html"><span class="hs-identifier">Data.ByteString.Base64</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B64</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Char8</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text.Encoding</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text.Lazy.Builder</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Builder</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text.Lazy.Builder</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Builder</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.html"><span class="hs-identifier">Formatting</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#Format"><span class="hs-identifier">Format</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier">bprint</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Formatters.html#fitLeft"><span class="hs-identifier">fitLeft</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#formatToString"><span class="hs-identifier">formatToString</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#later"><span class="hs-identifier">later</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#sformat"><span class="hs-identifier">sformat</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Formatters.html#stext"><span class="hs-identifier">stext</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#%25."><span class="hs-operator">(%.)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier">Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#InspectHeap"><span class="hs-identifier">InspectHeap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.html"><span class="hs-identifier">Text.JSON.Canonical</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Types.html#JSValue"><span class="hs-identifier">JSValue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Types.html#toJSString"><span class="hs-identifier">toJSString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.html"><span class="hs-identifier">Text.JSON.Canonical</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">TJC</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#FromJSON"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><span class="hs-comment">-- | Wrapper around 'CC.XPub'.</span></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">newtype</span><span> </span><span id="VerificationKey"><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-var">VerificationKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VerificationKey"><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-var">VerificationKey</span></a></span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unVerificationKey"><span class="annot"><span class="annottext">VerificationKey -&gt; XPub
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#unVerificationKey"><span class="hs-identifier hs-var hs-var">unVerificationKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#XPub"><span class="hs-identifier hs-type">CC.XPub</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679280089"><span id="local-6989586621679280093"><span class="annot"><span class="annottext">VerificationKey -&gt; VerificationKey -&gt; Bool
+(VerificationKey -&gt; VerificationKey -&gt; Bool)
+-&gt; (VerificationKey -&gt; VerificationKey -&gt; Bool)
+-&gt; Eq VerificationKey
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: VerificationKey -&gt; VerificationKey -&gt; Bool
+== :: VerificationKey -&gt; VerificationKey -&gt; Bool
+$c/= :: VerificationKey -&gt; VerificationKey -&gt; Bool
+/= :: VerificationKey -&gt; VerificationKey -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679280100"><span id="local-6989586621679280104"><span id="local-6989586621679280107"><span id="local-6989586621679280111"><span id="local-6989586621679280114"><span id="local-6989586621679280117"><span id="local-6989586621679280120"><span class="annot"><span class="annottext">Eq VerificationKey
+Eq VerificationKey =&gt;
+(VerificationKey -&gt; VerificationKey -&gt; Ordering)
+-&gt; (VerificationKey -&gt; VerificationKey -&gt; Bool)
+-&gt; (VerificationKey -&gt; VerificationKey -&gt; Bool)
+-&gt; (VerificationKey -&gt; VerificationKey -&gt; Bool)
+-&gt; (VerificationKey -&gt; VerificationKey -&gt; Bool)
+-&gt; (VerificationKey -&gt; VerificationKey -&gt; VerificationKey)
+-&gt; (VerificationKey -&gt; VerificationKey -&gt; VerificationKey)
+-&gt; Ord VerificationKey
+VerificationKey -&gt; VerificationKey -&gt; Bool
+VerificationKey -&gt; VerificationKey -&gt; Ordering
+VerificationKey -&gt; VerificationKey -&gt; VerificationKey
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: VerificationKey -&gt; VerificationKey -&gt; Ordering
+compare :: VerificationKey -&gt; VerificationKey -&gt; Ordering
+$c&lt; :: VerificationKey -&gt; VerificationKey -&gt; Bool
+&lt; :: VerificationKey -&gt; VerificationKey -&gt; Bool
+$c&lt;= :: VerificationKey -&gt; VerificationKey -&gt; Bool
+&lt;= :: VerificationKey -&gt; VerificationKey -&gt; Bool
+$c&gt; :: VerificationKey -&gt; VerificationKey -&gt; Bool
+&gt; :: VerificationKey -&gt; VerificationKey -&gt; Bool
+$c&gt;= :: VerificationKey -&gt; VerificationKey -&gt; Bool
+&gt;= :: VerificationKey -&gt; VerificationKey -&gt; Bool
+$cmax :: VerificationKey -&gt; VerificationKey -&gt; VerificationKey
+max :: VerificationKey -&gt; VerificationKey -&gt; VerificationKey
+$cmin :: VerificationKey -&gt; VerificationKey -&gt; VerificationKey
+min :: VerificationKey -&gt; VerificationKey -&gt; VerificationKey
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679280124"><span id="local-6989586621679280130"><span id="local-6989586621679280134"><span class="annot"><span class="annottext">Int -&gt; VerificationKey -&gt; ShowS
+[VerificationKey] -&gt; ShowS
+VerificationKey -&gt; String
+(Int -&gt; VerificationKey -&gt; ShowS)
+-&gt; (VerificationKey -&gt; String)
+-&gt; ([VerificationKey] -&gt; ShowS)
+-&gt; Show VerificationKey
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; VerificationKey -&gt; ShowS
+showsPrec :: Int -&gt; VerificationKey -&gt; ShowS
+$cshow :: VerificationKey -&gt; String
+show :: VerificationKey -&gt; String
+$cshowList :: [VerificationKey] -&gt; ShowS
+showList :: [VerificationKey] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679280138"><span id="local-6989586621679280140"><span class="annot"><span class="annottext">(forall x. VerificationKey -&gt; Rep VerificationKey x)
+-&gt; (forall x. Rep VerificationKey x -&gt; VerificationKey)
+-&gt; Generic VerificationKey
+forall x. Rep VerificationKey x -&gt; VerificationKey
+forall x. VerificationKey -&gt; Rep VerificationKey x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. VerificationKey -&gt; Rep VerificationKey x
+from :: forall x. VerificationKey -&gt; Rep VerificationKey x
+$cto :: forall x. Rep VerificationKey x -&gt; VerificationKey
+to :: forall x. Rep VerificationKey x -&gt; VerificationKey
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679280144"><span class="annot"><span class="annottext">VerificationKey -&gt; ()
+(VerificationKey -&gt; ()) -&gt; NFData VerificationKey
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: VerificationKey -&gt; ()
+rnf :: VerificationKey -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679280151"><span id="local-6989586621679280157"><span id="local-6989586621679280162"><span class="annot"><span class="annottext">Context -&gt; VerificationKey -&gt; IO (Maybe ThunkInfo)
+Proxy VerificationKey -&gt; String
+(Context -&gt; VerificationKey -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; VerificationKey -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy VerificationKey -&gt; String)
+-&gt; NoThunks VerificationKey
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; VerificationKey -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; VerificationKey -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; VerificationKey -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; VerificationKey -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy VerificationKey -&gt; String
+showTypeOf :: Proxy VerificationKey -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#InspectHeap"><span class="hs-identifier hs-type">InspectHeap</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#XPub"><span class="hs-identifier hs-type">CC.XPub</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679280170"><span id="local-6989586621679280174"><span id="local-6989586621679280177"><span id="local-6989586621679280180"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679280186"><span class="annot"><span class="annottext">toJSON :: VerificationKey -&gt; Value
+</span><a href="#local-6989586621679280186"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#toJSON"><span class="hs-identifier hs-var">toJSON</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Value)
+-&gt; (VerificationKey -&gt; Text) -&gt; VerificationKey -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format Text (VerificationKey -&gt; Text) -&gt; VerificationKey -&gt; Text
+forall a. Format Text a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#sformat"><span class="hs-identifier hs-var">sformat</span></a></span><span> </span><span class="annot"><span class="annottext">Format Text (VerificationKey -&gt; Text)
+forall r. Format r (VerificationKey -&gt; r)
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#fullVerificationKeyF"><span class="hs-identifier hs-var">fullVerificationKeyF</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679280191"><span id="local-6989586621679280195"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679280205"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser VerificationKey
+</span><a href="#local-6989586621679280205"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span id="local-6989586621679280207"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679280207"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser Text
+forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#parseJSON"><span class="hs-identifier hs-var">parseJSON</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679280207"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Text
+-&gt; (Text -&gt; Parser VerificationKey) -&gt; Parser VerificationKey
+forall a b. Parser a -&gt; (a -&gt; Parser b) -&gt; Parser b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Either VerificationKeyParseError VerificationKey
+-&gt; Parser VerificationKey
+forall e a. Buildable e =&gt; Either e a -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Error.html#toAesonError"><span class="hs-identifier hs-var">toAesonError</span></a></span><span> </span><span class="annot"><span class="annottext">(Either VerificationKeyParseError VerificationKey
+ -&gt; Parser VerificationKey)
+-&gt; (Text -&gt; Either VerificationKeyParseError VerificationKey)
+-&gt; Text
+-&gt; Parser VerificationKey
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either VerificationKeyParseError VerificationKey
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#parseFullVerificationKey"><span class="hs-identifier hs-var">parseFullVerificationKey</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679279963"><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621679279963"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#ToJSON"><span class="hs-identifier hs-type">TJC.ToJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679279963"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621679280219"><span class="annot"><span class="annottext">toJSON :: VerificationKey -&gt; m JSValue
+</span><a href="#local-6989586621679280219"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">JSValue -&gt; m JSValue
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(JSValue -&gt; m JSValue)
+-&gt; (VerificationKey -&gt; JSValue) -&gt; VerificationKey -&gt; m JSValue
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">JSString -&gt; JSValue
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Types.html#JSString"><span class="hs-identifier hs-var">JSString</span></a></span><span> </span><span class="annot"><span class="annottext">(JSString -&gt; JSValue)
+-&gt; (VerificationKey -&gt; JSString) -&gt; VerificationKey -&gt; JSValue
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; JSString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Types.html#toJSString"><span class="hs-identifier hs-var">toJSString</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; JSString)
+-&gt; (VerificationKey -&gt; String) -&gt; VerificationKey -&gt; JSString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format String (VerificationKey -&gt; String)
+-&gt; VerificationKey -&gt; String
+forall a. Format String a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#formatToString"><span class="hs-identifier hs-var">formatToString</span></a></span><span> </span><span class="annot"><span class="annottext">Format String (VerificationKey -&gt; String)
+forall r. Format r (VerificationKey -&gt; r)
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#fullVerificationKeyF"><span class="hs-identifier hs-var">fullVerificationKeyF</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679279974"><span class="annot"><span class="hs-identifier hs-type">MonadError</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Json.Canonical.html#SchemaError"><span class="hs-identifier hs-type">SchemaError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679279974"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#FromJSON"><span class="hs-identifier hs-type">TJC.FromJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679279974"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679280233"><span class="annot"><span class="annottext">fromJSON :: JSValue -&gt; m VerificationKey
+</span><a href="#local-6989586621679280233"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Either VerificationKeyParseError VerificationKey)
+-&gt; JSValue -&gt; m VerificationKey
+forall a (m :: * -&gt; *) e.
+(Typeable a, ReportSchemaErrors m, Buildable e) =&gt;
+(Text -&gt; Either e a) -&gt; JSValue -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Json.Parse.html#parseJSString"><span class="hs-identifier hs-var">parseJSString</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either VerificationKeyParseError VerificationKey
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#parseFullVerificationKey"><span class="hs-identifier hs-var">parseFullVerificationKey</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679280240"><span id="local-6989586621679280244"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679280249"><span class="annot"><span class="annottext">toCBOR :: VerificationKey -&gt; Encoding
+</span><a href="#local-6989586621679280249"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VerificationKey -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679280255"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679280261"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s VerificationKey
+</span><a href="#local-6989586621679280261"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s VerificationKey
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679280268"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621679280271"><span class="annot"><span class="annottext">encCBOR :: VerificationKey -&gt; Encoding
+</span><a href="#local-6989586621679280271"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span> </span><span id="local-6989586621679280273"><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621679280273"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">XPub -&gt; Encoding
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#encCBORXPub"><span class="hs-identifier hs-var">encCBORXPub</span></a></span><span> </span><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621679280273"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679280277"><span class="annot"><span class="annottext">encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy VerificationKey -&gt; Size
+</span><a href="#local-6989586621679280277"><span class="hs-identifier hs-var hs-var hs-var hs-var">encodedSizeExpr</span></a></span></span><span> </span><span class="annot"><span class="annottext">forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Proxy VerificationKey
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">66</span></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679280283"><span id="local-6989586621679280286"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679280291"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s VerificationKey
+</span><a href="#local-6989586621679280291"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(XPub -&gt; VerificationKey)
+-&gt; Decoder s XPub -&gt; Decoder s VerificationKey
+forall a b. (a -&gt; b) -&gt; Decoder s a -&gt; Decoder s b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">XPub -&gt; VerificationKey
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-var">VerificationKey</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s XPub
+forall s. Decoder s XPub
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#decCBORXPub"><span class="hs-identifier hs-var">decCBORXPub</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#encCBORXPub"><span class="hs-identifier hs-type">encCBORXPub</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#XPub"><span class="hs-identifier hs-type">CC.XPub</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span>
+</span><span id="line-92"></span><span id="encCBORXPub"><span class="annot"><span class="annottext">encCBORXPub :: XPub -&gt; Encoding
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#encCBORXPub"><span class="hs-identifier hs-var hs-var">encCBORXPub</span></a></span></span><span> </span><span id="local-6989586621679280294"><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621679280294"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Encoding) -&gt; ByteString -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">XPub -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#unXPub"><span class="hs-identifier hs-var">CC.unXPub</span></a></span><span> </span><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621679280294"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- | We enforce canonical CBOR encodings for `VerificationKey`s, because we serialize</span><span>
+</span><span id="line-95"></span><span class="hs-comment">--   them before hashing to get `KeyHash`es.</span><span>
+</span><span id="line-96"></span><span id="local-6989586621679280008"><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#decCBORXPub"><span class="hs-identifier hs-type">decCBORXPub</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679280008"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#XPub"><span class="hs-identifier hs-type">CC.XPub</span></a></span></span><span>
+</span><span id="line-97"></span><span id="decCBORXPub"><span class="annot"><span class="annottext">decCBORXPub :: forall s. Decoder s XPub
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#decCBORXPub"><span class="hs-identifier hs-var hs-var">decCBORXPub</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either String XPub -&gt; Decoder s XPub
+forall (m :: * -&gt; *) e a.
+(MonadFail m, Buildable e) =&gt;
+Either e a -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#toCborError"><span class="hs-identifier hs-var">toCborError</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String XPub -&gt; Decoder s XPub)
+-&gt; (ByteString -&gt; Either String XPub)
+-&gt; ByteString
+-&gt; Decoder s XPub
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either String XPub
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#xpub"><span class="hs-identifier hs-var">CC.xpub</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Decoder s XPub)
+-&gt; Decoder s ByteString -&gt; Decoder s XPub
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><span class="hs-operator hs-var">=&lt;&lt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s ByteString
+forall s. Decoder s ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeBytesCanonical"><span class="hs-identifier hs-var">decodeBytesCanonical</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier hs-type">Buildable</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-100"></span><span>  </span><span id="local-6989586621679280313"><span class="annot"><span class="annottext">build :: VerificationKey -&gt; Builder
+</span><a href="#local-6989586621679280313"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Format Builder (VerificationKey -&gt; Builder)
+-&gt; VerificationKey -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier hs-var">bprint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (VerificationKey -&gt; Builder) (VerificationKey -&gt; Builder)
+</span><span class="hs-string">&quot;pub:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (VerificationKey -&gt; Builder) (VerificationKey -&gt; Builder)
+-&gt; Format Builder (VerificationKey -&gt; Builder)
+-&gt; Format Builder (VerificationKey -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format Builder (VerificationKey -&gt; Builder)
+forall r. Format r (VerificationKey -&gt; r)
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#shortVerificationKeyHexF"><span class="hs-identifier hs-var">shortVerificationKeyHexF</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="annot"><span class="hs-comment">-- | 'Builder' for 'VerificationKey' to show it in base64 encoded form.</span></span><span>
+</span><span id="line-103"></span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#formatFullVerificationKey"><span class="hs-identifier hs-type">formatFullVerificationKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Builder</span></span><span>
+</span><span id="line-104"></span><span id="formatFullVerificationKey"><span class="annot"><span class="annottext">formatFullVerificationKey :: VerificationKey -&gt; Builder
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#formatFullVerificationKey"><span class="hs-identifier hs-var hs-var">formatFullVerificationKey</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span> </span><span id="local-6989586621679280315"><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621679280315"><span class="hs-identifier hs-var">vk</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Builder
+</span><span class="hs-identifier hs-var">Builder.fromString</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Builder) -&gt; (XPub -&gt; String) -&gt; XPub -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><span class="hs-identifier hs-var">BS.unpack</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; String) -&gt; (XPub -&gt; ByteString) -&gt; XPub -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/base64-bytestring-1.2.1.0-7b9aab95be47d60d99336ab202f1466e113c77f97c3906c8a0a53a2a02e80d84/share/doc/html/src/Data.ByteString.Base64.html#encode"><span class="hs-identifier hs-var">B64.encode</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; (XPub -&gt; ByteString) -&gt; XPub -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">XPub -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#unXPub"><span class="hs-identifier hs-var">CC.unXPub</span></a></span><span> </span><span class="annot"><span class="annottext">(XPub -&gt; Builder) -&gt; XPub -&gt; Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621679280315"><span class="hs-identifier hs-var">vk</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="annot"><span class="hs-comment">-- | Formatter for 'VerificationKey' to show it in base64.</span></span><span>
+</span><span id="line-108"></span><span id="local-6989586621679279948"><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#fullVerificationKeyF"><span class="hs-identifier hs-type">fullVerificationKeyF</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#Format"><span class="hs-identifier hs-type">Format</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679279948"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679279948"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-109"></span><span id="fullVerificationKeyF"><span class="annot"><span class="annottext">fullVerificationKeyF :: forall r. Format r (VerificationKey -&gt; r)
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#fullVerificationKeyF"><span class="hs-identifier hs-var hs-var">fullVerificationKeyF</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(VerificationKey -&gt; Builder) -&gt; Format r (VerificationKey -&gt; r)
+forall a r. (a -&gt; Builder) -&gt; Format r (a -&gt; r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#later"><span class="hs-identifier hs-var">later</span></a></span><span> </span><span class="annot"><span class="annottext">VerificationKey -&gt; Builder
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#formatFullVerificationKey"><span class="hs-identifier hs-var">formatFullVerificationKey</span></a></span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="annot"><span class="hs-comment">-- | Formatter for 'VerificationKey' to show it in hex.</span></span><span>
+</span><span id="line-112"></span><span id="local-6989586621679280319"><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#fullVerificationKeyHexF"><span class="hs-identifier hs-type">fullVerificationKeyHexF</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#Format"><span class="hs-identifier hs-type">Format</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679280319"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679280319"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-113"></span><span id="fullVerificationKeyHexF"><span class="annot"><span class="annottext">fullVerificationKeyHexF :: forall r. Format r (VerificationKey -&gt; r)
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#fullVerificationKeyHexF"><span class="hs-identifier hs-var hs-var">fullVerificationKeyHexF</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(VerificationKey -&gt; Builder) -&gt; Format r (VerificationKey -&gt; r)
+forall a r. (a -&gt; Builder) -&gt; Format r (a -&gt; r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#later"><span class="hs-identifier hs-var">later</span></a></span><span> </span><span class="annot"><span class="annottext">((VerificationKey -&gt; Builder) -&gt; Format r (VerificationKey -&gt; r))
+-&gt; (VerificationKey -&gt; Builder) -&gt; Format r (VerificationKey -&gt; r)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span> </span><span id="local-6989586621679280321"><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621679280321"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Builder
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Formatting.html#base16Builder"><span class="hs-identifier hs-var">base16Builder</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Builder) -&gt; (XPub -&gt; ByteString) -&gt; XPub -&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">XPub -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#unXPub"><span class="hs-identifier hs-var">CC.unXPub</span></a></span><span> </span><span class="annot"><span class="annottext">(XPub -&gt; Builder) -&gt; XPub -&gt; Builder
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621679280321"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="annot"><span class="hs-comment">-- | Formatter for 'VerificationKey' to show it in hex, but only first 8 chars.</span></span><span>
+</span><span id="line-116"></span><span id="local-6989586621679280323"><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#shortVerificationKeyHexF"><span class="hs-identifier hs-type">shortVerificationKeyHexF</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#Format"><span class="hs-identifier hs-type">Format</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679280323"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679280323"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-117"></span><span id="shortVerificationKeyHexF"><span class="annot"><span class="annottext">shortVerificationKeyHexF :: forall r. Format r (VerificationKey -&gt; r)
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#shortVerificationKeyHexF"><span class="hs-identifier hs-var hs-var">shortVerificationKeyHexF</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Format r (Builder -&gt; r)
+forall a r. Buildable a =&gt; Int -&gt; Format r (a -&gt; r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Formatters.html#fitLeft"><span class="hs-identifier hs-var">fitLeft</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span> </span><span class="annot"><span class="annottext">Format r (Builder -&gt; r)
+-&gt; Format r (VerificationKey -&gt; r)
+-&gt; Format r (VerificationKey -&gt; r)
+forall r r' a.
+Format r (Builder -&gt; r') -&gt; Format r' a -&gt; Format r a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#%25."><span class="hs-operator hs-var">%.</span></a></span><span> </span><span class="annot"><span class="annottext">Format r (VerificationKey -&gt; r)
+forall r. Format r (VerificationKey -&gt; r)
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#fullVerificationKeyHexF"><span class="hs-identifier hs-var">fullVerificationKeyHexF</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKeyParseError"><span class="hs-identifier hs-type">VerificationKeyParseError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">data</span><span> </span><span id="VerificationKeyParseError"><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKeyParseError"><span class="hs-identifier hs-var">VerificationKeyParseError</span></a></span></span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="VerificationKeyParseBase64Error"><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKeyParseBase64Error"><span class="hs-identifier hs-var">VerificationKeyParseBase64Error</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="VerificationKeyParseXPubError"><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKeyParseXPubError"><span class="hs-identifier hs-var">VerificationKeyParseXPubError</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679280329"><span id="local-6989586621679280334"><span class="annot"><span class="annottext">VerificationKeyParseError -&gt; VerificationKeyParseError -&gt; Bool
+(VerificationKeyParseError -&gt; VerificationKeyParseError -&gt; Bool)
+-&gt; (VerificationKeyParseError -&gt; VerificationKeyParseError -&gt; Bool)
+-&gt; Eq VerificationKeyParseError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: VerificationKeyParseError -&gt; VerificationKeyParseError -&gt; Bool
+== :: VerificationKeyParseError -&gt; VerificationKeyParseError -&gt; Bool
+$c/= :: VerificationKeyParseError -&gt; VerificationKeyParseError -&gt; Bool
+/= :: VerificationKeyParseError -&gt; VerificationKeyParseError -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679280338"><span id="local-6989586621679280345"><span id="local-6989586621679280349"><span class="annot"><span class="annottext">Int -&gt; VerificationKeyParseError -&gt; ShowS
+[VerificationKeyParseError] -&gt; ShowS
+VerificationKeyParseError -&gt; String
+(Int -&gt; VerificationKeyParseError -&gt; ShowS)
+-&gt; (VerificationKeyParseError -&gt; String)
+-&gt; ([VerificationKeyParseError] -&gt; ShowS)
+-&gt; Show VerificationKeyParseError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; VerificationKeyParseError -&gt; ShowS
+showsPrec :: Int -&gt; VerificationKeyParseError -&gt; ShowS
+$cshow :: VerificationKeyParseError -&gt; String
+show :: VerificationKeyParseError -&gt; String
+$cshowList :: [VerificationKeyParseError] -&gt; ShowS
+showList :: [VerificationKeyParseError] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier hs-type">Buildable</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKeyParseError"><span class="hs-identifier hs-type">VerificationKeyParseError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621679280358"><span class="annot"><span class="annottext">build :: VerificationKeyParseError -&gt; Builder
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#build"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKeyParseBase64Error"><span class="hs-identifier hs-type">VerificationKeyParseBase64Error</span></a></span><span> </span><span id="local-6989586621679280359"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679280359"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-128"></span><span>      </span><span class="annot"><span class="annottext">Format Builder (Text -&gt; Builder) -&gt; Text -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier hs-var">bprint</span></a></span><span>
+</span><span id="line-129"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (Text -&gt; Builder) (Text -&gt; Builder)
+</span><span class="hs-string">&quot;Failed to decode base 64 while parsing VerificationKey.\n Error: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (Text -&gt; Builder) (Text -&gt; Builder)
+-&gt; Format Builder (Text -&gt; Builder)
+-&gt; Format Builder (Text -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format Builder (Text -&gt; Builder)
+forall r. Format r (Text -&gt; r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Formatters.html#stext"><span class="hs-identifier hs-var">stext</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679280359"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKeyParseXPubError"><span class="hs-identifier hs-type">VerificationKeyParseXPubError</span></a></span><span> </span><span id="local-6989586621679280360"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679280360"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-132"></span><span>      </span><span class="annot"><span class="annottext">Format Builder (Text -&gt; Builder) -&gt; Text -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier hs-var">bprint</span></a></span><span>
+</span><span id="line-133"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (Text -&gt; Builder) (Text -&gt; Builder)
+</span><span class="hs-string">&quot;Failed to construct XPub while parsing VerificationKey.\n Error: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (Text -&gt; Builder) (Text -&gt; Builder)
+-&gt; Format Builder (Text -&gt; Builder)
+-&gt; Format Builder (Text -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format Builder (Text -&gt; Builder)
+forall r. Format r (Text -&gt; r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Formatters.html#stext"><span class="hs-identifier hs-var">stext</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679280360"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="annot"><span class="hs-comment">-- | Parse 'VerificationKey' from base64 encoded string</span></span><span>
+</span><span id="line-137"></span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#parseFullVerificationKey"><span class="hs-identifier hs-type">parseFullVerificationKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKeyParseError"><span class="hs-identifier hs-type">VerificationKeyParseError</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span>
+</span><span id="line-138"></span><span id="parseFullVerificationKey"><span class="annot"><span class="annottext">parseFullVerificationKey :: Text -&gt; Either VerificationKeyParseError VerificationKey
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#parseFullVerificationKey"><span class="hs-identifier hs-var hs-var">parseFullVerificationKey</span></a></span></span><span> </span><span id="local-6989586621679280361"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679280361"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-139"></span><span>  </span><span id="local-6989586621679280362"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679280362"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(String -&gt; VerificationKeyParseError)
+-&gt; Either String ByteString
+-&gt; Either VerificationKeyParseError ByteString
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><span class="hs-identifier hs-var">first</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; VerificationKeyParseError
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKeyParseBase64Error"><span class="hs-identifier hs-var">VerificationKeyParseBase64Error</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; VerificationKeyParseError)
+-&gt; (String -&gt; Text) -&gt; String -&gt; VerificationKeyParseError
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><span class="hs-identifier hs-var">Text.pack</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either String ByteString
+ -&gt; Either VerificationKeyParseError ByteString)
+-&gt; (ByteString -&gt; Either String ByteString)
+-&gt; ByteString
+-&gt; Either VerificationKeyParseError ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either String ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/base64-bytestring-1.2.1.0-7b9aab95be47d60d99336ab202f1466e113c77f97c3906c8a0a53a2a02e80d84/share/doc/html/src/Data.ByteString.Base64.html#decode"><span class="hs-identifier hs-var">B64.decode</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Either VerificationKeyParseError ByteString)
+-&gt; ByteString -&gt; Either VerificationKeyParseError ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><span class="hs-identifier hs-var">Text.encodeUtf8</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679280361"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><span class="annottext">XPub -&gt; VerificationKey
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-var">VerificationKey</span></a></span><span> </span><span class="annot"><span class="annottext">(XPub -&gt; VerificationKey)
+-&gt; Either VerificationKeyParseError XPub
+-&gt; Either VerificationKeyParseError VerificationKey
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; VerificationKeyParseError)
+-&gt; Either String XPub -&gt; Either VerificationKeyParseError XPub
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><span class="hs-identifier hs-var">first</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; VerificationKeyParseError
+</span><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKeyParseXPubError"><span class="hs-identifier hs-var">VerificationKeyParseXPubError</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; VerificationKeyParseError)
+-&gt; (String -&gt; Text) -&gt; String -&gt; VerificationKeyParseError
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><span class="hs-identifier hs-var">Text.pack</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Either String XPub
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#xpub"><span class="hs-identifier hs-var">CC.xpub</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679280362"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span></pre></body></html>

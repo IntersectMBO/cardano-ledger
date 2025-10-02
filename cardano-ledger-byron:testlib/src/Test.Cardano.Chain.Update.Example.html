@@ -1,0 +1,503 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Chain.Update.Example</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleApplicationName"><span class="hs-identifier">exampleApplicationName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProtocolVersion"><span class="hs-identifier">exampleProtocolVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProtocolParameters"><span class="hs-identifier">exampleProtocolParameters</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProtocolParametersUpdate"><span class="hs-identifier">exampleProtocolParametersUpdate</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleSoftwareVersion"><span class="hs-identifier">exampleSoftwareVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleSystemTag"><span class="hs-identifier">exampleSystemTag</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleInstallerHash"><span class="hs-identifier">exampleInstallerHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#examplePayload"><span class="hs-identifier">examplePayload</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProof"><span class="hs-identifier">exampleProof</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProposal"><span class="hs-identifier">exampleProposal</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProposalBody"><span class="hs-identifier">exampleProposalBody</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleUpId"><span class="hs-identifier">exampleUpId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleVote"><span class="hs-identifier">exampleVote</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.TxFeePolicy.html#TxFeePolicy"><span class="hs-identifier">TxFeePolicy</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.TxSizeLinear.html#TxSizeLinear"><span class="hs-identifier">TxSizeLinear</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Lovelace.html#mkKnownLovelace"><span class="hs-identifier">mkKnownLovelace</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier">rationalToLovelacePortion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.html"><span class="hs-identifier">Cardano.Chain.Slotting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier">EpochNumber</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier">SlotNumber</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.html"><span class="hs-identifier">Cardano.Chain.Update</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier">ApplicationName</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.InstallerHash.html#InstallerHash"><span class="hs-identifier">InstallerHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Payload.html#Payload"><span class="hs-identifier">Payload</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proof.html#Proof"><span class="hs-identifier">Proof</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proposal.html#Proposal"><span class="hs-identifier">Proposal</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proposal.html#ProposalBody"><span class="hs-identifier">ProposalBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier">ProtocolParameters</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier">ProtocolParametersUpdate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ProtocolVersion.html#ProtocolVersion"><span class="hs-identifier">ProtocolVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.SoftforkRule.html#SoftforkRule"><span class="hs-identifier">SoftforkRule</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.SoftwareVersion.html#SoftwareVersion"><span class="hs-identifier">SoftwareVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.SystemTag.html#SystemTag"><span class="hs-identifier">SystemTag</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proposal.html#UpId"><span class="hs-identifier">UpId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Vote.html#Vote"><span class="hs-identifier">Vote</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proof.html#mkProof"><span class="hs-identifier">mkProof</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Payload.html#payload"><span class="hs-identifier">payload</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proposal.html#signProposal"><span class="hs-identifier">signProposal</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Vote.html#signVote"><span class="hs-identifier">signVote</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.html"><span class="hs-identifier">Cardano.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.ProtocolMagic.html#ProtocolMagicId"><span class="hs-identifier">ProtocolMagicId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Hashing.html#serializeCborHash"><span class="hs-identifier">serializeCborHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Raw.html"><span class="hs-identifier">Cardano.Crypto.Raw</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Raw.html#Raw"><span class="hs-identifier">Raw</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.List</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(!!)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.CBOR.html"><span class="hs-identifier">Test.Cardano.Crypto.CBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.CBOR.html#getBytes"><span class="hs-identifier">getBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Example.html"><span class="hs-identifier">Test.Cardano.Crypto.Example</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Example.html#exampleSafeSigner"><span class="hs-identifier">exampleSafeSigner</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.html"><span class="hs-identifier">Test.Cardano.Prelude</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleApplicationName"><span class="hs-identifier hs-type">exampleApplicationName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-type">ApplicationName</span></a></span><span>
+</span><span id="line-58"></span><span id="exampleApplicationName"><span class="annot"><span class="annottext">exampleApplicationName :: ApplicationName
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleApplicationName"><span class="hs-identifier hs-var hs-var">exampleApplicationName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ApplicationName
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-var">ApplicationName</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Golden&quot;</span></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProtocolVersion"><span class="hs-identifier hs-type">exampleProtocolVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ProtocolVersion.html#ProtocolVersion"><span class="hs-identifier hs-type">ProtocolVersion</span></a></span><span>
+</span><span id="line-61"></span><span id="exampleProtocolVersion"><span class="annot"><span class="annottext">exampleProtocolVersion :: ProtocolVersion
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleProtocolVersion"><span class="hs-identifier hs-var hs-var">exampleProtocolVersion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Word16 -&gt; Word8 -&gt; ProtocolVersion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ProtocolVersion.html#ProtocolVersion"><span class="hs-identifier hs-var">ProtocolVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProtocolParameters"><span class="hs-identifier hs-type">exampleProtocolParameters</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier hs-type">ProtocolParameters</span></a></span><span>
+</span><span id="line-64"></span><span id="exampleProtocolParameters"><span class="annot"><span class="annottext">exampleProtocolParameters :: ProtocolParameters
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleProtocolParameters"><span class="hs-identifier hs-var hs-var">exampleProtocolParameters</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">Word16
+-&gt; Natural
+-&gt; Natural
+-&gt; Natural
+-&gt; Natural
+-&gt; Natural
+-&gt; LovelacePortion
+-&gt; LovelacePortion
+-&gt; LovelacePortion
+-&gt; LovelacePortion
+-&gt; SlotNumber
+-&gt; SoftforkRule
+-&gt; TxFeePolicy
+-&gt; EpochNumber
+-&gt; ProtocolParameters
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier hs-var">ProtocolParameters</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SlotNumber
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier hs-var">SlotNumber</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">99</span></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">SoftforkRule
+</span><a href="#local-6989586621679368075"><span class="hs-identifier hs-var">sfrule</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxSizeLinear -&gt; TxFeePolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.TxFeePolicy.html#TxFeePolicyTxSizeLinear"><span class="hs-identifier hs-var">TxFeePolicyTxSizeLinear</span></a></span><span> </span><span class="annot"><span class="annottext">TxSizeLinear
+</span><a href="#local-6989586621679368077"><span class="hs-identifier hs-var">tslin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; EpochNumber
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-var">EpochNumber</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">99</span></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>    </span><span id="local-6989586621679368077"><span class="annot"><span class="annottext">tslin :: TxSizeLinear
+</span><a href="#local-6989586621679368077"><span class="hs-identifier hs-var hs-var">tslin</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lovelace -&gt; Rational -&gt; TxSizeLinear
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.TxSizeLinear.html#TxSizeLinear"><span class="hs-identifier hs-var">TxSizeLinear</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679368080"><span class="hs-identifier hs-var">c1'</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679368081"><span class="hs-identifier hs-var">c2'</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679368080"><span class="annot"><span class="annottext">c1' :: Lovelace
+</span><a href="#local-6989586621679368080"><span class="hs-identifier hs-var hs-var">c1'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural).
+(KnownNat n, n &lt;= 45000000000000000) =&gt;
+Lovelace
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Lovelace.html#mkKnownLovelace"><span class="hs-identifier hs-var">mkKnownLovelace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">999</span></span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679368081"><span class="annot"><span class="annottext">c2' :: Rational
+</span><a href="#local-6989586621679368081"><span class="hs-identifier hs-var hs-var">c2'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">77</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Rational</span></span><span>
+</span><span id="line-84"></span><span>    </span><span id="local-6989586621679368075"><span class="annot"><span class="annottext">sfrule :: SoftforkRule
+</span><a href="#local-6989586621679368075"><span class="hs-identifier hs-var hs-var">sfrule</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-85"></span><span>      </span><span class="annot"><span class="annottext">LovelacePortion
+-&gt; LovelacePortion -&gt; LovelacePortion -&gt; SoftforkRule
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.SoftforkRule.html#SoftforkRule"><span class="hs-identifier hs-var">SoftforkRule</span></a></span><span>
+</span><span id="line-86"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProtocolParametersUpdate"><span class="hs-identifier hs-type">exampleProtocolParametersUpdate</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-type">ProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-91"></span><span id="exampleProtocolParametersUpdate"><span class="annot"><span class="annottext">exampleProtocolParametersUpdate :: ProtocolParametersUpdate
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleProtocolParametersUpdate"><span class="hs-identifier hs-var hs-var">exampleProtocolParametersUpdate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><span class="annottext">Maybe Word16
+-&gt; Maybe Natural
+-&gt; Maybe Natural
+-&gt; Maybe Natural
+-&gt; Maybe Natural
+-&gt; Maybe Natural
+-&gt; Maybe LovelacePortion
+-&gt; Maybe LovelacePortion
+-&gt; Maybe LovelacePortion
+-&gt; Maybe LovelacePortion
+-&gt; Maybe SlotNumber
+-&gt; Maybe SoftforkRule
+-&gt; Maybe TxFeePolicy
+-&gt; Maybe EpochNumber
+-&gt; ProtocolParametersUpdate
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-var">ProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word16 -&gt; Maybe Word16
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Maybe Natural
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Maybe Natural
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Maybe Natural
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Maybe Natural
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Maybe Natural
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">999</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LovelacePortion -&gt; Maybe LovelacePortion
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(LovelacePortion -&gt; Maybe LovelacePortion)
+-&gt; LovelacePortion -&gt; Maybe LovelacePortion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LovelacePortion -&gt; Maybe LovelacePortion
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(LovelacePortion -&gt; Maybe LovelacePortion)
+-&gt; LovelacePortion -&gt; Maybe LovelacePortion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LovelacePortion -&gt; Maybe LovelacePortion
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(LovelacePortion -&gt; Maybe LovelacePortion)
+-&gt; LovelacePortion -&gt; Maybe LovelacePortion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LovelacePortion -&gt; Maybe LovelacePortion
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(LovelacePortion -&gt; Maybe LovelacePortion)
+-&gt; LovelacePortion -&gt; Maybe LovelacePortion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SlotNumber -&gt; Maybe SlotNumber
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(SlotNumber -&gt; Maybe SlotNumber) -&gt; SlotNumber -&gt; Maybe SlotNumber
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; SlotNumber
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier hs-var">SlotNumber</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">99</span></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SoftforkRule -&gt; Maybe SoftforkRule
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">SoftforkRule
+</span><a href="#local-6989586621679368094"><span class="hs-identifier hs-var">sfrule'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxFeePolicy -&gt; Maybe TxFeePolicy
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(TxFeePolicy -&gt; Maybe TxFeePolicy)
+-&gt; TxFeePolicy -&gt; Maybe TxFeePolicy
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxSizeLinear -&gt; TxFeePolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.TxFeePolicy.html#TxFeePolicyTxSizeLinear"><span class="hs-identifier hs-var">TxFeePolicyTxSizeLinear</span></a></span><span> </span><span class="annot"><span class="annottext">TxSizeLinear
+</span><a href="#local-6989586621679368095"><span class="hs-identifier hs-var">tslin'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochNumber -&gt; Maybe EpochNumber
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(EpochNumber -&gt; Maybe EpochNumber)
+-&gt; EpochNumber -&gt; Maybe EpochNumber
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; EpochNumber
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-var">EpochNumber</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">99</span></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>    </span><span id="local-6989586621679368095"><span class="annot"><span class="annottext">tslin' :: TxSizeLinear
+</span><a href="#local-6989586621679368095"><span class="hs-identifier hs-var hs-var">tslin'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lovelace -&gt; Rational -&gt; TxSizeLinear
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.TxSizeLinear.html#TxSizeLinear"><span class="hs-identifier hs-var">TxSizeLinear</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679368096"><span class="hs-identifier hs-var">co1</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679368097"><span class="hs-identifier hs-var">co2</span></a></span><span>
+</span><span id="line-109"></span><span>    </span><span id="local-6989586621679368096"><span class="annot"><span class="annottext">co1 :: Lovelace
+</span><a href="#local-6989586621679368096"><span class="hs-identifier hs-var hs-var">co1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural).
+(KnownNat n, n &lt;= 45000000000000000) =&gt;
+Lovelace
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Lovelace.html#mkKnownLovelace"><span class="hs-identifier hs-var">mkKnownLovelace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">999</span></span><span>
+</span><span id="line-110"></span><span>    </span><span id="local-6989586621679368097"><span class="annot"><span class="annottext">co2 :: Rational
+</span><a href="#local-6989586621679368097"><span class="hs-identifier hs-var hs-var">co2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">77</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Rational</span></span><span>
+</span><span id="line-111"></span><span>    </span><span id="local-6989586621679368094"><span class="annot"><span class="annottext">sfrule' :: SoftforkRule
+</span><a href="#local-6989586621679368094"><span class="hs-identifier hs-var hs-var">sfrule'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>      </span><span class="annot"><span class="annottext">LovelacePortion
+-&gt; LovelacePortion -&gt; LovelacePortion -&gt; SoftforkRule
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.SoftforkRule.html#SoftforkRule"><span class="hs-identifier hs-var">SoftforkRule</span></a></span><span>
+</span><span id="line-113"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational -&gt; LovelacePortion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.LovelacePortion.html#rationalToLovelacePortion"><span class="hs-identifier hs-var">rationalToLovelacePortion</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">99e-15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleSystemTag"><span class="hs-identifier hs-type">exampleSystemTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.SystemTag.html#SystemTag"><span class="hs-identifier hs-type">SystemTag</span></a></span><span>
+</span><span id="line-118"></span><span id="exampleSystemTag"><span class="annot"><span class="annottext">exampleSystemTag :: SystemTag
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleSystemTag"><span class="hs-identifier hs-var hs-var">exampleSystemTag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; [SystemTag]
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleSystemTags"><span class="hs-identifier hs-var">exampleSystemTags</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">[SystemTag] -&gt; Int -&gt; SystemTag
+forall a. HasCallStack =&gt; [a] -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">!!</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleSystemTags"><span class="hs-identifier hs-type">exampleSystemTags</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.SystemTag.html#SystemTag"><span class="hs-identifier hs-type">SystemTag</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-121"></span><span id="exampleSystemTags"><span class="annot"><span class="annottext">exampleSystemTags :: Int -&gt; Int -&gt; [SystemTag]
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleSystemTags"><span class="hs-identifier hs-var hs-var">exampleSystemTags</span></a></span></span><span> </span><span id="local-6989586621679368108"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368108"><span class="hs-identifier hs-var">offset</span></a></span></span><span> </span><span id="local-6989586621679368109"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368109"><span class="hs-identifier hs-var">count</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-122"></span><span>  </span><span class="annot"><span class="annottext">(Int -&gt; SystemTag) -&gt; [Int] -&gt; [SystemTag]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; SystemTag
+</span><a href="#local-6989586621679368111"><span class="hs-identifier hs-var">toSystemTag</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; SystemTag) -&gt; (Int -&gt; Int) -&gt; Int -&gt; SystemTag
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368108"><span class="hs-identifier hs-var">offset</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368109"><span class="hs-identifier hs-var">count</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">]</span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621679368111"><span class="annot"><span class="annottext">toSystemTag :: Int -&gt; SystemTag
+</span><a href="#local-6989586621679368111"><span class="hs-identifier hs-var hs-var">toSystemTag</span></a></span></span><span> </span><span id="local-6989586621679368114"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368114"><span class="hs-identifier hs-var">start</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; SystemTag
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.SystemTag.html#SystemTag"><span class="hs-identifier hs-var">SystemTag</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Text
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.Golden.html#getText"><span class="hs-identifier hs-var">getText</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368114"><span class="hs-identifier hs-var">start</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleInstallerHash"><span class="hs-identifier hs-type">exampleInstallerHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.InstallerHash.html#InstallerHash"><span class="hs-identifier hs-type">InstallerHash</span></a></span><span>
+</span><span id="line-129"></span><span id="exampleInstallerHash"><span class="annot"><span class="annottext">exampleInstallerHash :: InstallerHash
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleInstallerHash"><span class="hs-identifier hs-var hs-var">exampleInstallerHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; [InstallerHash]
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleInstallerHashes"><span class="hs-identifier hs-var">exampleInstallerHashes</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">[InstallerHash] -&gt; Int -&gt; InstallerHash
+forall a. HasCallStack =&gt; [a] -&gt; Int -&gt; a
+</span><span class="hs-operator hs-var">!!</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleInstallerHashes"><span class="hs-identifier hs-type">exampleInstallerHashes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.InstallerHash.html#InstallerHash"><span class="hs-identifier hs-type">InstallerHash</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-132"></span><span id="exampleInstallerHashes"><span class="annot"><span class="annottext">exampleInstallerHashes :: Int -&gt; Int -&gt; [InstallerHash]
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleInstallerHashes"><span class="hs-identifier hs-var hs-var">exampleInstallerHashes</span></a></span></span><span> </span><span id="local-6989586621679368118"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368118"><span class="hs-identifier hs-var">offset</span></a></span></span><span> </span><span id="local-6989586621679368119"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368119"><span class="hs-identifier hs-var">count</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><span class="annottext">(Int -&gt; InstallerHash) -&gt; [Int] -&gt; [InstallerHash]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; InstallerHash
+</span><a href="#local-6989586621679368120"><span class="hs-identifier hs-var">toInstallerHash</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; InstallerHash) -&gt; (Int -&gt; Int) -&gt; Int -&gt; InstallerHash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368118"><span class="hs-identifier hs-var">offset</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368119"><span class="hs-identifier hs-var">count</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">]</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-137"></span><span>    </span><span id="local-6989586621679368120"><span class="annot"><span class="annottext">toInstallerHash :: Int -&gt; InstallerHash
+</span><a href="#local-6989586621679368120"><span class="hs-identifier hs-var hs-var">toInstallerHash</span></a></span></span><span> </span><span id="local-6989586621679368125"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368125"><span class="hs-identifier hs-var">start</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash Raw -&gt; InstallerHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.InstallerHash.html#InstallerHash"><span class="hs-identifier hs-var">InstallerHash</span></a></span><span> </span><span class="annot"><span class="annottext">(Hash Raw -&gt; InstallerHash)
+-&gt; (ByteString -&gt; Hash Raw) -&gt; ByteString -&gt; InstallerHash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Raw -&gt; Hash Raw
+forall a. EncCBOR a =&gt; a -&gt; Hash a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Hashing.html#serializeCborHash"><span class="hs-identifier hs-var">serializeCborHash</span></a></span><span> </span><span class="annot"><span class="annottext">(Raw -&gt; Hash Raw) -&gt; (ByteString -&gt; Raw) -&gt; ByteString -&gt; Hash Raw
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Raw
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Raw.html#Raw"><span class="hs-identifier hs-var">Raw</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; InstallerHash) -&gt; ByteString -&gt; InstallerHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.CBOR.html#getBytes"><span class="hs-identifier hs-var">getBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679368125"><span class="hs-identifier hs-var">start</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">128</span></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleUpId"><span class="hs-identifier hs-type">exampleUpId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proposal.html#UpId"><span class="hs-identifier hs-type">UpId</span></a></span><span>
+</span><span id="line-140"></span><span id="exampleUpId"><span class="annot"><span class="annottext">exampleUpId :: UpId
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleUpId"><span class="hs-identifier hs-var hs-var">exampleUpId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proposal -&gt; UpId
+forall a. EncCBOR a =&gt; a -&gt; Hash a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Hashing.html#serializeCborHash"><span class="hs-identifier hs-var">serializeCborHash</span></a></span><span> </span><span class="annot"><span class="annottext">Proposal
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleProposal"><span class="hs-identifier hs-var">exampleProposal</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#examplePayload"><span class="hs-identifier hs-type">examplePayload</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Payload.html#Payload"><span class="hs-identifier hs-type">Payload</span></a></span><span>
+</span><span id="line-143"></span><span id="examplePayload"><span class="annot"><span class="annottext">examplePayload :: Payload
+</span><a href="Test.Cardano.Chain.Update.Example.html#examplePayload"><span class="hs-identifier hs-var hs-var">examplePayload</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Proposal -&gt; [Vote] -&gt; Payload
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Payload.html#payload"><span class="hs-identifier hs-var">payload</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Proposal
+</span><a href="#local-6989586621679368128"><span class="hs-identifier hs-var">up</span></a></span><span> </span><span class="annot"><span class="annottext">[Vote]
+</span><a href="#local-6989586621679368129"><span class="hs-identifier hs-var">uv</span></a></span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-145"></span><span>    </span><span id="local-6989586621679368128"><span class="annot"><span class="annottext">up :: Maybe Proposal
+</span><a href="#local-6989586621679368128"><span class="hs-identifier hs-var hs-var">up</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proposal -&gt; Maybe Proposal
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Proposal
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleProposal"><span class="hs-identifier hs-var">exampleProposal</span></a></span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621679368129"><span class="annot"><span class="annottext">uv :: [Vote]
+</span><a href="#local-6989586621679368129"><span class="hs-identifier hs-var hs-var">uv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Vote
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleVote"><span class="hs-identifier hs-var">exampleVote</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProof"><span class="hs-identifier hs-type">exampleProof</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proof.html#Proof"><span class="hs-identifier hs-type">Proof</span></a></span><span>
+</span><span id="line-149"></span><span id="exampleProof"><span class="annot"><span class="annottext">exampleProof :: Proof
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleProof"><span class="hs-identifier hs-var hs-var">exampleProof</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Payload -&gt; Proof
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proof.html#mkProof"><span class="hs-identifier hs-var">mkProof</span></a></span><span> </span><span class="annot"><span class="annottext">Payload
+</span><a href="Test.Cardano.Chain.Update.Example.html#examplePayload"><span class="hs-identifier hs-var">examplePayload</span></a></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProposal"><span class="hs-identifier hs-type">exampleProposal</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proposal.html#Proposal"><span class="hs-identifier hs-type">Proposal</span></a></span><span>
+</span><span id="line-152"></span><span id="exampleProposal"><span class="annot"><span class="annottext">exampleProposal :: Proposal
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleProposal"><span class="hs-identifier hs-var hs-var">exampleProposal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; ProposalBody -&gt; SafeSigner -&gt; Proposal
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proposal.html#signProposal"><span class="hs-identifier hs-var">signProposal</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId
+</span><a href="#local-6989586621679368130"><span class="hs-identifier hs-var">pm</span></a></span><span> </span><span class="annot"><span class="annottext">ProposalBody
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleProposalBody"><span class="hs-identifier hs-var">exampleProposalBody</span></a></span><span> </span><span class="annot"><span class="annottext">SafeSigner
+</span><a href="#local-6989586621679368131"><span class="hs-identifier hs-var">ss</span></a></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-154"></span><span>    </span><span id="local-6989586621679368130"><span class="annot"><span class="annottext">pm :: ProtocolMagicId
+</span><a href="#local-6989586621679368130"><span class="hs-identifier hs-var hs-var">pm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NumSoftwareVersion -&gt; ProtocolMagicId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.ProtocolMagic.html#ProtocolMagicId"><span class="hs-identifier hs-var">ProtocolMagicId</span></a></span><span> </span><span class="annot"><span class="annottext">NumSoftwareVersion
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-155"></span><span>    </span><span id="local-6989586621679368131"><span class="annot"><span class="annottext">ss :: SafeSigner
+</span><a href="#local-6989586621679368131"><span class="hs-identifier hs-var hs-var">ss</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; SafeSigner
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Example.html#exampleSafeSigner"><span class="hs-identifier hs-var">exampleSafeSigner</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleProposalBody"><span class="hs-identifier hs-type">exampleProposalBody</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proposal.html#ProposalBody"><span class="hs-identifier hs-type">ProposalBody</span></a></span><span>
+</span><span id="line-158"></span><span id="exampleProposalBody"><span class="annot"><span class="annottext">exampleProposalBody :: ProposalBody
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleProposalBody"><span class="hs-identifier hs-var hs-var">exampleProposalBody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolVersion
+-&gt; ProtocolParametersUpdate
+-&gt; SoftwareVersion
+-&gt; Map SystemTag InstallerHash
+-&gt; ProposalBody
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Proposal.html#ProposalBody"><span class="hs-identifier hs-var">ProposalBody</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolVersion
+</span><a href="#local-6989586621679368135"><span class="hs-identifier hs-var">bv</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679368136"><span class="hs-identifier hs-var">bvm</span></a></span><span> </span><span class="annot"><span class="annottext">SoftwareVersion
+</span><a href="#local-6989586621679368137"><span class="hs-identifier hs-var">sv</span></a></span><span> </span><span class="annot"><span class="annottext">Map SystemTag InstallerHash
+</span><a href="#local-6989586621679368138"><span class="hs-identifier hs-var">hm</span></a></span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-160"></span><span>    </span><span id="local-6989586621679368135"><span class="annot"><span class="annottext">bv :: ProtocolVersion
+</span><a href="#local-6989586621679368135"><span class="hs-identifier hs-var hs-var">bv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolVersion
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleProtocolVersion"><span class="hs-identifier hs-var">exampleProtocolVersion</span></a></span><span>
+</span><span id="line-161"></span><span>    </span><span id="local-6989586621679368136"><span class="annot"><span class="annottext">bvm :: ProtocolParametersUpdate
+</span><a href="#local-6989586621679368136"><span class="hs-identifier hs-var hs-var">bvm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleProtocolParametersUpdate"><span class="hs-identifier hs-var">exampleProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span id="local-6989586621679368137"><span class="annot"><span class="annottext">sv :: SoftwareVersion
+</span><a href="#local-6989586621679368137"><span class="hs-identifier hs-var hs-var">sv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SoftwareVersion
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleSoftwareVersion"><span class="hs-identifier hs-var">exampleSoftwareVersion</span></a></span><span>
+</span><span id="line-163"></span><span>    </span><span id="local-6989586621679368138"><span class="annot"><span class="annottext">hm :: Map SystemTag InstallerHash
+</span><a href="#local-6989586621679368138"><span class="hs-identifier hs-var hs-var">hm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-164"></span><span>      </span><span class="annot"><span class="annottext">[(SystemTag, InstallerHash)] -&gt; Map SystemTag InstallerHash
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="annot"><span class="annottext">([(SystemTag, InstallerHash)] -&gt; Map SystemTag InstallerHash)
+-&gt; [(SystemTag, InstallerHash)] -&gt; Map SystemTag InstallerHash
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[SystemTag] -&gt; [InstallerHash] -&gt; [(SystemTag, InstallerHash)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><span class="hs-identifier hs-var">zip</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; [SystemTag]
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleSystemTags"><span class="hs-identifier hs-var">exampleSystemTags</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; [InstallerHash]
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleInstallerHashes"><span class="hs-identifier hs-var">exampleInstallerHashes</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleVote"><span class="hs-identifier hs-type">exampleVote</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Vote.html#Vote"><span class="hs-identifier hs-type">Vote</span></a></span><span>
+</span><span id="line-167"></span><span id="exampleVote"><span class="annot"><span class="annottext">exampleVote :: Vote
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleVote"><span class="hs-identifier hs-var hs-var">exampleVote</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; UpId -&gt; Bool -&gt; SafeSigner -&gt; Vote
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.Vote.html#signVote"><span class="hs-identifier hs-var">signVote</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId
+</span><a href="#local-6989586621679368142"><span class="hs-identifier hs-var">pm</span></a></span><span> </span><span class="annot"><span class="annottext">UpId
+</span><a href="#local-6989586621679368143"><span class="hs-identifier hs-var">ui</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679368144"><span class="hs-identifier hs-var">ar</span></a></span><span> </span><span class="annot"><span class="annottext">SafeSigner
+</span><a href="#local-6989586621679368145"><span class="hs-identifier hs-var">ss</span></a></span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-169"></span><span>    </span><span id="local-6989586621679368142"><span class="annot"><span class="annottext">pm :: ProtocolMagicId
+</span><a href="#local-6989586621679368142"><span class="hs-identifier hs-var hs-var">pm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NumSoftwareVersion -&gt; ProtocolMagicId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.ProtocolMagic.html#ProtocolMagicId"><span class="hs-identifier hs-var">ProtocolMagicId</span></a></span><span> </span><span class="annot"><span class="annottext">NumSoftwareVersion
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-170"></span><span>    </span><span id="local-6989586621679368145"><span class="annot"><span class="annottext">ss :: SafeSigner
+</span><a href="#local-6989586621679368145"><span class="hs-identifier hs-var hs-var">ss</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; SafeSigner
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Example.html#exampleSafeSigner"><span class="hs-identifier hs-var">exampleSafeSigner</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-171"></span><span>    </span><span id="local-6989586621679368143"><span class="annot"><span class="annottext">ui :: UpId
+</span><a href="#local-6989586621679368143"><span class="hs-identifier hs-var hs-var">ui</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpId
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleUpId"><span class="hs-identifier hs-var">exampleUpId</span></a></span><span>
+</span><span id="line-172"></span><span>    </span><span id="local-6989586621679368144"><span class="annot"><span class="annottext">ar :: Bool
+</span><a href="#local-6989586621679368144"><span class="hs-identifier hs-var hs-var">ar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="annot"><a href="Test.Cardano.Chain.Update.Example.html#exampleSoftwareVersion"><span class="hs-identifier hs-type">exampleSoftwareVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.SoftwareVersion.html#SoftwareVersion"><span class="hs-identifier hs-type">SoftwareVersion</span></a></span><span>
+</span><span id="line-175"></span><span id="exampleSoftwareVersion"><span class="annot"><span class="annottext">exampleSoftwareVersion :: SoftwareVersion
+</span><a href="Test.Cardano.Chain.Update.Example.html#exampleSoftwareVersion"><span class="hs-identifier hs-var hs-var">exampleSoftwareVersion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ApplicationName -&gt; NumSoftwareVersion -&gt; SoftwareVersion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.SoftwareVersion.html#SoftwareVersion"><span class="hs-identifier hs-var">SoftwareVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; ApplicationName
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-var">ApplicationName</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Golden&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NumSoftwareVersion
+</span><span class="hs-number">99</span></span><span>
+</span><span id="line-176"></span></pre></body></html>

@@ -1,0 +1,542 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ratify</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#Committee"><span class="hs-identifier">Committee</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#EnactState"><span class="hs-identifier">EnactState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionState"><span class="hs-identifier">GovActionState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#RatifyEnv"><span class="hs-identifier">RatifyEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#RatifySignal"><span class="hs-identifier">RatifySignal</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#RatifyState"><span class="hs-identifier">RatifyState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#ensProtVerL"><span class="hs-identifier">ensProtVerL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasAction"><span class="hs-identifier">gasAction</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#rsEnactStateL"><span class="hs-identifier">rsEnactStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.html"><span class="hs-identifier">Cardano.Ledger.Conway.Rules</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#committeeAccepted"><span class="hs-identifier">committeeAccepted</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#committeeAcceptedRatio"><span class="hs-identifier">committeeAcceptedRatio</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#dRepAccepted"><span class="hs-identifier">dRepAccepted</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#dRepAcceptedRatio"><span class="hs-identifier">dRepAcceptedRatio</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#spoAccepted"><span class="hs-identifier">spoAccepted</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#spoAcceptedRatio"><span class="hs-identifier">spoAcceptedRatio</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html"><span class="hs-identifier">Control.State.Transition.Extended</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Foldable</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Ratio</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">denominator</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">numerator</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Foreign.API.html"><span class="hs-identifier">MAlonzo.Code.Ledger.Foreign.API</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Agda</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.html"><span class="hs-identifier">Prettyprinter</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PP</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecSpecRule"><span class="hs-identifier">ExecSpecRule</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#SpecTRC"><span class="hs-identifier">SpecTRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier">SpecTranslate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#runSpecTransM"><span class="hs-identifier">runSpecTransM</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#unComputationResult_"><span class="hs-identifier">unComputationResult_</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#withCtx"><span class="hs-identifier">withCtx</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.ImpTest.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.ImpTest</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.TreeDiff.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.TreeDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#ansiExpr"><span class="hs-identifier">ansiExpr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#tableDoc"><span class="hs-identifier">tableDoc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679510095"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecSpecRule"><span class="hs-identifier hs-type">ExecSpecRule</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;RATIFY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679510219"><span class="annot"><span class="annottext">runAgdaRule :: HasCallStack =&gt;
+SpecTRC &quot;RATIFY&quot; ConwayEra
+-&gt; Either Text (SpecState &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510219"><span class="hs-identifier hs-var hs-var hs-var hs-var">runAgdaRule</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#SpecTRC"><span class="hs-identifier hs-type">SpecTRC</span></a></span><span> </span><span id="local-6989586621679510222"><span class="annot"><span class="annottext">SpecEnvironment &quot;RATIFY&quot; ConwayEra
+</span><a href="#local-6989586621679510222"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679510223"><span class="annot"><span class="annottext">SpecState &quot;RATIFY&quot; ConwayEra
+</span><a href="#local-6989586621679510223"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span id="local-6989586621679510224"><span class="annot"><span class="annottext">SpecSignal &quot;RATIFY&quot; ConwayEra
+</span><a href="#local-6989586621679510224"><span class="hs-identifier hs-var">sig</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ComputationResult Void RatifyState -&gt; Either Text RatifyState
+forall a e. ComputationResult Void a -&gt; Either e a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#unComputationResult_"><span class="hs-identifier hs-var">unComputationResult_</span></a></span><span> </span><span class="annot"><span class="annottext">(ComputationResult Void RatifyState -&gt; Either Text RatifyState)
+-&gt; ComputationResult Void RatifyState -&gt; Either Text RatifyState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">RatifyEnv
+-&gt; RatifyState
+-&gt; [(GovActionID, GovActionState)]
+-&gt; ComputationResult Void RatifyState
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Ratify.html#ratifyStep"><span class="hs-identifier hs-var">Agda.ratifyStep</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyEnv
+SpecEnvironment &quot;RATIFY&quot; ConwayEra
+</span><a href="#local-6989586621679510222"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyState
+SpecState &quot;RATIFY&quot; ConwayEra
+</span><a href="#local-6989586621679510223"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">[(GovActionID, GovActionState)]
+SpecSignal &quot;RATIFY&quot; ConwayEra
+</span><a href="#local-6989586621679510224"><span class="hs-identifier hs-var">sig</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679510265"><span class="annot"><span class="annottext">translateInputs :: HasCallStack =&gt;
+ExecContext &quot;RATIFY&quot; ConwayEra
+-&gt; TRC (EraRule &quot;RATIFY&quot; ConwayEra)
+-&gt; Either Text (SpecTRC &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510265"><span class="hs-identifier hs-var hs-var hs-var hs-var">translateInputs</span></a></span></span><span> </span><span class="annot"><span class="annottext">ExecContext &quot;RATIFY&quot; ConwayEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679510268"><span class="annot"><span class="annottext">Environment (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510268"><span class="hs-identifier hs-var">env</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679510269"><span class="annot"><span class="annottext">st :: State (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510269"><span class="hs-identifier hs-var">st</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#RatifyState"><span class="hs-identifier hs-type">RatifyState</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679510271"><span id="local-6989586621679510272"><span id="local-6989586621679510273"><span id="local-6989586621679510274"><span class="annot"><span class="annottext">Bool
+Set GovActionId
+EnactState ConwayEra
+Seq (GovActionState ConwayEra)
+rsEnactState :: EnactState ConwayEra
+rsEnacted :: Seq (GovActionState ConwayEra)
+rsExpired :: Set GovActionId
+rsDelayed :: Bool
+rsEnactState :: forall era. RatifyState era -&gt; EnactState era
+rsEnacted :: forall era. RatifyState era -&gt; Seq (GovActionState era)
+rsExpired :: forall era. RatifyState era -&gt; Set GovActionId
+rsDelayed :: forall era. RatifyState era -&gt; Bool
+</span><a href="#local-6989586621679510271"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679510279"><span class="annot"><span class="annottext">sig :: Signal (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510279"><span class="hs-identifier hs-var">sig</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#RatifySignal"><span class="hs-identifier hs-type">RatifySignal</span></a></span><span> </span><span id="local-6989586621679510281"><span class="annot"><span class="annottext">StrictSeq (GovActionState ConwayEra)
+</span><a href="#local-6989586621679510281"><span class="hs-identifier hs-var">actions</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">()
+-&gt; SpecTransM () (SpecTRC &quot;RATIFY&quot; ConwayEra)
+-&gt; Either Text (SpecTRC &quot;RATIFY&quot; ConwayEra)
+forall ctx a. ctx -&gt; SpecTransM ctx a -&gt; Either Text a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#runSpecTransM"><span class="hs-identifier hs-var">runSpecTransM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(SpecTransM () (SpecTRC &quot;RATIFY&quot; ConwayEra)
+ -&gt; Either Text (SpecTRC &quot;RATIFY&quot; ConwayEra))
+-&gt; SpecTransM () (SpecTRC &quot;RATIFY&quot; ConwayEra)
+-&gt; Either Text (SpecTRC &quot;RATIFY&quot; ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-53"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679510282"><span class="annot"><span class="annottext">treasury :: Coin
+</span><a href="#local-6989586621679510282"><span class="hs-identifier hs-var hs-var">treasury</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EnactState ConwayEra -&gt; Coin
+forall era. EnactState era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#ensTreasury"><span class="hs-identifier hs-var">ensTreasury</span></a></span><span> </span><span class="annot"><span class="annottext">EnactState ConwayEra
+</span><a href="#local-6989586621679510271"><span class="hs-identifier hs-var">rsEnactState</span></a></span><span>
+</span><span id="line-54"></span><span>      </span><span id="local-6989586621679510284"><span class="annot"><span class="annottext">SpecRep (RatifyEnv ConwayEra)
+</span><a href="#local-6989586621679510284"><span class="hs-identifier hs-var">specEnv</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Coin
+-&gt; SpecTransM Coin (SpecRep (RatifyEnv ConwayEra))
+-&gt; SpecTransM () (SpecRep (RatifyEnv ConwayEra))
+forall ctx a ctx'. ctx -&gt; SpecTransM ctx a -&gt; SpecTransM ctx' a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#withCtx"><span class="hs-identifier hs-var">withCtx</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679510282"><span class="hs-identifier hs-var">treasury</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+-&gt; SpecTransM Coin (SpecRep (RatifyEnv ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+Environment (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510268"><span class="hs-identifier hs-var">env</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>      </span><span id="local-6989586621679510286"><span class="annot"><span class="annottext">SpecRep (RatifyState ConwayEra)
+</span><a href="#local-6989586621679510286"><span class="hs-identifier hs-var">specSt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[GovActionState ConwayEra]
+-&gt; SpecTransM
+     [GovActionState ConwayEra] (SpecRep (RatifyState ConwayEra))
+-&gt; SpecTransM () (SpecRep (RatifyState ConwayEra))
+forall ctx a ctx'. ctx -&gt; SpecTransM ctx a -&gt; SpecTransM ctx' a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#withCtx"><span class="hs-identifier hs-var">withCtx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictSeq (GovActionState ConwayEra) -&gt; [GovActionState ConwayEra]
+forall a. StrictSeq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (GovActionState ConwayEra)
+</span><a href="#local-6989586621679510281"><span class="hs-identifier hs-var">actions</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RatifyState ConwayEra
+-&gt; SpecTransM
+     [GovActionState ConwayEra] (SpecRep (RatifyState ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyState ConwayEra
+State (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510269"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>      </span><span id="local-6989586621679510288"><span class="annot"><span class="annottext">SpecRep (RatifySignal ConwayEra)
+</span><a href="#local-6989586621679510288"><span class="hs-identifier hs-var">specSig</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">RatifySignal ConwayEra
+-&gt; SpecTransM () (SpecRep (RatifySignal ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">RatifySignal ConwayEra
+Signal (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510279"><span class="hs-identifier hs-var">sig</span></a></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">SpecTRC &quot;RATIFY&quot; ConwayEra
+-&gt; SpecTransM () (SpecTRC &quot;RATIFY&quot; ConwayEra)
+forall a. a -&gt; SpecTransM () a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(SpecTRC &quot;RATIFY&quot; ConwayEra
+ -&gt; SpecTransM () (SpecTRC &quot;RATIFY&quot; ConwayEra))
+-&gt; SpecTRC &quot;RATIFY&quot; ConwayEra
+-&gt; SpecTransM () (SpecTRC &quot;RATIFY&quot; ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">SpecEnvironment &quot;RATIFY&quot; ConwayEra
+-&gt; SpecState &quot;RATIFY&quot; ConwayEra
+-&gt; SpecSignal &quot;RATIFY&quot; ConwayEra
+-&gt; SpecTRC &quot;RATIFY&quot; ConwayEra
+forall (rule :: Symbol) era.
+SpecEnvironment rule era
+-&gt; SpecState rule era -&gt; SpecSignal rule era -&gt; SpecTRC rule era
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#SpecTRC"><span class="hs-identifier hs-var">SpecTRC</span></a></span><span> </span><span class="annot"><span class="annottext">SpecRep (RatifyEnv ConwayEra)
+SpecEnvironment &quot;RATIFY&quot; ConwayEra
+</span><a href="#local-6989586621679510284"><span class="hs-identifier hs-var">specEnv</span></a></span><span> </span><span class="annot"><span class="annottext">SpecRep (RatifyState ConwayEra)
+SpecState &quot;RATIFY&quot; ConwayEra
+</span><a href="#local-6989586621679510286"><span class="hs-identifier hs-var">specSt</span></a></span><span> </span><span class="annot"><span class="annottext">SpecRep (RatifySignal ConwayEra)
+SpecSignal &quot;RATIFY&quot; ConwayEra
+</span><a href="#local-6989586621679510288"><span class="hs-identifier hs-var">specSig</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679510306"><span class="annot"><span class="annottext">translateOutput :: ExecContext &quot;RATIFY&quot; ConwayEra
+-&gt; TRC (EraRule &quot;RATIFY&quot; ConwayEra)
+-&gt; State (EraRule &quot;RATIFY&quot; ConwayEra)
+-&gt; Either Text (SpecState &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510306"><span class="hs-identifier hs-var hs-var hs-var hs-var">translateOutput</span></a></span></span><span> </span><span class="annot"><span class="annottext">ExecContext &quot;RATIFY&quot; ConwayEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Environment (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#RatifySignal"><span class="hs-identifier hs-type">RatifySignal</span></a></span><span> </span><span id="local-6989586621679510308"><span class="annot"><span class="annottext">StrictSeq (GovActionState ConwayEra)
+</span><a href="#local-6989586621679510308"><span class="hs-identifier hs-var">actions</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679510309"><span class="annot"><span class="annottext">State (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510309"><span class="hs-identifier hs-var">out</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="annottext">() -&gt; SpecTransM () RatifyState -&gt; Either Text RatifyState
+forall ctx a. ctx -&gt; SpecTransM ctx a -&gt; Either Text a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#runSpecTransM"><span class="hs-identifier hs-var">runSpecTransM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(SpecTransM () RatifyState
+ -&gt; Either Text (SpecState &quot;RATIFY&quot; ConwayEra))
+-&gt; (SpecTransM [GovActionState ConwayEra] RatifyState
+    -&gt; SpecTransM () RatifyState)
+-&gt; SpecTransM [GovActionState ConwayEra] RatifyState
+-&gt; Either Text (SpecState &quot;RATIFY&quot; ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[GovActionState ConwayEra]
+-&gt; SpecTransM [GovActionState ConwayEra] RatifyState
+-&gt; SpecTransM () RatifyState
+forall ctx a ctx'. ctx -&gt; SpecTransM ctx a -&gt; SpecTransM ctx' a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#withCtx"><span class="hs-identifier hs-var">withCtx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictSeq (GovActionState ConwayEra) -&gt; [GovActionState ConwayEra]
+forall a. StrictSeq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (GovActionState ConwayEra)
+</span><a href="#local-6989586621679510308"><span class="hs-identifier hs-var">actions</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(SpecTransM [GovActionState ConwayEra] RatifyState
+ -&gt; Either Text (SpecState &quot;RATIFY&quot; ConwayEra))
+-&gt; SpecTransM [GovActionState ConwayEra] RatifyState
+-&gt; Either Text (SpecState &quot;RATIFY&quot; ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">RatifyState ConwayEra
+-&gt; SpecTransM
+     [GovActionState ConwayEra] (SpecRep (RatifyState ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyState ConwayEra
+State (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510309"><span class="hs-identifier hs-var">out</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679510315"><span class="annot"><span class="annottext">extraInfo :: HasCallStack =&gt;
+Globals
+-&gt; ExecContext &quot;RATIFY&quot; ConwayEra
+-&gt; TRC (EraRule &quot;RATIFY&quot; ConwayEra)
+-&gt; Either
+     Text
+     (State (EraRule &quot;RATIFY&quot; ConwayEra),
+      [Event (EraRule &quot;RATIFY&quot; ConwayEra)])
+-&gt; Doc AnsiStyle
+</span><a href="#local-6989586621679510315"><span class="hs-identifier hs-var hs-var hs-var hs-var">extraInfo</span></a></span></span><span> </span><span class="annot"><span class="annottext">Globals
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679510317"><span class="annot"><span class="annottext">ExecContext &quot;RATIFY&quot; ConwayEra
+</span><a href="#local-6989586621679510317"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span id="local-6989586621679510318"><span class="annot"><span class="annottext">trc :: TRC (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510318"><span class="hs-identifier hs-var">trc</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679510319"><span class="annot"><span class="annottext">env :: Environment (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510319"><span class="hs-identifier hs-var">env</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#RatifyEnv"><span class="hs-identifier hs-type">RatifyEnv</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679510321"><span id="local-6989586621679510322"><span id="local-6989586621679510323"><span id="local-6989586621679510324"><span id="local-6989586621679510325"><span id="local-6989586621679510326"><span id="local-6989586621679510327"><span id="local-6989586621679510328"><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) StakePoolState
+Map DRep (CompactForm Coin)
+Map (Credential 'DRepRole) DRepState
+Accounts ConwayEra
+PoolDistr
+CommitteeState ConwayEra
+InstantStake ConwayEra
+EpochNo
+reInstantStake :: InstantStake ConwayEra
+reStakePoolDistr :: PoolDistr
+reDRepDistr :: Map DRep (CompactForm Coin)
+reDRepState :: Map (Credential 'DRepRole) DRepState
+reCurrentEpoch :: EpochNo
+reCommitteeState :: CommitteeState ConwayEra
+reAccounts :: Accounts ConwayEra
+reStakePools :: Map (KeyHash 'StakePool) StakePoolState
+reInstantStake :: forall era. RatifyEnv era -&gt; InstantStake era
+reStakePoolDistr :: forall era. RatifyEnv era -&gt; PoolDistr
+reDRepDistr :: forall era. RatifyEnv era -&gt; Map DRep (CompactForm Coin)
+reDRepState :: forall era. RatifyEnv era -&gt; Map (Credential 'DRepRole) DRepState
+reCurrentEpoch :: forall era. RatifyEnv era -&gt; EpochNo
+reCommitteeState :: forall era. RatifyEnv era -&gt; CommitteeState era
+reAccounts :: forall era. RatifyEnv era -&gt; Accounts era
+reStakePools :: forall era.
+RatifyEnv era -&gt; Map (KeyHash 'StakePool) StakePoolState
+</span><a href="#local-6989586621679510321"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679510337"><span class="annot"><span class="annottext">st :: State (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510337"><span class="hs-identifier hs-var">st</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#RatifyState"><span class="hs-identifier hs-type">RatifyState</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679510338"><span id="local-6989586621679510339"><span id="local-6989586621679510340"><span id="local-6989586621679510341"><span class="annot"><span class="annottext">Bool
+Set GovActionId
+EnactState ConwayEra
+Seq (GovActionState ConwayEra)
+rsEnactState :: forall era. RatifyState era -&gt; EnactState era
+rsEnacted :: forall era. RatifyState era -&gt; Seq (GovActionState era)
+rsExpired :: forall era. RatifyState era -&gt; Set GovActionId
+rsDelayed :: forall era. RatifyState era -&gt; Bool
+rsEnactState :: EnactState ConwayEra
+rsEnacted :: Seq (GovActionState ConwayEra)
+rsExpired :: Set GovActionId
+rsDelayed :: Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#rsEnactState"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#RatifySignal"><span class="hs-identifier hs-type">RatifySignal</span></a></span><span> </span><span id="local-6989586621679510342"><span class="annot"><span class="annottext">StrictSeq (GovActionState ConwayEra)
+</span><a href="#local-6989586621679510342"><span class="hs-identifier hs-var">actions</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Either
+  Text
+  (State (EraRule &quot;RATIFY&quot; ConwayEra),
+   [Event (EraRule &quot;RATIFY&quot; ConwayEra)])
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="annottext">[Doc AnsiStyle] -&gt; Doc AnsiStyle
+forall ann. [Doc ann] -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#vsep"><span class="hs-identifier hs-var">PP.vsep</span></a></span><span> </span><span class="annot"><span class="annottext">([Doc AnsiStyle] -&gt; Doc AnsiStyle)
+-&gt; [Doc AnsiStyle] -&gt; Doc AnsiStyle
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><a href="#local-6989586621679510344"><span class="hs-identifier hs-var">specExtraInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; [Doc AnsiStyle] -&gt; [Doc AnsiStyle]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovActionState ConwayEra -&gt; Doc AnsiStyle
+</span><a href="#local-6989586621679510345"><span class="hs-identifier hs-var">actionAcceptedRatio</span></a></span><span> </span><span class="annot"><span class="annottext">(GovActionState ConwayEra -&gt; Doc AnsiStyle)
+-&gt; [GovActionState ConwayEra] -&gt; [Doc AnsiStyle]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (GovActionState ConwayEra) -&gt; [GovActionState ConwayEra]
+forall a. StrictSeq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (GovActionState ConwayEra)
+</span><a href="#local-6989586621679510342"><span class="hs-identifier hs-var">actions</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>      </span><span id="local-6989586621679510353"><span class="annot"><span class="annottext">members :: Map (Credential 'ColdCommitteeRole) EpochNo
+</span><a href="#local-6989586621679510353"><span class="hs-identifier hs-var hs-var">members</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Committee ConwayEra
+ -&gt; Map (Credential 'ColdCommitteeRole) EpochNo)
+-&gt; StrictMaybe (Committee ConwayEra)
+-&gt; Map (Credential 'ColdCommitteeRole) EpochNo
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; StrictMaybe a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><span class="hs-identifier hs-var">foldMap'</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era.
+Committee era -&gt; Map (Credential 'ColdCommitteeRole) EpochNo
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#committeeMembers"><span class="hs-identifier hs-var">committeeMembers</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(StrictMaybe (Committee ConwayEra)
+ -&gt; Map (Credential 'ColdCommitteeRole) EpochNo)
+-&gt; StrictMaybe (Committee ConwayEra)
+-&gt; Map (Credential 'ColdCommitteeRole) EpochNo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">EnactState ConwayEra -&gt; StrictMaybe (Committee ConwayEra)
+forall era. EnactState era -&gt; StrictMaybe (Committee era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#ensCommittee"><span class="hs-identifier hs-var">ensCommittee</span></a></span><span> </span><span class="annot"><span class="annottext">EnactState ConwayEra
+</span><a href="#local-6989586621679510338"><span class="hs-identifier hs-var">rsEnactState</span></a></span><span>
+</span><span id="line-66"></span><span>      </span><span id="local-6989586621679510360"><span class="annot"><span class="annottext">showAccepted :: Bool -&gt; Doc ann
+</span><a href="#local-6989586621679510360"><span class="hs-identifier hs-var hs-var">showAccepted</span></a></span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Symbols.Ascii.html#brackets"><span class="hs-identifier hs-var">PP.brackets</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;&#10003;&quot;</span></span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><a href="#local-6989586621679510360"><span class="hs-identifier hs-var">showAccepted</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Symbols.Ascii.html#brackets"><span class="hs-identifier hs-var">PP.brackets</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;&#215;&quot;</span></span><span>
+</span><span id="line-68"></span><span>      </span><span id="local-6989586621679510369"><span class="annot"><span class="annottext">showRatio :: Ratio a -&gt; Doc ann
+</span><a href="#local-6989586621679510369"><span class="hs-identifier hs-var hs-var">showRatio</span></a></span></span><span> </span><span id="local-6989586621679510370"><span class="annot"><span class="annottext">Ratio a
+</span><a href="#local-6989586621679510370"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#viaShow"><span class="hs-identifier hs-var">PP.viaShow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ratio a -&gt; a
+forall a. Ratio a -&gt; a
+</span><span class="hs-identifier hs-var">numerator</span></span><span> </span><span class="annot"><span class="annottext">Ratio a
+</span><a href="#local-6989586621679510370"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;/&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Doc ann
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#viaShow"><span class="hs-identifier hs-var">PP.viaShow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ratio a -&gt; a
+forall a. Ratio a -&gt; a
+</span><span class="hs-identifier hs-var">denominator</span></span><span> </span><span class="annot"><span class="annottext">Ratio a
+</span><a href="#local-6989586621679510370"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>      </span><span id="local-6989586621679510344"><span class="annot"><span class="annottext">specExtraInfo :: Doc AnsiStyle
+</span><a href="#local-6989586621679510344"><span class="hs-identifier hs-var hs-var">specExtraInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-70"></span><span>        </span><span class="annot"><span class="annottext">[Doc AnsiStyle] -&gt; Doc AnsiStyle
+forall ann. [Doc ann] -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#vsep"><span class="hs-identifier hs-var">PP.vsep</span></a></span><span>
+</span><span id="line-71"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><span class="hs-string">&quot;Spec extra info:&quot;</span></span><span>
+</span><span id="line-72"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Doc AnsiStyle)
+-&gt; (SpecTRC &quot;RATIFY&quot; ConwayEra -&gt; Doc AnsiStyle)
+-&gt; Either Text (SpecTRC &quot;RATIFY&quot; ConwayEra)
+-&gt; Doc AnsiStyle
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><span class="hs-identifier hs-var">either</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Doc AnsiStyle
+forall a ann. Show a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#viaShow"><span class="hs-identifier hs-var">PP.viaShow</span></a></span><span> </span><span class="annot"><span class="annottext">SpecTRC &quot;RATIFY&quot; ConwayEra -&gt; Doc AnsiStyle
+forall a. ToExpr a =&gt; a -&gt; Doc AnsiStyle
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#ansiExpr"><span class="hs-identifier hs-var">ansiExpr</span></a></span><span> </span><span class="annot"><span class="annottext">(Either Text (SpecTRC &quot;RATIFY&quot; ConwayEra) -&gt; Doc AnsiStyle)
+-&gt; Either Text (SpecTRC &quot;RATIFY&quot; ConwayEra) -&gt; Doc AnsiStyle
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall (rule :: Symbol) era.
+(ExecSpecRule rule era, HasCallStack) =&gt;
+ExecContext rule era
+-&gt; TRC (EraRule rule era) -&gt; Either Text (SpecTRC rule era)
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#translateInputs"><span class="hs-identifier hs-var">translateInputs</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">ExecContext &quot;RATIFY&quot; ConwayEra
+</span><a href="#local-6989586621679510317"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">TRC (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510318"><span class="hs-identifier hs-var">trc</span></a></span><span>
+</span><span id="line-73"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-74"></span><span>      </span><span id="local-6989586621679510395"><span class="annot"><span class="annottext">pv :: ProtVer
+</span><a href="#local-6989586621679510395"><span class="hs-identifier hs-var hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RatifyState ConwayEra
+State (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510337"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyState ConwayEra
+-&gt; Getting ProtVer (RatifyState ConwayEra) ProtVer -&gt; ProtVer
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(EnactState ConwayEra -&gt; Const ProtVer (EnactState ConwayEra))
+-&gt; RatifyState ConwayEra -&gt; Const ProtVer (RatifyState ConwayEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(EnactState era -&gt; f (EnactState era))
+-&gt; RatifyState era -&gt; f (RatifyState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#rsEnactStateL"><span class="hs-identifier hs-var">rsEnactStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((EnactState ConwayEra -&gt; Const ProtVer (EnactState ConwayEra))
+ -&gt; RatifyState ConwayEra -&gt; Const ProtVer (RatifyState ConwayEra))
+-&gt; ((ProtVer -&gt; Const ProtVer ProtVer)
+    -&gt; EnactState ConwayEra -&gt; Const ProtVer (EnactState ConwayEra))
+-&gt; Getting ProtVer (RatifyState ConwayEra) ProtVer
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(ProtVer -&gt; Const ProtVer ProtVer)
+-&gt; EnactState ConwayEra -&gt; Const ProtVer (EnactState ConwayEra)
+forall era. EraPParams era =&gt; Lens' (EnactState era) ProtVer
+Lens' (EnactState ConwayEra) ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#ensProtVerL"><span class="hs-identifier hs-var">ensProtVerL</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span id="local-6989586621679510345"><span class="annot"><span class="annottext">actionAcceptedRatio :: GovActionState ConwayEra -&gt; Doc AnsiStyle
+</span><a href="#local-6989586621679510345"><span class="hs-identifier hs-var hs-var">actionAcceptedRatio</span></a></span></span><span> </span><span id="local-6989586621679510409"><span class="annot"><span class="annottext">gas :: GovActionState ConwayEra
+</span><a href="#local-6989586621679510409"><span class="hs-identifier hs-var">gas</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionState"><span class="hs-identifier hs-type">GovActionState</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679510411"><span id="local-6989586621679510412"><span id="local-6989586621679510413"><span id="local-6989586621679510414"><span id="local-6989586621679510415"><span id="local-6989586621679510416"><span id="local-6989586621679510417"><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Vote
+Map (Credential 'DRepRole) Vote
+Map (Credential 'HotCommitteeRole) Vote
+ProposalProcedure ConwayEra
+GovActionId
+EpochNo
+gasId :: GovActionId
+gasCommitteeVotes :: Map (Credential 'HotCommitteeRole) Vote
+gasDRepVotes :: Map (Credential 'DRepRole) Vote
+gasStakePoolVotes :: Map (KeyHash 'StakePool) Vote
+gasProposalProcedure :: ProposalProcedure ConwayEra
+gasProposedIn :: EpochNo
+gasExpiresAfter :: EpochNo
+gasId :: forall era. GovActionState era -&gt; GovActionId
+gasCommitteeVotes :: forall era.
+GovActionState era -&gt; Map (Credential 'HotCommitteeRole) Vote
+gasDRepVotes :: forall era. GovActionState era -&gt; Map (Credential 'DRepRole) Vote
+gasStakePoolVotes :: forall era. GovActionState era -&gt; Map (KeyHash 'StakePool) Vote
+gasProposalProcedure :: forall era. GovActionState era -&gt; ProposalProcedure era
+gasProposedIn :: forall era. GovActionState era -&gt; EpochNo
+gasExpiresAfter :: forall era. GovActionState era -&gt; EpochNo
+</span><a href="#local-6989586621679510411"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>        </span><span class="annot"><span class="annottext">Maybe (Doc AnsiStyle) -&gt; [(String, Doc AnsiStyle)] -&gt; Doc AnsiStyle
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#tableDoc"><span class="hs-identifier hs-var">tableDoc</span></a></span><span>
+</span><span id="line-77"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Maybe (Doc AnsiStyle)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><span class="hs-string">&quot;GovActionState&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>          </span><span class="hs-special">[</span><span>
+</span><span id="line-79"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GovActionId:&quot;</span></span><span>
+</span><span id="line-80"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+forall ann. Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#line"><span class="hs-identifier hs-var">PP.line</span></a></span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Doc AnsiStyle -&gt; Doc AnsiStyle
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc AnsiStyle -&gt; Doc AnsiStyle
+forall ann. Int -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#indent"><span class="hs-identifier hs-var">PP.indent</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovActionId -&gt; Doc AnsiStyle
+forall a. ToExpr a =&gt; a -&gt; Doc AnsiStyle
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#ansiExpr"><span class="hs-identifier hs-var">ansiExpr</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621679510411"><span class="hs-identifier hs-var">gasId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>          </span><span class="hs-special">,</span><span>
+</span><span id="line-83"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;SPO:&quot;</span></span><span>
+</span><span id="line-84"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Doc AnsiStyle
+forall {ann}. Bool -&gt; Doc ann
+</span><a href="#local-6989586621679510360"><span class="hs-identifier hs-var">showAccepted</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+-&gt; RatifyState ConwayEra -&gt; GovActionState ConwayEra -&gt; Bool
+forall era.
+(ConwayEraPParams era, ConwayEraAccounts era) =&gt;
+RatifyEnv era -&gt; RatifyState era -&gt; GovActionState era -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#spoAccepted"><span class="hs-identifier hs-var">spoAccepted</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+Environment (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510319"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyState ConwayEra
+State (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510337"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState ConwayEra
+</span><a href="#local-6989586621679510409"><span class="hs-identifier hs-var">gas</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>                </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Doc AnsiStyle -&gt; Doc AnsiStyle
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">PP.&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Ratio Integer -&gt; Doc AnsiStyle
+forall {a} {ann}. Show a =&gt; Ratio a -&gt; Doc ann
+</span><a href="#local-6989586621679510369"><span class="hs-identifier hs-var">showRatio</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+-&gt; GovActionState ConwayEra -&gt; ProtVer -&gt; Ratio Integer
+forall era.
+ConwayEraAccounts era =&gt;
+RatifyEnv era -&gt; GovActionState era -&gt; ProtVer -&gt; Ratio Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#spoAcceptedRatio"><span class="hs-identifier hs-var">spoAcceptedRatio</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+Environment (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510319"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState ConwayEra
+</span><a href="#local-6989586621679510409"><span class="hs-identifier hs-var">gas</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679510395"><span class="hs-identifier hs-var">pv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>          </span><span class="hs-special">,</span><span>
+</span><span id="line-88"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DRep:&quot;</span></span><span>
+</span><span id="line-89"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Doc AnsiStyle
+forall {ann}. Bool -&gt; Doc ann
+</span><a href="#local-6989586621679510360"><span class="hs-identifier hs-var">showAccepted</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+-&gt; RatifyState ConwayEra -&gt; GovActionState ConwayEra -&gt; Bool
+forall era.
+ConwayEraPParams era =&gt;
+RatifyEnv era -&gt; RatifyState era -&gt; GovActionState era -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#dRepAccepted"><span class="hs-identifier hs-var">dRepAccepted</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+Environment (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510319"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyState ConwayEra
+State (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510337"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState ConwayEra
+</span><a href="#local-6989586621679510409"><span class="hs-identifier hs-var">gas</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>                </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Doc AnsiStyle -&gt; Doc AnsiStyle
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">PP.&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Ratio Integer -&gt; Doc AnsiStyle
+forall {a} {ann}. Show a =&gt; Ratio a -&gt; Doc ann
+</span><a href="#local-6989586621679510369"><span class="hs-identifier hs-var">showRatio</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+-&gt; Map (Credential 'DRepRole) Vote
+-&gt; GovAction ConwayEra
+-&gt; Ratio Integer
+forall era.
+RatifyEnv era
+-&gt; Map (Credential 'DRepRole) Vote
+-&gt; GovAction era
+-&gt; Ratio Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#dRepAcceptedRatio"><span class="hs-identifier hs-var">dRepAcceptedRatio</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+Environment (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510319"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'DRepRole) Vote
+</span><a href="#local-6989586621679510413"><span class="hs-identifier hs-var">gasDRepVotes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovActionState ConwayEra -&gt; GovAction ConwayEra
+forall era. GovActionState era -&gt; GovAction era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasAction"><span class="hs-identifier hs-var">gasAction</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState ConwayEra
+</span><a href="#local-6989586621679510409"><span class="hs-identifier hs-var">gas</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>          </span><span class="hs-special">,</span><span>
+</span><span id="line-93"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CC:&quot;</span></span><span>
+</span><span id="line-94"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Doc AnsiStyle
+forall {ann}. Bool -&gt; Doc ann
+</span><a href="#local-6989586621679510360"><span class="hs-identifier hs-var">showAccepted</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+-&gt; RatifyState ConwayEra -&gt; GovActionState ConwayEra -&gt; Bool
+forall era.
+ConwayEraPParams era =&gt;
+RatifyEnv era -&gt; RatifyState era -&gt; GovActionState era -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#committeeAccepted"><span class="hs-identifier hs-var">committeeAccepted</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyEnv ConwayEra
+Environment (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510319"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">RatifyState ConwayEra
+State (EraRule &quot;RATIFY&quot; ConwayEra)
+</span><a href="#local-6989586621679510337"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState ConwayEra
+</span><a href="#local-6989586621679510409"><span class="hs-identifier hs-var">gas</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>                </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Doc AnsiStyle -&gt; Doc AnsiStyle
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">PP.&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Ratio Integer -&gt; Doc AnsiStyle
+forall {a} {ann}. Show a =&gt; Ratio a -&gt; Doc ann
+</span><a href="#local-6989586621679510369"><span class="hs-identifier hs-var">showRatio</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (Credential 'ColdCommitteeRole) EpochNo
+-&gt; Map (Credential 'HotCommitteeRole) Vote
+-&gt; CommitteeState ConwayEra
+-&gt; EpochNo
+-&gt; Ratio Integer
+forall era.
+Map (Credential 'ColdCommitteeRole) EpochNo
+-&gt; Map (Credential 'HotCommitteeRole) Vote
+-&gt; CommitteeState era
+-&gt; EpochNo
+-&gt; Ratio Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ratify.html#committeeAcceptedRatio"><span class="hs-identifier hs-var">committeeAcceptedRatio</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'ColdCommitteeRole) EpochNo
+</span><a href="#local-6989586621679510353"><span class="hs-identifier hs-var">members</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'HotCommitteeRole) Vote
+</span><a href="#local-6989586621679510412"><span class="hs-identifier hs-var">gasCommitteeVotes</span></a></span><span> </span><span class="annot"><span class="annottext">CommitteeState ConwayEra
+</span><a href="#local-6989586621679510326"><span class="hs-identifier hs-var">reCommitteeState</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679510325"><span class="hs-identifier hs-var">reCurrentEpoch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-98"></span></pre></body></html>

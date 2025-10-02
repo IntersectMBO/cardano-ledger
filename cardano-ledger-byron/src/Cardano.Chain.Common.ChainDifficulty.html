@@ -1,0 +1,255 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Common.ChainDifficulty</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#ChainDifficulty"><span class="hs-identifier">ChainDifficulty</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#dropChainDifficulty"><span class="hs-identifier">dropChainDifficulty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Drop.html#Dropper"><span class="hs-identifier">Dropper</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Drop.html#dropWord64"><span class="hs-identifier">dropWord64</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeListLen"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#enforceSize"><span class="hs-identifier">enforceSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier">Buildable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- | Chain difficulty represents necessary effort to generate a</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- chain. In the simplest case it can be number of blocks in chain.</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">newtype</span><span> </span><span id="ChainDifficulty"><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#ChainDifficulty"><span class="hs-identifier hs-var">ChainDifficulty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ChainDifficulty"><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#ChainDifficulty"><span class="hs-identifier hs-var">ChainDifficulty</span></a></span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unChainDifficulty"><span class="annot"><span class="annottext">ChainDifficulty -&gt; Word64
+</span><a href="Cardano.Chain.Common.ChainDifficulty.html#unChainDifficulty"><span class="hs-identifier hs-var hs-var">unChainDifficulty</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679557662"><span id="local-6989586621679557668"><span id="local-6989586621679557672"><span class="annot"><span class="annottext">Int -&gt; ChainDifficulty -&gt; ShowS
+[ChainDifficulty] -&gt; ShowS
+ChainDifficulty -&gt; String
+(Int -&gt; ChainDifficulty -&gt; ShowS)
+-&gt; (ChainDifficulty -&gt; String)
+-&gt; ([ChainDifficulty] -&gt; ShowS)
+-&gt; Show ChainDifficulty
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ChainDifficulty -&gt; ShowS
+showsPrec :: Int -&gt; ChainDifficulty -&gt; ShowS
+$cshow :: ChainDifficulty -&gt; String
+show :: ChainDifficulty -&gt; String
+$cshowList :: [ChainDifficulty] -&gt; ShowS
+showList :: [ChainDifficulty] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557676"><span id="local-6989586621679557681"><span class="annot"><span class="annottext">ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+(ChainDifficulty -&gt; ChainDifficulty -&gt; Bool)
+-&gt; (ChainDifficulty -&gt; ChainDifficulty -&gt; Bool)
+-&gt; Eq ChainDifficulty
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+== :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+$c/= :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+/= :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557689"><span id="local-6989586621679557694"><span id="local-6989586621679557698"><span id="local-6989586621679557702"><span id="local-6989586621679557706"><span id="local-6989586621679557710"><span id="local-6989586621679557714"><span class="annot"><span class="annottext">Eq ChainDifficulty
+Eq ChainDifficulty =&gt;
+(ChainDifficulty -&gt; ChainDifficulty -&gt; Ordering)
+-&gt; (ChainDifficulty -&gt; ChainDifficulty -&gt; Bool)
+-&gt; (ChainDifficulty -&gt; ChainDifficulty -&gt; Bool)
+-&gt; (ChainDifficulty -&gt; ChainDifficulty -&gt; Bool)
+-&gt; (ChainDifficulty -&gt; ChainDifficulty -&gt; Bool)
+-&gt; (ChainDifficulty -&gt; ChainDifficulty -&gt; ChainDifficulty)
+-&gt; (ChainDifficulty -&gt; ChainDifficulty -&gt; ChainDifficulty)
+-&gt; Ord ChainDifficulty
+ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+ChainDifficulty -&gt; ChainDifficulty -&gt; Ordering
+ChainDifficulty -&gt; ChainDifficulty -&gt; ChainDifficulty
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: ChainDifficulty -&gt; ChainDifficulty -&gt; Ordering
+compare :: ChainDifficulty -&gt; ChainDifficulty -&gt; Ordering
+$c&lt; :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+&lt; :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+$c&lt;= :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+&lt;= :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+$c&gt; :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+&gt; :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+$c&gt;= :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+&gt;= :: ChainDifficulty -&gt; ChainDifficulty -&gt; Bool
+$cmax :: ChainDifficulty -&gt; ChainDifficulty -&gt; ChainDifficulty
+max :: ChainDifficulty -&gt; ChainDifficulty -&gt; ChainDifficulty
+$cmin :: ChainDifficulty -&gt; ChainDifficulty -&gt; ChainDifficulty
+min :: ChainDifficulty -&gt; ChainDifficulty -&gt; ChainDifficulty
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557720"><span id="local-6989586621679557725"><span id="local-6989586621679557729"><span id="local-6989586621679557733"><span id="local-6989586621679557737"><span id="local-6989586621679557741"><span id="local-6989586621679557745"><span id="local-6989586621679557749"><span class="annot"><span class="annottext">Int -&gt; ChainDifficulty
+ChainDifficulty -&gt; Int
+ChainDifficulty -&gt; [ChainDifficulty]
+ChainDifficulty -&gt; ChainDifficulty
+ChainDifficulty -&gt; ChainDifficulty -&gt; [ChainDifficulty]
+ChainDifficulty
+-&gt; ChainDifficulty -&gt; ChainDifficulty -&gt; [ChainDifficulty]
+(ChainDifficulty -&gt; ChainDifficulty)
+-&gt; (ChainDifficulty -&gt; ChainDifficulty)
+-&gt; (Int -&gt; ChainDifficulty)
+-&gt; (ChainDifficulty -&gt; Int)
+-&gt; (ChainDifficulty -&gt; [ChainDifficulty])
+-&gt; (ChainDifficulty -&gt; ChainDifficulty -&gt; [ChainDifficulty])
+-&gt; (ChainDifficulty -&gt; ChainDifficulty -&gt; [ChainDifficulty])
+-&gt; (ChainDifficulty
+    -&gt; ChainDifficulty -&gt; ChainDifficulty -&gt; [ChainDifficulty])
+-&gt; Enum ChainDifficulty
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: ChainDifficulty -&gt; ChainDifficulty
+succ :: ChainDifficulty -&gt; ChainDifficulty
+$cpred :: ChainDifficulty -&gt; ChainDifficulty
+pred :: ChainDifficulty -&gt; ChainDifficulty
+$ctoEnum :: Int -&gt; ChainDifficulty
+toEnum :: Int -&gt; ChainDifficulty
+$cfromEnum :: ChainDifficulty -&gt; Int
+fromEnum :: ChainDifficulty -&gt; Int
+$cenumFrom :: ChainDifficulty -&gt; [ChainDifficulty]
+enumFrom :: ChainDifficulty -&gt; [ChainDifficulty]
+$cenumFromThen :: ChainDifficulty -&gt; ChainDifficulty -&gt; [ChainDifficulty]
+enumFromThen :: ChainDifficulty -&gt; ChainDifficulty -&gt; [ChainDifficulty]
+$cenumFromTo :: ChainDifficulty -&gt; ChainDifficulty -&gt; [ChainDifficulty]
+enumFromTo :: ChainDifficulty -&gt; ChainDifficulty -&gt; [ChainDifficulty]
+$cenumFromThenTo :: ChainDifficulty
+-&gt; ChainDifficulty -&gt; ChainDifficulty -&gt; [ChainDifficulty]
+enumFromThenTo :: ChainDifficulty
+-&gt; ChainDifficulty -&gt; ChainDifficulty -&gt; [ChainDifficulty]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557755"><span id="local-6989586621679557757"><span class="annot"><span class="annottext">(forall x. ChainDifficulty -&gt; Rep ChainDifficulty x)
+-&gt; (forall x. Rep ChainDifficulty x -&gt; ChainDifficulty)
+-&gt; Generic ChainDifficulty
+forall x. Rep ChainDifficulty x -&gt; ChainDifficulty
+forall x. ChainDifficulty -&gt; Rep ChainDifficulty x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ChainDifficulty -&gt; Rep ChainDifficulty x
+from :: forall x. ChainDifficulty -&gt; Rep ChainDifficulty x
+$cto :: forall x. Rep ChainDifficulty x -&gt; ChainDifficulty
+to :: forall x. Rep ChainDifficulty x -&gt; ChainDifficulty
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557761"><span class="annot"><span class="annottext">ChainDifficulty -&gt; Builder
+(ChainDifficulty -&gt; Builder) -&gt; Buildable ChainDifficulty
+forall p. (p -&gt; Builder) -&gt; Buildable p
+$cbuild :: ChainDifficulty -&gt; Builder
+build :: ChainDifficulty -&gt; Builder
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier hs-var hs-var hs-var hs-var">Buildable</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557768"><span class="annot"><span class="annottext">ChainDifficulty -&gt; ()
+(ChainDifficulty -&gt; ()) -&gt; NFData ChainDifficulty
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: ChainDifficulty -&gt; ()
+rnf :: ChainDifficulty -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557775"><span id="local-6989586621679557780"><span id="local-6989586621679557784"><span class="annot"><span class="annottext">Context -&gt; ChainDifficulty -&gt; IO (Maybe ThunkInfo)
+Proxy ChainDifficulty -&gt; String
+(Context -&gt; ChainDifficulty -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; ChainDifficulty -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy ChainDifficulty -&gt; String)
+-&gt; NoThunks ChainDifficulty
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; ChainDifficulty -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; ChainDifficulty -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; ChainDifficulty -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; ChainDifficulty -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy ChainDifficulty -&gt; String
+showTypeOf :: Proxy ChainDifficulty -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- Used for debugging purposes only</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679557790"><span id="local-6989586621679557797"><span id="local-6989586621679557800"><span id="local-6989586621679557803"><span id="local-6989586621679557806"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#ChainDifficulty"><span class="hs-identifier hs-type">ChainDifficulty</span></a></span></span></span></span></span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679557884"><span id="local-6989586621679557888"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#ChainDifficulty"><span class="hs-identifier hs-type">ChainDifficulty</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679557893"><span class="annot"><span class="annottext">toCBOR :: ChainDifficulty -&gt; Encoding
+</span><a href="#local-6989586621679557893"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ChainDifficulty -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679557899"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#ChainDifficulty"><span class="hs-identifier hs-type">ChainDifficulty</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679557905"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s ChainDifficulty
+</span><a href="#local-6989586621679557905"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s ChainDifficulty
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679557912"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#ChainDifficulty"><span class="hs-identifier hs-type">ChainDifficulty</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679557919"><span class="annot"><span class="annottext">encCBOR :: ChainDifficulty -&gt; Encoding
+</span><a href="#local-6989586621679557919"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span id="local-6989586621679557921"><span class="annot"><span class="annottext">ChainDifficulty
+</span><a href="#local-6989586621679557921"><span class="hs-identifier hs-var">cd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeListLen"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChainDifficulty -&gt; Word64
+</span><a href="Cardano.Chain.Common.ChainDifficulty.html#unChainDifficulty"><span class="hs-identifier hs-var">unChainDifficulty</span></a></span><span> </span><span class="annot"><span class="annottext">ChainDifficulty
+</span><a href="#local-6989586621679557921"><span class="hs-identifier hs-var">cd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621679557928"><span class="annot"><span class="annottext">encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy ChainDifficulty -&gt; Size
+</span><a href="#local-6989586621679557928"><span class="hs-identifier hs-var hs-var hs-var hs-var">encodedSizeExpr</span></a></span></span><span> </span><span id="local-6989586621679557930"><span class="annot"><span class="annottext">forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><a href="#local-6989586621679557930"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679557931"><span class="annot"><span class="annottext">Proxy ChainDifficulty
+</span><a href="#local-6989586621679557931"><span class="hs-identifier hs-var">cd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Size -&gt; Size -&gt; Size
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Word64 -&gt; Size
+forall a.
+EncCBOR a =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encodedSizeExpr"><span class="hs-identifier hs-var">encodedSizeExpr</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy t -&gt; Size
+forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><a href="#local-6989586621679557930"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChainDifficulty -&gt; Word64
+</span><a href="Cardano.Chain.Common.ChainDifficulty.html#unChainDifficulty"><span class="hs-identifier hs-var">unChainDifficulty</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainDifficulty -&gt; Word64)
+-&gt; Proxy ChainDifficulty -&gt; Proxy Word64
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Proxy ChainDifficulty
+</span><a href="#local-6989586621679557931"><span class="hs-identifier hs-var">cd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679557940"><span id="local-6989586621679557943"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#ChainDifficulty"><span class="hs-identifier hs-type">ChainDifficulty</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679557954"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s ChainDifficulty
+</span><a href="#local-6989586621679557954"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; Decoder s ()
+forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#enforceSize"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ChainDifficulty&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; ChainDifficulty
+</span><a href="Cardano.Chain.Common.ChainDifficulty.html#ChainDifficulty"><span class="hs-identifier hs-var">ChainDifficulty</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; ChainDifficulty)
+-&gt; Decoder s Word64 -&gt; Decoder s ChainDifficulty
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Word64
+forall s. Decoder s Word64
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span id="local-6989586621679557644"><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#dropChainDifficulty"><span class="hs-identifier hs-type">dropChainDifficulty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Drop.html#Dropper"><span class="hs-identifier hs-type">Dropper</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679557644"><span class="hs-identifier hs-type">s</span></a></span></span><span>
+</span><span id="line-54"></span><span id="dropChainDifficulty"><span class="annot"><span class="annottext">dropChainDifficulty :: forall s. Dropper s
+</span><a href="Cardano.Chain.Common.ChainDifficulty.html#dropChainDifficulty"><span class="hs-identifier hs-var hs-var">dropChainDifficulty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; Dropper s
+forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#enforceSize"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ChainDifficulty&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">Dropper s
+forall s. Dropper s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Drop.html#dropWord64"><span class="hs-identifier hs-var">dropWord64</span></a></span><span>
+</span><span id="line-57"></span></pre></body></html>

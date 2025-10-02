@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-missed-specialisations #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Genesis.AvvmBalances</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier">GenesisAvvmBalances</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier">Lovelace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.Redeem.html"><span class="hs-identifier">Cardano.Crypto.Signing.Redeem</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.Redeem.Compact.html#CompactRedeemVerificationKey"><span class="hs-identifier">CompactRedeemVerificationKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeListLen"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#enforceSize"><span class="hs-identifier">enforceSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.html"><span class="hs-identifier">Text.JSON.Canonical</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#FromJSON"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | Predefined balances of AVVM (Ada Voucher Vending Machine) entries.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- People who purchased Ada at a pre-sale were issued a certificate during</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- the pre-sale period. These certificates allow customers to redeem ADA.</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">newtype</span><span> </span><span id="GenesisAvvmBalances"><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-var">GenesisAvvmBalances</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="GenesisAvvmBalances"><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-var">GenesisAvvmBalances</span></a></span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unGenesisAvvmBalances"><span class="annot"><span class="annottext">GenesisAvvmBalances -&gt; Map CompactRedeemVerificationKey Lovelace
+</span><a href="Cardano.Chain.Genesis.AvvmBalances.html#unGenesisAvvmBalances"><span class="hs-identifier hs-var hs-var">unGenesisAvvmBalances</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.Redeem.Compact.html#CompactRedeemVerificationKey"><span class="hs-identifier hs-type">CompactRedeemVerificationKey</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679566172"><span id="local-6989586621679566180"><span id="local-6989586621679566184"><span class="annot"><span class="annottext">Int -&gt; GenesisAvvmBalances -&gt; ShowS
+[GenesisAvvmBalances] -&gt; ShowS
+GenesisAvvmBalances -&gt; String
+(Int -&gt; GenesisAvvmBalances -&gt; ShowS)
+-&gt; (GenesisAvvmBalances -&gt; String)
+-&gt; ([GenesisAvvmBalances] -&gt; ShowS)
+-&gt; Show GenesisAvvmBalances
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; GenesisAvvmBalances -&gt; ShowS
+showsPrec :: Int -&gt; GenesisAvvmBalances -&gt; ShowS
+$cshow :: GenesisAvvmBalances -&gt; String
+show :: GenesisAvvmBalances -&gt; String
+$cshowList :: [GenesisAvvmBalances] -&gt; ShowS
+showList :: [GenesisAvvmBalances] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566190"><span id="local-6989586621679566197"><span class="annot"><span class="annottext">GenesisAvvmBalances -&gt; GenesisAvvmBalances -&gt; Bool
+(GenesisAvvmBalances -&gt; GenesisAvvmBalances -&gt; Bool)
+-&gt; (GenesisAvvmBalances -&gt; GenesisAvvmBalances -&gt; Bool)
+-&gt; Eq GenesisAvvmBalances
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: GenesisAvvmBalances -&gt; GenesisAvvmBalances -&gt; Bool
+== :: GenesisAvvmBalances -&gt; GenesisAvvmBalances -&gt; Bool
+$c/= :: GenesisAvvmBalances -&gt; GenesisAvvmBalances -&gt; Bool
+/= :: GenesisAvvmBalances -&gt; GenesisAvvmBalances -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566207"><span id="local-6989586621679566213"><span id="local-6989586621679566220"><span class="annot"><span class="annottext">NonEmpty GenesisAvvmBalances -&gt; GenesisAvvmBalances
+GenesisAvvmBalances -&gt; GenesisAvvmBalances -&gt; GenesisAvvmBalances
+(GenesisAvvmBalances -&gt; GenesisAvvmBalances -&gt; GenesisAvvmBalances)
+-&gt; (NonEmpty GenesisAvvmBalances -&gt; GenesisAvvmBalances)
+-&gt; (forall b.
+    Integral b =&gt;
+    b -&gt; GenesisAvvmBalances -&gt; GenesisAvvmBalances)
+-&gt; Semigroup GenesisAvvmBalances
+forall b.
+Integral b =&gt;
+b -&gt; GenesisAvvmBalances -&gt; GenesisAvvmBalances
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall b. Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+$c&lt;&gt; :: GenesisAvvmBalances -&gt; GenesisAvvmBalances -&gt; GenesisAvvmBalances
+&lt;&gt; :: GenesisAvvmBalances -&gt; GenesisAvvmBalances -&gt; GenesisAvvmBalances
+$csconcat :: NonEmpty GenesisAvvmBalances -&gt; GenesisAvvmBalances
+sconcat :: NonEmpty GenesisAvvmBalances -&gt; GenesisAvvmBalances
+$cstimes :: forall b.
+Integral b =&gt;
+b -&gt; GenesisAvvmBalances -&gt; GenesisAvvmBalances
+stimes :: forall b.
+Integral b =&gt;
+b -&gt; GenesisAvvmBalances -&gt; GenesisAvvmBalances
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566230"><span id="local-6989586621679566237"><span id="local-6989586621679566243"><span class="annot"><span class="annottext">Context -&gt; GenesisAvvmBalances -&gt; IO (Maybe ThunkInfo)
+Proxy GenesisAvvmBalances -&gt; String
+(Context -&gt; GenesisAvvmBalances -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; GenesisAvvmBalances -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy GenesisAvvmBalances -&gt; String)
+-&gt; NoThunks GenesisAvvmBalances
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; GenesisAvvmBalances -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; GenesisAvvmBalances -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; GenesisAvvmBalances -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; GenesisAvvmBalances -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy GenesisAvvmBalances -&gt; String
+showTypeOf :: Proxy GenesisAvvmBalances -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679566086"><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621679566086"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679566086"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-type">GenesisAvvmBalances</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621679566264"><span class="annot"><span class="annottext">toJSON :: GenesisAvvmBalances -&gt; m JSValue
+</span><a href="#local-6989586621679566264"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map CompactRedeemVerificationKey Lovelace -&gt; m JSValue
+forall (m :: * -&gt; *) a. ToJSON m a =&gt; a -&gt; m JSValue
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#toJSON"><span class="hs-identifier hs-var">toJSON</span></a></span><span> </span><span class="annot"><span class="annottext">(Map CompactRedeemVerificationKey Lovelace -&gt; m JSValue)
+-&gt; (GenesisAvvmBalances
+    -&gt; Map CompactRedeemVerificationKey Lovelace)
+-&gt; GenesisAvvmBalances
+-&gt; m JSValue
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">GenesisAvvmBalances -&gt; Map CompactRedeemVerificationKey Lovelace
+</span><a href="Cardano.Chain.Genesis.AvvmBalances.html#unGenesisAvvmBalances"><span class="hs-identifier hs-var">unGenesisAvvmBalances</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679566105"><span class="annot"><span class="hs-identifier hs-type">MonadError</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Json.Canonical.html#SchemaError"><span class="hs-identifier hs-type">SchemaError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679566105"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#FromJSON"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679566105"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-type">GenesisAvvmBalances</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679566291"><span class="annot"><span class="annottext">fromJSON :: JSValue -&gt; m GenesisAvvmBalances
+</span><a href="#local-6989586621679566291"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map CompactRedeemVerificationKey Lovelace -&gt; GenesisAvvmBalances)
+-&gt; m (Map CompactRedeemVerificationKey Lovelace)
+-&gt; m GenesisAvvmBalances
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map CompactRedeemVerificationKey Lovelace -&gt; GenesisAvvmBalances
+</span><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-var">GenesisAvvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">(Map CompactRedeemVerificationKey Lovelace -&gt; GenesisAvvmBalances)
+-&gt; (Map CompactRedeemVerificationKey Lovelace
+    -&gt; Map CompactRedeemVerificationKey Lovelace)
+-&gt; Map CompactRedeemVerificationKey Lovelace
+-&gt; GenesisAvvmBalances
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Map CompactRedeemVerificationKey Lovelace
+-&gt; Map CompactRedeemVerificationKey Lovelace
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; t a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Strict.html#forceElemsToWHNF"><span class="hs-identifier hs-var">forceElemsToWHNF</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(m (Map CompactRedeemVerificationKey Lovelace)
+ -&gt; m GenesisAvvmBalances)
+-&gt; (JSValue -&gt; m (Map CompactRedeemVerificationKey Lovelace))
+-&gt; JSValue
+-&gt; m GenesisAvvmBalances
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">JSValue -&gt; m (Map CompactRedeemVerificationKey Lovelace)
+forall (m :: * -&gt; *) a. FromJSON m a =&gt; JSValue -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#fromJSON"><span class="hs-identifier hs-var">fromJSON</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679566298"><span id="local-6989586621679566302"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-type">GenesisAvvmBalances</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679566307"><span class="annot"><span class="annottext">toCBOR :: GenesisAvvmBalances -&gt; Encoding
+</span><a href="#local-6989586621679566307"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenesisAvvmBalances -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679566313"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-type">GenesisAvvmBalances</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679566319"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s GenesisAvvmBalances
+</span><a href="#local-6989586621679566319"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s GenesisAvvmBalances
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679566325"><span id="local-6989586621679566328"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-type">GenesisAvvmBalances</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679566340"><span class="annot"><span class="annottext">encCBOR :: GenesisAvvmBalances -&gt; Encoding
+</span><a href="#local-6989586621679566340"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-type">GenesisAvvmBalances</span></a></span><span> </span><span id="local-6989586621679566342"><span class="annot"><span class="annottext">Map CompactRedeemVerificationKey Lovelace
+</span><a href="#local-6989586621679566342"><span class="hs-identifier hs-var">gab</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeListLen"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.Redeem.Compact.html#CompactRedeemVerificationKey"><span class="hs-identifier hs-type">CompactRedeemVerificationKey</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map CompactRedeemVerificationKey Lovelace
+</span><a href="#local-6989586621679566342"><span class="hs-identifier hs-var">gab</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679566347"><span id="local-6989586621679566350"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-type">GenesisAvvmBalances</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679566366"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s GenesisAvvmBalances
+</span><a href="#local-6989586621679566366"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; Decoder s ()
+forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#enforceSize"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;GenesisAvvmBalances&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">Map CompactRedeemVerificationKey Lovelace -&gt; GenesisAvvmBalances
+</span><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-var">GenesisAvvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">(Map CompactRedeemVerificationKey Lovelace -&gt; GenesisAvvmBalances)
+-&gt; Decoder s (Map CompactRedeemVerificationKey Lovelace)
+-&gt; Decoder s GenesisAvvmBalances
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.Redeem.Compact.html#CompactRedeemVerificationKey"><span class="hs-identifier hs-type">CompactRedeemVerificationKey</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span></pre></body></html>

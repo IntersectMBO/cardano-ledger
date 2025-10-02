@@ -1,0 +1,23 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Crypto</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-pragma">{-# DEPRECATED</span><span>
+</span><span id="line-3"></span><span>    </span><span class="hs-pragma">&quot;@Cardano.Ledger.Crypto@ interface have been completely overhauled. In particular: \
+    \\
+    \1). `Crypto` type class no longer contains `DSIGN`, `HASH` and `ADDRHASH` type families, \
+    \  instead they have been extracted into type synonyms that point to exact algorithms that previously \
+    \  where specified in `StandardCrypto` for those type families: \
+    \    a). `DSIGN` type synonym can be imported from \&quot;Cardano.Ledger.Keys\&quot; module \
+    \    b). `HASH` and `ADDRHASH` type synonyms can be imported from \&quot;Cardano.Ledger.Hashes\&quot; module \
+    \\
+    \2). `Crypto` type class has retained its `KES` and `VRF` type families, which are not used in Ledger, therefore \
+    \  this type class as well as `StandardCrypto` definition will be migrated to \&quot;Cardano.Protocol.Crypto\&quot; module \
+    \  and from now on should be imported from 'cardano-protocol-tpraos' package instead.&quot;</span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier">Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Crypto.Internal.html#StandardCrypto"><span class="hs-identifier">StandardCrypto</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier">HASH</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#ADDRHASH"><span class="hs-identifier">ADDRHASH</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier">DSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.Internal.html"><span class="hs-identifier">Cardano.Ledger.Crypto.Internal</span></a></span><span>
+</span><span id="line-23"></span></pre></body></html>

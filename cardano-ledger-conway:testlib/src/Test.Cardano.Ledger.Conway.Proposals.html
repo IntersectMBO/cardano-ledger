@@ -1,0 +1,826 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conway.Proposals</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">force</span></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Exception</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">AssertionFailed</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">evaluate</span></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">isRight</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">foldl'</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">toList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html"><span class="hs-identifier">Data.MapExtras</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html#fromElems"><span class="hs-identifier">fromElems</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromMaybe</span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Sequence</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Sequence</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Seq</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SSeq</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsForEnactment"><span class="hs-identifier">ProposalsForEnactment</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsNewActions"><span class="hs-identifier">ProposalsNewActions</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Era.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Era.html#ConwayEraTest"><span class="hs-identifier">ConwayEraTest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Proposals.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621686852542"><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Era.html#ConwayEraTest"><span class="hs-identifier hs-type">ConwayEraTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-28"></span><span id="spec"><span class="annot"><span class="annottext">spec :: forall era. ConwayEraTest era =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Conway.Proposals.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Proposals&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Construction&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-31"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (ProposalsNewActions era -&gt; Expectation) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Adding new nodes keeps Proposals consistent&quot;</span></span><span> </span><span class="annot"><span class="annottext">((ProposalsNewActions era -&gt; Expectation) -&gt; Spec)
+-&gt; (ProposalsNewActions era -&gt; Expectation) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-32"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsNewActions"><span class="hs-identifier hs-type">ProposalsNewActions</span></a></span><span> </span><span id="local-6989586621686853025"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853025"><span class="hs-identifier hs-var">ps</span></a></span></span><span> </span><span id="local-6989586621686853026"><span class="annot"><span class="annottext">[GovActionState era]
+</span><a href="#local-6989586621686853026"><span class="hs-identifier hs-var">actions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsNewActions"><span class="hs-identifier hs-type">ProposalsNewActions</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-33"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621686853058"><span class="annot"><span class="annottext">ps' :: Proposals era
+</span><a href="#local-6989586621686853058"><span class="hs-identifier hs-var hs-var">ps'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-34"></span><span>                </span><span class="annot"><span class="annottext">(Proposals era -&gt; GovActionState era -&gt; Proposals era)
+-&gt; Proposals era -&gt; [GovActionState era] -&gt; Proposals era
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldl'</span></span><span>
+</span><span id="line-35"></span><span>                  </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621686853059"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853059"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621686853060"><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621686853060"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Proposals era -&gt; Maybe (Proposals era) -&gt; Proposals era
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Proposals era
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unable to add action&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe (Proposals era) -&gt; Proposals era)
+-&gt; Maybe (Proposals era) -&gt; Proposals era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">GovActionState era -&gt; Proposals era -&gt; Maybe (Proposals era)
+forall era.
+(EraPParams era, HasCallStack) =&gt;
+GovActionState era -&gt; Proposals era -&gt; Maybe (Proposals era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsAddAction"><span class="hs-identifier hs-var">proposalsAddAction</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621686853060"><span class="hs-identifier hs-var">action</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853059"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>                  </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853025"><span class="hs-identifier hs-var">ps</span></a></span><span>
+</span><span id="line-37"></span><span>                  </span><span class="annot"><span class="annottext">[GovActionState era]
+</span><a href="#local-6989586621686853026"><span class="hs-identifier hs-var">actions</span></a></span><span>
+</span><span id="line-38"></span><span>              </span><span id="local-6989586621686853065"><span class="annot"><span class="annottext">actionsMap :: Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853065"><span class="hs-identifier hs-var hs-var">actionsMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map GovActionId (GovActionState era)
+ -&gt; GovActionState era -&gt; Map GovActionId (GovActionState era))
+-&gt; Map GovActionId (GovActionState era)
+-&gt; [GovActionState era]
+-&gt; Map GovActionId (GovActionState era)
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldl'</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621686853066"><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853066"><span class="hs-identifier hs-var">accum</span></a></span></span><span> </span><span id="local-6989586621686853067"><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621686853067"><span class="hs-identifier hs-var">gas</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">GovActionId
+-&gt; GovActionState era
+-&gt; Map GovActionId (GovActionState era)
+-&gt; Map GovActionId (GovActionState era)
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.insert</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovActionState era -&gt; GovActionId
+forall era. GovActionState era -&gt; GovActionId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasId"><span class="hs-identifier hs-var">gasId</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621686853067"><span class="hs-identifier hs-var">gas</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621686853067"><span class="hs-identifier hs-var">gas</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853066"><span class="hs-identifier hs-var">accum</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span> </span><span class="annot"><span class="annottext">[GovActionState era]
+</span><a href="#local-6989586621686853026"><span class="hs-identifier hs-var">actions</span></a></span><span>
+</span><span id="line-39"></span><span>           </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853065"><span class="hs-identifier hs-var">actionsMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+-&gt; Map GovActionId (GovActionState era) -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853065"><span class="hs-identifier hs-var">actionsMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+-&gt; Map GovActionId (GovActionState era)
+-&gt; Map GovActionId (GovActionState era)
+forall k a b. Ord k =&gt; Map k a -&gt; Map k b -&gt; Map k a
+</span><span class="hs-operator hs-var">`Map.intersection`</span></span><span> </span><span class="annot"><span class="annottext">Proposals era -&gt; Map GovActionId (GovActionState era)
+forall era. Proposals era -&gt; Map GovActionId (GovActionState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsActionsMap"><span class="hs-identifier hs-var">proposalsActionsMap</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853058"><span class="hs-identifier hs-var">ps'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Removal&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (Proposals era -&gt; Expectation) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Removing leaf nodes keeps Proposals consistent&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Proposals era -&gt; Expectation) -&gt; Spec)
+-&gt; (Proposals era -&gt; Expectation) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-42"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621686853074"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853074"><span class="hs-identifier hs-var">ps</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#Proposals"><span class="hs-identifier hs-type">Proposals</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-43"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621686853078"><span class="annot"><span class="annottext">gais :: Set GovActionId
+</span><a href="#local-6989586621686853078"><span class="hs-identifier hs-var hs-var">gais</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[GovActionId] -&gt; Set GovActionId
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="annot"><span class="annottext">([GovActionId] -&gt; Set GovActionId)
+-&gt; [GovActionId] -&gt; Set GovActionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq GovActionId -&gt; [GovActionId]
+forall a. StrictSeq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="annot"><span class="annottext">(StrictSeq GovActionId -&gt; [GovActionId])
+-&gt; StrictSeq GovActionId -&gt; [GovActionId]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; StrictSeq GovActionId -&gt; StrictSeq GovActionId
+forall a. Int -&gt; StrictSeq a -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#takeLast"><span class="hs-identifier hs-var">SSeq.takeLast</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span> </span><span class="annot"><span class="annottext">(StrictSeq GovActionId -&gt; StrictSeq GovActionId)
+-&gt; StrictSeq GovActionId -&gt; StrictSeq GovActionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Proposals era -&gt; StrictSeq GovActionId
+forall era. Proposals era -&gt; StrictSeq GovActionId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsIds"><span class="hs-identifier hs-var">proposalsIds</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853074"><span class="hs-identifier hs-var">ps</span></a></span><span>
+</span><span id="line-44"></span><span>              </span><span id="local-6989586621686853107"><span class="annot"><span class="annottext">ps' :: Proposals era
+</span><a href="#local-6989586621686853107"><span class="hs-identifier hs-var hs-var">ps'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Proposals era, Map GovActionId (GovActionState era))
+-&gt; Proposals era
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">((Proposals era, Map GovActionId (GovActionState era))
+ -&gt; Proposals era)
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+-&gt; Proposals era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+forall era.
+EraPParams era =&gt;
+Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsRemoveWithDescendants"><span class="hs-identifier hs-var">proposalsRemoveWithDescendants</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853078"><span class="hs-identifier hs-var">gais</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853074"><span class="hs-identifier hs-var">ps</span></a></span><span>
+</span><span id="line-45"></span><span>          </span><span class="annot"><span class="annottext">Proposals era -&gt; Int
+forall era. Proposals era -&gt; Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsSize"><span class="hs-identifier hs-var">proposalsSize</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853107"><span class="hs-identifier hs-var">ps'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era -&gt; Int
+forall era. Proposals era -&gt; Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsSize"><span class="hs-identifier hs-var">proposalsSize</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853074"><span class="hs-identifier hs-var">ps</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Set GovActionId -&gt; Int
+forall a. Set a -&gt; Int
+</span><span class="hs-identifier hs-var">Set.size</span></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853078"><span class="hs-identifier hs-var">gais</span></a></span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (Proposals era -&gt; Expectation) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Removing root nodes keeps Proposals consistent&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Proposals era -&gt; Expectation) -&gt; Spec)
+-&gt; (Proposals era -&gt; Expectation) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-47"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621686853112"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853112"><span class="hs-identifier hs-var">ps</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#Proposals"><span class="hs-identifier hs-type">Proposals</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-48"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621686853115"><span class="annot"><span class="annottext">gais :: Set GovActionId
+</span><a href="#local-6989586621686853115"><span class="hs-identifier hs-var hs-var">gais</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[GovActionId] -&gt; Set GovActionId
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="annot"><span class="annottext">([GovActionId] -&gt; Set GovActionId)
+-&gt; [GovActionId] -&gt; Set GovActionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq GovActionId -&gt; [GovActionId]
+forall a. StrictSeq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="annot"><span class="annottext">(StrictSeq GovActionId -&gt; [GovActionId])
+-&gt; StrictSeq GovActionId -&gt; [GovActionId]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; StrictSeq GovActionId -&gt; StrictSeq GovActionId
+forall a. Int -&gt; StrictSeq a -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#take"><span class="hs-identifier hs-var">SSeq.take</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span> </span><span class="annot"><span class="annottext">(StrictSeq GovActionId -&gt; StrictSeq GovActionId)
+-&gt; StrictSeq GovActionId -&gt; StrictSeq GovActionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Proposals era -&gt; StrictSeq GovActionId
+forall era. Proposals era -&gt; StrictSeq GovActionId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsIds"><span class="hs-identifier hs-var">proposalsIds</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853112"><span class="hs-identifier hs-var">ps</span></a></span><span>
+</span><span id="line-49"></span><span>              </span><span id="local-6989586621686853142"><span class="annot"><span class="annottext">ps' :: Proposals era
+</span><a href="#local-6989586621686853142"><span class="hs-identifier hs-var hs-var">ps'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Proposals era, Map GovActionId (GovActionState era))
+-&gt; Proposals era
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">((Proposals era, Map GovActionId (GovActionState era))
+ -&gt; Proposals era)
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+-&gt; Proposals era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+forall era.
+EraPParams era =&gt;
+Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsRemoveWithDescendants"><span class="hs-identifier hs-var">proposalsRemoveWithDescendants</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853115"><span class="hs-identifier hs-var">gais</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853112"><span class="hs-identifier hs-var">ps</span></a></span><span>
+</span><span id="line-50"></span><span>          </span><span class="annot"><span class="annottext">Proposals era -&gt; Int
+forall era. Proposals era -&gt; Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsSize"><span class="hs-identifier hs-var">proposalsSize</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853142"><span class="hs-identifier hs-var">ps'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; (Int -&gt; Bool) -&gt; Expectation
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Proposals era -&gt; Int
+forall era. Proposals era -&gt; Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsSize"><span class="hs-identifier hs-var">proposalsSize</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853112"><span class="hs-identifier hs-var">ps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (ProposalsNewActions era -&gt; Expectation) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Removing non-member nodes throws an AssertionFailure&quot;</span></span><span> </span><span class="annot"><span class="annottext">((ProposalsNewActions era -&gt; Expectation) -&gt; Spec)
+-&gt; (ProposalsNewActions era -&gt; Expectation) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-52"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsNewActions"><span class="hs-identifier hs-type">ProposalsNewActions</span></a></span><span> </span><span id="local-6989586621686853145"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853145"><span class="hs-identifier hs-var">ps</span></a></span></span><span> </span><span id="local-6989586621686853146"><span class="annot"><span class="annottext">[GovActionState era]
+</span><a href="#local-6989586621686853146"><span class="hs-identifier hs-var">actions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsNewActions"><span class="hs-identifier hs-type">ProposalsNewActions</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-53"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Proposals era, Map GovActionId (GovActionState era))
+-&gt; IO (Proposals era, Map GovActionId (GovActionState era))
+forall a. a -&gt; IO a
+</span><span class="hs-identifier hs-var">evaluate</span></span><span> </span><span class="annot"><span class="annottext">((Proposals era, Map GovActionId (GovActionState era))
+ -&gt; IO (Proposals era, Map GovActionId (GovActionState era)))
+-&gt; ((Proposals era, Map GovActionId (GovActionState era))
+    -&gt; (Proposals era, Map GovActionId (GovActionState era)))
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+-&gt; IO (Proposals era, Map GovActionId (GovActionState era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Proposals era, Map GovActionId (GovActionState era))
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+forall a. NFData a =&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">force</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+forall era.
+EraPParams era =&gt;
+Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsRemoveWithDescendants"><span class="hs-identifier hs-var">proposalsRemoveWithDescendants</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[GovActionId] -&gt; Set GovActionId
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="annot"><span class="annottext">([GovActionId] -&gt; Set GovActionId)
+-&gt; [GovActionId] -&gt; Set GovActionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">GovActionState era -&gt; GovActionId
+forall era. GovActionState era -&gt; GovActionId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasId"><span class="hs-identifier hs-var">gasId</span></a></span><span> </span><span class="annot"><span class="annottext">(GovActionState era -&gt; GovActionId)
+-&gt; [GovActionState era] -&gt; [GovActionId]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[GovActionState era]
+</span><a href="#local-6989586621686853146"><span class="hs-identifier hs-var">actions</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853145"><span class="hs-identifier hs-var">ps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>            </span><span class="annot"><span class="annottext">IO (Proposals era, Map GovActionId (GovActionState era))
+-&gt; Selector AssertionFailed -&gt; Expectation
+forall e a.
+(HasCallStack, Exception e) =&gt;
+IO a -&gt; Selector e -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldThrow"><span class="hs-operator hs-var">`shouldThrow`</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="hs-identifier hs-type">AssertionFailed</span></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Enactment&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">String
+-&gt; ((ProposalsForEnactment era, Voter, Vote) -&gt; Bool) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Adding votes preserves consistency&quot;</span></span><span> </span><span class="annot"><span class="annottext">(((ProposalsForEnactment era, Voter, Vote) -&gt; Bool) -&gt; Spec)
+-&gt; ((ProposalsForEnactment era, Voter, Vote) -&gt; Bool) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-57"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsForEnactment"><span class="hs-identifier hs-type">ProposalsForEnactment</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621686853152"><span class="annot"><span class="annottext">Proposals era
+pfeProposals :: Proposals era
+pfeProposals :: forall era. ProposalsForEnactment era -&gt; Proposals era
+</span><a href="#local-6989586621686853152"><span class="hs-identifier hs-var hs-var">pfeProposals</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853154"><span class="annot"><span class="annottext">Seq (GovActionState era)
+pfeToEnact :: Seq (GovActionState era)
+pfeToEnact :: forall era. ProposalsForEnactment era -&gt; Seq (GovActionState era)
+</span><a href="#local-6989586621686853154"><span class="hs-identifier hs-var hs-var">pfeToEnact</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsForEnactment"><span class="hs-identifier hs-type">ProposalsForEnactment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-58"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853156"><span class="annot"><span class="annottext">Voter
+</span><a href="#local-6989586621686853156"><span class="hs-identifier hs-var">voter</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#Voter"><span class="hs-identifier hs-type">Voter</span></a></span><span>
+</span><span id="line-59"></span><span>           </span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853157"><span class="annot"><span class="annottext">Vote
+</span><a href="#local-6989586621686853157"><span class="hs-identifier hs-var">vote</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#Vote"><span class="hs-identifier hs-type">Vote</span></a></span><span>
+</span><span id="line-60"></span><span>           </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+</span><a href="#local-6989586621686853154"><span class="hs-identifier hs-var">pfeToEnact</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-62"></span><span>              </span><span id="local-6989586621686853158"><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621686853158"><span class="hs-identifier hs-var">gas</span></a></span></span><span> </span><span class="annot"><span class="hs-operator hs-type">Seq.:&lt;|</span></span><span> </span><span id="local-6989586621686853160"><span class="annot"><span class="annottext">Seq (GovActionState era)
+</span><a href="#local-6989586621686853160"><span class="hs-identifier hs-var">_gass</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either String (GovRelation TreeMaybe) -&gt; Bool
+forall a b. Either a b -&gt; Bool
+</span><span class="hs-identifier hs-var">isRight</span></span><span> </span><span class="annot"><span class="annottext">(Either String (GovRelation TreeMaybe) -&gt; Bool)
+-&gt; (Proposals era -&gt; Either String (GovRelation TreeMaybe))
+-&gt; Proposals era
+-&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Proposals era -&gt; Either String (GovRelation TreeMaybe)
+forall era. Proposals era -&gt; Either String (GovRelation TreeMaybe)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#toGovRelationTreeEither"><span class="hs-identifier hs-var">toGovRelationTreeEither</span></a></span><span> </span><span class="annot"><span class="annottext">(Proposals era -&gt; Bool) -&gt; Proposals era -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Voter -&gt; Vote -&gt; GovActionId -&gt; Proposals era -&gt; Proposals era
+forall era.
+Voter -&gt; Vote -&gt; GovActionId -&gt; Proposals era -&gt; Proposals era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsAddVote"><span class="hs-identifier hs-var">proposalsAddVote</span></a></span><span> </span><span class="annot"><span class="annottext">Voter
+</span><a href="#local-6989586621686853156"><span class="hs-identifier hs-var">voter</span></a></span><span> </span><span class="annot"><span class="annottext">Vote
+</span><a href="#local-6989586621686853157"><span class="hs-identifier hs-var">vote</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovActionState era -&gt; GovActionId
+forall era. GovActionState era -&gt; GovActionId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasId"><span class="hs-identifier hs-var">gasId</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621686853158"><span class="hs-identifier hs-var">gas</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853152"><span class="hs-identifier hs-var">pfeProposals</span></a></span><span>
+</span><span id="line-63"></span><span>              </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (ProposalsForEnactment era -&gt; Expectation) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Enacting exhaustive lineages reduces Proposals to their roots&quot;</span></span><span> </span><span class="annot"><span class="annottext">((ProposalsForEnactment era -&gt; Expectation) -&gt; Spec)
+-&gt; (ProposalsForEnactment era -&gt; Expectation) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-65"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsForEnactment"><span class="hs-identifier hs-type">ProposalsForEnactment</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621686853163"><span class="annot"><span class="annottext">Proposals era
+pfeProposals :: forall era. ProposalsForEnactment era -&gt; Proposals era
+pfeProposals :: Proposals era
+</span><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#pfeProposals"><span class="hs-identifier hs-var hs-var">pfeProposals</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853164"><span class="annot"><span class="annottext">Seq (GovActionState era)
+pfeToEnact :: forall era. ProposalsForEnactment era -&gt; Seq (GovActionState era)
+pfeToEnact :: Seq (GovActionState era)
+</span><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#pfeToEnact"><span class="hs-identifier hs-var hs-var">pfeToEnact</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853165"><span class="annot"><span class="annottext">Set GovActionId
+pfeToRemove :: Set GovActionId
+pfeToRemove :: forall era. ProposalsForEnactment era -&gt; Set GovActionId
+</span><a href="#local-6989586621686853165"><span class="hs-identifier hs-var hs-var">pfeToRemove</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853167"><span class="annot"><span class="annottext">Set GovActionId
+pfeToRetain :: Set GovActionId
+pfeToRetain :: forall era. ProposalsForEnactment era -&gt; Set GovActionId
+</span><a href="#local-6989586621686853167"><span class="hs-identifier hs-var hs-var">pfeToRetain</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-66"></span><span>             </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsForEnactment"><span class="hs-identifier hs-type">ProposalsForEnactment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-67"></span><span>           </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-68"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621686853194"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853194"><span class="hs-identifier hs-var">ps'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853195"><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853195"><span class="hs-identifier hs-var">enacted</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853196"><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853196"><span class="hs-identifier hs-var">removedDueToEnactment</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853197"><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853197"><span class="hs-identifier hs-var">expiredRemoved</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+-&gt; Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+forall era.
+EraPParams era =&gt;
+Seq (GovActionState era)
+-&gt; Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsApplyEnactment"><span class="hs-identifier hs-var">proposalsApplyEnactment</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+</span><a href="#local-6989586621686853164"><span class="hs-identifier hs-var">pfeToEnact</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+forall a. Set a
+</span><span class="hs-identifier hs-var">Set.empty</span></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853163"><span class="hs-identifier hs-var">pfeProposals</span></a></span><span>
+</span><span id="line-69"></span><span>            </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853197"><span class="hs-identifier hs-var">expiredRemoved</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+-&gt; (Map GovActionId (GovActionState era) -&gt; Bool) -&gt; Expectation
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era) -&gt; Bool
+forall k a. Map k a -&gt; Bool
+</span><span class="hs-identifier hs-var">Map.null</span></span><span>
+</span><span id="line-70"></span><span>            </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853195"><span class="hs-identifier hs-var">enacted</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+-&gt; Map GovActionId (GovActionState era) -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">(GovActionState era -&gt; GovActionId)
+-&gt; Seq (GovActionState era) -&gt; Map GovActionId (GovActionState era)
+forall (f :: * -&gt; *) k v.
+(Foldable f, Ord k) =&gt;
+(v -&gt; k) -&gt; f v -&gt; Map k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html#fromElems"><span class="hs-identifier hs-var">fromElems</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState era -&gt; GovActionId
+forall era. GovActionState era -&gt; GovActionId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasId"><span class="hs-identifier hs-var">gasId</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+</span><a href="#local-6989586621686853164"><span class="hs-identifier hs-var">pfeToEnact</span></a></span><span>
+</span><span id="line-71"></span><span>            </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era) -&gt; Set GovActionId
+forall k a. Map k a -&gt; Set k
+</span><span class="hs-identifier hs-var">Map.keysSet</span></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853196"><span class="hs-identifier hs-var">removedDueToEnactment</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId -&gt; Set GovActionId -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853165"><span class="hs-identifier hs-var">pfeToRemove</span></a></span><span>
+</span><span id="line-72"></span><span>            </span><span class="annot"><span class="annottext">Proposals era -&gt; Int
+forall era. Proposals era -&gt; Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsSize"><span class="hs-identifier hs-var">proposalsSize</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853194"><span class="hs-identifier hs-var">ps'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId -&gt; Int
+forall a. Set a -&gt; Int
+</span><span class="hs-identifier hs-var">Set.size</span></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853167"><span class="hs-identifier hs-var">pfeToRetain</span></a></span><span>
+</span><span id="line-73"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (ProposalsNewActions era -&gt; Expectation) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Enacting non-member nodes throws an AssertionFailure&quot;</span></span><span> </span><span class="annot"><span class="annottext">((ProposalsNewActions era -&gt; Expectation) -&gt; Spec)
+-&gt; (ProposalsNewActions era -&gt; Expectation) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-74"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsNewActions"><span class="hs-identifier hs-type">ProposalsNewActions</span></a></span><span> </span><span id="local-6989586621686853202"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853202"><span class="hs-identifier hs-var">ps</span></a></span></span><span> </span><span id="local-6989586621686853203"><span class="annot"><span class="annottext">[GovActionState era]
+</span><a href="#local-6989586621686853203"><span class="hs-identifier hs-var">actions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsNewActions"><span class="hs-identifier hs-type">ProposalsNewActions</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Proposals era, Map GovActionId (GovActionState era),
+ Map GovActionId (GovActionState era),
+ Map GovActionId (GovActionState era))
+-&gt; IO
+     (Proposals era, Map GovActionId (GovActionState era),
+      Map GovActionId (GovActionState era),
+      Map GovActionId (GovActionState era))
+forall a. a -&gt; IO a
+</span><span class="hs-identifier hs-var">evaluate</span></span><span> </span><span class="annot"><span class="annottext">((Proposals era, Map GovActionId (GovActionState era),
+  Map GovActionId (GovActionState era),
+  Map GovActionId (GovActionState era))
+ -&gt; IO
+      (Proposals era, Map GovActionId (GovActionState era),
+       Map GovActionId (GovActionState era),
+       Map GovActionId (GovActionState era)))
+-&gt; ((Proposals era, Map GovActionId (GovActionState era),
+     Map GovActionId (GovActionState era),
+     Map GovActionId (GovActionState era))
+    -&gt; (Proposals era, Map GovActionId (GovActionState era),
+        Map GovActionId (GovActionState era),
+        Map GovActionId (GovActionState era)))
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+-&gt; IO
+     (Proposals era, Map GovActionId (GovActionState era),
+      Map GovActionId (GovActionState era),
+      Map GovActionId (GovActionState era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Proposals era, Map GovActionId (GovActionState era),
+ Map GovActionId (GovActionState era),
+ Map GovActionId (GovActionState era))
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+forall a. NFData a =&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">force</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seq (GovActionState era)
+-&gt; Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+forall era.
+EraPParams era =&gt;
+Seq (GovActionState era)
+-&gt; Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsApplyEnactment"><span class="hs-identifier hs-var">proposalsApplyEnactment</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[GovActionState era] -&gt; Seq (GovActionState era)
+forall a. [a] -&gt; Seq a
+</span><span class="hs-identifier hs-var">fromList</span></span><span> </span><span class="annot"><span class="annottext">[GovActionState era]
+</span><a href="#local-6989586621686853203"><span class="hs-identifier hs-var">actions</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+forall a. Set a
+</span><span class="hs-identifier hs-var">Set.empty</span></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853202"><span class="hs-identifier hs-var">ps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>            </span><span class="annot"><span class="annottext">IO
+  (Proposals era, Map GovActionId (GovActionState era),
+   Map GovActionId (GovActionState era),
+   Map GovActionId (GovActionState era))
+-&gt; Selector AssertionFailed -&gt; Expectation
+forall e a.
+(HasCallStack, Exception e) =&gt;
+IO a -&gt; Selector e -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldThrow"><span class="hs-operator hs-var">`shouldThrow`</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="hs-identifier hs-type">AssertionFailed</span></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (ProposalsForEnactment era -&gt; Expectation) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Expiring compliments of exhaustive lineages keeps proposals consistent&quot;</span></span><span> </span><span class="annot"><span class="annottext">((ProposalsForEnactment era -&gt; Expectation) -&gt; Spec)
+-&gt; (ProposalsForEnactment era -&gt; Expectation) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-78"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsForEnactment"><span class="hs-identifier hs-type">ProposalsForEnactment</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621686853204"><span class="annot"><span class="annottext">Proposals era
+pfeProposals :: forall era. ProposalsForEnactment era -&gt; Proposals era
+pfeProposals :: Proposals era
+</span><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#pfeProposals"><span class="hs-identifier hs-var hs-var">pfeProposals</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853205"><span class="annot"><span class="annottext">Seq (GovActionState era)
+pfeToEnact :: forall era. ProposalsForEnactment era -&gt; Seq (GovActionState era)
+pfeToEnact :: Seq (GovActionState era)
+</span><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#pfeToEnact"><span class="hs-identifier hs-var hs-var">pfeToEnact</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853206"><span class="annot"><span class="annottext">Set GovActionId
+pfeToRemove :: forall era. ProposalsForEnactment era -&gt; Set GovActionId
+pfeToRemove :: Set GovActionId
+</span><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#pfeToRemove"><span class="hs-identifier hs-var hs-var">pfeToRemove</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853207"><span class="annot"><span class="annottext">Set GovActionId
+pfeToRetain :: forall era. ProposalsForEnactment era -&gt; Set GovActionId
+pfeToRetain :: Set GovActionId
+</span><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#pfeToRetain"><span class="hs-identifier hs-var hs-var">pfeToRetain</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-79"></span><span>             </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsForEnactment"><span class="hs-identifier hs-type">ProposalsForEnactment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-80"></span><span>           </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-81"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621686853233"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853233"><span class="hs-identifier hs-var">ps'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853234"><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853234"><span class="hs-identifier hs-var">enacted</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853235"><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853235"><span class="hs-identifier hs-var">removedDueToEnactment</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853236"><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853236"><span class="hs-identifier hs-var">expiredRemoved</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-82"></span><span>                  </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+-&gt; Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+forall era.
+EraPParams era =&gt;
+Seq (GovActionState era)
+-&gt; Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsApplyEnactment"><span class="hs-identifier hs-var">proposalsApplyEnactment</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+forall a. Seq a
+</span><span class="hs-identifier hs-var">Seq.Empty</span></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853206"><span class="hs-identifier hs-var">pfeToRemove</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853204"><span class="hs-identifier hs-var">pfeProposals</span></a></span><span>
+</span><span id="line-83"></span><span>            </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853234"><span class="hs-identifier hs-var">enacted</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+-&gt; Map GovActionId (GovActionState era) -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-84"></span><span>            </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853235"><span class="hs-identifier hs-var">removedDueToEnactment</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+-&gt; Map GovActionId (GovActionState era) -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-85"></span><span>            </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era) -&gt; Set GovActionId
+forall k a. Map k a -&gt; Set k
+</span><span class="hs-identifier hs-var">Map.keysSet</span></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853236"><span class="hs-identifier hs-var">expiredRemoved</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId -&gt; Set GovActionId -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853206"><span class="hs-identifier hs-var">pfeToRemove</span></a></span><span>
+</span><span id="line-86"></span><span>            </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853233"><span class="hs-identifier hs-var">ps'</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era -&gt; Proposals era -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">(Proposals era, Map GovActionId (GovActionState era))
+-&gt; Proposals era
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+forall era.
+EraPParams era =&gt;
+Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsRemoveWithDescendants"><span class="hs-identifier hs-var">proposalsRemoveWithDescendants</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853206"><span class="hs-identifier hs-var">pfeToRemove</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853204"><span class="hs-identifier hs-var">pfeProposals</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621686853240"><span class="annot"><span class="annottext">enactMap :: Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853240"><span class="hs-identifier hs-var hs-var">enactMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GovActionState era -&gt; GovActionId)
+-&gt; Seq (GovActionState era) -&gt; Map GovActionId (GovActionState era)
+forall (f :: * -&gt; *) k v.
+(Foldable f, Ord k) =&gt;
+(v -&gt; k) -&gt; f v -&gt; Map k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html#fromElems"><span class="hs-identifier hs-var">fromElems</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState era -&gt; GovActionId
+forall era. GovActionState era -&gt; GovActionId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasId"><span class="hs-identifier hs-var">gasId</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+</span><a href="#local-6989586621686853205"><span class="hs-identifier hs-var">pfeToEnact</span></a></span><span>
+</span><span id="line-88"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621686853266"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853266"><span class="hs-identifier hs-var">emptyProposals</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853267"><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853267"><span class="hs-identifier hs-var">enactedMap</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+forall era.
+EraPParams era =&gt;
+Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsRemoveWithDescendants"><span class="hs-identifier hs-var">proposalsRemoveWithDescendants</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era) -&gt; Set GovActionId
+forall k a. Map k a -&gt; Set k
+</span><span class="hs-identifier hs-var">Map.keysSet</span></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853240"><span class="hs-identifier hs-var">enactMap</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853233"><span class="hs-identifier hs-var">ps'</span></a></span><span>
+</span><span id="line-89"></span><span>            </span><span class="annot"><span class="annottext">Proposals era -&gt; Int
+forall era. Proposals era -&gt; Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsSize"><span class="hs-identifier hs-var">proposalsSize</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853266"><span class="hs-identifier hs-var">emptyProposals</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId -&gt; Int
+forall a. Set a -&gt; Int
+</span><span class="hs-identifier hs-var">Set.size</span></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853207"><span class="hs-identifier hs-var">pfeToRetain</span></a></span><span>
+</span><span id="line-90"></span><span>            </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853267"><span class="hs-identifier hs-var">enactedMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+-&gt; Map GovActionId (GovActionState era) -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853240"><span class="hs-identifier hs-var">enactMap</span></a></span><span>
+</span><span id="line-91"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (ProposalsNewActions era -&gt; Expectation) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Expiring non-member nodes throws an AssertionFailure&quot;</span></span><span> </span><span class="annot"><span class="annottext">((ProposalsNewActions era -&gt; Expectation) -&gt; Spec)
+-&gt; (ProposalsNewActions era -&gt; Expectation) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsNewActions"><span class="hs-identifier hs-type">ProposalsNewActions</span></a></span><span> </span><span id="local-6989586621686853268"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853268"><span class="hs-identifier hs-var">ps</span></a></span></span><span> </span><span id="local-6989586621686853269"><span class="annot"><span class="annottext">[GovActionState era]
+</span><a href="#local-6989586621686853269"><span class="hs-identifier hs-var">actions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsNewActions"><span class="hs-identifier hs-type">ProposalsNewActions</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-93"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Proposals era, Map GovActionId (GovActionState era),
+ Map GovActionId (GovActionState era),
+ Map GovActionId (GovActionState era))
+-&gt; IO
+     (Proposals era, Map GovActionId (GovActionState era),
+      Map GovActionId (GovActionState era),
+      Map GovActionId (GovActionState era))
+forall a. a -&gt; IO a
+</span><span class="hs-identifier hs-var">evaluate</span></span><span> </span><span class="annot"><span class="annottext">((Proposals era, Map GovActionId (GovActionState era),
+  Map GovActionId (GovActionState era),
+  Map GovActionId (GovActionState era))
+ -&gt; IO
+      (Proposals era, Map GovActionId (GovActionState era),
+       Map GovActionId (GovActionState era),
+       Map GovActionId (GovActionState era)))
+-&gt; ((Proposals era, Map GovActionId (GovActionState era),
+     Map GovActionId (GovActionState era),
+     Map GovActionId (GovActionState era))
+    -&gt; (Proposals era, Map GovActionId (GovActionState era),
+        Map GovActionId (GovActionState era),
+        Map GovActionId (GovActionState era)))
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+-&gt; IO
+     (Proposals era, Map GovActionId (GovActionState era),
+      Map GovActionId (GovActionState era),
+      Map GovActionId (GovActionState era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Proposals era, Map GovActionId (GovActionState era),
+ Map GovActionId (GovActionState era),
+ Map GovActionId (GovActionState era))
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+forall a. NFData a =&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">force</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seq (GovActionState era)
+-&gt; Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+forall era.
+EraPParams era =&gt;
+Seq (GovActionState era)
+-&gt; Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsApplyEnactment"><span class="hs-identifier hs-var">proposalsApplyEnactment</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+forall a. Seq a
+</span><span class="hs-identifier hs-var">Seq.Empty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[GovActionId] -&gt; Set GovActionId
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="annot"><span class="annottext">([GovActionId] -&gt; Set GovActionId)
+-&gt; [GovActionId] -&gt; Set GovActionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">GovActionState era -&gt; GovActionId
+forall era. GovActionState era -&gt; GovActionId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasId"><span class="hs-identifier hs-var">gasId</span></a></span><span> </span><span class="annot"><span class="annottext">(GovActionState era -&gt; GovActionId)
+-&gt; [GovActionState era] -&gt; [GovActionId]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[GovActionState era]
+</span><a href="#local-6989586621686853269"><span class="hs-identifier hs-var">actions</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853268"><span class="hs-identifier hs-var">ps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>            </span><span class="annot"><span class="annottext">IO
+  (Proposals era, Map GovActionId (GovActionState era),
+   Map GovActionId (GovActionState era),
+   Map GovActionId (GovActionState era))
+-&gt; Selector AssertionFailed -&gt; Expectation
+forall e a.
+(HasCallStack, Exception e) =&gt;
+IO a -&gt; Selector e -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldThrow"><span class="hs-operator hs-var">`shouldThrow`</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="hs-identifier hs-type">AssertionFailed</span></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; (ProposalsForEnactment era -&gt; Expectation) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Enacting and expiring conflicting proposals does not lead to removal due to enactment&quot;</span></span><span> </span><span class="annot"><span class="annottext">((ProposalsForEnactment era -&gt; Expectation) -&gt; Spec)
+-&gt; (ProposalsForEnactment era -&gt; Expectation) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-96"></span><span>        </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsForEnactment"><span class="hs-identifier hs-type">ProposalsForEnactment</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621686853270"><span class="annot"><span class="annottext">Proposals era
+pfeProposals :: forall era. ProposalsForEnactment era -&gt; Proposals era
+pfeProposals :: Proposals era
+</span><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#pfeProposals"><span class="hs-identifier hs-var hs-var">pfeProposals</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853271"><span class="annot"><span class="annottext">Seq (GovActionState era)
+pfeToEnact :: forall era. ProposalsForEnactment era -&gt; Seq (GovActionState era)
+pfeToEnact :: Seq (GovActionState era)
+</span><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#pfeToEnact"><span class="hs-identifier hs-var hs-var">pfeToEnact</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853272"><span class="annot"><span class="annottext">Set GovActionId
+pfeToRemove :: forall era. ProposalsForEnactment era -&gt; Set GovActionId
+pfeToRemove :: Set GovActionId
+</span><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#pfeToRemove"><span class="hs-identifier hs-var hs-var">pfeToRemove</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853273"><span class="annot"><span class="annottext">Set GovActionId
+pfeToRetain :: forall era. ProposalsForEnactment era -&gt; Set GovActionId
+pfeToRetain :: Set GovActionId
+</span><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#pfeToRetain"><span class="hs-identifier hs-var hs-var">pfeToRetain</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-97"></span><span>             </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Arbitrary.html#ProposalsForEnactment"><span class="hs-identifier hs-type">ProposalsForEnactment</span></a></span><span> </span><span class="annot"><a href="#local-6989586621686852542"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-98"></span><span>           </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-99"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621686853299"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853299"><span class="hs-identifier hs-var">ps'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853300"><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853300"><span class="hs-identifier hs-var">enacted</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853301"><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853301"><span class="hs-identifier hs-var">enactedRemoved</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621686853302"><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853302"><span class="hs-identifier hs-var">expiredRemoved</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+-&gt; Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+forall era.
+EraPParams era =&gt;
+Seq (GovActionState era)
+-&gt; Set GovActionId
+-&gt; Proposals era
+-&gt; (Proposals era, Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era),
+    Map GovActionId (GovActionState era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsApplyEnactment"><span class="hs-identifier hs-var">proposalsApplyEnactment</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+</span><a href="#local-6989586621686853271"><span class="hs-identifier hs-var">pfeToEnact</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853272"><span class="hs-identifier hs-var">pfeToRemove</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853270"><span class="hs-identifier hs-var">pfeProposals</span></a></span><span>
+</span><span id="line-100"></span><span>            </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era) -&gt; Set GovActionId
+forall k a. Map k a -&gt; Set k
+</span><span class="hs-identifier hs-var">Map.keysSet</span></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853302"><span class="hs-identifier hs-var">expiredRemoved</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId -&gt; Set GovActionId -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853272"><span class="hs-identifier hs-var">pfeToRemove</span></a></span><span>
+</span><span id="line-101"></span><span>            </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853301"><span class="hs-identifier hs-var">enactedRemoved</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+-&gt; Map GovActionId (GovActionState era) -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-102"></span><span>            </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+</span><a href="#local-6989586621686853300"><span class="hs-identifier hs-var">enacted</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (GovActionState era)
+-&gt; Map GovActionId (GovActionState era) -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">(GovActionState era -&gt; GovActionId)
+-&gt; Seq (GovActionState era) -&gt; Map GovActionId (GovActionState era)
+forall (f :: * -&gt; *) k v.
+(Foldable f, Ord k) =&gt;
+(v -&gt; k) -&gt; f v -&gt; Map k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html#fromElems"><span class="hs-identifier hs-var">fromElems</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState era -&gt; GovActionId
+forall era. GovActionState era -&gt; GovActionId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasId"><span class="hs-identifier hs-var">gasId</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (GovActionState era)
+</span><a href="#local-6989586621686853271"><span class="hs-identifier hs-var">pfeToEnact</span></a></span><span>
+</span><span id="line-103"></span><span>            </span><span class="annot"><span class="annottext">Proposals era -&gt; Int
+forall era. Proposals era -&gt; Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsSize"><span class="hs-identifier hs-var">proposalsSize</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621686853299"><span class="hs-identifier hs-var">ps'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Set GovActionId -&gt; Int
+forall a. Set a -&gt; Int
+</span><span class="hs-identifier hs-var">Set.size</span></span><span> </span><span class="annot"><span class="annottext">Set GovActionId
+</span><a href="#local-6989586621686853273"><span class="hs-identifier hs-var">pfeToRetain</span></a></span><span>
+</span><span id="line-104"></span></pre></body></html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Babbage.Transition</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier">TransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.html"><span class="hs-identifier">Cardano.Ledger.Alonzo</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Transition.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Transition</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.Era.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Era</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.State.html"><span class="hs-identifier">Cardano.Ledger.Babbage.State</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.Translation.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Translation</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier">NoGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Transition</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679386344"><span id="local-6989586621679386352"><span id="local-6989586621679386361"><span id="local-6989586621679386374"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#EraTransition"><span class="hs-identifier hs-type">EraTransition</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-keyword">newtype</span><span> </span><span id="TransitionConfig"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-var">TransitionConfig</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BabbageTransitionConfig"><span class="annot"><a href="Cardano.Ledger.Babbage.Transition.html#BabbageTransitionConfig"><span class="hs-identifier hs-var">BabbageTransitionConfig</span></a></span></span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="btcAlonzoTransitionConfig"><span class="annot"><span class="annottext">TransitionConfig BabbageEra -&gt; TransitionConfig AlonzoEra
+</span><a href="Cardano.Ledger.Babbage.Transition.html#btcAlonzoTransitionConfig"><span class="hs-identifier hs-var hs-var">btcAlonzoTransitionConfig</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679386396"><span id="local-6989586621679386402"><span id="local-6989586621679386405"><span class="annot"><span class="annottext">Int -&gt; TransitionConfig BabbageEra -&gt; ShowS
+[TransitionConfig BabbageEra] -&gt; ShowS
+TransitionConfig BabbageEra -&gt; String
+(Int -&gt; TransitionConfig BabbageEra -&gt; ShowS)
+-&gt; (TransitionConfig BabbageEra -&gt; String)
+-&gt; ([TransitionConfig BabbageEra] -&gt; ShowS)
+-&gt; Show (TransitionConfig BabbageEra)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TransitionConfig BabbageEra -&gt; ShowS
+showsPrec :: Int -&gt; TransitionConfig BabbageEra -&gt; ShowS
+$cshow :: TransitionConfig BabbageEra -&gt; String
+show :: TransitionConfig BabbageEra -&gt; String
+$cshowList :: [TransitionConfig BabbageEra] -&gt; ShowS
+showList :: [TransitionConfig BabbageEra] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679386409"><span id="local-6989586621679386414"><span class="annot"><span class="annottext">TransitionConfig BabbageEra -&gt; TransitionConfig BabbageEra -&gt; Bool
+(TransitionConfig BabbageEra
+ -&gt; TransitionConfig BabbageEra -&gt; Bool)
+-&gt; (TransitionConfig BabbageEra
+    -&gt; TransitionConfig BabbageEra -&gt; Bool)
+-&gt; Eq (TransitionConfig BabbageEra)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TransitionConfig BabbageEra -&gt; TransitionConfig BabbageEra -&gt; Bool
+== :: TransitionConfig BabbageEra -&gt; TransitionConfig BabbageEra -&gt; Bool
+$c/= :: TransitionConfig BabbageEra -&gt; TransitionConfig BabbageEra -&gt; Bool
+/= :: TransitionConfig BabbageEra -&gt; TransitionConfig BabbageEra -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679386419"><span id="local-6989586621679386424"><span id="local-6989586621679386428"><span class="annot"><span class="annottext">Context -&gt; TransitionConfig BabbageEra -&gt; IO (Maybe ThunkInfo)
+Proxy (TransitionConfig BabbageEra) -&gt; String
+(Context -&gt; TransitionConfig BabbageEra -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; TransitionConfig BabbageEra -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (TransitionConfig BabbageEra) -&gt; String)
+-&gt; NoThunks (TransitionConfig BabbageEra)
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; TransitionConfig BabbageEra -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; TransitionConfig BabbageEra -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; TransitionConfig BabbageEra -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; TransitionConfig BabbageEra -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy (TransitionConfig BabbageEra) -&gt; String
+showTypeOf :: Proxy (TransitionConfig BabbageEra) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>  </span><span id="local-6989586621679386433"><span class="annot"><span class="annottext">mkTransitionConfig :: TranslationContext BabbageEra
+-&gt; TransitionConfig (PreviousEra BabbageEra)
+-&gt; TransitionConfig BabbageEra
+</span><a href="#local-6989586621679386433"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkTransitionConfig</span></a></span></span><span> </span><span class="annot"><span class="annottext">TranslationContext BabbageEra
+NoGenesis BabbageEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TransitionConfig (PreviousEra BabbageEra)
+-&gt; TransitionConfig BabbageEra
+TransitionConfig AlonzoEra -&gt; TransitionConfig BabbageEra
+</span><a href="Cardano.Ledger.Babbage.Transition.html#BabbageTransitionConfig"><span class="hs-identifier hs-var">BabbageTransitionConfig</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span>  </span><span id="local-6989586621679386439"><span class="annot"><span class="annottext">injectIntoTestState :: TransitionConfig BabbageEra
+-&gt; NewEpochState BabbageEra -&gt; NewEpochState BabbageEra
+</span><a href="#local-6989586621679386439"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectIntoTestState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TransitionConfig BabbageEra
+-&gt; NewEpochState BabbageEra -&gt; NewEpochState BabbageEra
+forall era.
+(EraTransition era, ShelleyEraAccounts era) =&gt;
+TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#shelleyRegisterInitialFundsThenStaking"><span class="hs-identifier hs-var">shelleyRegisterInitialFundsThenStaking</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679386445"><span class="annot"><span class="annottext">tcPreviousEraConfigL :: EraTransition (PreviousEra BabbageEra) =&gt;
+Lens'
+  (TransitionConfig BabbageEra)
+  (TransitionConfig (PreviousEra BabbageEra))
+</span><a href="#local-6989586621679386445"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcPreviousEraConfigL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="annottext">(TransitionConfig BabbageEra -&gt; TransitionConfig AlonzoEra)
+-&gt; (TransitionConfig BabbageEra
+    -&gt; TransitionConfig AlonzoEra -&gt; TransitionConfig BabbageEra)
+-&gt; Lens
+     (TransitionConfig BabbageEra)
+     (TransitionConfig BabbageEra)
+     (TransitionConfig AlonzoEra)
+     (TransitionConfig AlonzoEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig BabbageEra -&gt; TransitionConfig AlonzoEra
+</span><a href="Cardano.Ledger.Babbage.Transition.html#btcAlonzoTransitionConfig"><span class="hs-identifier hs-var">btcAlonzoTransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679386448"><span class="annot"><span class="annottext">TransitionConfig BabbageEra
+</span><a href="#local-6989586621679386448"><span class="hs-identifier hs-var">btc</span></a></span></span><span> </span><span id="local-6989586621679386449"><span class="annot"><span class="annottext">TransitionConfig AlonzoEra
+</span><a href="#local-6989586621679386449"><span class="hs-identifier hs-var">pc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TransitionConfig BabbageEra
+</span><a href="#local-6989586621679386448"><span class="hs-identifier hs-var">btc</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Babbage.Transition.html#btcAlonzoTransitionConfig"><span class="hs-identifier hs-var">btcAlonzoTransitionConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679386449"><span class="hs-identifier hs-type">pc</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679386452"><span class="annot"><span class="annottext">tcTranslationContextL :: Lens' (TransitionConfig BabbageEra) (TranslationContext BabbageEra)
+</span><a href="#local-6989586621679386452"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcTranslationContextL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TransitionConfig BabbageEra -&gt; NoGenesis BabbageEra)
+-&gt; (TransitionConfig BabbageEra
+    -&gt; NoGenesis BabbageEra -&gt; TransitionConfig BabbageEra)
+-&gt; Lens
+     (TransitionConfig BabbageEra)
+     (TransitionConfig BabbageEra)
+     (NoGenesis BabbageEra)
+     (NoGenesis BabbageEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NoGenesis BabbageEra
+-&gt; TransitionConfig BabbageEra -&gt; NoGenesis BabbageEra
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">NoGenesis BabbageEra
+forall era. NoGenesis era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">TransitionConfig BabbageEra
+-&gt; NoGenesis BabbageEra -&gt; TransitionConfig BabbageEra
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span>
+</span><span id="line-32"></span></pre></body></html>

@@ -1,0 +1,408 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Shelley.Translation</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier">FromByronTranslationContext</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#emptyFromByronTranslationContext"><span class="hs-identifier">emptyFromByronTranslationContext</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#toFromByronTranslationContext"><span class="hs-identifier">toFromByronTranslationContext</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#KeyValuePairs"><span class="hs-identifier">KeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ToKeyValuePairs"><span class="hs-identifier">ToKeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#shelleyProtVer"><span class="hs-identifier">shelleyProtVer</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#toPlainDecoder"><span class="hs-identifier">toPlainDecoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#toPlainEncoding"><span class="hs-identifier">toPlainEncoding</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Coders.html"><span class="hs-identifier">Cardano.Ledger.Binary.Coders</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#Decode"><span class="hs-identifier">Decode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Encode"><span class="hs-identifier">Encode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#decode"><span class="hs-identifier">decode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#encode"><span class="hs-identifier">encode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator">(!&gt;)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator">(&lt;!)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParams"><span class="hs-identifier">PParams</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Translation.html#TranslationContext"><span class="hs-identifier">TranslationContext</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#emptyPParams"><span class="hs-identifier">emptyPParams</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier">ShelleyGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#withObject"><span class="hs-identifier">withObject</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator">(.:)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator">(.=)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><span class="hs-comment">-- | Required data to translate a Byron ledger into a Shelley ledger.</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">data</span><span> </span><span id="FromByronTranslationContext"><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-var">FromByronTranslationContext</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="FromByronTranslationContext"><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-var">FromByronTranslationContext</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="fbtcGenDelegs"><span class="annot"><span class="annottext">FromByronTranslationContext -&gt; Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcGenDelegs"><span class="hs-identifier hs-var hs-var">fbtcGenDelegs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#GenDelegPair"><span class="hs-identifier hs-type">GenDelegPair</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="fbtcProtocolParams"><span class="annot"><span class="annottext">FromByronTranslationContext -&gt; PParams ShelleyEra
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcProtocolParams"><span class="hs-identifier hs-var hs-var">fbtcProtocolParams</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="fbtcMaxLovelaceSupply"><span class="annot"><span class="annottext">FromByronTranslationContext -&gt; Word64
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcMaxLovelaceSupply"><span class="hs-identifier hs-var hs-var">fbtcMaxLovelaceSupply</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679507393"><span id="local-6989586621679507404"><span class="annot"><span class="annottext">FromByronTranslationContext -&gt; FromByronTranslationContext -&gt; Bool
+(FromByronTranslationContext
+ -&gt; FromByronTranslationContext -&gt; Bool)
+-&gt; (FromByronTranslationContext
+    -&gt; FromByronTranslationContext -&gt; Bool)
+-&gt; Eq FromByronTranslationContext
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: FromByronTranslationContext -&gt; FromByronTranslationContext -&gt; Bool
+== :: FromByronTranslationContext -&gt; FromByronTranslationContext -&gt; Bool
+$c/= :: FromByronTranslationContext -&gt; FromByronTranslationContext -&gt; Bool
+/= :: FromByronTranslationContext -&gt; FromByronTranslationContext -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679507413"><span id="local-6989586621679507426"><span id="local-6989586621679507430"><span class="annot"><span class="annottext">Int -&gt; FromByronTranslationContext -&gt; ShowS
+[FromByronTranslationContext] -&gt; ShowS
+FromByronTranslationContext -&gt; String
+(Int -&gt; FromByronTranslationContext -&gt; ShowS)
+-&gt; (FromByronTranslationContext -&gt; String)
+-&gt; ([FromByronTranslationContext] -&gt; ShowS)
+-&gt; Show FromByronTranslationContext
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; FromByronTranslationContext -&gt; ShowS
+showsPrec :: Int -&gt; FromByronTranslationContext -&gt; ShowS
+$cshow :: FromByronTranslationContext -&gt; String
+show :: FromByronTranslationContext -&gt; String
+$cshowList :: [FromByronTranslationContext] -&gt; ShowS
+showList :: [FromByronTranslationContext] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679507438"><span id="local-6989586621679507440"><span class="annot"><span class="annottext">(forall x.
+ FromByronTranslationContext -&gt; Rep FromByronTranslationContext x)
+-&gt; (forall x.
+    Rep FromByronTranslationContext x -&gt; FromByronTranslationContext)
+-&gt; Generic FromByronTranslationContext
+forall x.
+Rep FromByronTranslationContext x -&gt; FromByronTranslationContext
+forall x.
+FromByronTranslationContext -&gt; Rep FromByronTranslationContext x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x.
+FromByronTranslationContext -&gt; Rep FromByronTranslationContext x
+from :: forall x.
+FromByronTranslationContext -&gt; Rep FromByronTranslationContext x
+$cto :: forall x.
+Rep FromByronTranslationContext x -&gt; FromByronTranslationContext
+to :: forall x.
+Rep FromByronTranslationContext x -&gt; FromByronTranslationContext
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679507444"><span id="local-6989586621679507450"><span id="local-6989586621679507455"><span id="local-6989586621679507460"><span id="local-6989586621679507465"><span class="annot"><span class="annottext">[FromByronTranslationContext] -&gt; Value
+[FromByronTranslationContext] -&gt; Encoding
+FromByronTranslationContext -&gt; Bool
+FromByronTranslationContext -&gt; Value
+FromByronTranslationContext -&gt; Encoding
+(FromByronTranslationContext -&gt; Value)
+-&gt; (FromByronTranslationContext -&gt; Encoding)
+-&gt; ([FromByronTranslationContext] -&gt; Value)
+-&gt; ([FromByronTranslationContext] -&gt; Encoding)
+-&gt; (FromByronTranslationContext -&gt; Bool)
+-&gt; ToJSON FromByronTranslationContext
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: FromByronTranslationContext -&gt; Value
+toJSON :: FromByronTranslationContext -&gt; Value
+$ctoEncoding :: FromByronTranslationContext -&gt; Encoding
+toEncoding :: FromByronTranslationContext -&gt; Encoding
+$ctoJSONList :: [FromByronTranslationContext] -&gt; Value
+toJSONList :: [FromByronTranslationContext] -&gt; Value
+$ctoEncodingList :: [FromByronTranslationContext] -&gt; Encoding
+toEncodingList :: [FromByronTranslationContext] -&gt; Encoding
+$comitField :: FromByronTranslationContext -&gt; Bool
+omitField :: FromByronTranslationContext -&gt; Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#KeyValuePairs"><span class="hs-identifier hs-type">KeyValuePairs</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679507476"><span id="local-6989586621679507480"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679507496"><span class="annot"><span class="annottext">toCBOR :: FromByronTranslationContext -&gt; Encoding
+</span><a href="#local-6989586621679507496"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span id="local-6989586621679507498"><span class="annot"><span class="annottext">x :: FromByronTranslationContext
+</span><a href="#local-6989586621679507498"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">PParams ShelleyEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679507499"><span id="local-6989586621679507500"><span id="local-6989586621679507501"><span class="annot"><span class="annottext">Word64
+Map (KeyHash 'Genesis) GenDelegPair
+PParams ShelleyEra
+fbtcGenDelegs :: FromByronTranslationContext -&gt; Map (KeyHash 'Genesis) GenDelegPair
+fbtcProtocolParams :: FromByronTranslationContext -&gt; PParams ShelleyEra
+fbtcMaxLovelaceSupply :: FromByronTranslationContext -&gt; Word64
+fbtcGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
+fbtcProtocolParams :: PParams ShelleyEra
+fbtcMaxLovelaceSupply :: Word64
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcGenDelegs"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FromByronTranslationContext
+</span><a href="#local-6989586621679507498"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-50"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#toPlainEncoding"><span class="hs-identifier hs-var">toPlainEncoding</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#shelleyProtVer"><span class="hs-identifier hs-var">shelleyProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; Encoding) -&gt; Encoding -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-51"></span><span>          </span><span class="annot"><span class="annottext">Encode ('Closed 'Dense) FromByronTranslationContext -&gt; Encoding
+forall (w :: Wrapped) t. Encode w t -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">(Encode ('Closed 'Dense) FromByronTranslationContext -&gt; Encoding)
+-&gt; Encode ('Closed 'Dense) FromByronTranslationContext -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-52"></span><span>            </span><span class="annot"><span class="annottext">(Map (KeyHash 'Genesis) GenDelegPair
+ -&gt; PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext)
+-&gt; Encode
+     ('Closed 'Dense)
+     (Map (KeyHash 'Genesis) GenDelegPair
+      -&gt; PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext)
+forall t. t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Rec"><span class="hs-identifier hs-var">Rec</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+-&gt; PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext
+</span><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-var">FromByronTranslationContext</span></a></span><span>
+</span><span id="line-53"></span><span>              </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Dense)
+  (Map (KeyHash 'Genesis) GenDelegPair
+   -&gt; PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext)
+-&gt; Encode ('Closed 'Dense) (Map (KeyHash 'Genesis) GenDelegPair)
+-&gt; Encode
+     ('Closed 'Dense)
+     (PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+-&gt; Encode ('Closed 'Dense) (Map (KeyHash 'Genesis) GenDelegPair)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="#local-6989586621679507499"><span class="hs-identifier hs-var">fbtcGenDelegs</span></a></span><span>
+</span><span id="line-54"></span><span>              </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Dense)
+  (PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext)
+-&gt; Encode ('Closed 'Dense) (PParams ShelleyEra)
+-&gt; Encode ('Closed 'Dense) (Word64 -&gt; FromByronTranslationContext)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ShelleyEra -&gt; Encode ('Closed 'Dense) (PParams ShelleyEra)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ShelleyEra
+</span><a href="#local-6989586621679507500"><span class="hs-identifier hs-var">fbtcProtocolParams</span></a></span><span>
+</span><span id="line-55"></span><span>              </span><span class="annot"><span class="annottext">Encode ('Closed 'Dense) (Word64 -&gt; FromByronTranslationContext)
+-&gt; Encode ('Closed 'Dense) Word64
+-&gt; Encode ('Closed 'Dense) FromByronTranslationContext
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Encode ('Closed 'Dense) Word64
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679507501"><span class="hs-identifier hs-var">fbtcMaxLovelaceSupply</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679507508"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679507535"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s FromByronTranslationContext
+</span><a href="#local-6989586621679507535"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">Maybe ByteString
+-&gt; Version
+-&gt; Decoder s FromByronTranslationContext
+-&gt; Decoder s FromByronTranslationContext
+forall s a.
+Maybe ByteString -&gt; Version -&gt; Decoder s a -&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#toPlainDecoder"><span class="hs-identifier hs-var">toPlainDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#shelleyProtVer"><span class="hs-identifier hs-var">shelleyProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">(Decoder s FromByronTranslationContext
+ -&gt; Decoder s FromByronTranslationContext)
+-&gt; Decoder s FromByronTranslationContext
+-&gt; Decoder s FromByronTranslationContext
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">Decode ('Closed 'Dense) FromByronTranslationContext
+-&gt; Decoder s FromByronTranslationContext
+forall t (w :: Wrapped) s. Typeable t =&gt; Decode w t -&gt; Decoder s t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#decode"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">(Decode ('Closed 'Dense) FromByronTranslationContext
+ -&gt; Decoder s FromByronTranslationContext)
+-&gt; Decode ('Closed 'Dense) FromByronTranslationContext
+-&gt; Decoder s FromByronTranslationContext
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-61"></span><span>        </span><span class="annot"><span class="annottext">(Map (KeyHash 'Genesis) GenDelegPair
+ -&gt; PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext)
+-&gt; Decode
+     ('Closed 'Dense)
+     (Map (KeyHash 'Genesis) GenDelegPair
+      -&gt; PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext)
+forall t. t -&gt; Decode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#RecD"><span class="hs-identifier hs-var">RecD</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+-&gt; PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext
+</span><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-var">FromByronTranslationContext</span></a></span><span>
+</span><span id="line-62"></span><span>          </span><span class="annot"><span class="annottext">Decode
+  ('Closed 'Dense)
+  (Map (KeyHash 'Genesis) GenDelegPair
+   -&gt; PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext)
+-&gt; Decode ('Closed Any) (Map (KeyHash 'Genesis) GenDelegPair)
+-&gt; Decode
+     ('Closed 'Dense)
+     (PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) (Map (KeyHash 'Genesis) GenDelegPair)
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-63"></span><span>          </span><span class="annot"><span class="annottext">Decode
+  ('Closed 'Dense)
+  (PParams ShelleyEra -&gt; Word64 -&gt; FromByronTranslationContext)
+-&gt; Decode ('Closed Any) (PParams ShelleyEra)
+-&gt; Decode ('Closed 'Dense) (Word64 -&gt; FromByronTranslationContext)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) (PParams ShelleyEra)
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-64"></span><span>          </span><span class="annot"><span class="annottext">Decode ('Closed 'Dense) (Word64 -&gt; FromByronTranslationContext)
+-&gt; Decode ('Closed Any) Word64
+-&gt; Decode ('Closed 'Dense) FromByronTranslationContext
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) Word64
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679507542"><span id="local-6989586621679507547"><span id="local-6989586621679507550"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span></span></span></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679507556"><span id="local-6989586621679507561"><span id="local-6989586621679507564"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span></span></span></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679507569"><span id="local-6989586621679507573"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621679507597"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser FromByronTranslationContext
+</span><a href="#local-6989586621679507597"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser FromByronTranslationContext)
+-&gt; Value
+-&gt; Parser FromByronTranslationContext
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#withObject"><span class="hs-identifier hs-var">withObject</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;FromByronTranslationContext&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser FromByronTranslationContext)
+ -&gt; Value -&gt; Parser FromByronTranslationContext)
+-&gt; (Object -&gt; Parser FromByronTranslationContext)
+-&gt; Value
+-&gt; Parser FromByronTranslationContext
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679507599"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679507599"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621679507600"><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="#local-6989586621679507600"><span class="hs-identifier hs-var">fbtcGenDelegs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679507599"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Map (KeyHash 'Genesis) GenDelegPair)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;genDelegs&quot;</span></span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679507601"><span class="annot"><span class="annottext">PParams ShelleyEra
+</span><a href="#local-6989586621679507601"><span class="hs-identifier hs-var">fbtcProtocolParams</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679507599"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (PParams ShelleyEra)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;protocolParams&quot;</span></span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679507602"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679507602"><span class="hs-identifier hs-var">fbtcMaxLovelaceSupply</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679507599"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Word64
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxLovelaceSupply&quot;</span></span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">FromByronTranslationContext -&gt; Parser FromByronTranslationContext
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">Word64
+Map (KeyHash 'Genesis) GenDelegPair
+PParams ShelleyEra
+fbtcGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
+fbtcProtocolParams :: PParams ShelleyEra
+fbtcMaxLovelaceSupply :: Word64
+fbtcGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
+fbtcProtocolParams :: PParams ShelleyEra
+fbtcMaxLovelaceSupply :: Word64
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcGenDelegs"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ToKeyValuePairs"><span class="hs-identifier hs-type">ToKeyValuePairs</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>  </span><span id="local-6989586621679507622"><span class="annot"><span class="annottext">toKeyValuePairs :: forall e kv. KeyValue e kv =&gt; FromByronTranslationContext -&gt; [kv]
+</span><a href="#local-6989586621679507622"><span class="hs-identifier hs-var hs-var hs-var hs-var">toKeyValuePairs</span></a></span></span><span> </span><span id="local-6989586621679507624"><span class="annot"><span class="annottext">fbtc :: FromByronTranslationContext
+</span><a href="#local-6989586621679507624"><span class="hs-identifier hs-var">fbtc</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">PParams ShelleyEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679507625"><span id="local-6989586621679507626"><span id="local-6989586621679507627"><span class="annot"><span class="annottext">Word64
+Map (KeyHash 'Genesis) GenDelegPair
+PParams ShelleyEra
+fbtcGenDelegs :: FromByronTranslationContext -&gt; Map (KeyHash 'Genesis) GenDelegPair
+fbtcProtocolParams :: FromByronTranslationContext -&gt; PParams ShelleyEra
+fbtcMaxLovelaceSupply :: FromByronTranslationContext -&gt; Word64
+fbtcGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
+fbtcProtocolParams :: PParams ShelleyEra
+fbtcMaxLovelaceSupply :: Word64
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcGenDelegs"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FromByronTranslationContext
+</span><a href="#local-6989586621679507624"><span class="hs-identifier hs-var">fbtc</span></a></span><span>
+</span><span id="line-80"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;genDelegs&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Map (KeyHash 'Genesis) GenDelegPair -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="#local-6989586621679507625"><span class="hs-identifier hs-var">fbtcGenDelegs</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;protocolParams&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; PParams ShelleyEra -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ShelleyEra
+</span><a href="#local-6989586621679507626"><span class="hs-identifier hs-var">fbtcProtocolParams</span></a></span><span>
+</span><span id="line-82"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxLovelaceSupply&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Word64 -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679507627"><span class="hs-identifier hs-var">fbtcMaxLovelaceSupply</span></a></span><span>
+</span><span id="line-83"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- | Trivial FromByronTranslationContext value, for use in cases where we do not need</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- to translate from Byron to Shelley.</span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#emptyFromByronTranslationContext"><span class="hs-identifier hs-type">emptyFromByronTranslationContext</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span>
+</span><span id="line-88"></span><span id="emptyFromByronTranslationContext"><span class="annot"><span class="annottext">emptyFromByronTranslationContext :: FromByronTranslationContext
+</span><a href="Cardano.Ledger.Shelley.Translation.html#emptyFromByronTranslationContext"><span class="hs-identifier hs-var hs-var">emptyFromByronTranslationContext</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">fbtcGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcGenDelegs"><span class="hs-identifier hs-var">fbtcGenDelegs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">fbtcMaxLovelaceSupply :: Word64
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcMaxLovelaceSupply"><span class="hs-identifier hs-var">fbtcMaxLovelaceSupply</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">fbtcProtocolParams :: PParams ShelleyEra
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcProtocolParams"><span class="hs-identifier hs-var">fbtcProtocolParams</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams ShelleyEra
+forall era. EraPParams era =&gt; PParams era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#emptyPParams"><span class="hs-identifier hs-var">emptyPParams</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#toFromByronTranslationContext"><span class="hs-identifier hs-type">toFromByronTranslationContext</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier hs-type">ShelleyGenesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span>
+</span><span id="line-98"></span><span id="toFromByronTranslationContext"><span class="annot"><span class="annottext">toFromByronTranslationContext :: ShelleyGenesis -&gt; FromByronTranslationContext
+</span><a href="Cardano.Ledger.Shelley.Translation.html#toFromByronTranslationContext"><span class="hs-identifier hs-var hs-var">toFromByronTranslationContext</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier hs-type">ShelleyGenesis</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679507630"><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+sgGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
+sgGenDelegs :: ShelleyGenesis -&gt; Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="#local-6989586621679507630"><span class="hs-identifier hs-var hs-var">sgGenDelegs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679507632"><span class="annot"><span class="annottext">Word64
+sgMaxLovelaceSupply :: Word64
+sgMaxLovelaceSupply :: ShelleyGenesis -&gt; Word64
+</span><a href="#local-6989586621679507632"><span class="hs-identifier hs-var hs-var">sgMaxLovelaceSupply</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679507634"><span class="annot"><span class="annottext">PParams ShelleyEra
+sgProtocolParams :: PParams ShelleyEra
+sgProtocolParams :: ShelleyGenesis -&gt; PParams ShelleyEra
+</span><a href="#local-6989586621679507634"><span class="hs-identifier hs-var hs-var">sgProtocolParams</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">fbtcGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcGenDelegs"><span class="hs-identifier hs-var">fbtcGenDelegs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="#local-6989586621679507630"><span class="hs-identifier hs-var">sgGenDelegs</span></a></span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">fbtcProtocolParams :: PParams ShelleyEra
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcProtocolParams"><span class="hs-identifier hs-var">fbtcProtocolParams</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams ShelleyEra
+</span><a href="#local-6989586621679507634"><span class="hs-identifier hs-var">sgProtocolParams</span></a></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">fbtcMaxLovelaceSupply :: Word64
+</span><a href="Cardano.Ledger.Shelley.Translation.html#fbtcMaxLovelaceSupply"><span class="hs-identifier hs-var">fbtcMaxLovelaceSupply</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679507632"><span class="hs-identifier hs-var">sgMaxLovelaceSupply</span></a></span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679507637"><span id="local-6989586621679507641"><span id="local-6989586621679507647"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span></span></span></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="TranslationContext"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Translation.html#TranslationContext"><span class="hs-identifier hs-var">TranslationContext</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Translation.html#FromByronTranslationContext"><span class="hs-identifier hs-type">FromByronTranslationContext</span></a></span><span>
+</span><span id="line-108"></span></pre></body></html>

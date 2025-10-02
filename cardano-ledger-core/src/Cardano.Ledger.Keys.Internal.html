@@ -1,0 +1,337 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DefaultSignatures #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE KindSignatures #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Keys.Internal</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><span class="hs-comment">-- * DSIGN</span></span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier">DSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSignable"><span class="hs-identifier">DSignable</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier">VKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#signedDSIGN"><span class="hs-identifier">signedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#verifySignedDSIGN"><span class="hs-identifier">verifySignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Key roles</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier">KeyRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#HasKeyRole"><span class="hs-identifier">HasKeyRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier">asWitness</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Re-exports from cardano-crypto-class</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#decodeSignedDSIGN"><span class="hs-identifier">decodeSignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#encodeSignedDSIGN"><span class="hs-identifier">encodeSignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.html"><span class="hs-identifier">Cardano.Crypto.DSIGN</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#decodeSignedDSIGN"><span class="hs-identifier">decodeSignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#encodeSignedDSIGN"><span class="hs-identifier">encodeSignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#signedDSIGN"><span class="hs-identifier">signedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#verifySignedDSIGN"><span class="hs-identifier">verifySignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.html"><span class="hs-identifier">Cardano.Crypto.DSIGN</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">DSIGN</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html"><span class="hs-identifier">Cardano.Ledger.Binary.Crypto</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Orphans.html"><span class="hs-identifier">Cardano.Ledger.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Coerce</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Coercible</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">coerce</span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Kind</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Type</span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Typeable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Typeable</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quiet-0.2-9225d7422c325dd8b63f688e0d6ee25919a9c576be361208829377debe40884d/share/doc/html/src/Quiet.html"><span class="hs-identifier">Quiet</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><span class="hs-comment">-- | Cryptographic signing algorithm used on Cardano blockchain.</span></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">type</span><span> </span><span id="DSIGN"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-var">DSIGN</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Ed25519.html#Ed25519DSIGN"><span class="hs-identifier hs-type">DSIGN.Ed25519DSIGN</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- | The role of a key.</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- All key roles are __fixed__ and unique, except for the `Witness` role. In particular,</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- keys can be cast to a `Witness` role with the help of `asWitness`, because same witness</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- can be valid for many roles.</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- In fact, it is perfectly allowable for a key to be used in many roles by the end user;</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- there is nothing prohibiting somebody using the same underlying key or a script as</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- their payment and staking credential, as well as the key for their stake pool. However,</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- in the ledger code mixing up keys with different roles could be catastrophic, that is</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- why we have this separation.</span><span>
+</span><span id="line-67"></span><span class="hs-keyword">data</span><span> </span><span id="KeyRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier hs-var">KeyRole</span></a></span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Genesis"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Genesis"><span class="hs-identifier hs-var">Genesis</span></a></span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GenesisDelegate"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenesisDelegate"><span class="hs-identifier hs-var">GenesisDelegate</span></a></span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Payment"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Payment"><span class="hs-identifier hs-var">Payment</span></a></span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Staking"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-var">Staking</span></a></span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="StakePool"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-var">StakePool</span></a></span></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BlockIssuer"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#BlockIssuer"><span class="hs-identifier hs-var">BlockIssuer</span></a></span></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Witness"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-var">Witness</span></a></span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="DRepRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DRepRole"><span class="hs-identifier hs-var">DRepRole</span></a></span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="HotCommitteeRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#HotCommitteeRole"><span class="hs-identifier hs-var">HotCommitteeRole</span></a></span></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ColdCommitteeRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#ColdCommitteeRole"><span class="hs-identifier hs-var">ColdCommitteeRole</span></a></span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Guard"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Guard"><span class="hs-identifier hs-var">Guard</span></a></span></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679430051"><span id="local-6989586621679430053"><span id="local-6989586621679430057"><span class="annot"><span class="annottext">Int -&gt; KeyRole -&gt; ShowS
+[KeyRole] -&gt; ShowS
+KeyRole -&gt; String
+(Int -&gt; KeyRole -&gt; ShowS)
+-&gt; (KeyRole -&gt; String) -&gt; ([KeyRole] -&gt; ShowS) -&gt; Show KeyRole
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; KeyRole -&gt; ShowS
+showsPrec :: Int -&gt; KeyRole -&gt; ShowS
+$cshow :: KeyRole -&gt; String
+show :: KeyRole -&gt; String
+$cshowList :: [KeyRole] -&gt; ShowS
+showList :: [KeyRole] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">class</span><span> </span><span id="HasKeyRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#HasKeyRole"><span class="hs-identifier hs-var">HasKeyRole</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679429892"><span class="annot"><a href="#local-6989586621679429892"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier hs-type">KeyRole</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-comment">-- | General coercion of key roles.</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-comment">--   The presence of this function is mostly to help the user realise where they</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-comment">--   are converting key roles.</span><span>
+</span><span id="line-86"></span><span>  </span><span id="coerceKeyRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#coerceKeyRole"><span class="hs-identifier hs-type">coerceKeyRole</span></a></span></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-87"></span><span>    </span><span id="local-6989586621679429906"><span id="local-6989586621679429907"><span class="annot"><a href="#local-6989586621679429892"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429906"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><a href="#local-6989586621679429892"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429907"><span class="hs-identifier hs-type">r'</span></a></span></span></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="coerceKeyRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#coerceKeyRole"><span class="hs-identifier hs-type">coerceKeyRole</span></a></span></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-90"></span><span>    </span><span id="local-6989586621679429893"><span id="local-6989586621679429894"><span class="annot"><span class="hs-identifier hs-type">Coercible</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679429892"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429893"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679429892"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429894"><span class="hs-identifier hs-type">r'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><a href="#local-6989586621679429892"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429893"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><a href="#local-6989586621679429892"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429894"><span class="hs-identifier hs-type">r'</span></a></span></span></span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679430062"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#coerceKeyRole"><span class="hs-identifier hs-var hs-var">coerceKeyRole</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a r -&gt; a r'
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- | Use a key as a witness.</span><span>
+</span><span id="line-96"></span><span class="hs-comment">--</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--   This is the most common coercion between key roles, because most keys can</span><span>
+</span><span id="line-98"></span><span class="hs-comment">--   be used as witnesses to some types of transaction. As such, we provide an</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--   explicit coercion for it.</span><span>
+</span><span id="line-100"></span><span id="local-6989586621679429901"><span id="local-6989586621679429902"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier hs-type">asWitness</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#HasKeyRole"><span class="hs-identifier hs-type">HasKeyRole</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429901"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><a href="#local-6989586621679429901"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429902"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-103"></span><span>  </span><span class="annot"><a href="#local-6989586621679429901"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span></span></span><span>
+</span><span id="line-104"></span><span id="asWitness"><span class="annot"><span class="annottext">asWitness :: forall (a :: KeyRole -&gt; *) (r :: KeyRole).
+HasKeyRole a =&gt;
+a r -&gt; a 'Witness
+</span><a href="Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier hs-var hs-var">asWitness</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a r -&gt; a 'Witness
+forall (r :: KeyRole) (r' :: KeyRole). a r -&gt; a r'
+forall (a :: KeyRole -&gt; *) (r :: KeyRole) (r' :: KeyRole).
+HasKeyRole a =&gt;
+a r -&gt; a r'
+</span><a href="Cardano.Ledger.Keys.Internal.html#coerceKeyRole"><span class="hs-identifier hs-var">coerceKeyRole</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- Verification keys</span><span>
+</span><span id="line-108"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-keyword">type</span><span> </span><span id="DSignable"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSignable"><span class="hs-identifier hs-var">DSignable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#Signable"><span class="hs-identifier hs-type">DSIGN.Signable</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- | Discriminated verification key</span><span>
+</span><span id="line-113"></span><span class="hs-comment">--</span><span>
+</span><span id="line-114"></span><span class="hs-comment">--   We wrap the basic `VerKeyDSIGN` in order to add the key role.</span><span>
+</span><span id="line-115"></span><span class="hs-keyword">newtype</span><span> </span><span id="VKey"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-var">VKey</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679429908"><span class="annot"><a href="#local-6989586621679429908"><span class="hs-identifier hs-type">kd</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier hs-type">KeyRole</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VKey"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-var">VKey</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unVKey"><span class="annot"><span class="annottext">forall (kd :: KeyRole). VKey kd -&gt; VerKeyDSIGN DSIGN
+</span><a href="Cardano.Ledger.Keys.Internal.html#unVKey"><span class="hs-identifier hs-var hs-var">unVKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#VerKeyDSIGN"><span class="hs-identifier hs-type">DSIGN.VerKeyDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679430070"><span id="local-6989586621679430072"><span class="annot"><span class="annottext">(forall x. VKey kd -&gt; Rep (VKey kd) x)
+-&gt; (forall x. Rep (VKey kd) x -&gt; VKey kd) -&gt; Generic (VKey kd)
+forall x. Rep (VKey kd) x -&gt; VKey kd
+forall x. VKey kd -&gt; Rep (VKey kd) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall (kd :: KeyRole) x. Rep (VKey kd) x -&gt; VKey kd
+forall (kd :: KeyRole) x. VKey kd -&gt; Rep (VKey kd) x
+$cfrom :: forall (kd :: KeyRole) x. VKey kd -&gt; Rep (VKey kd) x
+from :: forall x. VKey kd -&gt; Rep (VKey kd) x
+$cto :: forall (kd :: KeyRole) x. Rep (VKey kd) x -&gt; VKey kd
+to :: forall x. Rep (VKey kd) x -&gt; VKey kd
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679430076"><span id="local-6989586621679430081"><span class="annot"><span class="annottext">VKey kd -&gt; VKey kd -&gt; Bool
+(VKey kd -&gt; VKey kd -&gt; Bool)
+-&gt; (VKey kd -&gt; VKey kd -&gt; Bool) -&gt; Eq (VKey kd)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall (kd :: KeyRole). VKey kd -&gt; VKey kd -&gt; Bool
+$c== :: forall (kd :: KeyRole). VKey kd -&gt; VKey kd -&gt; Bool
+== :: VKey kd -&gt; VKey kd -&gt; Bool
+$c/= :: forall (kd :: KeyRole). VKey kd -&gt; VKey kd -&gt; Bool
+/= :: VKey kd -&gt; VKey kd -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679430087"><span class="annot"><span class="annottext">VKey kd -&gt; ()
+(VKey kd -&gt; ()) -&gt; NFData (VKey kd)
+forall a. (a -&gt; ()) -&gt; NFData a
+forall (kd :: KeyRole). VKey kd -&gt; ()
+$crnf :: forall (kd :: KeyRole). VKey kd -&gt; ()
+rnf :: VKey kd -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679430094"><span id="local-6989586621679430099"><span id="local-6989586621679430103"><span class="annot"><span class="annottext">Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+Proxy (VKey kd) -&gt; String
+(Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (VKey kd) -&gt; String)
+-&gt; NoThunks (VKey kd)
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+forall (kd :: KeyRole). Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+forall (kd :: KeyRole). Proxy (VKey kd) -&gt; String
+$cnoThunks :: forall (kd :: KeyRole). Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall (kd :: KeyRole). Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: forall (kd :: KeyRole). Proxy (VKey kd) -&gt; String
+showTypeOf :: Proxy (VKey kd) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679430113"><span id="local-6989586621679430119"><span id="local-6989586621679430124"><span class="annot"><span class="annottext">Typeable (VKey kd)
+Typeable (VKey kd) =&gt;
+(forall s. Decoder s (VKey kd))
+-&gt; (forall s. Proxy (VKey kd) -&gt; Decoder s ())
+-&gt; (Proxy (VKey kd) -&gt; Text)
+-&gt; DecCBOR (VKey kd)
+Proxy (VKey kd) -&gt; Text
+forall s. Decoder s (VKey kd)
+forall a.
+Typeable a =&gt;
+(forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy (VKey kd) -&gt; Decoder s ()
+forall (kd :: KeyRole). Typeable kd =&gt; Typeable (VKey kd)
+forall (kd :: KeyRole). Typeable kd =&gt; Proxy (VKey kd) -&gt; Text
+forall (kd :: KeyRole) s. Typeable kd =&gt; Decoder s (VKey kd)
+forall (kd :: KeyRole) s.
+Typeable kd =&gt;
+Proxy (VKey kd) -&gt; Decoder s ()
+$cdecCBOR :: forall (kd :: KeyRole) s. Typeable kd =&gt; Decoder s (VKey kd)
+decCBOR :: forall s. Decoder s (VKey kd)
+$cdropCBOR :: forall (kd :: KeyRole) s.
+Typeable kd =&gt;
+Proxy (VKey kd) -&gt; Decoder s ()
+dropCBOR :: forall s. Proxy (VKey kd) -&gt; Decoder s ()
+$clabel :: forall (kd :: KeyRole). Typeable kd =&gt; Proxy (VKey kd) -&gt; Text
+label :: Proxy (VKey kd) -&gt; Text
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679430136"><span id="local-6989586621679430144"><span id="local-6989586621679430151"><span class="annot"><span class="annottext">Typeable (VKey kd)
+Typeable (VKey kd) =&gt;
+(VKey kd -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy (VKey kd) -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [VKey kd] -&gt; Size)
+-&gt; EncCBOR (VKey kd)
+VKey kd -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [VKey kd] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (VKey kd) -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+forall (kd :: KeyRole). Typeable kd =&gt; Typeable (VKey kd)
+forall (kd :: KeyRole). Typeable kd =&gt; VKey kd -&gt; Encoding
+forall (kd :: KeyRole).
+Typeable kd =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [VKey kd] -&gt; Size
+forall (kd :: KeyRole).
+Typeable kd =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (VKey kd) -&gt; Size
+$cencCBOR :: forall (kd :: KeyRole). Typeable kd =&gt; VKey kd -&gt; Encoding
+encCBOR :: VKey kd -&gt; Encoding
+$cencodedSizeExpr :: forall (kd :: KeyRole).
+Typeable kd =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (VKey kd) -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (VKey kd) -&gt; Size
+$cencodedListSizeExpr :: forall (kd :: KeyRole).
+Typeable kd =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [VKey kd] -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [VKey kd] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span id="local-6989586621679430158"><span id="local-6989586621679430165"><span id="local-6989586621679430171"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">via</span><span> </span><span id="local-6989586621679429971"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quiet-0.2-9225d7422c325dd8b63f688e0d6ee25919a9c576be361208829377debe40884d/share/doc/html/src/Quiet.html#Quiet"><span class="hs-identifier hs-type">Quiet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429971"><span class="hs-identifier hs-type">kd</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429971"><span class="hs-identifier hs-type">kd</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679430213"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#HasKeyRole"><span class="hs-identifier hs-type">HasKeyRole</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679429979"><span id="local-6989586621679430224"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679429979"><span class="hs-identifier hs-type">kd</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429979"><span class="hs-identifier hs-type">kd</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-123"></span><span>  </span><span id="local-6989586621679430231"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (VKey kd)
+</span><a href="#local-6989586621679430231"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VerKeyDSIGN DSIGN -&gt; VKey kd
+forall (kd :: KeyRole). VerKeyDSIGN DSIGN -&gt; VKey kd
+</span><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-var">VKey</span></a></span><span> </span><span class="annot"><span class="annottext">(VerKeyDSIGN DSIGN -&gt; VKey kd)
+-&gt; Decoder s (VerKeyDSIGN DSIGN) -&gt; Decoder s (VKey kd)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (VerKeyDSIGN DSIGN)
+forall v s. DSIGNAlgorithm v =&gt; Decoder s (VerKeyDSIGN v)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#decodeVerKeyDSIGN"><span class="hs-identifier hs-var">DSIGN.decodeVerKeyDSIGN</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-pragma hs-type">fromCBOR</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679429992"><span id="local-6989586621679430241"><span id="local-6989586621679430245"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679429992"><span class="hs-identifier hs-type">kd</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429992"><span class="hs-identifier hs-type">kd</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679430249"><span class="annot"><span class="annottext">toCBOR :: VKey kd -&gt; Encoding
+</span><a href="#local-6989586621679430249"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VerKeyDSIGN DSIGN -&gt; Encoding
+forall v. DSIGNAlgorithm v =&gt; VerKeyDSIGN v -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#encodeVerKeyDSIGN"><span class="hs-identifier hs-var">DSIGN.encodeVerKeyDSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">(VerKeyDSIGN DSIGN -&gt; Encoding)
+-&gt; (VKey kd -&gt; VerKeyDSIGN DSIGN) -&gt; VKey kd -&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">VKey kd -&gt; VerKeyDSIGN DSIGN
+forall (kd :: KeyRole). VKey kd -&gt; VerKeyDSIGN DSIGN
+</span><a href="Cardano.Ledger.Keys.Internal.html#unVKey"><span class="hs-identifier hs-var">unVKey</span></a></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="annot"><span class="hs-comment">-- | Produce a digital signature</span></span><span>
+</span><span id="line-130"></span><span id="local-6989586621679429997"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#signedDSIGN"><span class="hs-identifier hs-type">signedDSIGN</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-131"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#Signable"><span class="hs-identifier hs-type">Signable</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429997"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignKeyDSIGN"><span class="hs-identifier hs-type">SignKeyDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><a href="#local-6989586621679429997"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignedDSIGN"><span class="hs-identifier hs-type">SignedDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679429997"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-135"></span><span id="signedDSIGN"><span class="annot"><span class="annottext">signedDSIGN :: forall a.
+Signable DSIGN a =&gt;
+SignKeyDSIGN DSIGN -&gt; a -&gt; SignedDSIGN DSIGN a
+</span><a href="Cardano.Ledger.Keys.Internal.html#signedDSIGN"><span class="hs-identifier hs-var hs-var">signedDSIGN</span></a></span></span><span> </span><span id="local-6989586621679430257"><span class="annot"><span class="annottext">SignKeyDSIGN DSIGN
+</span><a href="#local-6989586621679430257"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span id="local-6989586621679430258"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430258"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ContextDSIGN DSIGN
+-&gt; a -&gt; SignKeyDSIGN DSIGN -&gt; SignedDSIGN DSIGN a
+forall v a.
+(DSIGNAlgorithm v, Signable v a) =&gt;
+ContextDSIGN v -&gt; a -&gt; SignKeyDSIGN v -&gt; SignedDSIGN v a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#signedDSIGN"><span class="hs-identifier hs-var">DSIGN.signedDSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430258"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">SignKeyDSIGN DSIGN
+</span><a href="#local-6989586621679430257"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="annot"><span class="hs-comment">-- | Verify a digital signature</span></span><span>
+</span><span id="line-138"></span><span id="local-6989586621679430006"><span id="local-6989586621679430007"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#verifySignedDSIGN"><span class="hs-identifier hs-type">verifySignedDSIGN</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-139"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#Signable"><span class="hs-identifier hs-type">Signable</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430006"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430007"><span class="hs-identifier hs-type">kd</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-141"></span><span>  </span><span class="annot"><a href="#local-6989586621679430006"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-142"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignedDSIGN"><span class="hs-identifier hs-type">SignedDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679430006"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span></span><span>
+</span><span id="line-144"></span><span id="verifySignedDSIGN"><span class="annot"><span class="annottext">verifySignedDSIGN :: forall a (kd :: KeyRole).
+Signable DSIGN a =&gt;
+VKey kd -&gt; a -&gt; SignedDSIGN DSIGN a -&gt; Bool
+</span><a href="Cardano.Ledger.Keys.Internal.html#verifySignedDSIGN"><span class="hs-identifier hs-var hs-var">verifySignedDSIGN</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span id="local-6989586621679430265"><span class="annot"><span class="annottext">VerKeyDSIGN DSIGN
+</span><a href="#local-6989586621679430265"><span class="hs-identifier hs-var">vk</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679430266"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430266"><span class="hs-identifier hs-var">vd</span></a></span></span><span> </span><span id="local-6989586621679430267"><span class="annot"><span class="annottext">SignedDSIGN DSIGN a
+</span><a href="#local-6989586621679430267"><span class="hs-identifier hs-var">sigDSIGN</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><span class="annottext">(String -&gt; Bool) -&gt; (() -&gt; Bool) -&gt; Either String () -&gt; Bool
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><span class="hs-identifier hs-var">either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; String -&gt; Bool
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; () -&gt; Bool
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either String () -&gt; Bool) -&gt; Either String () -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ContextDSIGN DSIGN
+-&gt; VerKeyDSIGN DSIGN
+-&gt; a
+-&gt; SignedDSIGN DSIGN a
+-&gt; Either String ()
+forall v a.
+(DSIGNAlgorithm v, Signable v a, HasCallStack) =&gt;
+ContextDSIGN v
+-&gt; VerKeyDSIGN v -&gt; a -&gt; SignedDSIGN v a -&gt; Either String ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#verifySignedDSIGN"><span class="hs-identifier hs-var">DSIGN.verifySignedDSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">VerKeyDSIGN DSIGN
+</span><a href="#local-6989586621679430265"><span class="hs-identifier hs-var">vk</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679430266"><span class="hs-identifier hs-var">vd</span></a></span><span> </span><span class="annot"><span class="annottext">SignedDSIGN DSIGN a
+</span><a href="#local-6989586621679430267"><span class="hs-identifier hs-var">sigDSIGN</span></a></span><span>
+</span><span id="line-146"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#verifySignedDSIGN"><span class="hs-pragma hs-type">verifySignedDSIGN</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-147"></span></pre></body></html>

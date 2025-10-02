@@ -1,0 +1,121 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Main</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.IO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">BufferMode</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">LineBuffering</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hSetBuffering</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hSetEncoding</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">stdout</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">utf8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Failure.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Failure</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Failure</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.PlainSpec.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.PlainSpec</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PlainSpec</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.RoundTripSpec.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.RoundTripSpec</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">RoundTripSpec</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Success.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Success</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Success</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Coders.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Vintage.Coders</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Vintage.Coders</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Drop.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Vintage.Drop</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Vintage.Drop</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Failure.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Vintage.Failure</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Vintage.Failure</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.RoundTrip.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Vintage.RoundTrip</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Vintage.RoundTrip</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Serialization.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Vintage.Serialization</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Vintage.Serialization</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.SizeBounds.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Vintage.SizeBounds</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Vintage.SizeBounds</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.html"><span class="hs-identifier">Test.Hspec</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="annot"><a href="Main.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-17"></span><span id="spec"><span class="annot"><span class="annottext">spec :: Spec
+</span><a href="Main.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Vintage Test Suite&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;RoundTrip&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.RoundTrip.html#tests"><span class="hs-identifier hs-var">Vintage.RoundTrip.tests</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; Bool -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; IO a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldReturn"><span class="hs-operator hs-var">`shouldReturn`</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;SizeBounds&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.SizeBounds.html#tests"><span class="hs-identifier hs-var">Vintage.SizeBounds.tests</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; Bool -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; IO a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldReturn"><span class="hs-operator hs-var">`shouldReturn`</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Serialization&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Serialization.html#tests"><span class="hs-identifier hs-var">Vintage.Serialization.tests</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; Bool -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; IO a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldReturn"><span class="hs-operator hs-var">`shouldReturn`</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Drop&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Drop.html#tests"><span class="hs-identifier hs-var">Vintage.Drop.tests</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; Bool -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; IO a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldReturn"><span class="hs-operator hs-var">`shouldReturn`</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Failure&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Failure.html#tests"><span class="hs-identifier hs-var">Vintage.Failure.tests</span></a></span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; Bool -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; IO a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldReturn"><span class="hs-operator hs-var">`shouldReturn`</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="annottext">Spec
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Coders.html#spec"><span class="hs-identifier hs-var">Vintage.Coders.spec</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><span class="annottext">Spec
+</span><a href="Test.Cardano.Ledger.Binary.PlainSpec.html#spec"><span class="hs-identifier hs-var">PlainSpec.spec</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Versioned&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">Spec
+</span><a href="Test.Cardano.Ledger.Binary.RoundTripSpec.html#spec"><span class="hs-identifier hs-var">RoundTripSpec.spec</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">Spec
+</span><a href="Test.Cardano.Ledger.Binary.Failure.html#spec"><span class="hs-identifier hs-var">Failure.spec</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="annottext">Spec
+</span><a href="Test.Cardano.Ledger.Binary.Success.html#spec"><span class="hs-identifier hs-var">Success.spec</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Main.html#main"><span class="hs-identifier hs-type">main</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span id="main"><span class="annot"><span class="annottext">Expectation
+</span><a href="Main.html#main"><span class="hs-identifier hs-var hs-var hs-var">main</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="annottext">Handle -&gt; BufferMode -&gt; Expectation
+</span><span class="hs-identifier hs-var">hSetBuffering</span></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><span class="hs-identifier hs-var">stdout</span></span><span> </span><span class="annot"><span class="annottext">BufferMode
+</span><span class="hs-identifier hs-var">LineBuffering</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="annottext">Handle -&gt; TextEncoding -&gt; Expectation
+</span><span class="hs-identifier hs-var">hSetEncoding</span></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><span class="hs-identifier hs-var">stdout</span></span><span> </span><span class="annot"><span class="annottext">TextEncoding
+</span><span class="hs-identifier hs-var">utf8</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="annottext">Spec -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Runner.html#hspec"><span class="hs-identifier hs-var">hspec</span></a></span><span> </span><span class="annot"><span class="annottext">Spec
+</span><a href="Main.html#spec"><span class="hs-identifier hs-var">spec</span></a></span><span>
+</span><span id="line-36"></span></pre></body></html>

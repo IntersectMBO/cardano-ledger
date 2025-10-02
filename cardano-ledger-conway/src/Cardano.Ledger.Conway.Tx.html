@@ -1,0 +1,516 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Conway.Tx</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">BabbageTxReExport</span></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.Tx.html#tierRefScriptFee"><span class="hs-identifier">tierRefScriptFee</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Conway.Tx.html#getConwayMinFeeTx"><span class="hs-identifier">getConwayMinFeeTx</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier">Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Tx.html"><span class="hs-identifier">Cardano.Ledger.Allegra.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Tx.html#validateTimelock"><span class="hs-identifier">validateTimelock</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Core.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html#AlonzoEraTxWits"><span class="hs-identifier">AlonzoEraTxWits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Tx</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#alonzoMinFeeTx"><span class="hs-identifier">alonzoMinFeeTx</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#alonzoTxEqRaw"><span class="hs-identifier">alonzoTxEqRaw</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#auxDataAlonzoTxL"><span class="hs-identifier">auxDataAlonzoTxL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#bodyAlonzoTxL"><span class="hs-identifier">bodyAlonzoTxL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#isValidAlonzoTxL"><span class="hs-identifier">isValidAlonzoTxL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#mkBasicAlonzoTx"><span class="hs-identifier">mkBasicAlonzoTx</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#sizeAlonzoTxF"><span class="hs-identifier">sizeAlonzoTxF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#witsAlonzoTxL"><span class="hs-identifier">witsAlonzoTxL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Tx.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Tx</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BabbageTxReExport</span></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#AlonzoEraTx"><span class="hs-identifier">AlonzoEraTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#AlonzoTx"><span class="hs-identifier">AlonzoTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier">Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier">NonZero</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier">unboundRational</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier">Annotator</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html"><span class="hs-identifier">Cardano.Ledger.Conway.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.PParams.html"><span class="hs-identifier">Cardano.Ledger.Conway.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Conway.PParams.html#ConwayEraPParams"><span class="hs-identifier">ConwayEraPParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.PParams.html#ppMinFeeRefScriptCostPerByteL"><span class="hs-identifier">ppMinFeeRefScriptCostPerByteL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.TxAuxData.html"><span class="hs-identifier">Cardano.Ledger.Conway.TxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.TxBody.html"><span class="hs-identifier">Cardano.Ledger.Conway.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.TxWits.html"><span class="hs-identifier">Cardano.Ledger.Conway.TxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.html"><span class="hs-identifier">Cardano.Ledger.MemoBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#EqRaw"><span class="hs-identifier">EqRaw</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html"><span class="hs-identifier">Cardano.Ledger.Val</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#Val"><span class="hs-identifier">Val</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word32</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Stack</span></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier">Lens'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier">lens</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679632482"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">EraTx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-keyword">newtype</span><span> </span><span id="Tx"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-var">Tx</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkConwayTx"><span class="annot"><a href="Cardano.Ledger.Conway.Tx.html#MkConwayTx"><span class="hs-identifier hs-var">MkConwayTx</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unConwayTx"><span class="annot"><span class="annottext">Tx ConwayEra -&gt; AlonzoTx ConwayEra
+</span><a href="Cardano.Ledger.Conway.Tx.html#unConwayTx"><span class="hs-identifier hs-var hs-var">unConwayTx</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#AlonzoTx"><span class="hs-identifier hs-type">AlonzoTx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679632497"><span id="local-6989586621679632506"><span class="annot"><span class="annottext">Tx ConwayEra -&gt; Tx ConwayEra -&gt; Bool
+(Tx ConwayEra -&gt; Tx ConwayEra -&gt; Bool)
+-&gt; (Tx ConwayEra -&gt; Tx ConwayEra -&gt; Bool) -&gt; Eq (Tx ConwayEra)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Tx ConwayEra -&gt; Tx ConwayEra -&gt; Bool
+== :: Tx ConwayEra -&gt; Tx ConwayEra -&gt; Bool
+$c/= :: Tx ConwayEra -&gt; Tx ConwayEra -&gt; Bool
+/= :: Tx ConwayEra -&gt; Tx ConwayEra -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679632531"><span id="local-6989586621679632541"><span id="local-6989586621679632550"><span class="annot"><span class="annottext">Int -&gt; Tx ConwayEra -&gt; ShowS
+[Tx ConwayEra] -&gt; ShowS
+Tx ConwayEra -&gt; String
+(Int -&gt; Tx ConwayEra -&gt; ShowS)
+-&gt; (Tx ConwayEra -&gt; String)
+-&gt; ([Tx ConwayEra] -&gt; ShowS)
+-&gt; Show (Tx ConwayEra)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Tx ConwayEra -&gt; ShowS
+showsPrec :: Int -&gt; Tx ConwayEra -&gt; ShowS
+$cshow :: Tx ConwayEra -&gt; String
+show :: Tx ConwayEra -&gt; String
+$cshowList :: [Tx ConwayEra] -&gt; ShowS
+showList :: [Tx ConwayEra] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679632589"><span class="annot"><span class="annottext">Tx ConwayEra -&gt; ()
+(Tx ConwayEra -&gt; ()) -&gt; NFData (Tx ConwayEra)
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: Tx ConwayEra -&gt; ()
+rnf :: Tx ConwayEra -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679632618"><span id="local-6989586621679632627"><span id="local-6989586621679632635"><span class="annot"><span class="annottext">Context -&gt; Tx ConwayEra -&gt; IO (Maybe ThunkInfo)
+Proxy (Tx ConwayEra) -&gt; String
+(Context -&gt; Tx ConwayEra -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; Tx ConwayEra -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (Tx ConwayEra) -&gt; String)
+-&gt; NoThunks (Tx ConwayEra)
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; Tx ConwayEra -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; Tx ConwayEra -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; Tx ConwayEra -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; Tx ConwayEra -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy (Tx ConwayEra) -&gt; String
+showTypeOf :: Proxy (Tx ConwayEra) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679632660"><span id="local-6989586621679632671"><span id="local-6989586621679632681"><span class="annot"><span class="annottext">Typeable (Tx ConwayEra)
+Typeable (Tx ConwayEra) =&gt;
+(Tx ConwayEra -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy (Tx ConwayEra) -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [Tx ConwayEra] -&gt; Size)
+-&gt; ToCBOR (Tx ConwayEra)
+Tx ConwayEra -&gt; Encoding
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [Tx ConwayEra] -&gt; Size
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (Tx ConwayEra) -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; ToCBOR a
+$ctoCBOR :: Tx ConwayEra -&gt; Encoding
+toCBOR :: Tx ConwayEra -&gt; Encoding
+$cencodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (Tx ConwayEra) -&gt; Size
+encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (Tx ConwayEra) -&gt; Size
+$cencodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [Tx ConwayEra] -&gt; Size
+encodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [Tx ConwayEra] -&gt; Size
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679632703"><span id="local-6989586621679632714"><span id="local-6989586621679632724"><span class="annot"><span class="annottext">Typeable (Tx ConwayEra)
+Typeable (Tx ConwayEra) =&gt;
+(Tx ConwayEra -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy (Tx ConwayEra) -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [Tx ConwayEra] -&gt; Size)
+-&gt; EncCBOR (Tx ConwayEra)
+Tx ConwayEra -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [Tx ConwayEra] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (Tx ConwayEra) -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+$cencCBOR :: Tx ConwayEra -&gt; Encoding
+encCBOR :: Tx ConwayEra -&gt; Encoding
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (Tx ConwayEra) -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (Tx ConwayEra) -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [Tx ConwayEra] -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [Tx ConwayEra] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679632739"><span id="local-6989586621679632741"><span class="annot"><span class="annottext">(forall x. Tx ConwayEra -&gt; Rep (Tx ConwayEra) x)
+-&gt; (forall x. Rep (Tx ConwayEra) x -&gt; Tx ConwayEra)
+-&gt; Generic (Tx ConwayEra)
+forall x. Rep (Tx ConwayEra) x -&gt; Tx ConwayEra
+forall x. Tx ConwayEra -&gt; Rep (Tx ConwayEra) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Tx ConwayEra -&gt; Rep (Tx ConwayEra) x
+from :: forall x. Tx ConwayEra -&gt; Rep (Tx ConwayEra) x
+$cto :: forall x. Rep (Tx ConwayEra) x -&gt; Tx ConwayEra
+to :: forall x. Rep (Tx ConwayEra) x -&gt; Tx ConwayEra
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679632748"><span class="annot"><span class="annottext">mkBasicTx :: TxBody ConwayEra -&gt; Tx ConwayEra
+</span><a href="#local-6989586621679632748"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkBasicTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoTx ConwayEra -&gt; Tx ConwayEra
+</span><a href="Cardano.Ledger.Conway.Tx.html#MkConwayTx"><span class="hs-identifier hs-var">MkConwayTx</span></a></span><span> </span><span class="annot"><span class="annottext">(AlonzoTx ConwayEra -&gt; Tx ConwayEra)
+-&gt; (TxBody ConwayEra -&gt; AlonzoTx ConwayEra)
+-&gt; TxBody ConwayEra
+-&gt; Tx ConwayEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra -&gt; AlonzoTx ConwayEra
+forall era. Monoid (TxWits era) =&gt; TxBody era -&gt; AlonzoTx era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#mkBasicAlonzoTx"><span class="hs-identifier hs-var">mkBasicAlonzoTx</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679632754"><span class="annot"><span class="annottext">bodyTxL :: Lens' (Tx ConwayEra) (TxBody ConwayEra)
+</span><a href="#local-6989586621679632754"><span class="hs-identifier hs-var hs-var hs-var hs-var">bodyTxL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+-&gt; Tx ConwayEra -&gt; f (Tx ConwayEra)
+Lens' (Tx ConwayEra) (AlonzoTx ConwayEra)
+</span><a href="Cardano.Ledger.Conway.Tx.html#conwayTxL"><span class="hs-identifier hs-var">conwayTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+ -&gt; Tx ConwayEra -&gt; f (Tx ConwayEra))
+-&gt; ((TxBody ConwayEra -&gt; f (TxBody ConwayEra))
+    -&gt; AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+-&gt; (TxBody ConwayEra -&gt; f (TxBody ConwayEra))
+-&gt; Tx ConwayEra
+-&gt; f (Tx ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(TxBody ConwayEra -&gt; f (TxBody ConwayEra))
+-&gt; AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(TxBody era -&gt; f (TxBody era)) -&gt; AlonzoTx era -&gt; f (AlonzoTx era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#bodyAlonzoTxL"><span class="hs-identifier hs-var">bodyAlonzoTxL</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-pragma hs-type">bodyTxL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679632760"><span class="annot"><span class="annottext">witsTxL :: Lens' (Tx ConwayEra) (TxWits ConwayEra)
+</span><a href="#local-6989586621679632760"><span class="hs-identifier hs-var hs-var hs-var hs-var">witsTxL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+-&gt; Tx ConwayEra -&gt; f (Tx ConwayEra)
+Lens' (Tx ConwayEra) (AlonzoTx ConwayEra)
+</span><a href="Cardano.Ledger.Conway.Tx.html#conwayTxL"><span class="hs-identifier hs-var">conwayTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+ -&gt; Tx ConwayEra -&gt; f (Tx ConwayEra))
+-&gt; ((AlonzoTxWits ConwayEra -&gt; f (AlonzoTxWits ConwayEra))
+    -&gt; AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+-&gt; (AlonzoTxWits ConwayEra -&gt; f (AlonzoTxWits ConwayEra))
+-&gt; Tx ConwayEra
+-&gt; f (Tx ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(TxWits ConwayEra -&gt; f (TxWits ConwayEra))
+-&gt; AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra)
+(AlonzoTxWits ConwayEra -&gt; f (AlonzoTxWits ConwayEra))
+-&gt; AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(TxWits era -&gt; f (TxWits era)) -&gt; AlonzoTx era -&gt; f (AlonzoTx era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#witsAlonzoTxL"><span class="hs-identifier hs-var">witsAlonzoTxL</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-pragma hs-type">witsTxL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679632765"><span class="annot"><span class="annottext">auxDataTxL :: Lens' (Tx ConwayEra) (StrictMaybe (TxAuxData ConwayEra))
+</span><a href="#local-6989586621679632765"><span class="hs-identifier hs-var hs-var hs-var hs-var">auxDataTxL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+-&gt; Tx ConwayEra -&gt; f (Tx ConwayEra)
+Lens' (Tx ConwayEra) (AlonzoTx ConwayEra)
+</span><a href="Cardano.Ledger.Conway.Tx.html#conwayTxL"><span class="hs-identifier hs-var">conwayTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+ -&gt; Tx ConwayEra -&gt; f (Tx ConwayEra))
+-&gt; ((StrictMaybe (AlonzoTxAuxData ConwayEra)
+     -&gt; f (StrictMaybe (AlonzoTxAuxData ConwayEra)))
+    -&gt; AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+-&gt; (StrictMaybe (AlonzoTxAuxData ConwayEra)
+    -&gt; f (StrictMaybe (AlonzoTxAuxData ConwayEra)))
+-&gt; Tx ConwayEra
+-&gt; f (Tx ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe (TxAuxData ConwayEra)
+ -&gt; f (StrictMaybe (TxAuxData ConwayEra)))
+-&gt; AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra)
+(StrictMaybe (AlonzoTxAuxData ConwayEra)
+ -&gt; f (StrictMaybe (AlonzoTxAuxData ConwayEra)))
+-&gt; AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(StrictMaybe (TxAuxData era) -&gt; f (StrictMaybe (TxAuxData era)))
+-&gt; AlonzoTx era -&gt; f (AlonzoTx era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#auxDataAlonzoTxL"><span class="hs-identifier hs-var">auxDataAlonzoTxL</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#auxDataTxL"><span class="hs-pragma hs-type">auxDataTxL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679632773"><span class="annot"><span class="annottext">sizeTxF :: HasCallStack =&gt; SimpleGetter (Tx ConwayEra) Word32
+</span><a href="#local-6989586621679632773"><span class="hs-identifier hs-var hs-var hs-var hs-var">sizeTxF</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AlonzoTx ConwayEra -&gt; Const r (AlonzoTx ConwayEra))
+-&gt; Tx ConwayEra -&gt; Const r (Tx ConwayEra)
+Lens' (Tx ConwayEra) (AlonzoTx ConwayEra)
+</span><a href="Cardano.Ledger.Conway.Tx.html#conwayTxL"><span class="hs-identifier hs-var">conwayTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoTx ConwayEra -&gt; Const r (AlonzoTx ConwayEra))
+ -&gt; Tx ConwayEra -&gt; Const r (Tx ConwayEra))
+-&gt; ((Word32 -&gt; Const r Word32)
+    -&gt; AlonzoTx ConwayEra -&gt; Const r (AlonzoTx ConwayEra))
+-&gt; (Word32 -&gt; Const r Word32)
+-&gt; Tx ConwayEra
+-&gt; Const r (Tx ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; Const r Word32)
+-&gt; AlonzoTx ConwayEra -&gt; Const r (AlonzoTx ConwayEra)
+forall era.
+(HasCallStack, EraTx era) =&gt;
+SimpleGetter (AlonzoTx era) Word32
+SimpleGetter (AlonzoTx ConwayEra) Word32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#sizeAlonzoTxF"><span class="hs-identifier hs-var">sizeAlonzoTxF</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#sizeTxF"><span class="hs-pragma hs-type">sizeTxF</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621679632782"><span class="annot"><span class="annottext">validateNativeScript :: Tx ConwayEra -&gt; NativeScript ConwayEra -&gt; Bool
+</span><a href="#local-6989586621679632782"><span class="hs-identifier hs-var hs-var hs-var hs-var">validateNativeScript</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra -&gt; NativeScript ConwayEra -&gt; Bool
+forall era.
+(EraTx era, AllegraEraTxBody era, AllegraEraScript era,
+ NativeScript era ~ Timelock era) =&gt;
+Tx era -&gt; NativeScript era -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Tx.html#validateTimelock"><span class="hs-identifier hs-var">validateTimelock</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#validateNativeScript"><span class="hs-pragma hs-type">validateNativeScript</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679632789"><span class="annot"><span class="annottext">getMinFeeTx :: PParams ConwayEra -&gt; Tx ConwayEra -&gt; Int -&gt; Coin
+</span><a href="#local-6989586621679632789"><span class="hs-identifier hs-var hs-var hs-var hs-var">getMinFeeTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra -&gt; Tx ConwayEra -&gt; Int -&gt; Coin
+forall era.
+(EraTx era, AlonzoEraTxWits era, ConwayEraPParams era) =&gt;
+PParams era -&gt; Tx era -&gt; Int -&gt; Coin
+</span><a href="Cardano.Ledger.Conway.Tx.html#getConwayMinFeeTx"><span class="hs-identifier hs-var">getConwayMinFeeTx</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#EqRaw"><span class="hs-identifier hs-type">EqRaw</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679632796"><span class="annot"><span class="annottext">eqRaw :: Tx ConwayEra -&gt; Tx ConwayEra -&gt; Bool
+</span><a href="#local-6989586621679632796"><span class="hs-identifier hs-var hs-var hs-var hs-var">eqRaw</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra -&gt; Tx ConwayEra -&gt; Bool
+forall era. AlonzoEraTx era =&gt; Tx era -&gt; Tx era -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#alonzoTxEqRaw"><span class="hs-identifier hs-var">alonzoTxEqRaw</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="Cardano.Ledger.Conway.Tx.html#conwayTxL"><span class="hs-identifier hs-type">conwayTxL</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier hs-type">Lens'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#AlonzoTx"><span class="hs-identifier hs-type">AlonzoTx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span id="conwayTxL"><span class="annot"><span class="annottext">conwayTxL :: Lens' (Tx ConwayEra) (AlonzoTx ConwayEra)
+</span><a href="Cardano.Ledger.Conway.Tx.html#conwayTxL"><span class="hs-identifier hs-var hs-var">conwayTxL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Tx ConwayEra -&gt; AlonzoTx ConwayEra)
+-&gt; (Tx ConwayEra -&gt; AlonzoTx ConwayEra -&gt; Tx ConwayEra)
+-&gt; Lens' (Tx ConwayEra) (AlonzoTx ConwayEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra -&gt; AlonzoTx ConwayEra
+</span><a href="Cardano.Ledger.Conway.Tx.html#unConwayTx"><span class="hs-identifier hs-var">unConwayTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679632800"><span class="annot"><span class="annottext">Tx ConwayEra
+</span><a href="#local-6989586621679632800"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679632801"><span class="annot"><span class="annottext">AlonzoTx ConwayEra
+</span><a href="#local-6989586621679632801"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra
+</span><a href="#local-6989586621679632800"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Conway.Tx.html#unConwayTx"><span class="hs-identifier hs-var">unConwayTx</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679632801"><span class="hs-identifier hs-type">y</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span id="local-6989586621679632352"><span class="annot"><a href="Cardano.Ledger.Conway.Tx.html#getConwayMinFeeTx"><span class="hs-identifier hs-type">getConwayMinFeeTx</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">EraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679632352"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html#AlonzoEraTxWits"><span class="hs-identifier hs-type">AlonzoEraTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679632352"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.PParams.html#ConwayEraPParams"><span class="hs-identifier hs-type">ConwayEraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679632352"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679632352"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679632352"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span></span><span>
+</span><span id="line-93"></span><span id="getConwayMinFeeTx"><span class="annot"><span class="annottext">getConwayMinFeeTx :: forall era.
+(EraTx era, AlonzoEraTxWits era, ConwayEraPParams era) =&gt;
+PParams era -&gt; Tx era -&gt; Int -&gt; Coin
+</span><a href="Cardano.Ledger.Conway.Tx.html#getConwayMinFeeTx"><span class="hs-identifier hs-var hs-var">getConwayMinFeeTx</span></a></span></span><span> </span><span id="local-6989586621679632828"><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679632828"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679632829"><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679632829"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span id="local-6989586621679632830"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679632830"><span class="hs-identifier hs-var">refScriptsSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="annottext">PParams era -&gt; Tx era -&gt; Coin
+forall era.
+(EraTx era, AlonzoEraTxWits era, AlonzoEraPParams era) =&gt;
+PParams era -&gt; Tx era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#alonzoMinFeeTx"><span class="hs-identifier hs-var">alonzoMinFeeTx</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679632828"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679632829"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Coin -&gt; Coin
+forall t. Val t =&gt; t -&gt; t -&gt; t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679632832"><span class="hs-identifier hs-var">refScriptsFee</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>    </span><span id="local-6989586621679632833"><span class="annot"><span class="annottext">refScriptCostPerByte :: Rational
+</span><a href="#local-6989586621679632833"><span class="hs-identifier hs-var hs-var">refScriptCostPerByte</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonNegativeInterval -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679632828"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+-&gt; Getting NonNegativeInterval (PParams era) NonNegativeInterval
+-&gt; NonNegativeInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting NonNegativeInterval (PParams era) NonNegativeInterval
+forall era.
+ConwayEraPParams era =&gt;
+Lens' (PParams era) NonNegativeInterval
+Lens' (PParams era) NonNegativeInterval
+</span><a href="Cardano.Ledger.Conway.PParams.html#ppMinFeeRefScriptCostPerByteL"><span class="hs-identifier hs-var">ppMinFeeRefScriptCostPerByteL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>    </span><span id="local-6989586621679632832"><span class="annot"><span class="annottext">refScriptsFee :: Coin
+</span><a href="#local-6989586621679632832"><span class="hs-identifier hs-var hs-var">refScriptsFee</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><span class="annottext">HasCallStack =&gt; Rational -&gt; Int -&gt; Rational -&gt; Int -&gt; Coin
+Rational -&gt; Int -&gt; Rational -&gt; Int -&gt; Coin
+</span><a href="Cardano.Ledger.Conway.Tx.html#tierRefScriptFee"><span class="hs-identifier hs-var">tierRefScriptFee</span></a></span><span>
+</span><span id="line-99"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PositiveInterval -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span> </span><span class="annot"><span class="annottext">(PositiveInterval -&gt; Rational) -&gt; PositiveInterval -&gt; Rational
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679632828"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+-&gt; Getting PositiveInterval (PParams era) PositiveInterval
+-&gt; PositiveInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting PositiveInterval (PParams era) PositiveInterval
+forall era.
+ConwayEraPParams era =&gt;
+SimpleGetter (PParams era) PositiveInterval
+SimpleGetter (PParams era) PositiveInterval
+</span><a href="Cardano.Ledger.Conway.PParams.html#ppRefScriptCostMultiplierG"><span class="hs-identifier hs-var">ppRefScriptCostMultiplierG</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; Int)
+-&gt; (NonZero Word32 -&gt; Word32) -&gt; NonZero Word32 -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">NonZero Word32 -&gt; Word32
+forall a. NonZero a -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#unNonZero"><span class="hs-identifier hs-var">unNonZero</span></a></span><span> </span><span class="annot"><span class="annottext">(NonZero Word32 -&gt; Int) -&gt; NonZero Word32 -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679632828"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+-&gt; Getting (NonZero Word32) (PParams era) (NonZero Word32)
+-&gt; NonZero Word32
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (NonZero Word32) (PParams era) (NonZero Word32)
+forall era.
+ConwayEraPParams era =&gt;
+SimpleGetter (PParams era) (NonZero Word32)
+SimpleGetter (PParams era) (NonZero Word32)
+</span><a href="Cardano.Ledger.Conway.PParams.html#ppRefScriptCostStrideG"><span class="hs-identifier hs-var">ppRefScriptCostStrideG</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>        </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632833"><span class="hs-identifier hs-var">refScriptCostPerByte</span></a></span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679632830"><span class="hs-identifier hs-var">refScriptsSize</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- | Calculate the fee for reference scripts using an exponential growth of the price per</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- byte with linear increments</span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Cardano.Ledger.Conway.Tx.html#tierRefScriptFee"><span class="hs-identifier hs-type">tierRefScriptFee</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-107"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Growth factor or step multiplier</span></span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Rational</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Increment size in which price grows linearly according to the price</span></span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Base fee. Currently this is customizable by `ppMinFeeRefScriptCostPerByteL`</span></span><span>
+</span><span id="line-113"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Rational</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Total RefScript size in bytes</span></span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span>
+</span><span id="line-117"></span><span id="tierRefScriptFee"><span class="annot"><span class="annottext">tierRefScriptFee :: HasCallStack =&gt; Rational -&gt; Int -&gt; Rational -&gt; Int -&gt; Coin
+</span><a href="Cardano.Ledger.Conway.Tx.html#tierRefScriptFee"><span class="hs-identifier hs-var hs-var">tierRefScriptFee</span></a></span></span><span> </span><span id="local-6989586621679632863"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632863"><span class="hs-identifier hs-var">multiplier</span></a></span></span><span> </span><span id="local-6989586621679632864"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679632864"><span class="hs-identifier hs-var">sizeIncrement</span></a></span></span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632863"><span class="hs-identifier hs-var">multiplier</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">||</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679632864"><span class="hs-identifier hs-var">sizeIncrement</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Rational -&gt; Int -&gt; Coin
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Size increment and multiplier must be positive&quot;</span></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Int -&gt; Coin
+</span><a href="#local-6989586621679632868"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-121"></span><span>    </span><span id="local-6989586621679632868"><span class="annot"><span class="annottext">go :: Rational -&gt; Rational -&gt; Int -&gt; Coin
+</span><a href="#local-6989586621679632868"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679632869"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632869"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679632870"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632870"><span class="hs-identifier hs-var">curTierPrice</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679632871"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679632871"><span class="hs-identifier hs-var">n</span></a></span></span><span>
+</span><span id="line-122"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679632871"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679632864"><span class="hs-identifier hs-var">sizeIncrement</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-123"></span><span>          </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Coin) -&gt; Integer -&gt; Coin
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Integer
+forall b. Integral b =&gt; Rational -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">floor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632869"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Rational
+forall a. Real a =&gt; a -&gt; Rational
+</span><span class="hs-identifier hs-var">toRational</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679632871"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632870"><span class="hs-identifier hs-var">curTierPrice</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-125"></span><span>          </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Int -&gt; Coin
+</span><a href="#local-6989586621679632868"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632869"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632876"><span class="hs-identifier hs-var">sizeIncrementRational</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632870"><span class="hs-identifier hs-var">curTierPrice</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632863"><span class="hs-identifier hs-var">multiplier</span></a></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679632870"><span class="hs-identifier hs-var">curTierPrice</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679632871"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679632864"><span class="hs-identifier hs-var">sizeIncrement</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621679632876"><span class="annot"><span class="annottext">sizeIncrementRational :: Rational
+</span><a href="#local-6989586621679632876"><span class="hs-identifier hs-var hs-var">sizeIncrementRational</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Rational
+forall a. Real a =&gt; a -&gt; Rational
+</span><span class="hs-identifier hs-var">toRational</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679632864"><span class="hs-identifier hs-var">sizeIncrement</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#AlonzoEraTx"><span class="hs-identifier hs-type">AlonzoEraTx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621679632891"><span class="annot"><span class="annottext">isValidTxL :: Lens' (Tx ConwayEra) IsValid
+</span><a href="#local-6989586621679632891"><span class="hs-identifier hs-var hs-var hs-var hs-var">isValidTxL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+-&gt; Tx ConwayEra -&gt; f (Tx ConwayEra)
+Lens' (Tx ConwayEra) (AlonzoTx ConwayEra)
+</span><a href="Cardano.Ledger.Conway.Tx.html#conwayTxL"><span class="hs-identifier hs-var">conwayTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+ -&gt; Tx ConwayEra -&gt; f (Tx ConwayEra))
+-&gt; ((IsValid -&gt; f IsValid)
+    -&gt; AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra))
+-&gt; (IsValid -&gt; f IsValid)
+-&gt; Tx ConwayEra
+-&gt; f (Tx ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(IsValid -&gt; f IsValid)
+-&gt; AlonzoTx ConwayEra -&gt; f (AlonzoTx ConwayEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(IsValid -&gt; f IsValid) -&gt; AlonzoTx era -&gt; f (AlonzoTx era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#isValidAlonzoTxL"><span class="hs-identifier hs-var">isValidAlonzoTxL</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#isValidTxL"><span class="hs-pragma hs-type">isValidTxL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679632899"><span id="local-6989586621679632902"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-133"></span><span>  </span><span id="local-6989586621679632944"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (Annotator (Tx ConwayEra))
+</span><a href="#local-6989586621679632944"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AlonzoTx ConwayEra -&gt; Tx ConwayEra)
+-&gt; Annotator (AlonzoTx ConwayEra) -&gt; Annotator (Tx ConwayEra)
+forall a b. (a -&gt; b) -&gt; Annotator a -&gt; Annotator b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">AlonzoTx ConwayEra -&gt; Tx ConwayEra
+</span><a href="Cardano.Ledger.Conway.Tx.html#MkConwayTx"><span class="hs-identifier hs-var">MkConwayTx</span></a></span><span> </span><span class="annot"><span class="annottext">(Annotator (AlonzoTx ConwayEra) -&gt; Annotator (Tx ConwayEra))
+-&gt; Decoder s (Annotator (AlonzoTx ConwayEra))
+-&gt; Decoder s (Annotator (Tx ConwayEra))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (AlonzoTx ConwayEra))
+forall s. Decoder s (Annotator (AlonzoTx ConwayEra))
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-134"></span></pre></body></html>

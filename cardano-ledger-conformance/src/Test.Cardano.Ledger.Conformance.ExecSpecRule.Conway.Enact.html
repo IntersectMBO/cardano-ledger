@@ -1,0 +1,164 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Enact</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier">EpochNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#EnactState"><span class="hs-identifier">EnactState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.html"><span class="hs-identifier">Cardano.Ledger.Conway.Rules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Enact.html#EnactSignal"><span class="hs-identifier">EnactSignal</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html"><span class="hs-identifier">Control.State.Transition.Extended</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Foreign.API.html"><span class="hs-identifier">MAlonzo.Code.Ledger.Foreign.API</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Agda</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecSpecRule"><span class="hs-identifier">ExecSpecRule</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#SpecTRC"><span class="hs-identifier">SpecTRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier">SpecTranslate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#runSpecTransM"><span class="hs-identifier">runSpecTransM</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#unComputationResult"><span class="hs-identifier">unComputationResult</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.ImpTest.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.ImpTest</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679513150"><span id="local-6989586621679513158"><span id="local-6989586621679513165"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecSpecRule"><span class="hs-identifier hs-type">ExecSpecRule</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;ENACT&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ExecContext"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecContext"><span class="hs-identifier hs-var">ExecContext</span></a></span></span><span> </span><span class="annot"><span class="hs-string">&quot;ENACT&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="SpecEnvironment"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#SpecEnvironment"><span class="hs-identifier hs-var">SpecEnvironment</span></a></span></span><span> </span><span class="annot"><span class="hs-string">&quot;ENACT&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Enact.html#EnactEnv"><span class="hs-identifier hs-type">Agda.EnactEnv</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679513270"><span class="annot"><span class="annottext">translateInputs :: HasCallStack =&gt;
+ExecContext &quot;ENACT&quot; ConwayEra
+-&gt; TRC (EraRule &quot;ENACT&quot; ConwayEra)
+-&gt; Either Text (SpecTRC &quot;ENACT&quot; ConwayEra)
+</span><a href="#local-6989586621679513270"><span class="hs-identifier hs-var hs-var hs-var hs-var">translateInputs</span></a></span></span><span> </span><span id="local-6989586621679513272"><span class="annot"><span class="annottext">ExecContext &quot;ENACT&quot; ConwayEra
+</span><a href="#local-6989586621679513272"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Environment (EraRule &quot;ENACT&quot; ConwayEra)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679513274"><span class="annot"><span class="annottext">st :: State (EraRule &quot;ENACT&quot; ConwayEra)
+</span><a href="#local-6989586621679513274"><span class="hs-identifier hs-var">st</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#EnactState"><span class="hs-identifier hs-type">EnactState</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679513276"><span id="local-6989586621679513277"><span id="local-6989586621679513278"><span id="local-6989586621679513279"><span id="local-6989586621679513280"><span id="local-6989586621679513281"><span id="local-6989586621679513282"><span class="annot"><span class="annottext">Map (Credential 'Staking) Coin
+StrictMaybe (Committee ConwayEra)
+PParams ConwayEra
+Constitution ConwayEra
+GovRelation StrictMaybe
+Coin
+ensCommittee :: StrictMaybe (Committee ConwayEra)
+ensConstitution :: Constitution ConwayEra
+ensCurPParams :: PParams ConwayEra
+ensPrevPParams :: PParams ConwayEra
+ensTreasury :: Coin
+ensWithdrawals :: Map (Credential 'Staking) Coin
+ensPrevGovActionIds :: GovRelation StrictMaybe
+ensCommittee :: forall era. EnactState era -&gt; StrictMaybe (Committee era)
+ensConstitution :: forall era. EnactState era -&gt; Constitution era
+ensCurPParams :: forall era. EnactState era -&gt; PParams era
+ensPrevPParams :: forall era. EnactState era -&gt; PParams era
+ensTreasury :: forall era. EnactState era -&gt; Coin
+ensWithdrawals :: forall era. EnactState era -&gt; Map (Credential 'Staking) Coin
+ensPrevGovActionIds :: forall era. EnactState era -&gt; GovRelation StrictMaybe
+</span><a href="#local-6989586621679513276"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679513290"><span class="annot"><span class="annottext">sig :: Signal (EraRule &quot;ENACT&quot; ConwayEra)
+</span><a href="#local-6989586621679513290"><span class="hs-identifier hs-var">sig</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Enact.html#EnactSignal"><span class="hs-identifier hs-type">EnactSignal</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679513292"><span id="local-6989586621679513293"><span class="annot"><span class="annottext">GovAction ConwayEra
+GovActionId
+esGovActionId :: GovActionId
+esGovAction :: GovAction ConwayEra
+esGovActionId :: forall era. EnactSignal era -&gt; GovActionId
+esGovAction :: forall era. EnactSignal era -&gt; GovAction era
+</span><a href="#local-6989586621679513292"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">()
+-&gt; SpecTransM () (SpecTRC &quot;ENACT&quot; ConwayEra)
+-&gt; Either Text (SpecTRC &quot;ENACT&quot; ConwayEra)
+forall ctx a. ctx -&gt; SpecTransM ctx a -&gt; Either Text a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#runSpecTransM"><span class="hs-identifier hs-var">runSpecTransM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(SpecTransM () (SpecTRC &quot;ENACT&quot; ConwayEra)
+ -&gt; Either Text (SpecTRC &quot;ENACT&quot; ConwayEra))
+-&gt; SpecTransM () (SpecTRC &quot;ENACT&quot; ConwayEra)
+-&gt; Either Text (SpecTRC &quot;ENACT&quot; ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-31"></span><span>      </span><span id="local-6989586621679513296"><span class="annot"><span class="annottext">SpecRep (EnactState ConwayEra)
+</span><a href="#local-6989586621679513296"><span class="hs-identifier hs-var">agdaSt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">EnactState ConwayEra
+-&gt; SpecTransM () (SpecRep (EnactState ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">EnactState ConwayEra
+State (EraRule &quot;ENACT&quot; ConwayEra)
+</span><a href="#local-6989586621679513274"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-32"></span><span>      </span><span id="local-6989586621679513298"><span class="annot"><span class="annottext">SpecRep (EnactSignal ConwayEra)
+</span><a href="#local-6989586621679513298"><span class="hs-identifier hs-var">agdaSig</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">EnactSignal ConwayEra
+-&gt; SpecTransM () (SpecRep (EnactSignal ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">EnactSignal ConwayEra
+Signal (EraRule &quot;ENACT&quot; ConwayEra)
+</span><a href="#local-6989586621679513290"><span class="hs-identifier hs-var">sig</span></a></span><span>
+</span><span id="line-33"></span><span>      </span><span id="local-6989586621679513299"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679513299"><span class="hs-identifier hs-var">treasury</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; SpecTransM () (SpecRep Coin)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679513280"><span class="hs-identifier hs-var">ensTreasury</span></a></span><span>
+</span><span id="line-34"></span><span>      </span><span id="local-6989586621679513300"><span class="annot"><span class="annottext">(Integer, Integer)
+</span><a href="#local-6989586621679513300"><span class="hs-identifier hs-var">gaId</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GovActionId -&gt; SpecTransM () (SpecRep GovActionId)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621679513292"><span class="hs-identifier hs-var">esGovActionId</span></a></span><span>
+</span><span id="line-35"></span><span>      </span><span id="local-6989586621679513301"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679513301"><span class="hs-identifier hs-var">curEpoch</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; SpecTransM () (SpecRep EpochNo)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+ExecContext &quot;ENACT&quot; ConwayEra
+</span><a href="#local-6989586621679513272"><span class="hs-identifier hs-var">ctx</span></a></span><span>
+</span><span id="line-36"></span><span>      </span><span class="annot"><span class="annottext">SpecTRC &quot;ENACT&quot; ConwayEra
+-&gt; SpecTransM () (SpecTRC &quot;ENACT&quot; ConwayEra)
+forall a. a -&gt; SpecTransM () a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(SpecTRC &quot;ENACT&quot; ConwayEra
+ -&gt; SpecTransM () (SpecTRC &quot;ENACT&quot; ConwayEra))
+-&gt; SpecTRC &quot;ENACT&quot; ConwayEra
+-&gt; SpecTransM () (SpecTRC &quot;ENACT&quot; ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-37"></span><span>        </span><span class="annot"><span class="annottext">SpecEnvironment &quot;ENACT&quot; ConwayEra
+-&gt; SpecState &quot;ENACT&quot; ConwayEra
+-&gt; SpecSignal &quot;ENACT&quot; ConwayEra
+-&gt; SpecTRC &quot;ENACT&quot; ConwayEra
+forall (rule :: Symbol) era.
+SpecEnvironment rule era
+-&gt; SpecState rule era -&gt; SpecSignal rule era -&gt; SpecTRC rule era
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#SpecTRC"><span class="hs-identifier hs-var">SpecTRC</span></a></span><span>
+</span><span id="line-38"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Integer, Integer) -&gt; Integer -&gt; Integer -&gt; EnactEnv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Enact.html#MkEnactEnv"><span class="hs-identifier hs-var">Agda.MkEnactEnv</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer, Integer)
+</span><a href="#local-6989586621679513300"><span class="hs-identifier hs-var">gaId</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679513299"><span class="hs-identifier hs-var">treasury</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679513301"><span class="hs-identifier hs-var">curEpoch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>          </span><span class="annot"><span class="annottext">SpecRep (EnactState ConwayEra)
+SpecState &quot;ENACT&quot; ConwayEra
+</span><a href="#local-6989586621679513296"><span class="hs-identifier hs-var">agdaSt</span></a></span><span>
+</span><span id="line-40"></span><span>          </span><span class="annot"><span class="annottext">SpecRep (EnactSignal ConwayEra)
+SpecSignal &quot;ENACT&quot; ConwayEra
+</span><a href="#local-6989586621679513298"><span class="hs-identifier hs-var">agdaSig</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679513305"><span class="annot"><span class="annottext">runAgdaRule :: HasCallStack =&gt;
+SpecTRC &quot;ENACT&quot; ConwayEra
+-&gt; Either Text (SpecState &quot;ENACT&quot; ConwayEra)
+</span><a href="#local-6989586621679513305"><span class="hs-identifier hs-var hs-var hs-var hs-var">runAgdaRule</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#SpecTRC"><span class="hs-identifier hs-type">SpecTRC</span></a></span><span> </span><span id="local-6989586621679513307"><span class="annot"><span class="annottext">SpecEnvironment &quot;ENACT&quot; ConwayEra
+</span><a href="#local-6989586621679513307"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679513308"><span class="annot"><span class="annottext">SpecState &quot;ENACT&quot; ConwayEra
+</span><a href="#local-6989586621679513308"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span id="local-6989586621679513309"><span class="annot"><span class="annottext">SpecSignal &quot;ENACT&quot; ConwayEra
+</span><a href="#local-6989586621679513309"><span class="hs-identifier hs-var">sig</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ComputationResult Text EnactState -&gt; Either Text EnactState
+forall a. ComputationResult Text a -&gt; Either Text a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#unComputationResult"><span class="hs-identifier hs-var">unComputationResult</span></a></span><span> </span><span class="annot"><span class="annottext">(ComputationResult Text EnactState -&gt; Either Text EnactState)
+-&gt; ComputationResult Text EnactState -&gt; Either Text EnactState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">EnactEnv
+-&gt; EnactState -&gt; GovAction -&gt; ComputationResult Text EnactState
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Enact.html#enactStep"><span class="hs-identifier hs-var">Agda.enactStep</span></a></span><span> </span><span class="annot"><span class="annottext">EnactEnv
+SpecEnvironment &quot;ENACT&quot; ConwayEra
+</span><a href="#local-6989586621679513307"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">EnactState
+SpecState &quot;ENACT&quot; ConwayEra
+</span><a href="#local-6989586621679513308"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">GovAction
+SpecSignal &quot;ENACT&quot; ConwayEra
+</span><a href="#local-6989586621679513309"><span class="hs-identifier hs-var">sig</span></a></span><span>
+</span><span id="line-43"></span></pre></body></html>

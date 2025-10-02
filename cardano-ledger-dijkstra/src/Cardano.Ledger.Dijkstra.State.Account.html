@@ -1,0 +1,204 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Dijkstra.State.Account</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.html"><span class="hs-identifier">Cardano.Ledger.Conway.State</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Era.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Era</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#EraAccounts"><span class="hs-identifier hs-type">EraAccounts</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="AccountState"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#AccountState"><span class="hs-identifier hs-var">AccountState</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#ConwayAccountState"><span class="hs-identifier hs-type">ConwayAccountState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Accounts"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#Accounts"><span class="hs-identifier hs-var">Accounts</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#ConwayAccounts"><span class="hs-identifier hs-type">ConwayAccounts</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>  </span><span id="local-6989586621679350365"><span class="annot"><span class="annottext">addAccountState :: Credential 'Staking
+-&gt; AccountState DijkstraEra
+-&gt; Accounts DijkstraEra
+-&gt; Accounts DijkstraEra
+</span><a href="#local-6989586621679350365"><span class="hs-identifier hs-var hs-var hs-var hs-var">addAccountState</span></a></span></span><span> </span><span id="local-6989586621679350367"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679350367"><span class="hs-identifier hs-var">cred</span></a></span></span><span> </span><span id="local-6989586621679350368"><span class="annot"><span class="annottext">AccountState DijkstraEra
+</span><a href="#local-6989586621679350368"><span class="hs-identifier hs-var">accountState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'Staking) (AccountState DijkstraEra)
+ -&gt; Identity (Map (Credential 'Staking) (AccountState DijkstraEra)))
+-&gt; Accounts DijkstraEra -&gt; Identity (Accounts DijkstraEra)
+(Map (Credential 'Staking) (AccountState DijkstraEra)
+ -&gt; Identity (Map (Credential 'Staking) (AccountState DijkstraEra)))
+-&gt; ConwayAccounts DijkstraEra
+-&gt; Identity (ConwayAccounts DijkstraEra)
+forall era.
+EraAccounts era =&gt;
+Lens' (Accounts era) (Map (Credential 'Staking) (AccountState era))
+Lens'
+  (Accounts DijkstraEra)
+  (Map (Credential 'Staking) (AccountState DijkstraEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#accountsMapL"><span class="hs-identifier hs-var">accountsMapL</span></a></span><span> </span><span class="annot"><span class="annottext">((Map (Credential 'Staking) (AccountState DijkstraEra)
+  -&gt; Identity (Map (Credential 'Staking) (AccountState DijkstraEra)))
+ -&gt; ConwayAccounts DijkstraEra
+ -&gt; Identity (ConwayAccounts DijkstraEra))
+-&gt; (Map (Credential 'Staking) (AccountState DijkstraEra)
+    -&gt; Map (Credential 'Staking) (AccountState DijkstraEra))
+-&gt; ConwayAccounts DijkstraEra
+-&gt; ConwayAccounts DijkstraEra
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%25~"><span class="hs-operator hs-var">%~</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+-&gt; AccountState DijkstraEra
+-&gt; Map (Credential 'Staking) (AccountState DijkstraEra)
+-&gt; Map (Credential 'Staking) (AccountState DijkstraEra)
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.insert</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679350367"><span class="hs-identifier hs-var">cred</span></a></span><span> </span><span class="annot"><span class="annottext">AccountState DijkstraEra
+</span><a href="#local-6989586621679350368"><span class="hs-identifier hs-var">accountState</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span>  </span><span id="local-6989586621679350374"><span class="annot"><span class="annottext">accountsMapL :: Lens'
+  (Accounts DijkstraEra)
+  (Map (Credential 'Staking) (AccountState DijkstraEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#accountsMapL"><span class="hs-identifier hs-var hs-var hs-var hs-var">accountsMapL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Accounts DijkstraEra
+ -&gt; Map (Credential 'Staking) (AccountState DijkstraEra))
+-&gt; (Accounts DijkstraEra
+    -&gt; Map (Credential 'Staking) (AccountState DijkstraEra)
+    -&gt; Accounts DijkstraEra)
+-&gt; Lens'
+     (Accounts DijkstraEra)
+     (Map (Credential 'Staking) (AccountState DijkstraEra))
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">Accounts DijkstraEra
+-&gt; Map (Credential 'Staking) (AccountState DijkstraEra)
+ConwayAccounts DijkstraEra
+-&gt; Map (Credential 'Staking) (ConwayAccountState DijkstraEra)
+forall era.
+ConwayAccounts era
+-&gt; Map (Credential 'Staking) (ConwayAccountState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#caStates"><span class="hs-identifier hs-var">caStates</span></a></span><span> </span><span class="annot"><span class="annottext">((Accounts DijkstraEra
+  -&gt; Map (Credential 'Staking) (AccountState DijkstraEra)
+  -&gt; Accounts DijkstraEra)
+ -&gt; Lens'
+      (Accounts DijkstraEra)
+      (Map (Credential 'Staking) (AccountState DijkstraEra)))
+-&gt; (Accounts DijkstraEra
+    -&gt; Map (Credential 'Staking) (AccountState DijkstraEra)
+    -&gt; Accounts DijkstraEra)
+-&gt; Lens'
+     (Accounts DijkstraEra)
+     (Map (Credential 'Staking) (AccountState DijkstraEra))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679350377"><span class="annot"><span class="annottext">Accounts DijkstraEra
+</span><a href="#local-6989586621679350377"><span class="hs-identifier hs-var">cas</span></a></span></span><span> </span><span id="local-6989586621679350378"><span class="annot"><span class="annottext">Map (Credential 'Staking) (AccountState DijkstraEra)
+</span><a href="#local-6989586621679350378"><span class="hs-identifier hs-var">asMap</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Accounts DijkstraEra
+</span><a href="#local-6989586621679350377"><span class="hs-identifier hs-var">cas</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#caStates"><span class="hs-identifier hs-var">caStates</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679350378"><span class="hs-identifier hs-type">asMap</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>  </span><span id="local-6989586621679350381"><span class="annot"><span class="annottext">balanceAccountStateL :: Lens' (AccountState DijkstraEra) (CompactForm Coin)
+</span><a href="#local-6989586621679350381"><span class="hs-identifier hs-var hs-var hs-var hs-var">balanceAccountStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AccountState DijkstraEra -&gt; CompactForm Coin)
+-&gt; (AccountState DijkstraEra
+    -&gt; CompactForm Coin -&gt; AccountState DijkstraEra)
+-&gt; Lens' (AccountState DijkstraEra) (CompactForm Coin)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">AccountState DijkstraEra -&gt; CompactForm Coin
+ConwayAccountState DijkstraEra -&gt; CompactForm Coin
+forall era. ConwayAccountState era -&gt; CompactForm Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#casBalance"><span class="hs-identifier hs-var">casBalance</span></a></span><span> </span><span class="annot"><span class="annottext">((AccountState DijkstraEra
+  -&gt; CompactForm Coin -&gt; AccountState DijkstraEra)
+ -&gt; Lens' (AccountState DijkstraEra) (CompactForm Coin))
+-&gt; (AccountState DijkstraEra
+    -&gt; CompactForm Coin -&gt; AccountState DijkstraEra)
+-&gt; Lens' (AccountState DijkstraEra) (CompactForm Coin)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679350384"><span class="annot"><span class="annottext">AccountState DijkstraEra
+</span><a href="#local-6989586621679350384"><span class="hs-identifier hs-var">cas</span></a></span></span><span> </span><span id="local-6989586621679350385"><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679350385"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AccountState DijkstraEra
+</span><a href="#local-6989586621679350384"><span class="hs-identifier hs-var">cas</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#casBalance"><span class="hs-identifier hs-var">casBalance</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679350385"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>  </span><span id="local-6989586621679350388"><span class="annot"><span class="annottext">depositAccountStateL :: Lens' (AccountState DijkstraEra) (CompactForm Coin)
+</span><a href="#local-6989586621679350388"><span class="hs-identifier hs-var hs-var hs-var hs-var">depositAccountStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AccountState DijkstraEra -&gt; CompactForm Coin)
+-&gt; (AccountState DijkstraEra
+    -&gt; CompactForm Coin -&gt; AccountState DijkstraEra)
+-&gt; Lens' (AccountState DijkstraEra) (CompactForm Coin)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">AccountState DijkstraEra -&gt; CompactForm Coin
+ConwayAccountState DijkstraEra -&gt; CompactForm Coin
+forall era. ConwayAccountState era -&gt; CompactForm Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#casDeposit"><span class="hs-identifier hs-var">casDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">((AccountState DijkstraEra
+  -&gt; CompactForm Coin -&gt; AccountState DijkstraEra)
+ -&gt; Lens' (AccountState DijkstraEra) (CompactForm Coin))
+-&gt; (AccountState DijkstraEra
+    -&gt; CompactForm Coin -&gt; AccountState DijkstraEra)
+-&gt; Lens' (AccountState DijkstraEra) (CompactForm Coin)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679350391"><span class="annot"><span class="annottext">AccountState DijkstraEra
+</span><a href="#local-6989586621679350391"><span class="hs-identifier hs-var">cas</span></a></span></span><span> </span><span id="local-6989586621679350392"><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679350392"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AccountState DijkstraEra
+</span><a href="#local-6989586621679350391"><span class="hs-identifier hs-var">cas</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#casDeposit"><span class="hs-identifier hs-var">casDeposit</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679350392"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>  </span><span id="local-6989586621679350395"><span class="annot"><span class="annottext">stakePoolDelegationAccountStateL :: Lens' (AccountState DijkstraEra) (Maybe (KeyHash 'StakePool))
+</span><a href="#local-6989586621679350395"><span class="hs-identifier hs-var hs-var hs-var hs-var">stakePoolDelegationAccountStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="annottext">(AccountState DijkstraEra -&gt; Maybe (KeyHash 'StakePool))
+-&gt; (AccountState DijkstraEra
+    -&gt; Maybe (KeyHash 'StakePool) -&gt; AccountState DijkstraEra)
+-&gt; Lens' (AccountState DijkstraEra) (Maybe (KeyHash 'StakePool))
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictMaybe (KeyHash 'StakePool) -&gt; Maybe (KeyHash 'StakePool)
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe (KeyHash 'StakePool) -&gt; Maybe (KeyHash 'StakePool))
+-&gt; (ConwayAccountState DijkstraEra
+    -&gt; StrictMaybe (KeyHash 'StakePool))
+-&gt; ConwayAccountState DijkstraEra
+-&gt; Maybe (KeyHash 'StakePool)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ConwayAccountState DijkstraEra -&gt; StrictMaybe (KeyHash 'StakePool)
+forall era.
+ConwayAccountState era -&gt; StrictMaybe (KeyHash 'StakePool)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#casStakePoolDelegation"><span class="hs-identifier hs-var">casStakePoolDelegation</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((AccountState DijkstraEra
+  -&gt; Maybe (KeyHash 'StakePool) -&gt; AccountState DijkstraEra)
+ -&gt; Lens' (AccountState DijkstraEra) (Maybe (KeyHash 'StakePool)))
+-&gt; (AccountState DijkstraEra
+    -&gt; Maybe (KeyHash 'StakePool) -&gt; AccountState DijkstraEra)
+-&gt; Lens' (AccountState DijkstraEra) (Maybe (KeyHash 'StakePool))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679350400"><span class="annot"><span class="annottext">AccountState DijkstraEra
+</span><a href="#local-6989586621679350400"><span class="hs-identifier hs-var">cas</span></a></span></span><span> </span><span id="local-6989586621679350401"><span class="annot"><span class="annottext">Maybe (KeyHash 'StakePool)
+</span><a href="#local-6989586621679350401"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-26"></span><span>      </span><span class="annot"><span class="annottext">AccountState DijkstraEra
+</span><a href="#local-6989586621679350400"><span class="hs-identifier hs-var">cas</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#casStakePoolDelegation"><span class="hs-identifier hs-var">casStakePoolDelegation</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier hs-type">maybeToStrictMaybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679350401"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679350404"><span class="annot"><span class="annottext">unregisterAccount :: Credential 'Staking
+-&gt; Accounts DijkstraEra
+-&gt; (Maybe (AccountState DijkstraEra), Accounts DijkstraEra)
+</span><a href="#local-6989586621679350404"><span class="hs-identifier hs-var hs-var hs-var hs-var">unregisterAccount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+-&gt; Accounts DijkstraEra
+-&gt; (Maybe (AccountState DijkstraEra), Accounts DijkstraEra)
+forall era.
+EraAccounts era =&gt;
+Credential 'Staking
+-&gt; Accounts era -&gt; (Maybe (AccountState era), Accounts era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#unregisterConwayAccount"><span class="hs-identifier hs-var">unregisterConwayAccount</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679350410"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#ConwayEraAccounts"><span class="hs-identifier hs-type">ConwayEraAccounts</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679350419"><span class="annot"><span class="annottext">dRepDelegationAccountStateL :: Lens' (AccountState DijkstraEra) (Maybe DRep)
+</span><a href="#local-6989586621679350419"><span class="hs-identifier hs-var hs-var hs-var hs-var">dRepDelegationAccountStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><span class="annottext">(AccountState DijkstraEra -&gt; Maybe DRep)
+-&gt; (AccountState DijkstraEra
+    -&gt; Maybe DRep -&gt; AccountState DijkstraEra)
+-&gt; Lens' (AccountState DijkstraEra) (Maybe DRep)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictMaybe DRep -&gt; Maybe DRep
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe DRep -&gt; Maybe DRep)
+-&gt; (ConwayAccountState DijkstraEra -&gt; StrictMaybe DRep)
+-&gt; ConwayAccountState DijkstraEra
+-&gt; Maybe DRep
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ConwayAccountState DijkstraEra -&gt; StrictMaybe DRep
+forall era. ConwayAccountState era -&gt; StrictMaybe DRep
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#casDRepDelegation"><span class="hs-identifier hs-var">casDRepDelegation</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((AccountState DijkstraEra
+  -&gt; Maybe DRep -&gt; AccountState DijkstraEra)
+ -&gt; Lens' (AccountState DijkstraEra) (Maybe DRep))
+-&gt; (AccountState DijkstraEra
+    -&gt; Maybe DRep -&gt; AccountState DijkstraEra)
+-&gt; Lens' (AccountState DijkstraEra) (Maybe DRep)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679350422"><span class="annot"><span class="annottext">AccountState DijkstraEra
+</span><a href="#local-6989586621679350422"><span class="hs-identifier hs-var">cas</span></a></span></span><span> </span><span id="local-6989586621679350423"><span class="annot"><span class="annottext">Maybe DRep
+</span><a href="#local-6989586621679350423"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-33"></span><span>      </span><span class="annot"><span class="annottext">AccountState DijkstraEra
+</span><a href="#local-6989586621679350422"><span class="hs-identifier hs-var">cas</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.Account.html#casDRepDelegation"><span class="hs-identifier hs-var">casDRepDelegation</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier hs-type">maybeToStrictMaybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679350423"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-34"></span></pre></body></html>

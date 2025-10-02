@@ -1,0 +1,301 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Core.html"><span class="hs-identifier">Cardano.Ledger.Conway.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier">EraTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html"><span class="hs-identifier">Cardano.Ledger.Conway.TxCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCert"><span class="hs-identifier">ConwayTxCert</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html"><span class="hs-identifier">Cardano.Ledger.Conway.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#getConwayWitsVKeyNeeded"><span class="hs-identifier">getConwayWitsVKeyNeeded</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#UTxOState"><span class="hs-identifier">UTxOState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html"><span class="hs-identifier">Cardano.Ledger.TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier">TxId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html"><span class="hs-identifier">Control.State.Transition.Extended</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Bifunctor</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Bifunctor</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Coerce</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">coerce</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Foreign.API.html"><span class="hs-identifier">MAlonzo.Code.Ledger.Foreign.API</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Agda</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.html"><span class="hs-identifier">Prettyprinter</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PP</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecSpecRule"><span class="hs-identifier">ExecSpecRule</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier">SpecTranslate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#runFromAgdaFunction"><span class="hs-identifier">runFromAgdaFunction</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#runSpecTransM"><span class="hs-identifier">runSpecTransM</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base.html#externalFunctions"><span class="hs-identifier">externalFunctions</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src/Test.Cardano.Ledger.Constrained.Conway.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src/Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier">UtxoExecContext</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.TreeDiff.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.TreeDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#showExpr"><span class="hs-identifier">showExpr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Utils</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#runSTS"><span class="hs-identifier">runSTS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679514471"><span id="local-6989586621679514478"><span id="local-6989586621679514494"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier hs-type">SpecTranslate</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayTxCert"><span class="hs-identifier hs-type">ConwayTxCert</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecSpecRule"><span class="hs-identifier hs-type">ExecSpecRule</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;UTXOW&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span></span></span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ExecContext"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecContext"><span class="hs-identifier hs-var">ExecContext</span></a></span></span><span> </span><span class="annot"><span class="hs-string">&quot;UTXOW&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src/Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679515020"><span class="annot"><span class="annottext">runAgdaRule :: HasCallStack =&gt;
+SpecTRC &quot;UTXOW&quot; ConwayEra
+-&gt; Either Text (SpecState &quot;UTXOW&quot; ConwayEra)
+</span><a href="#local-6989586621679515020"><span class="hs-identifier hs-var hs-var hs-var hs-var">runAgdaRule</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SpecEnvironment &quot;UTXOW&quot; ConwayEra
+ -&gt; SpecState &quot;UTXOW&quot; ConwayEra
+ -&gt; SpecSignal &quot;UTXOW&quot; ConwayEra
+ -&gt; ComputationResult Text (SpecState &quot;UTXOW&quot; ConwayEra))
+-&gt; SpecTRC &quot;UTXOW&quot; ConwayEra
+-&gt; Either Text (SpecState &quot;UTXOW&quot; ConwayEra)
+forall (rule :: Symbol) era.
+(SpecEnvironment rule era
+ -&gt; SpecState rule era
+ -&gt; SpecSignal rule era
+ -&gt; ComputationResult Text (SpecState rule era))
+-&gt; SpecTRC rule era -&gt; Either Text (SpecState rule era)
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#runFromAgdaFunction"><span class="hs-identifier hs-var">runFromAgdaFunction</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">T_ExternalFunctions_8
+-&gt; UTxOEnv
+-&gt; UTxOState
+-&gt; Tx
+-&gt; T_ComputationResult_44 Text UTxOState
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Utxo.html#utxowStep"><span class="hs-identifier hs-var">Agda.utxowStep</span></a></span><span> </span><span class="annot"><span class="annottext">T_ExternalFunctions_8
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base.html#externalFunctions"><span class="hs-identifier hs-var">externalFunctions</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679515191"><span class="annot"><span class="annottext">extraInfo :: HasCallStack =&gt;
+Globals
+-&gt; ExecContext &quot;UTXOW&quot; ConwayEra
+-&gt; TRC (EraRule &quot;UTXOW&quot; ConwayEra)
+-&gt; Either
+     Text
+     (State (EraRule &quot;UTXOW&quot; ConwayEra),
+      [Event (EraRule &quot;UTXOW&quot; ConwayEra)])
+-&gt; Doc AnsiStyle
+</span><a href="#local-6989586621679515191"><span class="hs-identifier hs-var hs-var hs-var hs-var">extraInfo</span></a></span></span><span> </span><span id="local-6989586621679515193"><span class="annot"><span class="annottext">Globals
+</span><a href="#local-6989586621679515193"><span class="hs-identifier hs-var">globals</span></a></span></span><span> </span><span id="local-6989586621679515194"><span class="annot"><span class="annottext">ExecContext &quot;UTXOW&quot; ConwayEra
+</span><a href="#local-6989586621679515194"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span id="local-6989586621679515195"><span class="annot"><span class="annottext">trc :: TRC (EraRule &quot;UTXOW&quot; ConwayEra)
+</span><a href="#local-6989586621679515195"><span class="hs-identifier hs-var">trc</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679515197"><span class="annot"><span class="annottext">Environment (EraRule &quot;UTXOW&quot; ConwayEra)
+</span><a href="#local-6989586621679515197"><span class="hs-identifier hs-var">env</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679515198"><span class="annot"><span class="annottext">State (EraRule &quot;UTXOW&quot; ConwayEra)
+</span><a href="#local-6989586621679515198"><span class="hs-identifier hs-var">st</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679515199"><span class="annot"><span class="annottext">Signal (EraRule &quot;UTXOW&quot; ConwayEra)
+</span><a href="#local-6989586621679515199"><span class="hs-identifier hs-var">sig</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Either
+  Text
+  (State (EraRule &quot;UTXOW&quot; ConwayEra),
+   [Event (EraRule &quot;UTXOW&quot; ConwayEra)])
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-keyword">let</span><span>
+</span><span id="line-52"></span><span>      </span><span id="local-6989586621679515200"><span class="annot"><span class="annottext">result :: String
+</span><a href="#local-6989586621679515200"><span class="hs-identifier hs-var hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><span class="annottext">(Text -&gt; String) -&gt; (Text -&gt; String) -&gt; Either Text Text -&gt; String
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><span class="hs-identifier hs-var">either</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><span class="hs-identifier hs-var">T.unpack</span></span><span> </span><span class="annot"><span class="annottext">(Either Text Text -&gt; String)
+-&gt; (SpecTransM (UtxoExecContext ConwayEra) Text
+    -&gt; Either Text Text)
+-&gt; SpecTransM (UtxoExecContext ConwayEra) Text
+-&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">UtxoExecContext ConwayEra
+-&gt; SpecTransM (UtxoExecContext ConwayEra) Text -&gt; Either Text Text
+forall ctx a. ctx -&gt; SpecTransM ctx a -&gt; Either Text a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#runSpecTransM"><span class="hs-identifier hs-var">runSpecTransM</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoExecContext ConwayEra
+ExecContext &quot;UTXOW&quot; ConwayEra
+</span><a href="#local-6989586621679515194"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">(SpecTransM (UtxoExecContext ConwayEra) Text -&gt; String)
+-&gt; SpecTransM (UtxoExecContext ConwayEra) Text -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-54"></span><span>          </span><span class="annot"><span class="annottext">T_ExternalFunctions_8 -&gt; UTxOEnv -&gt; UTxOState -&gt; Tx -&gt; Text
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Utxo.html#utxowDebug"><span class="hs-identifier hs-var">Agda.utxowDebug</span></a></span><span> </span><span class="annot"><span class="annottext">T_ExternalFunctions_8
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base.html#externalFunctions"><span class="hs-identifier hs-var">externalFunctions</span></a></span><span>
+</span><span id="line-55"></span><span>            </span><span class="annot"><span class="annottext">(UTxOEnv -&gt; UTxOState -&gt; Tx -&gt; Text)
+-&gt; SpecTransM (UtxoExecContext ConwayEra) UTxOEnv
+-&gt; SpecTransM (UtxoExecContext ConwayEra) (UTxOState -&gt; Tx -&gt; Text)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">UtxoEnv ConwayEra
+-&gt; SpecTransM
+     (UtxoExecContext ConwayEra) (SpecRep (UtxoEnv ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoEnv ConwayEra
+Environment (EraRule &quot;UTXOW&quot; ConwayEra)
+</span><a href="#local-6989586621679515197"><span class="hs-identifier hs-var">env</span></a></span><span>
+</span><span id="line-56"></span><span>            </span><span class="annot"><span class="annottext">SpecTransM (UtxoExecContext ConwayEra) (UTxOState -&gt; Tx -&gt; Text)
+-&gt; SpecTransM (UtxoExecContext ConwayEra) UTxOState
+-&gt; SpecTransM (UtxoExecContext ConwayEra) (Tx -&gt; Text)
+forall a b.
+SpecTransM (UtxoExecContext ConwayEra) (a -&gt; b)
+-&gt; SpecTransM (UtxoExecContext ConwayEra) a
+-&gt; SpecTransM (UtxoExecContext ConwayEra) b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">UTxOState ConwayEra
+-&gt; SpecTransM
+     (UtxoExecContext ConwayEra) (SpecRep (UTxOState ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">State (EraRule &quot;UTXOW&quot; ConwayEra)
+UTxOState ConwayEra
+</span><a href="#local-6989586621679515198"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-57"></span><span>            </span><span class="annot"><span class="annottext">SpecTransM (UtxoExecContext ConwayEra) (Tx -&gt; Text)
+-&gt; SpecTransM (UtxoExecContext ConwayEra) Tx
+-&gt; SpecTransM (UtxoExecContext ConwayEra) Text
+forall a b.
+SpecTransM (UtxoExecContext ConwayEra) (a -&gt; b)
+-&gt; SpecTransM (UtxoExecContext ConwayEra) a
+-&gt; SpecTransM (UtxoExecContext ConwayEra) b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra
+-&gt; SpecTransM (UtxoExecContext ConwayEra) (SpecRep (Tx ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra
+Signal (EraRule &quot;UTXOW&quot; ConwayEra)
+</span><a href="#local-6989586621679515199"><span class="hs-identifier hs-var">sig</span></a></span><span>
+</span><span id="line-58"></span><span>      </span><span id="local-6989586621679515208"><span class="annot"><span class="annottext">stFinal :: Either
+  Text
+  (State (EraRule &quot;UTXO&quot; ConwayEra),
+   [Event (EraRule &quot;UTXO&quot; ConwayEra)])
+</span><a href="#local-6989586621679515208"><span class="hs-identifier hs-var hs-var">stFinal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(NonEmpty (PredicateFailure (EraRule &quot;UTXO&quot; ConwayEra)) -&gt; Text)
+-&gt; Either
+     (NonEmpty (PredicateFailure (EraRule &quot;UTXO&quot; ConwayEra)))
+     (State (EraRule &quot;UTXO&quot; ConwayEra),
+      [Event (EraRule &quot;UTXO&quot; ConwayEra)])
+-&gt; Either
+     Text
+     (State (EraRule &quot;UTXO&quot; ConwayEra),
+      [Event (EraRule &quot;UTXO&quot; ConwayEra)])
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><span class="hs-identifier hs-var">first</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Text
+</span><span class="hs-identifier hs-var">T.pack</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Text)
+-&gt; (NonEmpty (ConwayUtxoPredFailure ConwayEra) -&gt; String)
+-&gt; NonEmpty (ConwayUtxoPredFailure ConwayEra)
+-&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">NonEmpty (ConwayUtxoPredFailure ConwayEra) -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either
+   (NonEmpty (PredicateFailure (EraRule &quot;UTXO&quot; ConwayEra)))
+   (State (EraRule &quot;UTXO&quot; ConwayEra),
+    [Event (EraRule &quot;UTXO&quot; ConwayEra)])
+ -&gt; Either
+      Text
+      (State (EraRule &quot;UTXO&quot; ConwayEra),
+       [Event (EraRule &quot;UTXO&quot; ConwayEra)]))
+-&gt; Either
+     (NonEmpty (PredicateFailure (EraRule &quot;UTXO&quot; ConwayEra)))
+     (State (EraRule &quot;UTXO&quot; ConwayEra),
+      [Event (EraRule &quot;UTXO&quot; ConwayEra)])
+-&gt; Either
+     Text
+     (State (EraRule &quot;UTXO&quot; ConwayEra),
+      [Event (EraRule &quot;UTXO&quot; ConwayEra)])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall (rule :: Symbol) era.
+(BaseM (EraRule rule era) ~ ShelleyBase, STS (EraRule rule era)) =&gt;
+Globals
+-&gt; Environment (EraRule rule era)
+-&gt; State (EraRule rule era)
+-&gt; Signal (EraRule rule era)
+-&gt; Either
+     (NonEmpty (PredicateFailure (EraRule rule era)))
+     (State (EraRule rule era), [Event (EraRule rule era)])
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Utils.html#runSTS"><span class="hs-identifier hs-var">runSTS</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;UTXO&quot;</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">Globals
+</span><a href="#local-6989586621679515193"><span class="hs-identifier hs-var">globals</span></a></span><span> </span><span class="annot"><span class="annottext">Environment (EraRule &quot;UTXO&quot; ConwayEra)
+Environment (EraRule &quot;UTXOW&quot; ConwayEra)
+</span><a href="#local-6989586621679515197"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">State (EraRule &quot;UTXO&quot; ConwayEra)
+State (EraRule &quot;UTXOW&quot; ConwayEra)
+</span><a href="#local-6989586621679515198"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">Signal (EraRule &quot;UTXO&quot; ConwayEra)
+Signal (EraRule &quot;UTXOW&quot; ConwayEra)
+</span><a href="#local-6989586621679515199"><span class="hs-identifier hs-var">sig</span></a></span><span>
+</span><span id="line-59"></span><span>      </span><span id="local-6989586621679515211"><span class="annot"><span class="annottext">utxoInfo :: Doc AnsiStyle
+</span><a href="#local-6989586621679515211"><span class="hs-identifier hs-var hs-var">utxoInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (rule :: Symbol) era.
+(ExecSpecRule rule era, HasCallStack) =&gt;
+Globals
+-&gt; ExecContext rule era
+-&gt; TRC (EraRule rule era)
+-&gt; Either
+     Text (State (EraRule rule era), [Event (EraRule rule era)])
+-&gt; Doc AnsiStyle
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#extraInfo"><span class="hs-identifier hs-var">extraInfo</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-string">&quot;UTXO&quot;</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">Globals
+</span><a href="#local-6989586621679515193"><span class="hs-identifier hs-var">globals</span></a></span><span> </span><span class="annot"><span class="annottext">ExecContext &quot;UTXO&quot; ConwayEra
+ExecContext &quot;UTXOW&quot; ConwayEra
+</span><a href="#local-6989586621679515194"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TRC (ConwayUTXOW ConwayEra) -&gt; TRC (ConwayUTXO ConwayEra)
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">TRC (EraRule &quot;UTXOW&quot; ConwayEra)
+TRC (ConwayUTXOW ConwayEra)
+</span><a href="#local-6989586621679515195"><span class="hs-identifier hs-var">trc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Either
+  Text
+  (State (EraRule &quot;UTXO&quot; ConwayEra),
+   [Event (EraRule &quot;UTXO&quot; ConwayEra)])
+</span><a href="#local-6989586621679515208"><span class="hs-identifier hs-var">stFinal</span></a></span><span>
+</span><span id="line-60"></span><span>     </span><span class="hs-keyword">in</span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">[Doc AnsiStyle] -&gt; Doc AnsiStyle
+forall ann. [Doc ann] -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#vcat"><span class="hs-identifier hs-var">PP.vcat</span></a></span><span>
+</span><span id="line-62"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><span class="hs-string">&quot;UTXOW&quot;</span></span><span>
+</span><span id="line-63"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><span class="hs-string">&quot;Impl:&quot;</span></span><span>
+</span><span id="line-64"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><span class="hs-string">&quot;witsVKeyNeeded&quot;</span></span><span>
+</span><span id="line-65"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc AnsiStyle
+forall ann. String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">PP.pretty</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Doc AnsiStyle)
+-&gt; (Set (KeyHash 'Witness) -&gt; String)
+-&gt; Set (KeyHash 'Witness)
+-&gt; Doc AnsiStyle
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Set (KeyHash 'Witness) -&gt; String
+forall a. ToExpr a =&gt; a -&gt; String
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.TreeDiff.html#showExpr"><span class="hs-identifier hs-var">showExpr</span></a></span><span> </span><span class="annot"><span class="annottext">(Set (KeyHash 'Witness) -&gt; Doc AnsiStyle)
+-&gt; Set (KeyHash 'Witness) -&gt; Doc AnsiStyle
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-66"></span><span>            </span><span class="annot"><span class="annottext">forall era.
+(EraTx era, ConwayEraTxBody era) =&gt;
+UTxO era -&gt; TxBody era -&gt; Set (KeyHash 'Witness)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.UTxO.html#getConwayWitsVKeyNeeded"><span class="hs-identifier hs-var">getConwayWitsVKeyNeeded</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UTxOState ConwayEra -&gt; UTxO ConwayEra
+forall era. UTxOState era -&gt; UTxO era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#utxosUtxo"><span class="hs-identifier hs-var">utxosUtxo</span></a></span><span> </span><span class="annot"><span class="annottext">State (EraRule &quot;UTXOW&quot; ConwayEra)
+UTxOState ConwayEra
+</span><a href="#local-6989586621679515198"><span class="hs-identifier hs-var">st</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx ConwayEra
+Signal (EraRule &quot;UTXOW&quot; ConwayEra)
+</span><a href="#local-6989586621679515199"><span class="hs-identifier hs-var">sig</span></a></span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra
+-&gt; Getting (TxBody ConwayEra) (Tx ConwayEra) (TxBody ConwayEra)
+-&gt; TxBody ConwayEra
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (TxBody ConwayEra) (Tx ConwayEra) (TxBody ConwayEra)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx ConwayEra) (TxBody ConwayEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">bodyTxL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><span class="hs-string">&quot;witsVKeyHashes&quot;</span></span><span>
+</span><span id="line-68"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><span class="hs-string">&quot;Spec:&quot;</span></span><span>
+</span><span id="line-69"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Doc AnsiStyle
+forall ann. String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/prettyprinter-1.7.1-318bfdf9d6702b01d9e5968bc160c179db42096d98c6a62c9b2a9c2ecaf4b7ee/share/doc/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">PP.pretty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679515200"><span class="hs-identifier hs-var">result</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-71"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><span class="hs-string">&quot;UTXO&quot;</span></span><span>
+</span><span id="line-72"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle
+</span><a href="#local-6989586621679515211"><span class="hs-identifier hs-var">utxoInfo</span></a></span><span>
+</span><span id="line-73"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-74"></span></pre></body></html>

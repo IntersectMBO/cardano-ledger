@@ -1,0 +1,229 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Common.BlockCount</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier">BlockCount</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier">Buildable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">newtype</span><span> </span><span id="BlockCount"><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier hs-var">BlockCount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BlockCount"><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier hs-var">BlockCount</span></a></span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unBlockCount"><span class="annot"><span class="annottext">BlockCount -&gt; Word64
+</span><a href="Cardano.Chain.Common.BlockCount.html#unBlockCount"><span class="hs-identifier hs-var hs-var">unBlockCount</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679557058"><span id="local-6989586621679557063"><span class="annot"><span class="annottext">BlockCount -&gt; BlockCount -&gt; Bool
+(BlockCount -&gt; BlockCount -&gt; Bool)
+-&gt; (BlockCount -&gt; BlockCount -&gt; Bool) -&gt; Eq BlockCount
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: BlockCount -&gt; BlockCount -&gt; Bool
+== :: BlockCount -&gt; BlockCount -&gt; Bool
+$c/= :: BlockCount -&gt; BlockCount -&gt; Bool
+/= :: BlockCount -&gt; BlockCount -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557071"><span id="local-6989586621679557076"><span id="local-6989586621679557080"><span id="local-6989586621679557084"><span id="local-6989586621679557088"><span id="local-6989586621679557092"><span id="local-6989586621679557096"><span class="annot"><span class="annottext">Eq BlockCount
+Eq BlockCount =&gt;
+(BlockCount -&gt; BlockCount -&gt; Ordering)
+-&gt; (BlockCount -&gt; BlockCount -&gt; Bool)
+-&gt; (BlockCount -&gt; BlockCount -&gt; Bool)
+-&gt; (BlockCount -&gt; BlockCount -&gt; Bool)
+-&gt; (BlockCount -&gt; BlockCount -&gt; Bool)
+-&gt; (BlockCount -&gt; BlockCount -&gt; BlockCount)
+-&gt; (BlockCount -&gt; BlockCount -&gt; BlockCount)
+-&gt; Ord BlockCount
+BlockCount -&gt; BlockCount -&gt; Bool
+BlockCount -&gt; BlockCount -&gt; Ordering
+BlockCount -&gt; BlockCount -&gt; BlockCount
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: BlockCount -&gt; BlockCount -&gt; Ordering
+compare :: BlockCount -&gt; BlockCount -&gt; Ordering
+$c&lt; :: BlockCount -&gt; BlockCount -&gt; Bool
+&lt; :: BlockCount -&gt; BlockCount -&gt; Bool
+$c&lt;= :: BlockCount -&gt; BlockCount -&gt; Bool
+&lt;= :: BlockCount -&gt; BlockCount -&gt; Bool
+$c&gt; :: BlockCount -&gt; BlockCount -&gt; Bool
+&gt; :: BlockCount -&gt; BlockCount -&gt; Bool
+$c&gt;= :: BlockCount -&gt; BlockCount -&gt; Bool
+&gt;= :: BlockCount -&gt; BlockCount -&gt; Bool
+$cmax :: BlockCount -&gt; BlockCount -&gt; BlockCount
+max :: BlockCount -&gt; BlockCount -&gt; BlockCount
+$cmin :: BlockCount -&gt; BlockCount -&gt; BlockCount
+min :: BlockCount -&gt; BlockCount -&gt; BlockCount
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557102"><span id="local-6989586621679557107"><span id="local-6989586621679557111"><span id="local-6989586621679557115"><span id="local-6989586621679557119"><span id="local-6989586621679557123"><span id="local-6989586621679557127"><span id="local-6989586621679557131"><span class="annot"><span class="annottext">Int -&gt; BlockCount
+BlockCount -&gt; Int
+BlockCount -&gt; [BlockCount]
+BlockCount -&gt; BlockCount
+BlockCount -&gt; BlockCount -&gt; [BlockCount]
+BlockCount -&gt; BlockCount -&gt; BlockCount -&gt; [BlockCount]
+(BlockCount -&gt; BlockCount)
+-&gt; (BlockCount -&gt; BlockCount)
+-&gt; (Int -&gt; BlockCount)
+-&gt; (BlockCount -&gt; Int)
+-&gt; (BlockCount -&gt; [BlockCount])
+-&gt; (BlockCount -&gt; BlockCount -&gt; [BlockCount])
+-&gt; (BlockCount -&gt; BlockCount -&gt; [BlockCount])
+-&gt; (BlockCount -&gt; BlockCount -&gt; BlockCount -&gt; [BlockCount])
+-&gt; Enum BlockCount
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: BlockCount -&gt; BlockCount
+succ :: BlockCount -&gt; BlockCount
+$cpred :: BlockCount -&gt; BlockCount
+pred :: BlockCount -&gt; BlockCount
+$ctoEnum :: Int -&gt; BlockCount
+toEnum :: Int -&gt; BlockCount
+$cfromEnum :: BlockCount -&gt; Int
+fromEnum :: BlockCount -&gt; Int
+$cenumFrom :: BlockCount -&gt; [BlockCount]
+enumFrom :: BlockCount -&gt; [BlockCount]
+$cenumFromThen :: BlockCount -&gt; BlockCount -&gt; [BlockCount]
+enumFromThen :: BlockCount -&gt; BlockCount -&gt; [BlockCount]
+$cenumFromTo :: BlockCount -&gt; BlockCount -&gt; [BlockCount]
+enumFromTo :: BlockCount -&gt; BlockCount -&gt; [BlockCount]
+$cenumFromThenTo :: BlockCount -&gt; BlockCount -&gt; BlockCount -&gt; [BlockCount]
+enumFromThenTo :: BlockCount -&gt; BlockCount -&gt; BlockCount -&gt; [BlockCount]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557137"><span id="local-6989586621679557141"><span id="local-6989586621679557144"><span id="local-6989586621679557154"><span class="annot"><span class="annottext">ReadPrec [BlockCount]
+ReadPrec BlockCount
+Int -&gt; ReadS BlockCount
+ReadS [BlockCount]
+(Int -&gt; ReadS BlockCount)
+-&gt; ReadS [BlockCount]
+-&gt; ReadPrec BlockCount
+-&gt; ReadPrec [BlockCount]
+-&gt; Read BlockCount
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+$creadsPrec :: Int -&gt; ReadS BlockCount
+readsPrec :: Int -&gt; ReadS BlockCount
+$creadList :: ReadS [BlockCount]
+readList :: ReadS [BlockCount]
+$creadPrec :: ReadPrec BlockCount
+readPrec :: ReadPrec BlockCount
+$creadListPrec :: ReadPrec [BlockCount]
+readListPrec :: ReadPrec [BlockCount]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557158"><span id="local-6989586621679557164"><span id="local-6989586621679557168"><span class="annot"><span class="annottext">Int -&gt; BlockCount -&gt; ShowS
+[BlockCount] -&gt; ShowS
+BlockCount -&gt; String
+(Int -&gt; BlockCount -&gt; ShowS)
+-&gt; (BlockCount -&gt; String)
+-&gt; ([BlockCount] -&gt; ShowS)
+-&gt; Show BlockCount
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BlockCount -&gt; ShowS
+showsPrec :: Int -&gt; BlockCount -&gt; ShowS
+$cshow :: BlockCount -&gt; String
+show :: BlockCount -&gt; String
+$cshowList :: [BlockCount] -&gt; ShowS
+showList :: [BlockCount] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557172"><span class="annot"><span class="annottext">BlockCount -&gt; Builder
+(BlockCount -&gt; Builder) -&gt; Buildable BlockCount
+forall p. (p -&gt; Builder) -&gt; Buildable p
+$cbuild :: BlockCount -&gt; Builder
+build :: BlockCount -&gt; Builder
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier hs-var hs-var hs-var hs-var">Buildable</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557179"><span id="local-6989586621679557181"><span class="annot"><span class="annottext">(forall x. BlockCount -&gt; Rep BlockCount x)
+-&gt; (forall x. Rep BlockCount x -&gt; BlockCount) -&gt; Generic BlockCount
+forall x. Rep BlockCount x -&gt; BlockCount
+forall x. BlockCount -&gt; Rep BlockCount x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. BlockCount -&gt; Rep BlockCount x
+from :: forall x. BlockCount -&gt; Rep BlockCount x
+$cto :: forall x. Rep BlockCount x -&gt; BlockCount
+to :: forall x. Rep BlockCount x -&gt; BlockCount
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557185"><span class="annot"><span class="annottext">BlockCount -&gt; ()
+(BlockCount -&gt; ()) -&gt; NFData BlockCount
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: BlockCount -&gt; ()
+rnf :: BlockCount -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679557192"><span id="local-6989586621679557197"><span id="local-6989586621679557201"><span class="annot"><span class="annottext">Context -&gt; BlockCount -&gt; IO (Maybe ThunkInfo)
+Proxy BlockCount -&gt; String
+(Context -&gt; BlockCount -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; BlockCount -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy BlockCount -&gt; String)
+-&gt; NoThunks BlockCount
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; BlockCount -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; BlockCount -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; BlockCount -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; BlockCount -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy BlockCount -&gt; String
+showTypeOf :: Proxy BlockCount -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679557210"><span id="local-6989586621679557214"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier hs-type">BlockCount</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>  </span><span id="local-6989586621679557219"><span class="annot"><span class="annottext">toCBOR :: BlockCount -&gt; Encoding
+</span><a href="#local-6989586621679557219"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BlockCount -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679557225"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier hs-type">BlockCount</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679557231"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s BlockCount
+</span><a href="#local-6989586621679557231"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s BlockCount
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679557238"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier hs-type">BlockCount</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679557245"><span class="annot"><span class="annottext">encCBOR :: BlockCount -&gt; Encoding
+</span><a href="#local-6989586621679557245"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; Encoding)
+-&gt; (BlockCount -&gt; Word64) -&gt; BlockCount -&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">BlockCount -&gt; Word64
+</span><a href="Cardano.Chain.Common.BlockCount.html#unBlockCount"><span class="hs-identifier hs-var">unBlockCount</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679557251"><span class="annot"><span class="annottext">encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy BlockCount -&gt; Size
+</span><a href="#local-6989586621679557251"><span class="hs-identifier hs-var hs-var hs-var hs-var">encodedSizeExpr</span></a></span></span><span> </span><span id="local-6989586621679557253"><span class="annot"><span class="annottext">forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><a href="#local-6989586621679557253"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span id="local-6989586621679557254"><span class="annot"><span class="annottext">Proxy BlockCount
+</span><a href="#local-6989586621679557254"><span class="hs-identifier hs-var">pxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy Word64 -&gt; Size
+forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><a href="#local-6989586621679557253"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlockCount -&gt; Word64
+</span><a href="Cardano.Chain.Common.BlockCount.html#unBlockCount"><span class="hs-identifier hs-var">unBlockCount</span></a></span><span> </span><span class="annot"><span class="annottext">(BlockCount -&gt; Word64) -&gt; Proxy BlockCount -&gt; Proxy Word64
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Proxy BlockCount
+</span><a href="#local-6989586621679557254"><span class="hs-identifier hs-var">pxy</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679557260"><span id="local-6989586621679557263"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier hs-type">BlockCount</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679557270"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s BlockCount
+</span><a href="#local-6989586621679557270"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; BlockCount
+</span><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier hs-var">BlockCount</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; BlockCount) -&gt; Decoder s Word64 -&gt; Decoder s BlockCount
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Word64
+forall s. Decoder s Word64
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-37"></span></pre></body></html>

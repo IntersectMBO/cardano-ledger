@@ -1,0 +1,1165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE EmptyDataDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-16"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-17"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-18"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Plutus.Data</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier">PlutusData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#MkData"><span class="hs-identifier">MkData</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#unData"><span class="hs-identifier">unData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#DataHash"><span class="hs-identifier">DataHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#upgradeData"><span class="hs-identifier">upgradeData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#hashData"><span class="hs-identifier">hashData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#getPlutusData"><span class="hs-identifier">getPlutusData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#dataHashSize"><span class="hs-identifier">dataHashSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier">BinaryData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#hashBinaryData"><span class="hs-identifier">hashBinaryData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#makeBinaryData"><span class="hs-identifier">makeBinaryData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#binaryDataToData"><span class="hs-identifier">binaryDataToData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#dataToBinaryData"><span class="hs-identifier">dataToBinaryData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier">Datum</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#mkInlineDatum"><span class="hs-identifier">mkInlineDatum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#mkHashedDatum"><span class="hs-identifier">mkHashedDatum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#datumDataHash"><span class="hs-identifier">datumDataHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#translateDatum"><span class="hs-identifier">translateDatum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier">StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier">Annotator</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier">DecoderError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull%27"><span class="hs-identifier">decodeFull'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeNestedCborBytes"><span class="hs-identifier">decodeNestedCborBytes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeTag"><span class="hs-identifier">encodeTag</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#fromPlainDecoder"><span class="hs-identifier">fromPlainDecoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#fromPlainEncoding"><span class="hs-identifier">fromPlainEncoding</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Coders.html"><span class="hs-identifier">Cardano.Ledger.Binary.Coders</span></a></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.MemoBytes.html"><span class="hs-identifier">Cardano.Ledger.MemoBytes</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#Mem"><span class="hs-identifier">Mem</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#MemoBytes"><span class="hs-identifier">MemoBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#MemoHashIndex"><span class="hs-identifier">MemoHashIndex</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#Memoized"><span class="hs-identifier">Memoized</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#RawType"><span class="hs-identifier">RawType</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#getMemoRawType"><span class="hs-identifier">getMemoRawType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#getMemoSafeHash"><span class="hs-identifier">getMemoSafeHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#mkMemoizedEra"><span class="hs-identifier">mkMemoizedEra</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html"><span class="hs-identifier">Cardano.Ledger.MemoBytes.Internal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#mkMemoBytesStrict"><span class="hs-identifier">mkMemoBytesStrict</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/serialise-0.2.6.1-2752a82f9b20292826224499920261331d0cff26dacce3346239cc2bf786d2f1/share/doc/html/src/Codec.Serialise.html"><span class="hs-identifier">Codec.Serialise</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Cborg</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/serialise-0.2.6.1-2752a82f9b20292826224499920261331d0cff26dacce3346239cc2bf786d2f1/share/doc/html/src/Codec.Serialise.Class.html#Serialise"><span class="hs-identifier">Serialise</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.Internal.html#Value"><span class="hs-identifier">Value</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.Internal.html#Null"><span class="hs-identifier">Null</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Short</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ShortByteString</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">fromShort</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">toShort</span></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Coerce</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">coerce</span></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html"><span class="hs-identifier">Data.MemPack</span></a></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Typeable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Typeable</span></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.54.0.0-cc90923e1d4848db7788cc174c20b16ae21e66915548bbaadb7b5dd5e94d4ab2/share/doc/html/src/PlutusLedgerApi.V1.html"><span class="hs-identifier">PlutusLedgerApi.V1</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PV1</span></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- ============================================================================</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- the newtype Data is a wrapper around the type that Plutus expects as data.</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- The newtype will memoize the serialized bytes.</span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- | This is a wrapper with a phantom era for PV1.Data, since we need</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- something with kind (* -&gt; *) for MemoBytes</span><span>
+</span><span id="line-83"></span><span class="hs-keyword">newtype</span><span> </span><span id="PlutusData"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-var">PlutusData</span></a></span></span><span> </span><span id="local-6989586621679474305"><span class="annot"><a href="#local-6989586621679474305"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PlutusData"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-var">PlutusData</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#Data"><span class="hs-identifier hs-type">PV1.Data</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679474554"><span id="local-6989586621679474559"><span class="annot"><span class="annottext">PlutusData era -&gt; PlutusData era -&gt; Bool
+(PlutusData era -&gt; PlutusData era -&gt; Bool)
+-&gt; (PlutusData era -&gt; PlutusData era -&gt; Bool)
+-&gt; Eq (PlutusData era)
+forall era. PlutusData era -&gt; PlutusData era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era. PlutusData era -&gt; PlutusData era -&gt; Bool
+== :: PlutusData era -&gt; PlutusData era -&gt; Bool
+$c/= :: forall era. PlutusData era -&gt; PlutusData era -&gt; Bool
+/= :: PlutusData era -&gt; PlutusData era -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474565"><span id="local-6989586621679474571"><span class="annot"><span class="annottext">(forall x. PlutusData era -&gt; Rep (PlutusData era) x)
+-&gt; (forall x. Rep (PlutusData era) x -&gt; PlutusData era)
+-&gt; Generic (PlutusData era)
+forall x. Rep (PlutusData era) x -&gt; PlutusData era
+forall x. PlutusData era -&gt; Rep (PlutusData era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x. Rep (PlutusData era) x -&gt; PlutusData era
+forall era x. PlutusData era -&gt; Rep (PlutusData era) x
+$cfrom :: forall era x. PlutusData era -&gt; Rep (PlutusData era) x
+from :: forall x. PlutusData era -&gt; Rep (PlutusData era) x
+$cto :: forall era x. Rep (PlutusData era) x -&gt; PlutusData era
+to :: forall x. Rep (PlutusData era) x -&gt; PlutusData era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474578"><span id="local-6989586621679474583"><span id="local-6989586621679474587"><span class="annot"><span class="annottext">Int -&gt; PlutusData era -&gt; ShowS
+[PlutusData era] -&gt; ShowS
+PlutusData era -&gt; String
+(Int -&gt; PlutusData era -&gt; ShowS)
+-&gt; (PlutusData era -&gt; String)
+-&gt; ([PlutusData era] -&gt; ShowS)
+-&gt; Show (PlutusData era)
+forall era. Int -&gt; PlutusData era -&gt; ShowS
+forall era. [PlutusData era] -&gt; ShowS
+forall era. PlutusData era -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall era. Int -&gt; PlutusData era -&gt; ShowS
+showsPrec :: Int -&gt; PlutusData era -&gt; ShowS
+$cshow :: forall era. PlutusData era -&gt; String
+show :: PlutusData era -&gt; String
+$cshowList :: forall era. [PlutusData era] -&gt; ShowS
+showList :: [PlutusData era] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474593"><span class="annot"><span class="annottext">PlutusData era -&gt; ()
+(PlutusData era -&gt; ()) -&gt; NFData (PlutusData era)
+forall era. PlutusData era -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: forall era. PlutusData era -&gt; ()
+rnf :: PlutusData era -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474600"><span id="local-6989586621679474605"><span id="local-6989586621679474609"><span class="annot"><span class="annottext">Context -&gt; PlutusData era -&gt; IO (Maybe ThunkInfo)
+Proxy (PlutusData era) -&gt; String
+(Context -&gt; PlutusData era -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; PlutusData era -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (PlutusData era) -&gt; String)
+-&gt; NoThunks (PlutusData era)
+forall era. Context -&gt; PlutusData era -&gt; IO (Maybe ThunkInfo)
+forall era. Proxy (PlutusData era) -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: forall era. Context -&gt; PlutusData era -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; PlutusData era -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall era. Context -&gt; PlutusData era -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; PlutusData era -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: forall era. Proxy (PlutusData era) -&gt; String
+showTypeOf :: Proxy (PlutusData era) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474615"><span id="local-6989586621679474620"><span id="local-6989586621679474624"><span id="local-6989586621679474628"><span class="annot"><span class="annottext">[PlutusData era] -&gt; Encoding
+PlutusData era -&gt; Encoding
+(PlutusData era -&gt; Encoding)
+-&gt; (forall s. Decoder s (PlutusData era))
+-&gt; ([PlutusData era] -&gt; Encoding)
+-&gt; (forall s. Decoder s [PlutusData era])
+-&gt; Serialise (PlutusData era)
+forall s. Decoder s [PlutusData era]
+forall s. Decoder s (PlutusData era)
+forall era. [PlutusData era] -&gt; Encoding
+forall era. PlutusData era -&gt; Encoding
+forall a.
+(a -&gt; Encoding)
+-&gt; (forall s. Decoder s a)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (forall s. Decoder s [a])
+-&gt; Serialise a
+forall era s. Decoder s [PlutusData era]
+forall era s. Decoder s (PlutusData era)
+$cencode :: forall era. PlutusData era -&gt; Encoding
+encode :: PlutusData era -&gt; Encoding
+$cdecode :: forall era s. Decoder s (PlutusData era)
+decode :: forall s. Decoder s (PlutusData era)
+$cencodeList :: forall era. [PlutusData era] -&gt; Encoding
+encodeList :: [PlutusData era] -&gt; Encoding
+$cdecodeList :: forall era s. Decoder s [PlutusData era]
+decodeList :: forall s. Decoder s [PlutusData era]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/serialise-0.2.6.1-2752a82f9b20292826224499920261331d0cff26dacce3346239cc2bf786d2f1/share/doc/html/src/Codec.Serialise.Class.html#Serialise"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Cborg.Serialise</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474192"><span id="local-6989586621679474639"><span id="local-6989586621679474642"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679474192"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-type">PlutusData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474192"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679474646"><span class="annot"><span class="annottext">encCBOR :: PlutusData era -&gt; Encoding
+</span><a href="#local-6989586621679474646"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-type">PlutusData</span></a></span><span> </span><span id="local-6989586621679474648"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679474648"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#fromPlainEncoding"><span class="hs-identifier hs-var">fromPlainEncoding</span></a></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; Encoding) -&gt; Encoding -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Encoding
+forall a. Serialise a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/serialise-0.2.6.1-2752a82f9b20292826224499920261331d0cff26dacce3346239cc2bf786d2f1/share/doc/html/src/Codec.Serialise.Class.html#encode"><span class="hs-identifier hs-var">Cborg.encode</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679474648"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474203"><span id="local-6989586621679474656"><span id="local-6989586621679474660"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679474203"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-type">PlutusData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474203"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621679474664"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (PlutusData era)
+</span><a href="#local-6989586621679474664"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s (PlutusData era) -&gt; Decoder s (PlutusData era)
+forall s a. Decoder s a -&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#fromPlainDecoder"><span class="hs-identifier hs-var">fromPlainDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (PlutusData era)
+forall s. Decoder s (PlutusData era)
+forall a s. Serialise a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/serialise-0.2.6.1-2752a82f9b20292826224499920261331d0cff26dacce3346239cc2bf786d2f1/share/doc/html/src/Codec.Serialise.Class.html#decode"><span class="hs-identifier hs-var">Cborg.decode</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474209"><span id="local-6989586621679474674"><span id="local-6989586621679474678"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679474209"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-type">PlutusData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474209"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679474686"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (Annotator (PlutusData era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PlutusData era -&gt; Annotator (PlutusData era)
+forall a. a -&gt; Annotator a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(PlutusData era -&gt; Annotator (PlutusData era))
+-&gt; Decoder s (PlutusData era)
+-&gt; Decoder s (Annotator (PlutusData era))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (PlutusData era) -&gt; Decoder s (PlutusData era)
+forall s a. Decoder s a -&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#fromPlainDecoder"><span class="hs-identifier hs-var">fromPlainDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (PlutusData era)
+forall s. Decoder s (PlutusData era)
+forall a s. Serialise a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/serialise-0.2.6.1-2752a82f9b20292826224499920261331d0cff26dacce3346239cc2bf786d2f1/share/doc/html/src/Codec.Serialise.Class.html#decode"><span class="hs-identifier hs-var">Cborg.decode</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">newtype</span><span> </span><span id="Data"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span></span><span> </span><span id="local-6989586621679474375"><span class="annot"><a href="#local-6989586621679474375"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkData"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#MkData"><span class="hs-identifier hs-var">MkData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#MemoBytes"><span class="hs-identifier hs-type">MemoBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-type">PlutusData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474375"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679474689"><span id="local-6989586621679474695"><span class="annot"><span class="annottext">Data era -&gt; Data era -&gt; Bool
+(Data era -&gt; Data era -&gt; Bool)
+-&gt; (Data era -&gt; Data era -&gt; Bool) -&gt; Eq (Data era)
+forall era. Data era -&gt; Data era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era. Data era -&gt; Data era -&gt; Bool
+== :: Data era -&gt; Data era -&gt; Bool
+$c/= :: forall era. Data era -&gt; Data era -&gt; Bool
+/= :: Data era -&gt; Data era -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474701"><span id="local-6989586621679474703"><span class="annot"><span class="annottext">(forall x. Data era -&gt; Rep (Data era) x)
+-&gt; (forall x. Rep (Data era) x -&gt; Data era) -&gt; Generic (Data era)
+forall x. Rep (Data era) x -&gt; Data era
+forall x. Data era -&gt; Rep (Data era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x. Rep (Data era) x -&gt; Data era
+forall era x. Data era -&gt; Rep (Data era) x
+$cfrom :: forall era x. Data era -&gt; Rep (Data era) x
+from :: forall x. Data era -&gt; Rep (Data era) x
+$cto :: forall era x. Rep (Data era) x -&gt; Data era
+to :: forall x. Rep (Data era) x -&gt; Data era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679474706"><span id="local-6989586621679474711"><span id="local-6989586621679474715"><span class="annot"><span class="annottext">Data era -&gt; Int
+Data era -&gt; ByteString
+(Data era -&gt; ByteString)
+-&gt; (Data era -&gt; Int)
+-&gt; (forall i. Proxy i -&gt; Data era -&gt; SafeHash i)
+-&gt; SafeToHash (Data era)
+forall i. Proxy i -&gt; Data era -&gt; SafeHash i
+forall era. Data era -&gt; Int
+forall era. Data era -&gt; ByteString
+forall t.
+(t -&gt; ByteString)
+-&gt; (t -&gt; Int)
+-&gt; (forall i. Proxy i -&gt; t -&gt; SafeHash i)
+-&gt; SafeToHash t
+forall era i. Proxy i -&gt; Data era -&gt; SafeHash i
+$coriginalBytes :: forall era. Data era -&gt; ByteString
+originalBytes :: Data era -&gt; ByteString
+$coriginalBytesSize :: forall era. Data era -&gt; Int
+originalBytesSize :: Data era -&gt; Int
+$cmakeHashWithExplicitProxys :: forall era i. Proxy i -&gt; Data era -&gt; SafeHash i
+makeHashWithExplicitProxys :: forall i. Proxy i -&gt; Data era -&gt; SafeHash i
+</span><a href="Cardano.Ledger.Hashes.html#SafeToHash"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">SafeToHash</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474725"><span id="local-6989586621679474733"><span id="local-6989586621679474740"><span class="annot"><span class="annottext">Typeable (Data era)
+Typeable (Data era) =&gt;
+(Data era -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy (Data era) -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [Data era] -&gt; Size)
+-&gt; ToCBOR (Data era)
+Data era -&gt; Encoding
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Data era] -&gt; Size
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (Data era) -&gt; Size
+forall era. Typeable era =&gt; Typeable (Data era)
+forall era. Typeable era =&gt; Data era -&gt; Encoding
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; ToCBOR a
+forall era.
+Typeable era =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Data era] -&gt; Size
+forall era.
+Typeable era =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (Data era) -&gt; Size
+$ctoCBOR :: forall era. Typeable era =&gt; Data era -&gt; Encoding
+toCBOR :: Data era -&gt; Encoding
+$cencodedSizeExpr :: forall era.
+Typeable era =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (Data era) -&gt; Size
+encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (Data era) -&gt; Size
+$cencodedListSizeExpr :: forall era.
+Typeable era =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Data era] -&gt; Size
+encodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Data era] -&gt; Size
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474750"><span class="annot"><span class="annottext">Data era -&gt; ()
+(Data era -&gt; ()) -&gt; NFData (Data era)
+forall era. Data era -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: forall era. Data era -&gt; ()
+rnf :: Data era -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474761"><span id="local-6989586621679474767"><span id="local-6989586621679474772"><span class="annot"><span class="annottext">Typeable (Data era)
+Typeable (Data era) =&gt;
+(forall s. Decoder s (Data era))
+-&gt; (forall s. Proxy (Data era) -&gt; Decoder s ())
+-&gt; (Proxy (Data era) -&gt; Text)
+-&gt; DecCBOR (Data era)
+Proxy (Data era) -&gt; Text
+forall s. Decoder s (Data era)
+forall era. Typeable era =&gt; Typeable (Data era)
+forall era. Typeable era =&gt; Proxy (Data era) -&gt; Text
+forall a.
+Typeable a =&gt;
+(forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall era s. Typeable era =&gt; Decoder s (Data era)
+forall era s. Typeable era =&gt; Proxy (Data era) -&gt; Decoder s ()
+forall s. Proxy (Data era) -&gt; Decoder s ()
+$cdecCBOR :: forall era s. Typeable era =&gt; Decoder s (Data era)
+decCBOR :: forall s. Decoder s (Data era)
+$cdropCBOR :: forall era s. Typeable era =&gt; Proxy (Data era) -&gt; Decoder s ()
+dropCBOR :: forall s. Proxy (Data era) -&gt; Decoder s ()
+$clabel :: forall era. Typeable era =&gt; Proxy (Data era) -&gt; Text
+label :: Proxy (Data era) -&gt; Text
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="annot"><span class="hs-comment">-- | Encodes memoized bytes created upon construction.</span></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474248"><span id="local-6989586621679474782"><span id="local-6989586621679474787"><span id="local-6989586621679474790"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679474248"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474248"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474251"><span id="local-6989586621679474793"><span id="local-6989586621679474798"><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#Memoized"><span class="hs-identifier hs-type">Memoized</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474251"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="RawType"><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#RawType"><span class="hs-identifier hs-var">RawType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474251"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-type">PlutusData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474251"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span id="local-6989586621679474809"><span id="local-6989586621679474816"><span id="local-6989586621679474822"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">via</span><span>
+</span><span id="line-106"></span><span>  </span><span id="local-6989586621679474258"><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#Mem"><span class="hs-identifier hs-type">Mem</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-type">PlutusData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-keyword">instance</span><span>
+</span><span id="line-108"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474258"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span id="local-6989586621679474261"><span id="local-6989586621679474834"><span id="local-6989586621679474841"><span id="local-6989586621679474845"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474261"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="MemoHashIndex"><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#MemoHashIndex"><span class="hs-identifier hs-var">MemoHashIndex</span></a></span></span><span> </span><span id="local-6989586621679474847"><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-type">PlutusData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474847"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentData"><span class="hs-identifier hs-type">EraIndependentData</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474267"><span class="annot"><a href="Cardano.Ledger.Hashes.html#HashAnnotated"><span class="hs-identifier hs-type">HashAnnotated</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474267"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentData"><span class="hs-identifier hs-type">EraIndependentData</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621679474854"><span class="annot"><span class="annottext">hashAnnotated :: Data era -&gt; SafeHash EraIndependentData
+</span><a href="#local-6989586621679474854"><span class="hs-identifier hs-var hs-var hs-var hs-var">hashAnnotated</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Data era -&gt; SafeHash EraIndependentData
+Data era -&gt; SafeHash (MemoHashIndex (RawType (Data era)))
+forall t. Memoized t =&gt; t -&gt; SafeHash (MemoHashIndex (RawType t))
+</span><a href="Cardano.Ledger.MemoBytes.Internal.html#getMemoSafeHash"><span class="hs-identifier hs-var">getMemoSafeHash</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474299"><span id="local-6989586621679474858"><span id="local-6989586621679474862"><span id="local-6989586621679474868"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679474299"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474299"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679474128"><span class="annot"><a href="#local-6989586621679474128"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474128"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#Data"><span class="hs-identifier hs-type">PV1.Data</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474128"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-121"></span><span class="hs-keyword">pattern</span><span> </span><span id="Data"><span id="%24mData"><span id="%24bData"><span class="annot"><span class="annottext">$mData :: forall {r} {era}.
+Era era =&gt;
+Data era -&gt; (Data -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bData :: forall era. Era era =&gt; Data -&gt; Data era
+</span><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span><span> </span><span class="annot"><a href="#local-6989586621679474895"><span class="hs-identifier hs-type">p</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#getMemoRawType"><span class="hs-identifier hs-type">getMemoRawType</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-type">PlutusData</span></a></span><span> </span><span id="local-6989586621679474895"><span class="annot"><a href="#local-6989586621679474895"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span><span> </span><span id="local-6989586621679474897"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679474897"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era t.
+(Era era, EncCBOR (RawType t), Memoized t) =&gt;
+RawType t -&gt; t
+</span><a href="Cardano.Ledger.MemoBytes.Internal.html#mkMemoizedEra"><span class="hs-identifier hs-var">mkMemoizedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679474128"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">(RawType (Data era) -&gt; Data era) -&gt; RawType (Data era) -&gt; Data era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; PlutusData era
+forall era. Data -&gt; PlutusData era
+</span><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-var">PlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679474897"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-pragma hs-type">Data</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span id="local-6989586621679474306"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#unData"><span class="hs-identifier hs-type">unData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474306"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#Data"><span class="hs-identifier hs-type">PV1.Data</span></a></span></span><span>
+</span><span id="line-128"></span><span id="unData"><span class="annot"><span class="annottext">unData :: forall era. Data era -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.Data.html#unData"><span class="hs-identifier hs-var hs-var">unData</span></a></span></span><span> </span><span id="local-6989586621679474899"><span class="annot"><span class="annottext">Data era
+</span><a href="#local-6989586621679474899"><span class="hs-identifier hs-var">eraData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Data era -&gt; RawType (Data era)
+forall t. Memoized t =&gt; t -&gt; RawType t
+</span><a href="Cardano.Ledger.MemoBytes.Internal.html#getMemoRawType"><span class="hs-identifier hs-var">getMemoRawType</span></a></span><span> </span><span class="annot"><span class="annottext">Data era
+</span><a href="#local-6989586621679474899"><span class="hs-identifier hs-var">eraData</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-type">PlutusData</span></a></span><span> </span><span id="local-6989586621679474900"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679474900"><span class="hs-identifier hs-var">plutusData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679474900"><span class="hs-identifier hs-var">plutusData</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- | Upgrade 'Data' from one era to another. While the underlying data will</span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- remain the same, the memoised serialisation may change to reflect the</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- versioned serialisation of the new era.</span><span>
+</span><span id="line-135"></span><span id="local-6989586621679474308"><span id="local-6989586621679474309"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#upgradeData"><span class="hs-identifier hs-type">upgradeData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474308"><span class="hs-identifier hs-type">era1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474309"><span class="hs-identifier hs-type">era2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474308"><span class="hs-identifier hs-type">era1</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474309"><span class="hs-identifier hs-type">era2</span></a></span></span></span><span>
+</span><span id="line-136"></span><span id="upgradeData"><span class="annot"><span class="annottext">upgradeData :: forall era1 era2. (Era era1, Era era2) =&gt; Data era1 -&gt; Data era2
+</span><a href="Cardano.Ledger.Plutus.Data.html#upgradeData"><span class="hs-identifier hs-var hs-var">upgradeData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span id="local-6989586621679474905"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679474905"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Data -&gt; Data era2
+forall era. Era era =&gt; Data -&gt; Data era
+</span><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679474905"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span id="local-6989586621679474906"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#getPlutusData"><span class="hs-identifier hs-type">getPlutusData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474906"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#Data"><span class="hs-identifier hs-type">PV1.Data</span></a></span></span><span>
+</span><span id="line-139"></span><span id="getPlutusData"><span class="annot"><span class="annottext">getPlutusData :: forall era. Data era -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.Data.html#getPlutusData"><span class="hs-identifier hs-var hs-var">getPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Data era -&gt; RawType (Data era)
+forall t. Memoized t =&gt; t -&gt; RawType t
+</span><a href="Cardano.Ledger.MemoBytes.Internal.html#getMemoRawType"><span class="hs-identifier hs-var">getMemoRawType</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#PlutusData"><span class="hs-identifier hs-type">PlutusData</span></a></span><span> </span><span id="local-6989586621679474908"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679474908"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679474908"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- | Inlined data must be stored in the most compact form because it contributes</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- to the memory overhead of the ledger state. Constructor is intentionally not</span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- exported, in order to prevent invalid creation of data from arbitrary binary</span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- data. Use `makeBinaryData` for smart construction.</span><span>
+</span><span id="line-145"></span><span class="hs-keyword">newtype</span><span> </span><span id="BinaryData"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-var">BinaryData</span></a></span></span><span> </span><span id="local-6989586621679474365"><span class="annot"><a href="#local-6989586621679474365"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BinaryData"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-var">BinaryData</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ShortByteString</span></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679474911"><span id="local-6989586621679474916"><span class="annot"><span class="annottext">BinaryData era -&gt; BinaryData era -&gt; Bool
+(BinaryData era -&gt; BinaryData era -&gt; Bool)
+-&gt; (BinaryData era -&gt; BinaryData era -&gt; Bool)
+-&gt; Eq (BinaryData era)
+forall era. BinaryData era -&gt; BinaryData era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era. BinaryData era -&gt; BinaryData era -&gt; Bool
+== :: BinaryData era -&gt; BinaryData era -&gt; Bool
+$c/= :: forall era. BinaryData era -&gt; BinaryData era -&gt; Bool
+/= :: BinaryData era -&gt; BinaryData era -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474921"><span id="local-6989586621679474926"><span id="local-6989586621679474930"><span class="annot"><span class="annottext">Context -&gt; BinaryData era -&gt; IO (Maybe ThunkInfo)
+Proxy (BinaryData era) -&gt; String
+(Context -&gt; BinaryData era -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; BinaryData era -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (BinaryData era) -&gt; String)
+-&gt; NoThunks (BinaryData era)
+forall era. Context -&gt; BinaryData era -&gt; IO (Maybe ThunkInfo)
+forall era. Proxy (BinaryData era) -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: forall era. Context -&gt; BinaryData era -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; BinaryData era -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall era. Context -&gt; BinaryData era -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; BinaryData era -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: forall era. Proxy (BinaryData era) -&gt; String
+showTypeOf :: Proxy (BinaryData era) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474937"><span id="local-6989586621679474942"><span id="local-6989586621679474946"><span id="local-6989586621679474950"><span id="local-6989586621679474954"><span id="local-6989586621679474958"><span id="local-6989586621679474962"><span class="annot"><span class="annottext">Eq (BinaryData era)
+Eq (BinaryData era) =&gt;
+(BinaryData era -&gt; BinaryData era -&gt; Ordering)
+-&gt; (BinaryData era -&gt; BinaryData era -&gt; Bool)
+-&gt; (BinaryData era -&gt; BinaryData era -&gt; Bool)
+-&gt; (BinaryData era -&gt; BinaryData era -&gt; Bool)
+-&gt; (BinaryData era -&gt; BinaryData era -&gt; Bool)
+-&gt; (BinaryData era -&gt; BinaryData era -&gt; BinaryData era)
+-&gt; (BinaryData era -&gt; BinaryData era -&gt; BinaryData era)
+-&gt; Ord (BinaryData era)
+BinaryData era -&gt; BinaryData era -&gt; Bool
+BinaryData era -&gt; BinaryData era -&gt; Ordering
+BinaryData era -&gt; BinaryData era -&gt; BinaryData era
+forall era. Eq (BinaryData era)
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall era. BinaryData era -&gt; BinaryData era -&gt; Bool
+forall era. BinaryData era -&gt; BinaryData era -&gt; Ordering
+forall era. BinaryData era -&gt; BinaryData era -&gt; BinaryData era
+$ccompare :: forall era. BinaryData era -&gt; BinaryData era -&gt; Ordering
+compare :: BinaryData era -&gt; BinaryData era -&gt; Ordering
+$c&lt; :: forall era. BinaryData era -&gt; BinaryData era -&gt; Bool
+&lt; :: BinaryData era -&gt; BinaryData era -&gt; Bool
+$c&lt;= :: forall era. BinaryData era -&gt; BinaryData era -&gt; Bool
+&lt;= :: BinaryData era -&gt; BinaryData era -&gt; Bool
+$c&gt; :: forall era. BinaryData era -&gt; BinaryData era -&gt; Bool
+&gt; :: BinaryData era -&gt; BinaryData era -&gt; Bool
+$c&gt;= :: forall era. BinaryData era -&gt; BinaryData era -&gt; Bool
+&gt;= :: BinaryData era -&gt; BinaryData era -&gt; Bool
+$cmax :: forall era. BinaryData era -&gt; BinaryData era -&gt; BinaryData era
+max :: BinaryData era -&gt; BinaryData era -&gt; BinaryData era
+$cmin :: forall era. BinaryData era -&gt; BinaryData era -&gt; BinaryData era
+min :: BinaryData era -&gt; BinaryData era -&gt; BinaryData era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474968"><span id="local-6989586621679474973"><span id="local-6989586621679474977"><span class="annot"><span class="annottext">Int -&gt; BinaryData era -&gt; ShowS
+[BinaryData era] -&gt; ShowS
+BinaryData era -&gt; String
+(Int -&gt; BinaryData era -&gt; ShowS)
+-&gt; (BinaryData era -&gt; String)
+-&gt; ([BinaryData era] -&gt; ShowS)
+-&gt; Show (BinaryData era)
+forall era. Int -&gt; BinaryData era -&gt; ShowS
+forall era. [BinaryData era] -&gt; ShowS
+forall era. BinaryData era -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall era. Int -&gt; BinaryData era -&gt; ShowS
+showsPrec :: Int -&gt; BinaryData era -&gt; ShowS
+$cshow :: forall era. BinaryData era -&gt; String
+show :: BinaryData era -&gt; String
+$cshowList :: forall era. [BinaryData era] -&gt; ShowS
+showList :: [BinaryData era] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474982"><span id="local-6989586621679474987"><span id="local-6989586621679474991"><span class="annot"><span class="annottext">BinaryData era -&gt; Int
+BinaryData era -&gt; ByteString
+(BinaryData era -&gt; ByteString)
+-&gt; (BinaryData era -&gt; Int)
+-&gt; (forall i. Proxy i -&gt; BinaryData era -&gt; SafeHash i)
+-&gt; SafeToHash (BinaryData era)
+forall i. Proxy i -&gt; BinaryData era -&gt; SafeHash i
+forall era. BinaryData era -&gt; Int
+forall era. BinaryData era -&gt; ByteString
+forall t.
+(t -&gt; ByteString)
+-&gt; (t -&gt; Int)
+-&gt; (forall i. Proxy i -&gt; t -&gt; SafeHash i)
+-&gt; SafeToHash t
+forall era i. Proxy i -&gt; BinaryData era -&gt; SafeHash i
+$coriginalBytes :: forall era. BinaryData era -&gt; ByteString
+originalBytes :: BinaryData era -&gt; ByteString
+$coriginalBytesSize :: forall era. BinaryData era -&gt; Int
+originalBytesSize :: BinaryData era -&gt; Int
+$cmakeHashWithExplicitProxys :: forall era i. Proxy i -&gt; BinaryData era -&gt; SafeHash i
+makeHashWithExplicitProxys :: forall i. Proxy i -&gt; BinaryData era -&gt; SafeHash i
+</span><a href="Cardano.Ledger.Hashes.html#SafeToHash"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">SafeToHash</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679474996"><span id="local-6989586621679475001"><span id="local-6989586621679475005"><span id="local-6989586621679475011"><span class="annot"><span class="annottext">String
+String
+-&gt; (BinaryData era -&gt; Int)
+-&gt; (forall s. BinaryData era -&gt; Pack s ())
+-&gt; (forall b s. Buffer b =&gt; Unpack s b (BinaryData era))
+-&gt; MemPack (BinaryData era)
+BinaryData era -&gt; Int
+forall era. String
+forall a.
+String
+-&gt; (a -&gt; Int)
+-&gt; (forall s. a -&gt; Pack s ())
+-&gt; (forall b s. Buffer b =&gt; Unpack s b a)
+-&gt; MemPack a
+forall era. BinaryData era -&gt; Int
+forall s. BinaryData era -&gt; Pack s ()
+forall b s. Buffer b =&gt; Unpack s b (BinaryData era)
+forall era s. BinaryData era -&gt; Pack s ()
+forall era b s. Buffer b =&gt; Unpack s b (BinaryData era)
+$ctypeName :: forall era. String
+typeName :: String
+$cpackedByteCount :: forall era. BinaryData era -&gt; Int
+packedByteCount :: BinaryData era -&gt; Int
+$cpackM :: forall era s. BinaryData era -&gt; Pack s ()
+packM :: forall s. BinaryData era -&gt; Pack s ()
+$cunpackM :: forall era b s. Buffer b =&gt; Unpack s b (BinaryData era)
+unpackM :: forall b s. Buffer b =&gt; Unpack s b (BinaryData era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#MemPack"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MemPack</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679475019"><span id="local-6989586621679475021"><span class="annot"><span class="annottext">(forall x. BinaryData era -&gt; Rep (BinaryData era) x)
+-&gt; (forall x. Rep (BinaryData era) x -&gt; BinaryData era)
+-&gt; Generic (BinaryData era)
+forall x. Rep (BinaryData era) x -&gt; BinaryData era
+forall x. BinaryData era -&gt; Rep (BinaryData era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x. Rep (BinaryData era) x -&gt; BinaryData era
+forall era x. BinaryData era -&gt; Rep (BinaryData era) x
+$cfrom :: forall era x. BinaryData era -&gt; Rep (BinaryData era) x
+from :: forall x. BinaryData era -&gt; Rep (BinaryData era) x
+$cto :: forall era x. Rep (BinaryData era) x -&gt; BinaryData era
+to :: forall x. Rep (BinaryData era) x -&gt; BinaryData era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474344"><span id="local-6989586621679475026"><span class="annot"><a href="Cardano.Ledger.Hashes.html#HashAnnotated"><span class="hs-identifier hs-type">HashAnnotated</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-type">BinaryData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474344"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentData"><span class="hs-identifier hs-type">EraIndependentData</span></a></span></span></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474346"><span id="local-6989586621679475035"><span id="local-6989586621679475039"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679474346"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-type">BinaryData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474346"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-152"></span><span>  </span><span id="local-6989586621679475045"><span class="annot"><span class="annottext">encCBOR :: BinaryData era -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-type">BinaryData</span></a></span><span> </span><span id="local-6989586621679475046"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679475046"><span class="hs-identifier hs-var">sbs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeTag"><span class="hs-identifier hs-var">encodeTag</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">24</span></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679475046"><span class="hs-identifier hs-var">sbs</span></a></span><span>
+</span><span id="line-153"></span><span>
+</span><span id="line-154"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474349"><span id="local-6989586621679475054"><span id="local-6989586621679475058"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474349"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-type">BinaryData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474349"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-155"></span><span>  </span><span id="local-6989586621679475067"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (BinaryData era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-156"></span><span>    </span><span id="local-6989586621679475068"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679475068"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s ByteString
+forall s. Decoder s ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeNestedCborBytes"><span class="hs-identifier hs-var">decodeNestedCborBytes</span></a></span><span>
+</span><span id="line-157"></span><span>    </span><span class="annot"><span class="annottext">(String -&gt; Decoder s (BinaryData era))
+-&gt; (BinaryData era -&gt; Decoder s (BinaryData era))
+-&gt; Either String (BinaryData era)
+-&gt; Decoder s (BinaryData era)
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><span class="hs-identifier hs-var">either</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Decoder s (BinaryData era)
+forall a. String -&gt; Decoder s a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; Decoder s (BinaryData era)
+forall a. a -&gt; Decoder s a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Either String (BinaryData era) -&gt; Decoder s (BinaryData era))
+-&gt; Either String (BinaryData era) -&gt; Decoder s (BinaryData era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; Either String (BinaryData era)
+forall era.
+Era era =&gt;
+ShortByteString -&gt; Either String (BinaryData era)
+</span><a href="Cardano.Ledger.Plutus.Data.html#makeBinaryData"><span class="hs-identifier hs-var">makeBinaryData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ShortByteString
+</span><span class="hs-identifier hs-var">toShort</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679475068"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-comment">-- | Construct `BinaryData` from a buffer of bytes, while ensuring that it can be later</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- safely converted to `Data` with `binaryDataToData`</span><span>
+</span><span id="line-161"></span><span id="local-6989586621679474360"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#makeBinaryData"><span class="hs-identifier hs-type">makeBinaryData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474360"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ShortByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-type">BinaryData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474360"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-162"></span><span id="makeBinaryData"><span class="annot"><span class="annottext">makeBinaryData :: forall era.
+Era era =&gt;
+ShortByteString -&gt; Either String (BinaryData era)
+</span><a href="Cardano.Ledger.Plutus.Data.html#makeBinaryData"><span class="hs-identifier hs-var hs-var">makeBinaryData</span></a></span></span><span> </span><span id="local-6989586621679475080"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679475080"><span class="hs-identifier hs-var">sbs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679475081"><span class="annot"><span class="annottext">binaryData :: BinaryData era
+</span><a href="#local-6989586621679475081"><span class="hs-identifier hs-var hs-var">binaryData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; BinaryData era
+forall era. ShortByteString -&gt; BinaryData era
+</span><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-var">BinaryData</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679475080"><span class="hs-identifier hs-var">sbs</span></a></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-comment">-- We need to verify that binary data is indeed valid Plutus Data.</span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; Either DecoderError (Data era)
+forall era.
+Era era =&gt;
+BinaryData era -&gt; Either DecoderError (Data era)
+</span><a href="Cardano.Ledger.Plutus.Data.html#decodeBinaryData"><span class="hs-identifier hs-var">decodeBinaryData</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475081"><span class="hs-identifier hs-var">binaryData</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-166"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679475083"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679475083"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String (BinaryData era)
+forall a b. a -&gt; Either a b
+</span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Either String (BinaryData era))
+-&gt; String -&gt; Either String (BinaryData era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Invalid CBOR for Data: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679475083"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-167"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679475085"><span class="annot"><span class="annottext">Data era
+</span><a href="#local-6989586621679475085"><span class="hs-identifier hs-var">_d</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; Either String (BinaryData era)
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475081"><span class="hs-identifier hs-var">binaryData</span></a></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#decodeBinaryData"><span class="hs-identifier hs-type">decodeBinaryData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679474366"><span class="annot"><a href="#local-6989586621679474366"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474366"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-type">BinaryData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474366"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474366"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span id="decodeBinaryData"><span class="annot"><span class="annottext">decodeBinaryData :: forall era.
+Era era =&gt;
+BinaryData era -&gt; Either DecoderError (Data era)
+</span><a href="Cardano.Ledger.Plutus.Data.html#decodeBinaryData"><span class="hs-identifier hs-var hs-var">decodeBinaryData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-type">BinaryData</span></a></span><span> </span><span id="local-6989586621679475094"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679475094"><span class="hs-identifier hs-var">sbs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679475095"><span class="annot"><span class="annottext">bs :: ByteString
+</span><a href="#local-6989586621679475095"><span class="hs-identifier hs-var hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">fromShort</span></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679475094"><span class="hs-identifier hs-var">sbs</span></a></span><span>
+</span><span id="line-172"></span><span>  </span><span id="local-6989586621679475096"><span class="annot"><span class="annottext">PlutusData era
+</span><a href="#local-6989586621679475096"><span class="hs-identifier hs-var">plutusData</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Version -&gt; ByteString -&gt; Either DecoderError (PlutusData era)
+forall a.
+DecCBOR a =&gt;
+Version -&gt; ByteString -&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull%27"><span class="hs-identifier hs-var">decodeFull'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="Cardano.Ledger.Core.Era.html#eraProtVerLow"><span class="hs-identifier hs-var">eraProtVerLow</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679474366"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679475095"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-173"></span><span>  </span><span class="annot"><span class="annottext">Data era -&gt; Either DecoderError (Data era)
+forall a. a -&gt; Either DecoderError a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MemoBytes (PlutusData era) -&gt; Data era
+forall era. MemoBytes (PlutusData era) -&gt; Data era
+</span><a href="Cardano.Ledger.Plutus.Data.html#MkData"><span class="hs-identifier hs-var">MkData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PlutusData era -&gt; ByteString -&gt; MemoBytes (PlutusData era)
+forall t. t -&gt; ByteString -&gt; MemoBytes t
+</span><a href="Cardano.Ledger.MemoBytes.Internal.html#mkMemoBytesStrict"><span class="hs-identifier hs-var">mkMemoBytesStrict</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusData era
+</span><a href="#local-6989586621679475096"><span class="hs-identifier hs-var">plutusData</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679475095"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- | It is safe to convert `BinaryData` to `Data` because the only way to</span><span>
+</span><span id="line-176"></span><span class="hs-comment">-- construct `BinaryData` is through the smart constructor `makeBinaryData` that</span><span>
+</span><span id="line-177"></span><span class="hs-comment">-- takes care of validation.</span><span>
+</span><span id="line-178"></span><span id="local-6989586621679474377"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#binaryDataToData"><span class="hs-identifier hs-type">binaryDataToData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474377"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-type">BinaryData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474377"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474377"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-179"></span><span id="binaryDataToData"><span class="annot"><span class="annottext">binaryDataToData :: forall era. Era era =&gt; BinaryData era -&gt; Data era
+</span><a href="Cardano.Ledger.Plutus.Data.html#binaryDataToData"><span class="hs-identifier hs-var hs-var">binaryDataToData</span></a></span></span><span> </span><span id="local-6989586621679475105"><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475105"><span class="hs-identifier hs-var">binaryData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; Either DecoderError (Data era)
+forall era.
+Era era =&gt;
+BinaryData era -&gt; Either DecoderError (Data era)
+</span><a href="Cardano.Ledger.Plutus.Data.html#decodeBinaryData"><span class="hs-identifier hs-var">decodeBinaryData</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475105"><span class="hs-identifier hs-var">binaryData</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-181"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679475106"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679475106"><span class="hs-identifier hs-var">errMsg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-182"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; Data era
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Data era) -&gt; String -&gt; Data era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Impossible: incorrectly encoded data: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679475106"><span class="hs-identifier hs-var">errMsg</span></a></span><span>
+</span><span id="line-183"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679475108"><span class="annot"><span class="annottext">Data era
+</span><a href="#local-6989586621679475108"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Data era
+</span><a href="#local-6989586621679475108"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span id="local-6989586621679474383"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#dataToBinaryData"><span class="hs-identifier hs-type">dataToBinaryData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474383"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-type">BinaryData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474383"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-186"></span><span id="dataToBinaryData"><span class="annot"><span class="annottext">dataToBinaryData :: forall era. Data era -&gt; BinaryData era
+</span><a href="Cardano.Ledger.Plutus.Data.html#dataToBinaryData"><span class="hs-identifier hs-var hs-var">dataToBinaryData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#MkData"><span class="hs-identifier hs-type">MkData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.MemoBytes.Internal.html#Memo"><span class="hs-identifier hs-type">Memo</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusData era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679475110"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679475110"><span class="hs-identifier hs-var">sbs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; BinaryData era
+forall era. ShortByteString -&gt; BinaryData era
+</span><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-var">BinaryData</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679475110"><span class="hs-identifier hs-var">sbs</span></a></span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span id="local-6989586621679475111"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#hashBinaryData"><span class="hs-identifier hs-type">hashBinaryData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-type">BinaryData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679475111"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#DataHash"><span class="hs-identifier hs-type">DataHash</span></a></span></span><span>
+</span><span id="line-189"></span><span id="hashBinaryData"><span class="annot"><span class="annottext">hashBinaryData :: forall era. BinaryData era -&gt; SafeHash EraIndependentData
+</span><a href="Cardano.Ledger.Plutus.Data.html#hashBinaryData"><span class="hs-identifier hs-var hs-var">hashBinaryData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; SafeHash EraIndependentData
+forall x i. HashAnnotated x i =&gt; x -&gt; SafeHash i
+</span><a href="Cardano.Ledger.Hashes.html#hashAnnotated"><span class="hs-identifier hs-var">hashAnnotated</span></a></span><span>
+</span><span id="line-190"></span><span>
+</span><span id="line-191"></span><span class="hs-comment">-- =============================================================================</span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span id="local-6989586621679475113"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#hashData"><span class="hs-identifier hs-type">hashData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679475113"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#DataHash"><span class="hs-identifier hs-type">DataHash</span></a></span></span><span>
+</span><span id="line-194"></span><span id="hashData"><span class="annot"><span class="annottext">hashData :: forall era. Data era -&gt; SafeHash EraIndependentData
+</span><a href="Cardano.Ledger.Plutus.Data.html#hashData"><span class="hs-identifier hs-var hs-var">hashData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Data era -&gt; SafeHash EraIndependentData
+forall x i. HashAnnotated x i =&gt; x -&gt; SafeHash i
+</span><a href="Cardano.Ledger.Hashes.html#hashAnnotated"><span class="hs-identifier hs-var">hashAnnotated</span></a></span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span class="hs-comment">-- Size of the datum hash attached to the output (could be Nothing)</span><span>
+</span><span id="line-197"></span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#dataHashSize"><span class="hs-identifier hs-type">dataHashSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">StrictMaybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#DataHash"><span class="hs-identifier hs-type">DataHash</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-198"></span><span id="dataHashSize"><span class="annot"><span class="annottext">dataHashSize :: StrictMaybe (SafeHash EraIndependentData) -&gt; Integer
+</span><a href="Cardano.Ledger.Plutus.Data.html#dataHashSize"><span class="hs-identifier hs-var hs-var">dataHashSize</span></a></span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe (SafeHash EraIndependentData)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-199"></span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#dataHashSize"><span class="hs-identifier hs-var">dataHashSize</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-type">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- ============================================================================</span><span>
+</span><span id="line-202"></span><span class="hs-comment">-- Datum</span><span>
+</span><span id="line-203"></span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- | Datum can be described by a either a data hash or binary data, but not</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- both. It can also be neither one of them.</span><span>
+</span><span id="line-206"></span><span class="hs-keyword">data</span><span> </span><span id="Datum"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-var">Datum</span></a></span></span><span> </span><span id="local-6989586621679474430"><span class="annot"><a href="#local-6989586621679474430"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-207"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="NoDatum"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#NoDatum"><span class="hs-identifier hs-var">NoDatum</span></a></span></span><span>
+</span><span id="line-208"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="DatumHash"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#DatumHash"><span class="hs-identifier hs-var">DatumHash</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Ledger.Hashes.html#DataHash"><span class="hs-identifier hs-type">DataHash</span></a></span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Datum"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-var">Datum</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#BinaryData"><span class="hs-identifier hs-type">BinaryData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474430"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-210"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679475121"><span id="local-6989586621679475126"><span class="annot"><span class="annottext">Datum era -&gt; Datum era -&gt; Bool
+(Datum era -&gt; Datum era -&gt; Bool)
+-&gt; (Datum era -&gt; Datum era -&gt; Bool) -&gt; Eq (Datum era)
+forall era. Datum era -&gt; Datum era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era. Datum era -&gt; Datum era -&gt; Bool
+== :: Datum era -&gt; Datum era -&gt; Bool
+$c/= :: forall era. Datum era -&gt; Datum era -&gt; Bool
+/= :: Datum era -&gt; Datum era -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475130"><span id="local-6989586621679475132"><span class="annot"><span class="annottext">(forall x. Datum era -&gt; Rep (Datum era) x)
+-&gt; (forall x. Rep (Datum era) x -&gt; Datum era)
+-&gt; Generic (Datum era)
+forall x. Rep (Datum era) x -&gt; Datum era
+forall x. Datum era -&gt; Rep (Datum era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x. Rep (Datum era) x -&gt; Datum era
+forall era x. Datum era -&gt; Rep (Datum era) x
+$cfrom :: forall era x. Datum era -&gt; Rep (Datum era) x
+from :: forall x. Datum era -&gt; Rep (Datum era) x
+$cto :: forall era x. Rep (Datum era) x -&gt; Datum era
+to :: forall x. Rep (Datum era) x -&gt; Datum era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475135"><span id="local-6989586621679475139"><span id="local-6989586621679475145"><span class="annot"><span class="annottext">Context -&gt; Datum era -&gt; IO (Maybe ThunkInfo)
+Proxy (Datum era) -&gt; String
+(Context -&gt; Datum era -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; Datum era -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (Datum era) -&gt; String)
+-&gt; NoThunks (Datum era)
+forall era. Context -&gt; Datum era -&gt; IO (Maybe ThunkInfo)
+forall era. Proxy (Datum era) -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: forall era. Context -&gt; Datum era -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; Datum era -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall era. Context -&gt; Datum era -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; Datum era -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: forall era. Proxy (Datum era) -&gt; String
+showTypeOf :: Proxy (Datum era) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475174"><span id="local-6989586621679475179"><span id="local-6989586621679475183"><span id="local-6989586621679475187"><span id="local-6989586621679475190"><span id="local-6989586621679475193"><span id="local-6989586621679475196"><span class="annot"><span class="annottext">Eq (Datum era)
+Eq (Datum era) =&gt;
+(Datum era -&gt; Datum era -&gt; Ordering)
+-&gt; (Datum era -&gt; Datum era -&gt; Bool)
+-&gt; (Datum era -&gt; Datum era -&gt; Bool)
+-&gt; (Datum era -&gt; Datum era -&gt; Bool)
+-&gt; (Datum era -&gt; Datum era -&gt; Bool)
+-&gt; (Datum era -&gt; Datum era -&gt; Datum era)
+-&gt; (Datum era -&gt; Datum era -&gt; Datum era)
+-&gt; Ord (Datum era)
+Datum era -&gt; Datum era -&gt; Bool
+Datum era -&gt; Datum era -&gt; Ordering
+Datum era -&gt; Datum era -&gt; Datum era
+forall era. Eq (Datum era)
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall era. Datum era -&gt; Datum era -&gt; Bool
+forall era. Datum era -&gt; Datum era -&gt; Ordering
+forall era. Datum era -&gt; Datum era -&gt; Datum era
+$ccompare :: forall era. Datum era -&gt; Datum era -&gt; Ordering
+compare :: Datum era -&gt; Datum era -&gt; Ordering
+$c&lt; :: forall era. Datum era -&gt; Datum era -&gt; Bool
+&lt; :: Datum era -&gt; Datum era -&gt; Bool
+$c&lt;= :: forall era. Datum era -&gt; Datum era -&gt; Bool
+&lt;= :: Datum era -&gt; Datum era -&gt; Bool
+$c&gt; :: forall era. Datum era -&gt; Datum era -&gt; Bool
+&gt; :: Datum era -&gt; Datum era -&gt; Bool
+$c&gt;= :: forall era. Datum era -&gt; Datum era -&gt; Bool
+&gt;= :: Datum era -&gt; Datum era -&gt; Bool
+$cmax :: forall era. Datum era -&gt; Datum era -&gt; Datum era
+max :: Datum era -&gt; Datum era -&gt; Datum era
+$cmin :: forall era. Datum era -&gt; Datum era -&gt; Datum era
+min :: Datum era -&gt; Datum era -&gt; Datum era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679475199"><span id="local-6989586621679475206"><span id="local-6989586621679475210"><span class="annot"><span class="annottext">Int -&gt; Datum era -&gt; ShowS
+[Datum era] -&gt; ShowS
+Datum era -&gt; String
+(Int -&gt; Datum era -&gt; ShowS)
+-&gt; (Datum era -&gt; String)
+-&gt; ([Datum era] -&gt; ShowS)
+-&gt; Show (Datum era)
+forall era. Int -&gt; Datum era -&gt; ShowS
+forall era. [Datum era] -&gt; ShowS
+forall era. Datum era -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall era. Int -&gt; Datum era -&gt; ShowS
+showsPrec :: Int -&gt; Datum era -&gt; ShowS
+$cshow :: forall era. Datum era -&gt; String
+show :: Datum era -&gt; String
+$cshowList :: forall era. [Datum era] -&gt; ShowS
+showList :: [Datum era] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-211"></span><span>
+</span><span id="line-212"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474408"><span id="local-6989586621679475214"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474408"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#MemPack"><span class="hs-identifier hs-type">MemPack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474408"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-213"></span><span>  </span><span id="local-6989586621679475229"><span class="annot"><span class="annottext">packedByteCount :: Datum era -&gt; Int
+</span><a href="#local-6989586621679475229"><span class="hs-identifier hs-var hs-var hs-var hs-var">packedByteCount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-214"></span><span>    </span><span class="annot"><span class="annottext">Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#NoDatum"><span class="hs-identifier hs-var">NoDatum</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packedTagByteCount"><span class="hs-identifier hs-var">packedTagByteCount</span></a></span><span>
+</span><span id="line-215"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#DatumHash"><span class="hs-identifier hs-type">DatumHash</span></a></span><span> </span><span id="local-6989586621679475232"><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475232"><span class="hs-identifier hs-var">dataHash</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packedTagByteCount"><span class="hs-identifier hs-var">packedTagByteCount</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData -&gt; Int
+forall a. MemPack a =&gt; a -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packedByteCount"><span class="hs-identifier hs-var">packedByteCount</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475232"><span class="hs-identifier hs-var">dataHash</span></a></span><span>
+</span><span id="line-216"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span id="local-6989586621679475234"><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475234"><span class="hs-identifier hs-var">binaryData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packedTagByteCount"><span class="hs-identifier hs-var">packedTagByteCount</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; Int
+forall a. MemPack a =&gt; a -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packedByteCount"><span class="hs-identifier hs-var">packedByteCount</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475234"><span class="hs-identifier hs-var">binaryData</span></a></span><span>
+</span><span id="line-217"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packedByteCount"><span class="hs-pragma hs-type">packedByteCount</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-218"></span><span>  </span><span id="local-6989586621679475244"><span class="annot"><span class="annottext">packM :: forall s. Datum era -&gt; Pack s ()
+</span><a href="#local-6989586621679475244"><span class="hs-identifier hs-var hs-var hs-var hs-var">packM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-219"></span><span>    </span><span class="annot"><span class="annottext">Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#NoDatum"><span class="hs-identifier hs-var">NoDatum</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Tag -&gt; Pack s ()
+forall s. Tag -&gt; Pack s ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packTagM"><span class="hs-identifier hs-var">packTagM</span></a></span><span> </span><span class="annot"><span class="annottext">Tag
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-220"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#DatumHash"><span class="hs-identifier hs-type">DatumHash</span></a></span><span> </span><span id="local-6989586621679475247"><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475247"><span class="hs-identifier hs-var">dataHash</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Tag -&gt; Pack s ()
+forall s. Tag -&gt; Pack s ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packTagM"><span class="hs-identifier hs-var">packTagM</span></a></span><span> </span><span class="annot"><span class="annottext">Tag
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Pack s () -&gt; Pack s () -&gt; Pack s ()
+forall a b. Pack s a -&gt; Pack s b -&gt; Pack s b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData -&gt; Pack s ()
+forall a s. MemPack a =&gt; a -&gt; Pack s ()
+forall s. SafeHash EraIndependentData -&gt; Pack s ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packM"><span class="hs-identifier hs-var">packM</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475247"><span class="hs-identifier hs-var">dataHash</span></a></span><span>
+</span><span id="line-221"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span id="local-6989586621679475248"><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475248"><span class="hs-identifier hs-var">binaryData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Tag -&gt; Pack s ()
+forall s. Tag -&gt; Pack s ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packTagM"><span class="hs-identifier hs-var">packTagM</span></a></span><span> </span><span class="annot"><span class="annottext">Tag
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Pack s () -&gt; Pack s () -&gt; Pack s ()
+forall a b. Pack s a -&gt; Pack s b -&gt; Pack s b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; Pack s ()
+forall a s. MemPack a =&gt; a -&gt; Pack s ()
+forall s. BinaryData era -&gt; Pack s ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packM"><span class="hs-identifier hs-var">packM</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475248"><span class="hs-identifier hs-var">binaryData</span></a></span><span>
+</span><span id="line-222"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packM"><span class="hs-pragma hs-type">packM</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-223"></span><span>  </span><span id="local-6989586621679475274"><span class="annot"><span class="annottext">unpackM :: forall b s. Buffer b =&gt; Unpack s b (Datum era)
+</span><a href="#local-6989586621679475274"><span class="hs-identifier hs-var hs-var hs-var hs-var">unpackM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-224"></span><span>    </span><span class="annot"><span class="annottext">Unpack s b Tag
+forall a b s. (MemPack a, Buffer b) =&gt; Unpack s b a
+forall b s. Buffer b =&gt; Unpack s b Tag
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#unpackM"><span class="hs-identifier hs-var">unpackM</span></a></span><span> </span><span class="annot"><span class="annottext">Unpack s b Tag
+-&gt; (Tag -&gt; Unpack s b (Datum era)) -&gt; Unpack s b (Datum era)
+forall a b. Unpack s b a -&gt; (a -&gt; Unpack s b b) -&gt; Unpack s b b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-225"></span><span>      </span><span class="annot"><span class="annottext">Tag
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Datum era -&gt; Unpack s b (Datum era)
+forall a. a -&gt; Unpack s b a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Datum era
+forall era. Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#NoDatum"><span class="hs-identifier hs-var">NoDatum</span></a></span><span>
+</span><span id="line-226"></span><span>      </span><span class="annot"><span class="annottext">Tag
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData -&gt; Datum era
+forall era. SafeHash EraIndependentData -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#DatumHash"><span class="hs-identifier hs-var">DatumHash</span></a></span><span> </span><span class="annot"><span class="annottext">(SafeHash EraIndependentData -&gt; Datum era)
+-&gt; Unpack s b (SafeHash EraIndependentData)
+-&gt; Unpack s b (Datum era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Unpack s b (SafeHash EraIndependentData)
+forall a b s. (MemPack a, Buffer b) =&gt; Unpack s b a
+forall b s. Buffer b =&gt; Unpack s b (SafeHash EraIndependentData)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#unpackM"><span class="hs-identifier hs-var">unpackM</span></a></span><span>
+</span><span id="line-227"></span><span>      </span><span class="annot"><span class="annottext">Tag
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; Datum era
+forall era. BinaryData era -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-var">Datum</span></a></span><span> </span><span class="annot"><span class="annottext">(BinaryData era -&gt; Datum era)
+-&gt; Unpack s b (BinaryData era) -&gt; Unpack s b (Datum era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Unpack s b (BinaryData era)
+forall a b s. (MemPack a, Buffer b) =&gt; Unpack s b a
+forall b s. Buffer b =&gt; Unpack s b (BinaryData era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#unpackM"><span class="hs-identifier hs-var">unpackM</span></a></span><span>
+</span><span id="line-228"></span><span>      </span><span id="local-6989586621679475276"><span class="annot"><span class="annottext">Tag
+</span><a href="#local-6989586621679475276"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *) b. (MemPack a, MonadFail m) =&gt; Tag -&gt; m b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#unknownTagM"><span class="hs-identifier hs-var">unknownTagM</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474408"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Tag
+</span><a href="#local-6989586621679475276"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-229"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#unpackM"><span class="hs-pragma hs-type">unpackM</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-230"></span><span>
+</span><span id="line-231"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474435"><span id="local-6989586621679475285"><span id="local-6989586621679475289"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474435"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474435"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-232"></span><span>  </span><span id="local-6989586621679475295"><span class="annot"><span class="annottext">encCBOR :: Datum era -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span id="local-6989586621679475296"><span class="annot"><span class="annottext">Datum era
+</span><a href="#local-6989586621679475296"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Encode 'Open (Datum era) -&gt; Encoding
+forall (w :: Wrapped) t. Encode w t -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">(Encode 'Open (Datum era) -&gt; Encoding)
+-&gt; Encode 'Open (Datum era) -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Datum era
+</span><a href="#local-6989586621679475296"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-233"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#DatumHash"><span class="hs-identifier hs-type">DatumHash</span></a></span><span> </span><span id="local-6989586621679475298"><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475298"><span class="hs-identifier hs-var">dh</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(SafeHash EraIndependentData -&gt; Datum era)
+-&gt; Word -&gt; Encode 'Open (SafeHash EraIndependentData -&gt; Datum era)
+forall t. t -&gt; Word -&gt; Encode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Sum"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData -&gt; Datum era
+forall era. SafeHash EraIndependentData -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#DatumHash"><span class="hs-identifier hs-var">DatumHash</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Encode 'Open (SafeHash EraIndependentData -&gt; Datum era)
+-&gt; Encode ('Closed 'Dense) (SafeHash EraIndependentData)
+-&gt; Encode 'Open (Datum era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData
+-&gt; Encode ('Closed 'Dense) (SafeHash EraIndependentData)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475298"><span class="hs-identifier hs-var">dh</span></a></span><span>
+</span><span id="line-234"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span id="local-6989586621679475302"><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475302"><span class="hs-identifier hs-var">d'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(BinaryData era -&gt; Datum era)
+-&gt; Word -&gt; Encode 'Open (BinaryData era -&gt; Datum era)
+forall t. t -&gt; Word -&gt; Encode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Sum"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; Datum era
+forall era. BinaryData era -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-var">Datum</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Encode 'Open (BinaryData era -&gt; Datum era)
+-&gt; Encode ('Closed 'Dense) (BinaryData era)
+-&gt; Encode 'Open (Datum era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; Encode ('Closed 'Dense) (BinaryData era)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475302"><span class="hs-identifier hs-var">d'</span></a></span><span>
+</span><span id="line-235"></span><span>    </span><span class="annot"><span class="annottext">Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#NoDatum"><span class="hs-identifier hs-var">NoDatum</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Datum era -&gt; Encode 'Open (Datum era)
+forall t (w :: Wrapped). t -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#OmitC"><span class="hs-identifier hs-var">OmitC</span></a></span><span> </span><span class="annot"><span class="annottext">Datum era
+forall era. Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#NoDatum"><span class="hs-identifier hs-var">NoDatum</span></a></span><span>
+</span><span id="line-236"></span><span>
+</span><span id="line-237"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474459"><span id="local-6989586621679475311"><span id="local-6989586621679475315"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474459"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474459"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-238"></span><span>  </span><span id="local-6989586621679475334"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (Datum era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decode ('Closed 'Dense) (Datum era) -&gt; Decoder s (Datum era)
+forall t (w :: Wrapped) s. Typeable t =&gt; Decode w t -&gt; Decoder s t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#decode"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+-&gt; (Word -&gt; Decode 'Open (Datum era))
+-&gt; Decode ('Closed 'Dense) (Datum era)
+forall t.
+Text -&gt; (Word -&gt; Decode 'Open t) -&gt; Decode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#Summands"><span class="hs-identifier hs-var">Summands</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Datum&quot;</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Decode 'Open (Datum era)
+forall {era}.
+(Assert
+   (OrdCond
+      (CmpNat (ProtVerLow era) (ProtVerHigh era)) 'True 'True 'False)
+   (TypeError ...),
+ Assert
+   (OrdCond (CmpNat MinVersion (ProtVerLow era)) 'True 'True 'False)
+   (TypeError ...),
+ Assert
+   (OrdCond (CmpNat MinVersion (ProtVerHigh era)) 'True 'True 'False)
+   (TypeError ...),
+ Era era) =&gt;
+Word -&gt; Decode 'Open (Datum era)
+</span><a href="#local-6989586621679475337"><span class="hs-identifier hs-var">decodeDatum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-240"></span><span>      </span><span id="local-6989586621679475337"><span class="annot"><span class="annottext">decodeDatum :: Word -&gt; Decode 'Open (Datum era)
+</span><a href="#local-6989586621679475337"><span class="hs-identifier hs-var hs-var">decodeDatum</span></a></span></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SafeHash EraIndependentData -&gt; Datum era)
+-&gt; Decode 'Open (SafeHash EraIndependentData -&gt; Datum era)
+forall t. t -&gt; Decode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#SumD"><span class="hs-identifier hs-var">SumD</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData -&gt; Datum era
+forall era. SafeHash EraIndependentData -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#DatumHash"><span class="hs-identifier hs-var">DatumHash</span></a></span><span> </span><span class="annot"><span class="annottext">Decode 'Open (SafeHash EraIndependentData -&gt; Datum era)
+-&gt; Decode ('Closed Any) (SafeHash EraIndependentData)
+-&gt; Decode 'Open (Datum era)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) (SafeHash EraIndependentData)
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-241"></span><span>      </span><span class="annot"><a href="#local-6989586621679475337"><span class="hs-identifier hs-var">decodeDatum</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BinaryData era -&gt; Datum era)
+-&gt; Decode 'Open (BinaryData era -&gt; Datum era)
+forall t. t -&gt; Decode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#SumD"><span class="hs-identifier hs-var">SumD</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; Datum era
+forall era. BinaryData era -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-var">Datum</span></a></span><span> </span><span class="annot"><span class="annottext">Decode 'Open (BinaryData era -&gt; Datum era)
+-&gt; Decode ('Closed Any) (BinaryData era)
+-&gt; Decode 'Open (Datum era)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) (BinaryData era)
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-242"></span><span>      </span><span class="annot"><a href="#local-6989586621679475337"><span class="hs-identifier hs-var">decodeDatum</span></a></span><span> </span><span id="local-6989586621679475383"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679475383"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Decode 'Open (Datum era)
+forall (w :: Wrapped) t. Word -&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#Invalid"><span class="hs-identifier hs-var">Invalid</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679475383"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-243"></span><span>
+</span><span id="line-244"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679474479"><span id="local-6989586621679475389"><span id="local-6989586621679475393"><span id="local-6989586621679475396"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474479"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474479"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-245"></span><span>  </span><span id="local-6989586621679475401"><span class="annot"><span class="annottext">toJSON :: Datum era -&gt; Value
+</span><a href="#local-6989586621679475401"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span id="local-6989586621679475403"><span class="annot"><span class="annottext">Datum era
+</span><a href="#local-6989586621679475403"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-246"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Datum era -&gt; StrictMaybe (SafeHash EraIndependentData)
+forall era. Datum era -&gt; StrictMaybe (SafeHash EraIndependentData)
+</span><a href="Cardano.Ledger.Plutus.Data.html#datumDataHash"><span class="hs-identifier hs-var">datumDataHash</span></a></span><span> </span><span class="annot"><span class="annottext">Datum era
+</span><a href="#local-6989586621679475403"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-247"></span><span>      </span><span class="annot"><span class="annottext">StrictMaybe (SafeHash EraIndependentData)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.Internal.html#Null"><span class="hs-identifier hs-var">Null</span></a></span><span>
+</span><span id="line-248"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-type">SJust</span></a></span><span> </span><span id="local-6989586621679475404"><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475404"><span class="hs-identifier hs-var">dh</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#toJSON"><span class="hs-identifier hs-var">toJSON</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475404"><span class="hs-identifier hs-var">dh</span></a></span><span>
+</span><span id="line-249"></span><span>  </span><span id="local-6989586621679475408"><span class="annot"><span class="annottext">toEncoding :: Datum era -&gt; Encoding
+</span><a href="#local-6989586621679475408"><span class="hs-identifier hs-var hs-var hs-var hs-var">toEncoding</span></a></span></span><span> </span><span id="local-6989586621679475410"><span class="annot"><span class="annottext">Datum era
+</span><a href="#local-6989586621679475410"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-250"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Datum era -&gt; StrictMaybe (SafeHash EraIndependentData)
+forall era. Datum era -&gt; StrictMaybe (SafeHash EraIndependentData)
+</span><a href="Cardano.Ledger.Plutus.Data.html#datumDataHash"><span class="hs-identifier hs-var">datumDataHash</span></a></span><span> </span><span class="annot"><span class="annottext">Datum era
+</span><a href="#local-6989586621679475410"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-251"></span><span>      </span><span class="annot"><span class="annottext">StrictMaybe (SafeHash EraIndependentData)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Encoding
+forall a. ToJSON a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#toEncoding"><span class="hs-identifier hs-var">toEncoding</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.Internal.html#Null"><span class="hs-identifier hs-var">Null</span></a></span><span>
+</span><span id="line-252"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-type">SJust</span></a></span><span> </span><span id="local-6989586621679475411"><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475411"><span class="hs-identifier hs-var">dh</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData -&gt; Encoding
+forall a. ToJSON a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#toEncoding"><span class="hs-identifier hs-var">toEncoding</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475411"><span class="hs-identifier hs-var">dh</span></a></span><span>
+</span><span id="line-253"></span><span>
+</span><span id="line-254"></span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#mkInlineDatum"><span class="hs-identifier hs-type">mkInlineDatum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679474482"><span class="annot"><a href="#local-6989586621679474482"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474482"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#Data"><span class="hs-identifier hs-type">PV1.Data</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474482"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-255"></span><span id="mkInlineDatum"><span class="annot"><span class="annottext">mkInlineDatum :: forall era. Era era =&gt; Data -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#mkInlineDatum"><span class="hs-identifier hs-var hs-var">mkInlineDatum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BinaryData era -&gt; Datum era
+forall era. BinaryData era -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-var">Datum</span></a></span><span> </span><span class="annot"><span class="annottext">(BinaryData era -&gt; Datum era)
+-&gt; (Data -&gt; BinaryData era) -&gt; Data -&gt; Datum era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Data era -&gt; BinaryData era
+forall era. Data era -&gt; BinaryData era
+</span><a href="Cardano.Ledger.Plutus.Data.html#dataToBinaryData"><span class="hs-identifier hs-var">dataToBinaryData</span></a></span><span> </span><span class="annot"><span class="annottext">(Data era -&gt; BinaryData era)
+-&gt; (Data -&gt; Data era) -&gt; Data -&gt; BinaryData era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Data -&gt; Data era
+</span><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679474482"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-256"></span><span>
+</span><span id="line-257"></span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#mkHashedDatum"><span class="hs-identifier hs-type">mkHashedDatum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679475415"><span class="annot"><a href="#local-6989586621679475415"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679475415"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#Data"><span class="hs-identifier hs-type">PV1.Data</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679475415"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-258"></span><span id="mkHashedDatum"><span class="annot"><span class="annottext">mkHashedDatum :: forall era. Era era =&gt; Data -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#mkHashedDatum"><span class="hs-identifier hs-var hs-var">mkHashedDatum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData -&gt; Datum era
+forall era. SafeHash EraIndependentData -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#DatumHash"><span class="hs-identifier hs-var">DatumHash</span></a></span><span> </span><span class="annot"><span class="annottext">(SafeHash EraIndependentData -&gt; Datum era)
+-&gt; (Data -&gt; SafeHash EraIndependentData) -&gt; Data -&gt; Datum era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Data era -&gt; SafeHash EraIndependentData
+forall era. Data era -&gt; SafeHash EraIndependentData
+</span><a href="Cardano.Ledger.Plutus.Data.html#hashData"><span class="hs-identifier hs-var">hashData</span></a></span><span> </span><span class="annot"><span class="annottext">(Data era -&gt; SafeHash EraIndependentData)
+-&gt; (Data -&gt; Data era) -&gt; Data -&gt; SafeHash EraIndependentData
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Data -&gt; Data era
+</span><a href="Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-var">Data</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679475415"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-259"></span><span>
+</span><span id="line-260"></span><span class="annot"><span class="hs-comment">-- | Get the Hash of the datum.</span></span><span>
+</span><span id="line-261"></span><span id="local-6989586621679474481"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#datumDataHash"><span class="hs-identifier hs-type">datumDataHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474481"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">StrictMaybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#DataHash"><span class="hs-identifier hs-type">DataHash</span></a></span></span><span>
+</span><span id="line-262"></span><span id="datumDataHash"><span class="annot"><span class="annottext">datumDataHash :: forall era. Datum era -&gt; StrictMaybe (SafeHash EraIndependentData)
+</span><a href="Cardano.Ledger.Plutus.Data.html#datumDataHash"><span class="hs-identifier hs-var hs-var">datumDataHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-263"></span><span>  </span><span class="annot"><span class="annottext">Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#NoDatum"><span class="hs-identifier hs-var">NoDatum</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">StrictMaybe (SafeHash EraIndependentData)
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-264"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#DatumHash"><span class="hs-identifier hs-type">DatumHash</span></a></span><span> </span><span id="local-6989586621679475418"><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475418"><span class="hs-identifier hs-var">dh</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData
+-&gt; StrictMaybe (SafeHash EraIndependentData)
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475418"><span class="hs-identifier hs-var">dh</span></a></span><span>
+</span><span id="line-265"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span id="local-6989586621679475419"><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475419"><span class="hs-identifier hs-var">bd</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData
+-&gt; StrictMaybe (SafeHash EraIndependentData)
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BinaryData era -&gt; SafeHash EraIndependentData
+forall era. BinaryData era -&gt; SafeHash EraIndependentData
+</span><a href="Cardano.Ledger.Plutus.Data.html#hashBinaryData"><span class="hs-identifier hs-var">hashBinaryData</span></a></span><span> </span><span class="annot"><span class="annottext">BinaryData era
+</span><a href="#local-6989586621679475419"><span class="hs-identifier hs-var">bd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-266"></span><span>
+</span><span id="line-267"></span><span id="local-6989586621679474490"><span id="local-6989586621679474491"><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#translateDatum"><span class="hs-identifier hs-type">translateDatum</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-268"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474490"><span class="hs-identifier hs-type">era1</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-269"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474491"><span class="hs-identifier hs-type">era2</span></a></span></span></span><span>
+</span><span id="line-270"></span><span id="translateDatum"><span class="annot"><span class="annottext">translateDatum :: forall era1 era2. Datum era1 -&gt; Datum era2
+</span><a href="Cardano.Ledger.Plutus.Data.html#translateDatum"><span class="hs-identifier hs-var hs-var">translateDatum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-271"></span><span>  </span><span class="annot"><span class="annottext">Datum era1
+</span><a href="Cardano.Ledger.Plutus.Data.html#NoDatum"><span class="hs-identifier hs-var">NoDatum</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Datum era2
+forall era. Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#NoDatum"><span class="hs-identifier hs-var">NoDatum</span></a></span><span>
+</span><span id="line-272"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#DatumHash"><span class="hs-identifier hs-type">DatumHash</span></a></span><span> </span><span id="local-6989586621679475421"><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475421"><span class="hs-identifier hs-var">dh</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData -&gt; Datum era2
+forall era. SafeHash EraIndependentData -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#DatumHash"><span class="hs-identifier hs-var">DatumHash</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentData
+</span><a href="#local-6989586621679475421"><span class="hs-identifier hs-var">dh</span></a></span><span>
+</span><span id="line-273"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-type">Datum</span></a></span><span> </span><span id="local-6989586621679475422"><span class="annot"><span class="annottext">BinaryData era1
+</span><a href="#local-6989586621679475422"><span class="hs-identifier hs-var">bd</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BinaryData era2 -&gt; Datum era2
+forall era. BinaryData era -&gt; Datum era
+</span><a href="Cardano.Ledger.Plutus.Data.html#Datum"><span class="hs-identifier hs-var">Datum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BinaryData era1 -&gt; BinaryData era2
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">BinaryData era1
+</span><a href="#local-6989586621679475422"><span class="hs-identifier hs-var">bd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-274"></span></pre></body></html>

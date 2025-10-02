@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Dijkstra.Transition</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier">TransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Transition.html"><span class="hs-identifier">Cardano.Ledger.Conway.Transition</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Transition.html#ConwayEraTransition"><span class="hs-identifier">ConwayEraTransition</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Transition.html#conwayRegisterInitialFundsThenStaking"><span class="hs-identifier">conwayRegisterInitialFundsThenStaking</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Era.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Era</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Genesis</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Translation.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Translation</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Transition</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679361325"><span id="local-6989586621679361333"><span id="local-6989586621679361342"><span id="local-6989586621679361355"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#EraTransition"><span class="hs-identifier hs-type">EraTransition</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="TransitionConfig"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-var">TransitionConfig</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DijkstraTransitionConfig"><span class="annot"><a href="Cardano.Ledger.Dijkstra.Transition.html#DijkstraTransitionConfig"><span class="hs-identifier hs-var">DijkstraTransitionConfig</span></a></span></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="dtcDijkstraGenesis"><span class="annot"><span class="annottext">TransitionConfig DijkstraEra -&gt; DijkstraGenesis
+</span><a href="Cardano.Ledger.Dijkstra.Transition.html#dtcDijkstraGenesis"><span class="hs-identifier hs-var hs-var">dtcDijkstraGenesis</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-type">DijkstraGenesis</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="dtcConwayTransitionConfig"><span class="annot"><span class="annottext">TransitionConfig DijkstraEra -&gt; TransitionConfig ConwayEra
+</span><a href="Cardano.Ledger.Dijkstra.Transition.html#dtcConwayTransitionConfig"><span class="hs-identifier hs-var hs-var">dtcConwayTransitionConfig</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679361374"><span id="local-6989586621679361382"><span id="local-6989586621679361385"><span class="annot"><span class="annottext">Int -&gt; TransitionConfig DijkstraEra -&gt; ShowS
+[TransitionConfig DijkstraEra] -&gt; ShowS
+TransitionConfig DijkstraEra -&gt; String
+(Int -&gt; TransitionConfig DijkstraEra -&gt; ShowS)
+-&gt; (TransitionConfig DijkstraEra -&gt; String)
+-&gt; ([TransitionConfig DijkstraEra] -&gt; ShowS)
+-&gt; Show (TransitionConfig DijkstraEra)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TransitionConfig DijkstraEra -&gt; ShowS
+showsPrec :: Int -&gt; TransitionConfig DijkstraEra -&gt; ShowS
+$cshow :: TransitionConfig DijkstraEra -&gt; String
+show :: TransitionConfig DijkstraEra -&gt; String
+$cshowList :: [TransitionConfig DijkstraEra] -&gt; ShowS
+showList :: [TransitionConfig DijkstraEra] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679361389"><span id="local-6989586621679361395"><span class="annot"><span class="annottext">TransitionConfig DijkstraEra
+-&gt; TransitionConfig DijkstraEra -&gt; Bool
+(TransitionConfig DijkstraEra
+ -&gt; TransitionConfig DijkstraEra -&gt; Bool)
+-&gt; (TransitionConfig DijkstraEra
+    -&gt; TransitionConfig DijkstraEra -&gt; Bool)
+-&gt; Eq (TransitionConfig DijkstraEra)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TransitionConfig DijkstraEra
+-&gt; TransitionConfig DijkstraEra -&gt; Bool
+== :: TransitionConfig DijkstraEra
+-&gt; TransitionConfig DijkstraEra -&gt; Bool
+$c/= :: TransitionConfig DijkstraEra
+-&gt; TransitionConfig DijkstraEra -&gt; Bool
+/= :: TransitionConfig DijkstraEra
+-&gt; TransitionConfig DijkstraEra -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679361399"><span id="local-6989586621679361401"><span class="annot"><span class="annottext">(forall x.
+ TransitionConfig DijkstraEra
+ -&gt; Rep (TransitionConfig DijkstraEra) x)
+-&gt; (forall x.
+    Rep (TransitionConfig DijkstraEra) x
+    -&gt; TransitionConfig DijkstraEra)
+-&gt; Generic (TransitionConfig DijkstraEra)
+forall x.
+Rep (TransitionConfig DijkstraEra) x
+-&gt; TransitionConfig DijkstraEra
+forall x.
+TransitionConfig DijkstraEra
+-&gt; Rep (TransitionConfig DijkstraEra) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x.
+TransitionConfig DijkstraEra
+-&gt; Rep (TransitionConfig DijkstraEra) x
+from :: forall x.
+TransitionConfig DijkstraEra
+-&gt; Rep (TransitionConfig DijkstraEra) x
+$cto :: forall x.
+Rep (TransitionConfig DijkstraEra) x
+-&gt; TransitionConfig DijkstraEra
+to :: forall x.
+Rep (TransitionConfig DijkstraEra) x
+-&gt; TransitionConfig DijkstraEra
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>  </span><span id="local-6989586621679361404"><span class="annot"><span class="annottext">mkTransitionConfig :: TranslationContext DijkstraEra
+-&gt; TransitionConfig (PreviousEra DijkstraEra)
+-&gt; TransitionConfig DijkstraEra
+</span><a href="#local-6989586621679361404"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkTransitionConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TranslationContext DijkstraEra
+-&gt; TransitionConfig (PreviousEra DijkstraEra)
+-&gt; TransitionConfig DijkstraEra
+DijkstraGenesis
+-&gt; TransitionConfig ConwayEra -&gt; TransitionConfig DijkstraEra
+</span><a href="Cardano.Ledger.Dijkstra.Transition.html#DijkstraTransitionConfig"><span class="hs-identifier hs-var">DijkstraTransitionConfig</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679361408"><span class="annot"><span class="annottext">injectIntoTestState :: TransitionConfig DijkstraEra
+-&gt; NewEpochState DijkstraEra -&gt; NewEpochState DijkstraEra
+</span><a href="#local-6989586621679361408"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectIntoTestState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TransitionConfig DijkstraEra
+-&gt; NewEpochState DijkstraEra -&gt; NewEpochState DijkstraEra
+forall era.
+ConwayEraTransition era =&gt;
+TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Transition.html#conwayRegisterInitialFundsThenStaking"><span class="hs-identifier hs-var">conwayRegisterInitialFundsThenStaking</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679361413"><span class="annot"><span class="annottext">tcPreviousEraConfigL :: EraTransition (PreviousEra DijkstraEra) =&gt;
+Lens'
+  (TransitionConfig DijkstraEra)
+  (TransitionConfig (PreviousEra DijkstraEra))
+</span><a href="#local-6989586621679361413"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcPreviousEraConfigL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="annottext">(TransitionConfig DijkstraEra -&gt; TransitionConfig ConwayEra)
+-&gt; (TransitionConfig DijkstraEra
+    -&gt; TransitionConfig ConwayEra -&gt; TransitionConfig DijkstraEra)
+-&gt; Lens
+     (TransitionConfig DijkstraEra)
+     (TransitionConfig DijkstraEra)
+     (TransitionConfig ConwayEra)
+     (TransitionConfig ConwayEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig DijkstraEra -&gt; TransitionConfig ConwayEra
+</span><a href="Cardano.Ledger.Dijkstra.Transition.html#dtcConwayTransitionConfig"><span class="hs-identifier hs-var">dtcConwayTransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679361416"><span class="annot"><span class="annottext">TransitionConfig DijkstraEra
+</span><a href="#local-6989586621679361416"><span class="hs-identifier hs-var">dtc</span></a></span></span><span> </span><span id="local-6989586621679361417"><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+</span><a href="#local-6989586621679361417"><span class="hs-identifier hs-var">pc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TransitionConfig DijkstraEra
+</span><a href="#local-6989586621679361416"><span class="hs-identifier hs-var">dtc</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Transition.html#dtcConwayTransitionConfig"><span class="hs-identifier hs-var">dtcConwayTransitionConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679361417"><span class="hs-identifier hs-type">pc</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679361420"><span class="annot"><span class="annottext">tcTranslationContextL :: Lens'
+  (TransitionConfig DijkstraEra) (TranslationContext DijkstraEra)
+</span><a href="#local-6989586621679361420"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcTranslationContextL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="annottext">(TransitionConfig DijkstraEra -&gt; DijkstraGenesis)
+-&gt; (TransitionConfig DijkstraEra
+    -&gt; DijkstraGenesis -&gt; TransitionConfig DijkstraEra)
+-&gt; Lens
+     (TransitionConfig DijkstraEra)
+     (TransitionConfig DijkstraEra)
+     DijkstraGenesis
+     DijkstraGenesis
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig DijkstraEra -&gt; DijkstraGenesis
+</span><a href="Cardano.Ledger.Dijkstra.Transition.html#dtcDijkstraGenesis"><span class="hs-identifier hs-var">dtcDijkstraGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679361422"><span class="annot"><span class="annottext">TransitionConfig DijkstraEra
+</span><a href="#local-6989586621679361422"><span class="hs-identifier hs-var">dtc</span></a></span></span><span> </span><span id="local-6989586621679361423"><span class="annot"><span class="annottext">DijkstraGenesis
+</span><a href="#local-6989586621679361423"><span class="hs-identifier hs-var">ag</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TransitionConfig DijkstraEra
+</span><a href="#local-6989586621679361422"><span class="hs-identifier hs-var">dtc</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Transition.html#dtcDijkstraGenesis"><span class="hs-identifier hs-var">dtcDijkstraGenesis</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679361423"><span class="hs-identifier hs-type">ag</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679361430"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Transition.html#ConwayEraTransition"><span class="hs-identifier hs-type">ConwayEraTransition</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679361439"><span id="local-6989586621679361443"><span id="local-6989586621679361449"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-43"></span></pre></body></html>

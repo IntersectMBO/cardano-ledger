@@ -1,0 +1,340 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- | Specs necessary to generate, environment, state, and signal</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- for the CERTS rule</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Certs</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.html"><span class="hs-identifier">Cardano.Ledger.Conway.Rules</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.html"><span class="hs-identifier">Cardano.Ledger.State</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.API.html"><span class="hs-identifier">Constrained.API</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Sequence</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Seq</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">fromList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Cert</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Instances</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.PParams.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.PParams.html#pparamsSpec"><span class="hs-identifier">pparamsSpec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- =======================================================</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span id="local-6989586621682710405"><span id="local-6989586621682710406"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#setMapMaybe"><span class="hs-identifier hs-type">setMapMaybe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621682710405"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621682710406"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621682710405"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="#local-6989586621682710406"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="#local-6989586621682710405"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-29"></span><span id="setMapMaybe"><span class="annot"><span class="annottext">setMapMaybe :: forall a t. Ord a =&gt; (t -&gt; Maybe a) -&gt; Set t -&gt; Set a
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#setMapMaybe"><span class="hs-identifier hs-var hs-var">setMapMaybe</span></a></span></span><span> </span><span id="local-6989586621682710585"><span class="annot"><span class="annottext">t -&gt; Maybe a
+</span><a href="#local-6989586621682710585"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621682710586"><span class="annot"><span class="annottext">Set t
+</span><a href="#local-6989586621682710586"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(t -&gt; Set a -&gt; Set a) -&gt; Set a -&gt; Set t -&gt; Set a
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Set a -&gt; b
+</span><span class="hs-identifier hs-var">Set.foldr'</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682710588"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621682710588"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621682710589"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621682710589"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Set a -&gt; (a -&gt; Set a) -&gt; Maybe a -&gt; Set a
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><span class="hs-identifier hs-var">maybe</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621682710589"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Set a
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><span class="hs-operator hs-var">`Set.insert`</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621682710589"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe a -&gt; Set a) -&gt; Maybe a -&gt; Set a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">t -&gt; Maybe a
+</span><a href="#local-6989586621682710585"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621682710588"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Set a
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">Set t
+</span><a href="#local-6989586621682710586"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span id="local-6989586621682710420"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#txZero"><span class="hs-identifier hs-type">txZero</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">EraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710420"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710420"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-32"></span><span id="txZero"><span class="annot"><span class="annottext">txZero :: forall era. EraTx era =&gt; Tx era
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#txZero"><span class="hs-identifier hs-var hs-var">txZero</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxBody era -&gt; Tx era
+forall era. EraTx era =&gt; TxBody era -&gt; Tx era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTx"><span class="hs-identifier hs-var">mkBasicTx</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody era
+forall era. EraTxBody era =&gt; TxBody era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxBody"><span class="hs-identifier hs-var">mkBasicTxBody</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span id="local-6989586621682710428"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#certsEnvSpec"><span class="hs-identifier hs-type">certsEnvSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Basic.html#EraSpecPParams"><span class="hs-identifier hs-type">EraSpecPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710428"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710428"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#CertsEnv"><span class="hs-identifier hs-type">CertsEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710428"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-37"></span><span id="certsEnvSpec"><span class="annot"><span class="annottext">certsEnvSpec :: forall era.
+(EraSpecPParams era, HasSpec (Tx era)) =&gt;
+Specification (CertsEnv era)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#certsEnvSpec"><span class="hs-identifier hs-var hs-var">certsEnvSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (CertsEnv era) -&gt; Pred) -&gt; Specification (CertsEnv era)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (CertsEnv era) -&gt; Pred) -&gt; Specification (CertsEnv era))
+-&gt; (Term (CertsEnv era) -&gt; Pred) -&gt; Specification (CertsEnv era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682710716"><span class="annot"><span class="annottext">Term (CertsEnv era)
+</span><a href="#local-6989586621682710716"><span class="hs-identifier hs-var">ce</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="annottext">Term (CertsEnv era)
+-&gt; FunTy (MapList Term (ProductAsList (CertsEnv era))) [Pred]
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (CertsEnv era)
+</span><a href="#local-6989586621682710716"><span class="hs-identifier hs-var">ce</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (CertsEnv era))) [Pred]
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList (CertsEnv era))) [Pred]
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682710718"><span class="annot"><span class="annottext">Term (Tx era)
+</span><a href="#local-6989586621682710718"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span id="local-6989586621682710719"><span class="annot"><span class="annottext">Term (PParams era)
+</span><a href="#local-6989586621682710719"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621682710720"><span class="annot"><span class="annottext">TermD Deps EpochNo
+</span><a href="#local-6989586621682710720"><span class="hs-identifier hs-var">_currepoch</span></a></span></span><span> </span><span id="local-6989586621682710721"><span class="annot"><span class="annottext">TermD Deps (StrictMaybe (Committee era))
+</span><a href="#local-6989586621682710721"><span class="hs-identifier hs-var">_currcommittee</span></a></span></span><span> </span><span id="local-6989586621682710722"><span class="annot"><span class="annottext">Term (Map (GovPurposeId 'CommitteePurpose) (GovActionState era))
+</span><a href="#local-6989586621682710722"><span class="hs-identifier hs-var">commproposals</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (PParams era) -&gt; Specification (PParams era) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term (PParams era)
+</span><a href="#local-6989586621682710719"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (PParams era)
+forall era. EraSpecPParams era =&gt; Specification (PParams era)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.PParams.html#pparamsSpec"><span class="hs-identifier hs-var">pparamsSpec</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (Tx era)
+</span><a href="#local-6989586621682710718"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Tx era) -&gt; Term (Tx era) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era -&gt; Term (Tx era)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era
+forall era. EraTx era =&gt; Tx era
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#txZero"><span class="hs-identifier hs-var">txZero</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Hint (Map (GovPurposeId 'CommitteePurpose) (GovActionState era))
+-&gt; Term (Map (GovPurposeId 'CommitteePurpose) (GovActionState era))
+-&gt; Pred
+forall t. HasGenHint t =&gt; Hint t -&gt; Term t -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#genHint"><span class="hs-identifier hs-var">genHint</span></a></span><span> </span><span class="annot"><span class="annottext">Hint (Map (GovPurposeId 'CommitteePurpose) (GovActionState era))
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">Term (Map (GovPurposeId 'CommitteePurpose) (GovActionState era))
+</span><a href="#local-6989586621682710722"><span class="hs-identifier hs-var">commproposals</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="annot"><span class="hs-comment">-- | Project a CertEnv out of a CertsEnv (i.e drop the Tx)</span></span><span>
+</span><span id="line-45"></span><span id="local-6989586621682710508"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#projectEnv"><span class="hs-identifier hs-type">projectEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#CertsEnv"><span class="hs-identifier hs-type">CertsEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710508"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Cert.html#CertEnv"><span class="hs-identifier hs-type">CertEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710508"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-46"></span><span id="projectEnv"><span class="annot"><span class="annottext">projectEnv :: forall era. CertsEnv era -&gt; CertEnv era
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#projectEnv"><span class="hs-identifier hs-var hs-var">projectEnv</span></a></span></span><span> </span><span id="local-6989586621682710729"><span class="annot"><span class="annottext">CertsEnv era
+</span><a href="#local-6989586621682710729"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Cert.html#CertEnv"><span class="hs-identifier hs-type">CertEnv</span></a></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">cePParams :: PParams era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Cert.html#cePParams"><span class="hs-identifier hs-var">cePParams</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CertsEnv era -&gt; PParams era
+forall era. CertsEnv era -&gt; PParams era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#certsPParams"><span class="hs-identifier hs-var">certsPParams</span></a></span><span> </span><span class="annot"><span class="annottext">CertsEnv era
+</span><a href="#local-6989586621682710729"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ceCurrentEpoch :: EpochNo
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Cert.html#ceCurrentEpoch"><span class="hs-identifier hs-var">ceCurrentEpoch</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CertsEnv era -&gt; EpochNo
+forall era. CertsEnv era -&gt; EpochNo
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#certsCurrentEpoch"><span class="hs-identifier hs-var">certsCurrentEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">CertsEnv era
+</span><a href="#local-6989586621682710729"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ceCurrentCommittee :: StrictMaybe (Committee era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Cert.html#ceCurrentCommittee"><span class="hs-identifier hs-var">ceCurrentCommittee</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CertsEnv era -&gt; StrictMaybe (Committee era)
+forall era. CertsEnv era -&gt; StrictMaybe (Committee era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#certsCurrentCommittee"><span class="hs-identifier hs-var">certsCurrentCommittee</span></a></span><span> </span><span class="annot"><span class="annottext">CertsEnv era
+</span><a href="#local-6989586621682710729"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ceCommitteeProposals :: Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Cert.html#ceCommitteeProposals"><span class="hs-identifier hs-var">ceCommitteeProposals</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CertsEnv era
+-&gt; Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
+forall era.
+CertsEnv era
+-&gt; Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#certsCommitteeProposals"><span class="hs-identifier hs-var">certsCommitteeProposals</span></a></span><span> </span><span class="annot"><span class="annottext">CertsEnv era
+</span><a href="#local-6989586621682710729"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#txCertsSpec"><span class="hs-identifier hs-type">txCertsSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682710515"><span class="annot"><a href="#local-6989586621682710515"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#EraSpecCert"><span class="hs-identifier hs-type">EraSpecCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710515"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710515"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#CertsEnv"><span class="hs-identifier hs-type">CertsEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710515"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#CertState"><span class="hs-identifier hs-type">CertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710515"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Seq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#TxCert"><span class="hs-identifier hs-type">TxCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710515"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span id="txCertsSpec"><span class="annot"><span class="annottext">txCertsSpec :: forall era.
+EraSpecCert era =&gt;
+WitUniv era
+-&gt; CertsEnv era
+-&gt; CertState era
+-&gt; Specification (Seq (TxCert era))
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#txCertsSpec"><span class="hs-identifier hs-var hs-var">txCertsSpec</span></a></span></span><span> </span><span id="local-6989586621682710775"><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682710775"><span class="hs-identifier hs-var">univ</span></a></span></span><span> </span><span id="local-6989586621682710776"><span class="annot"><span class="annottext">CertsEnv era
+</span><a href="#local-6989586621682710776"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621682710777"><span class="annot"><span class="annottext">CertState era
+</span><a href="#local-6989586621682710777"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="annottext">(Term (Seq (TxCert era)) -&gt; Pred)
+-&gt; Specification (Seq (TxCert era))
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Seq (TxCert era)) -&gt; Pred)
+ -&gt; Specification (Seq (TxCert era)))
+-&gt; (Term (Seq (TxCert era)) -&gt; Pred)
+-&gt; Specification (Seq (TxCert era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682710778"><span class="annot"><span class="annottext">Term (Seq (TxCert era))
+</span><a href="#local-6989586621682710778"><span class="hs-identifier hs-var">seqs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="annottext">((forall b. Term b -&gt; b) -&gt; GE [TxCert era])
+-&gt; (Term [TxCert era] -&gt; Pred) -&gt; Pred
+forall a p.
+(HasSpec a, IsPred p) =&gt;
+((forall b. Term b -&gt; b) -&gt; GE a) -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#exists"><span class="hs-identifier hs-var">exists</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682710780"><span class="annot"><span class="annottext">forall b. Term b -&gt; b
+</span><a href="#local-6989586621682710780"><span class="hs-identifier hs-var">eval</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[TxCert era] -&gt; GE [TxCert era]
+forall a. a -&gt; GE a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">([TxCert era] -&gt; GE [TxCert era])
+-&gt; [TxCert era] -&gt; GE [TxCert era]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Seq (TxCert era) -&gt; [TxCert era]
+forall a. Seq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Seq (TxCert era)) -&gt; Seq (TxCert era)
+forall b. Term b -&gt; b
+</span><a href="#local-6989586621682710780"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Seq (TxCert era))
+</span><a href="#local-6989586621682710778"><span class="hs-identifier hs-var">seqs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682710781"><span class="annot"><span class="annottext">Term [TxCert era]
+</span><a href="#local-6989586621682710781"><span class="hs-identifier hs-var">list</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term ([TxCert era], Seq (TxCert era))
+-&gt; Specification ([TxCert era], Seq (TxCert era)) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term [TxCert era]
+-&gt; Term (Seq (TxCert era)) -&gt; Term ([TxCert era], Seq (TxCert era))
+forall a b.
+(HasSpec a, HasSpec b, IsNormalType a, IsNormalType b) =&gt;
+Term a -&gt; Term b -&gt; Term (a, b)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#pair_"><span class="hs-identifier hs-var">pair_</span></a></span><span> </span><span class="annot"><span class="annottext">Term [TxCert era]
+</span><a href="#local-6989586621682710781"><span class="hs-identifier hs-var">list</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Seq (TxCert era))
+</span><a href="#local-6989586621682710778"><span class="hs-identifier hs-var">seqs</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era.
+EraSpecCert era =&gt;
+WitUniv era
+-&gt; CertEnv era
+-&gt; CertState era
+-&gt; Specification ([TxCert era], Seq (TxCert era))
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#listSeqCertPairSpec"><span class="hs-identifier hs-var">listSeqCertPairSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621682710515"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682710775"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. CertsEnv era -&gt; CertEnv era
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#projectEnv"><span class="hs-identifier hs-var">projectEnv</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621682710515"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">CertsEnv era
+</span><a href="#local-6989586621682710776"><span class="hs-identifier hs-var">env</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">CertState era
+</span><a href="#local-6989586621682710777"><span class="hs-identifier hs-var">state</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#noSameKeys"><span class="hs-identifier hs-type">noSameKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682710537"><span class="annot"><a href="#local-6989586621682710537"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#EraSpecCert"><span class="hs-identifier hs-type">EraSpecCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710537"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#TxCert"><span class="hs-identifier hs-type">TxCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710537"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#TxCert"><span class="hs-identifier hs-type">TxCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710537"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span id="noSameKeys"><span class="annot"><span class="annottext">noSameKeys :: forall era. EraSpecCert era =&gt; [TxCert era] -&gt; [TxCert era]
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#noSameKeys"><span class="hs-identifier hs-var hs-var">noSameKeys</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#noSameKeys"><span class="hs-identifier hs-var">noSameKeys</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621682710791"><span class="annot"><span class="annottext">TxCert era
+</span><a href="#local-6989586621682710791"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621682710792"><span class="annot"><span class="annottext">[TxCert era]
+</span><a href="#local-6989586621682710792"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxCert era
+</span><a href="#local-6989586621682710791"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert era -&gt; [TxCert era] -&gt; [TxCert era]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">forall era. EraSpecCert era =&gt; [TxCert era] -&gt; [TxCert era]
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#noSameKeys"><span class="hs-identifier hs-var">noSameKeys</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621682710537"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TxCert era -&gt; Bool) -&gt; [TxCert era] -&gt; [TxCert era]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">filter</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682710793"><span class="annot"><span class="annottext">TxCert era
+</span><a href="#local-6989586621682710793"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall era. EraSpecCert era =&gt; TxCert era -&gt; CertKey
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#txCertKey"><span class="hs-identifier hs-var">txCertKey</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621682710537"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert era
+</span><a href="#local-6989586621682710791"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">CertKey -&gt; CertKey -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">forall era. EraSpecCert era =&gt; TxCert era -&gt; CertKey
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#txCertKey"><span class="hs-identifier hs-var">txCertKey</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621682710537"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert era
+</span><a href="#local-6989586621682710793"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[TxCert era]
+</span><a href="#local-6989586621682710792"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- | Specify a pair of List and Seq, where they have essentially the same elements</span><span>
+</span><span id="line-72"></span><span class="hs-comment">--   EXCEPT, the Seq has duplicate keys filtered out.</span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#listSeqCertPairSpec"><span class="hs-identifier hs-type">listSeqCertPairSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682710536"><span class="annot"><a href="#local-6989586621682710536"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#EraSpecCert"><span class="hs-identifier hs-type">EraSpecCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710536"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710536"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Cert.html#CertEnv"><span class="hs-identifier hs-type">CertEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710536"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#CertState"><span class="hs-identifier hs-type">CertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710536"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#TxCert"><span class="hs-identifier hs-type">TxCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710536"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Seq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#TxCert"><span class="hs-identifier hs-type">TxCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682710536"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span id="listSeqCertPairSpec"><span class="annot"><span class="annottext">listSeqCertPairSpec :: forall era.
+EraSpecCert era =&gt;
+WitUniv era
+-&gt; CertEnv era
+-&gt; CertState era
+-&gt; Specification ([TxCert era], Seq (TxCert era))
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#listSeqCertPairSpec"><span class="hs-identifier hs-var hs-var">listSeqCertPairSpec</span></a></span></span><span> </span><span id="local-6989586621682710875"><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682710875"><span class="hs-identifier hs-var">univ</span></a></span></span><span> </span><span id="local-6989586621682710876"><span class="annot"><span class="annottext">CertEnv era
+</span><a href="#local-6989586621682710876"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621682710877"><span class="annot"><span class="annottext">CertState era
+</span><a href="#local-6989586621682710877"><span class="hs-identifier hs-var">state</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">FunTy
+  (MapList Term (Args (SimpleRep ([TxCert era], Seq (TxCert era)))))
+  [Pred]
+-&gt; Specification ([TxCert era], Seq (TxCert era))
+forall a p.
+(Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec (SimpleRep a),
+ HasSimpleRep a, All HasSpec (Args (SimpleRep a)),
+ IsProd (SimpleRep a), HasSpec a, IsProductType a, IsPred p,
+ GenericRequires a, ProdAsListComputes a) =&gt;
+FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#constrained%27"><span class="hs-identifier hs-var">constrained'</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (Args (SimpleRep ([TxCert era], Seq (TxCert era)))))
+   [Pred]
+ -&gt; Specification ([TxCert era], Seq (TxCert era)))
+-&gt; FunTy
+     (MapList Term (Args (SimpleRep ([TxCert era], Seq (TxCert era)))))
+     [Pred]
+-&gt; Specification ([TxCert era], Seq (TxCert era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682710879"><span class="annot"><span class="annottext">Term [TxCert era]
+</span><a href="#local-6989586621682710879"><span class="hs-identifier hs-var">list</span></a></span></span><span> </span><span id="local-6989586621682710880"><span class="annot"><span class="annottext">Term (Seq (TxCert era))
+</span><a href="#local-6989586621682710880"><span class="hs-identifier hs-var">seqs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term [TxCert era] -&gt; Term Integer
+forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term [TxCert era]
+</span><a href="#local-6989586621682710879"><span class="hs-identifier hs-var">list</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term [TxCert era] -&gt; (Term (TxCert era) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term [TxCert era]
+</span><a href="#local-6989586621682710879"><span class="hs-identifier hs-var">list</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (TxCert era) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (TxCert era) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682710884"><span class="annot"><span class="annottext">Term (TxCert era)
+</span><a href="#local-6989586621682710884"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term (TxCert era) -&gt; Specification (TxCert era) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term (TxCert era)
+</span><a href="#local-6989586621682710884"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era.
+EraSpecCert era =&gt;
+WitUniv era
+-&gt; CertEnv era -&gt; CertState era -&gt; Specification (TxCert era)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#txCertSpec"><span class="hs-identifier hs-var">txCertSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621682710536"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682710875"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">CertEnv era
+</span><a href="#local-6989586621682710876"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">CertState era
+</span><a href="#local-6989586621682710877"><span class="hs-identifier hs-var">state</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term [TxCert era]
+-&gt; ([TxCert era] -&gt; Seq (TxCert era))
+-&gt; (Term (Seq (TxCert era)) -&gt; Term Bool)
+-&gt; Pred
+forall a b p.
+(HasSpec a, HasSpec b, IsPred p) =&gt;
+Term a -&gt; (a -&gt; b) -&gt; (Term b -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#reify"><span class="hs-identifier hs-var">reify</span></a></span><span> </span><span class="annot"><span class="annottext">Term [TxCert era]
+</span><a href="#local-6989586621682710879"><span class="hs-identifier hs-var">list</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[TxCert era] -&gt; Seq (TxCert era)
+forall a. [a] -&gt; Seq a
+</span><span class="hs-identifier hs-var">fromList</span></span><span> </span><span class="annot"><span class="annottext">([TxCert era] -&gt; Seq (TxCert era))
+-&gt; ([TxCert era] -&gt; [TxCert era])
+-&gt; [TxCert era]
+-&gt; Seq (TxCert era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">forall era. EraSpecCert era =&gt; [TxCert era] -&gt; [TxCert era]
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Certs.html#noSameKeys"><span class="hs-identifier hs-var">noSameKeys</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621682710536"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682710888"><span class="annot"><span class="annottext">Term (Seq (TxCert era))
+</span><a href="#local-6989586621682710888"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term (Seq (TxCert era))
+</span><a href="#local-6989586621682710880"><span class="hs-identifier hs-var">seqs</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Seq (TxCert era)) -&gt; Term (Seq (TxCert era)) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Seq (TxCert era))
+</span><a href="#local-6989586621682710888"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-86"></span></pre></body></html>

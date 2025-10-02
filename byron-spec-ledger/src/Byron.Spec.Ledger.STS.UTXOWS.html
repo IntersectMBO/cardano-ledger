@@ -1,0 +1,601 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679685988"><span id="local-6989586621679685989"><span id="local-6989586621679685990"></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE StrictData #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- | Transition system that models the application of multiple transactions to</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- the UTxO part of the ledger state.</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Byron.Spec.Ledger.STS.UTXOWS</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXO.html"><span class="hs-identifier">Byron.Spec.Ledger.STS.UTXO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXO.html#UTxOEnv"><span class="hs-identifier">UTxOEnv</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXO.html#UTxOState"><span class="hs-identifier">UTxOState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOW.html"><span class="hs-identifier">Byron.Spec.Ledger.STS.UTXOW</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOW.html#UTXOW"><span class="hs-identifier">UTXOW</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html"><span class="hs-identifier">Byron.Spec.Ledger.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier">Tx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Embed"><span class="hs-identifier">Embed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier">Environment</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#IRC"><span class="hs-identifier">IRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#IRC"><span class="hs-identifier">IRC</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier">PredicateFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier">STS</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier">Signal</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier">State</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier">TRC</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#initialRules"><span class="hs-identifier">initialRules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier">judgmentContext</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#trans"><span class="hs-identifier">trans</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#transitionRules"><span class="hs-identifier">transitionRules</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#wrapFailed"><span class="hs-identifier">wrapFailed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Data</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Data</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html"><span class="hs-identifier">Test.Control.State.Transition.Generator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#HasTrace"><span class="hs-identifier">HasTrace</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#envGen"><span class="hs-identifier">envGen</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#genTrace"><span class="hs-identifier">genTrace</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#sigGen"><span class="hs-identifier">sigGen</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html"><span class="hs-identifier">Test.Control.State.Transition.Trace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#TraceOrder"><span class="hs-identifier">TraceOrder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#OldestFirst"><span class="hs-identifier">OldestFirst</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#traceSignals"><span class="hs-identifier">traceSignals</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">data</span><span> </span><span id="UTXOWS"><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-var">UTXOWS</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679686007"><span id="local-6989586621679686009"><span id="local-6989586621679686011"><span id="local-6989586621679686013"><span id="local-6989586621679686015"><span id="local-6989586621679686021"><span id="local-6989586621679686026"><span id="local-6989586621679686029"><span id="local-6989586621679686032"><span id="local-6989586621679686035"><span id="local-6989586621679686038"><span id="local-6989586621679686041"><span id="local-6989586621679686046"><span id="local-6989586621679686051"><span class="annot"><span class="annottext">Typeable UTXOWS
+Typeable UTXOWS =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; UTXOWS -&gt; c UTXOWS)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UTXOWS)
+-&gt; (UTXOWS -&gt; Constr)
+-&gt; (UTXOWS -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UTXOWS))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UTXOWS))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; UTXOWS -&gt; UTXOWS)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTXOWS -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTXOWS -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UTXOWS -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UTXOWS -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; UTXOWS -&gt; m UTXOWS)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; UTXOWS -&gt; m UTXOWS)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; UTXOWS -&gt; m UTXOWS)
+-&gt; Data UTXOWS
+UTXOWS -&gt; Constr
+UTXOWS -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; UTXOWS -&gt; UTXOWS
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UTXOWS -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UTXOWS -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTXOWS -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTXOWS -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTXOWS -&gt; m UTXOWS
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTXOWS -&gt; m UTXOWS
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UTXOWS
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; UTXOWS -&gt; c UTXOWS
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UTXOWS)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UTXOWS)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; UTXOWS -&gt; c UTXOWS
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; UTXOWS -&gt; c UTXOWS
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UTXOWS
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UTXOWS
+$ctoConstr :: UTXOWS -&gt; Constr
+toConstr :: UTXOWS -&gt; Constr
+$cdataTypeOf :: UTXOWS -&gt; DataType
+dataTypeOf :: UTXOWS -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UTXOWS)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UTXOWS)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UTXOWS)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UTXOWS)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; UTXOWS -&gt; UTXOWS
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; UTXOWS -&gt; UTXOWS
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTXOWS -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTXOWS -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTXOWS -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTXOWS -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UTXOWS -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UTXOWS -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UTXOWS -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UTXOWS -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTXOWS -&gt; m UTXOWS
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTXOWS -&gt; m UTXOWS
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTXOWS -&gt; m UTXOWS
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTXOWS -&gt; m UTXOWS
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTXOWS -&gt; m UTXOWS
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTXOWS -&gt; m UTXOWS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">data</span><span> </span><span id="UtxowsPredicateFailure"><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UtxowsPredicateFailure"><span class="hs-identifier hs-var">UtxowsPredicateFailure</span></a></span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="UtxowFailure"><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UtxowFailure"><span class="hs-identifier hs-var">UtxowFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOW.html#UTXOW"><span class="hs-identifier hs-type">UTXOW</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679686058"><span id="local-6989586621679686062"><span class="annot"><span class="annottext">UtxowsPredicateFailure -&gt; UtxowsPredicateFailure -&gt; Bool
+(UtxowsPredicateFailure -&gt; UtxowsPredicateFailure -&gt; Bool)
+-&gt; (UtxowsPredicateFailure -&gt; UtxowsPredicateFailure -&gt; Bool)
+-&gt; Eq UtxowsPredicateFailure
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: UtxowsPredicateFailure -&gt; UtxowsPredicateFailure -&gt; Bool
+== :: UtxowsPredicateFailure -&gt; UtxowsPredicateFailure -&gt; Bool
+$c/= :: UtxowsPredicateFailure -&gt; UtxowsPredicateFailure -&gt; Bool
+/= :: UtxowsPredicateFailure -&gt; UtxowsPredicateFailure -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679686067"><span id="local-6989586621679686073"><span id="local-6989586621679686077"><span class="annot"><span class="annottext">Int -&gt; UtxowsPredicateFailure -&gt; ShowS
+[UtxowsPredicateFailure] -&gt; ShowS
+UtxowsPredicateFailure -&gt; String
+(Int -&gt; UtxowsPredicateFailure -&gt; ShowS)
+-&gt; (UtxowsPredicateFailure -&gt; String)
+-&gt; ([UtxowsPredicateFailure] -&gt; ShowS)
+-&gt; Show UtxowsPredicateFailure
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; UtxowsPredicateFailure -&gt; ShowS
+showsPrec :: Int -&gt; UtxowsPredicateFailure -&gt; ShowS
+$cshow :: UtxowsPredicateFailure -&gt; String
+show :: UtxowsPredicateFailure -&gt; String
+$cshowList :: [UtxowsPredicateFailure] -&gt; ShowS
+showList :: [UtxowsPredicateFailure] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679686083"><span id="local-6989586621679686087"><span id="local-6989586621679686090"><span id="local-6989586621679686092"><span id="local-6989586621679686094"><span id="local-6989586621679686100"><span id="local-6989586621679686105"><span id="local-6989586621679686108"><span id="local-6989586621679686111"><span id="local-6989586621679686114"><span id="local-6989586621679686117"><span id="local-6989586621679686120"><span id="local-6989586621679686125"><span id="local-6989586621679686130"><span class="annot"><span class="annottext">Typeable UtxowsPredicateFailure
+Typeable UtxowsPredicateFailure =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g)
+ -&gt; UtxowsPredicateFailure
+ -&gt; c UtxowsPredicateFailure)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UtxowsPredicateFailure)
+-&gt; (UtxowsPredicateFailure -&gt; Constr)
+-&gt; (UtxowsPredicateFailure -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UtxowsPredicateFailure))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c UtxowsPredicateFailure))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; UtxowsPredicateFailure -&gt; UtxowsPredicateFailure)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r
+    -&gt; (forall d. Data d =&gt; d -&gt; r')
+    -&gt; UtxowsPredicateFailure
+    -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r
+    -&gt; (forall d. Data d =&gt; d -&gt; r')
+    -&gt; UtxowsPredicateFailure
+    -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; UtxowsPredicateFailure -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UtxowsPredicateFailure -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; UtxowsPredicateFailure -&gt; m UtxowsPredicateFailure)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; UtxowsPredicateFailure -&gt; m UtxowsPredicateFailure)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; UtxowsPredicateFailure -&gt; m UtxowsPredicateFailure)
+-&gt; Data UtxowsPredicateFailure
+UtxowsPredicateFailure -&gt; Constr
+UtxowsPredicateFailure -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; UtxowsPredicateFailure -&gt; UtxowsPredicateFailure
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UtxowsPredicateFailure -&gt; u
+forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; UtxowsPredicateFailure -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; UtxowsPredicateFailure
+-&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; UtxowsPredicateFailure
+-&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UtxowsPredicateFailure -&gt; m UtxowsPredicateFailure
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UtxowsPredicateFailure -&gt; m UtxowsPredicateFailure
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UtxowsPredicateFailure
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; UtxowsPredicateFailure
+-&gt; c UtxowsPredicateFailure
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UtxowsPredicateFailure)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c UtxowsPredicateFailure)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; UtxowsPredicateFailure
+-&gt; c UtxowsPredicateFailure
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; UtxowsPredicateFailure
+-&gt; c UtxowsPredicateFailure
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UtxowsPredicateFailure
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UtxowsPredicateFailure
+$ctoConstr :: UtxowsPredicateFailure -&gt; Constr
+toConstr :: UtxowsPredicateFailure -&gt; Constr
+$cdataTypeOf :: UtxowsPredicateFailure -&gt; DataType
+dataTypeOf :: UtxowsPredicateFailure -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UtxowsPredicateFailure)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UtxowsPredicateFailure)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c UtxowsPredicateFailure)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c UtxowsPredicateFailure)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; UtxowsPredicateFailure -&gt; UtxowsPredicateFailure
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; UtxowsPredicateFailure -&gt; UtxowsPredicateFailure
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; UtxowsPredicateFailure
+-&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; UtxowsPredicateFailure
+-&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; UtxowsPredicateFailure
+-&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; UtxowsPredicateFailure
+-&gt; r
+$cgmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; UtxowsPredicateFailure -&gt; [u]
+gmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; UtxowsPredicateFailure -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UtxowsPredicateFailure -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UtxowsPredicateFailure -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UtxowsPredicateFailure -&gt; m UtxowsPredicateFailure
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UtxowsPredicateFailure -&gt; m UtxowsPredicateFailure
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UtxowsPredicateFailure -&gt; m UtxowsPredicateFailure
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UtxowsPredicateFailure -&gt; m UtxowsPredicateFailure
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UtxowsPredicateFailure -&gt; m UtxowsPredicateFailure
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; UtxowsPredicateFailure -&gt; m UtxowsPredicateFailure
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679686135"><span id="local-6989586621679686137"><span class="annot"><span class="annottext">(forall x. UtxowsPredicateFailure -&gt; Rep UtxowsPredicateFailure x)
+-&gt; (forall x.
+    Rep UtxowsPredicateFailure x -&gt; UtxowsPredicateFailure)
+-&gt; Generic UtxowsPredicateFailure
+forall x. Rep UtxowsPredicateFailure x -&gt; UtxowsPredicateFailure
+forall x. UtxowsPredicateFailure -&gt; Rep UtxowsPredicateFailure x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. UtxowsPredicateFailure -&gt; Rep UtxowsPredicateFailure x
+from :: forall x. UtxowsPredicateFailure -&gt; Rep UtxowsPredicateFailure x
+$cto :: forall x. Rep UtxowsPredicateFailure x -&gt; UtxowsPredicateFailure
+to :: forall x. Rep UtxowsPredicateFailure x -&gt; UtxowsPredicateFailure
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679686141"><span id="local-6989586621679686145"><span id="local-6989586621679686151"><span class="annot"><span class="annottext">Context -&gt; UtxowsPredicateFailure -&gt; IO (Maybe ThunkInfo)
+Proxy UtxowsPredicateFailure -&gt; String
+(Context -&gt; UtxowsPredicateFailure -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; UtxowsPredicateFailure -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy UtxowsPredicateFailure -&gt; String)
+-&gt; NoThunks UtxowsPredicateFailure
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; UtxowsPredicateFailure -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; UtxowsPredicateFailure -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; UtxowsPredicateFailure -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; UtxowsPredicateFailure -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy UtxowsPredicateFailure -&gt; String
+showTypeOf :: Proxy UtxowsPredicateFailure -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679686188"><span id="local-6989586621679686192"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-type">UTXOWS</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="State"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-type">UTXOWS</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXO.html#UTxOState"><span class="hs-identifier hs-type">UTxOState</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signal"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-var">Signal</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-type">UTXOWS</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Environment"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-type">UTXOWS</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXO.html#UTxOEnv"><span class="hs-identifier hs-type">UTxOEnv</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="PredicateFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-var">PredicateFailure</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-type">UTXOWS</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UtxowsPredicateFailure"><span class="hs-identifier hs-type">UtxowsPredicateFailure</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679686200"><span class="annot"><span class="annottext">initialRules :: [InitialRule UTXOWS]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#initialRules"><span class="hs-identifier hs-var hs-var hs-var hs-var">initialRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-53"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#IRC"><span class="hs-identifier hs-type">IRC</span></a></span><span> </span><span id="local-6989586621679686201"><span class="annot"><span class="annottext">Environment UTXOWS
+</span><a href="#local-6989586621679686201"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Rule UTXOWS 'Initial (RuleContext 'Initial UTXOWS)
+F (Clause UTXOWS 'Initial) (IRC UTXOWS)
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><span class="annottext">forall sub super (rtype :: RuleType).
+Embed sub super =&gt;
+RuleContext rtype sub -&gt; Rule super rtype (State sub)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#trans"><span class="hs-identifier hs-var">trans</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOW.html#UTXOW"><span class="hs-identifier hs-type">UTXOW</span></a></span><span> </span><span class="annot"><span class="annottext">(RuleContext 'Initial UTXOW -&gt; Rule UTXOWS 'Initial (State UTXOW))
+-&gt; RuleContext 'Initial UTXOW -&gt; Rule UTXOWS 'Initial (State UTXOW)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Environment UTXOW -&gt; IRC UTXOW
+forall sts. Environment sts -&gt; IRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#IRC"><span class="hs-identifier hs-var">IRC</span></a></span><span> </span><span class="annot"><span class="annottext">Environment UTXOW
+Environment UTXOWS
+</span><a href="#local-6989586621679686201"><span class="hs-identifier hs-var">env</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>  </span><span id="local-6989586621679686211"><span class="annot"><span class="annottext">transitionRules :: [TransitionRule UTXOWS]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#transitionRules"><span class="hs-identifier hs-var hs-var hs-var hs-var">transitionRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-59"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679686212"><span class="annot"><span class="annottext">Environment UTXOWS
+</span><a href="#local-6989586621679686212"><span class="hs-identifier hs-var">env</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679686213"><span class="annot"><span class="annottext">State UTXOWS
+</span><a href="#local-6989586621679686213"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679686214"><span class="annot"><span class="annottext">Signal UTXOWS
+</span><a href="#local-6989586621679686214"><span class="hs-identifier hs-var">txWits</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Rule UTXOWS 'Transition (RuleContext 'Transition UTXOWS)
+F (Clause UTXOWS 'Transition) (TRC UTXOWS)
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span>
+</span><span id="line-60"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Tx]
+Signal UTXOWS
+</span><a href="#local-6989586621679686214"><span class="hs-identifier hs-var">txWits</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-61"></span><span>          </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">UTxOState -&gt; F (Clause UTXOWS 'Transition) UTxOState
+forall a. a -&gt; F (Clause UTXOWS 'Transition) a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">State UTXOWS
+UTxOState
+</span><a href="#local-6989586621679686213"><span class="hs-identifier hs-var">utxo</span></a></span><span>
+</span><span id="line-62"></span><span>          </span><span class="hs-special">(</span><span id="local-6989586621679686215"><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679686215"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679686216"><span class="annot"><span class="annottext">[Tx]
+</span><a href="#local-6989586621679686216"><span class="hs-identifier hs-var">gamma</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-63"></span><span>            </span><span id="local-6989586621679686217"><span class="annot"><span class="annottext">UTxOState
+</span><a href="#local-6989586621679686217"><span class="hs-identifier hs-var">utxo'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall sub super (rtype :: RuleType).
+Embed sub super =&gt;
+RuleContext rtype sub -&gt; Rule super rtype (State sub)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#trans"><span class="hs-identifier hs-var">trans</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOW.html#UTXOW"><span class="hs-identifier hs-type">UTXOW</span></a></span><span> </span><span class="annot"><span class="annottext">(RuleContext 'Transition UTXOW
+ -&gt; Rule UTXOWS 'Transition (State UTXOW))
+-&gt; RuleContext 'Transition UTXOW
+-&gt; Rule UTXOWS 'Transition (State UTXOW)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Environment UTXOW, State UTXOW, Signal UTXOW) -&gt; TRC UTXOW
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Environment UTXOW
+Environment UTXOWS
+</span><a href="#local-6989586621679686212"><span class="hs-identifier hs-var">env</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State UTXOW
+State UTXOWS
+</span><a href="#local-6989586621679686213"><span class="hs-identifier hs-var">utxo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Signal UTXOW
+Tx
+</span><a href="#local-6989586621679686215"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>            </span><span id="local-6989586621679686218"><span class="annot"><span class="annottext">UTxOState
+</span><a href="#local-6989586621679686218"><span class="hs-identifier hs-var">utxo''</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall sub super (rtype :: RuleType).
+Embed sub super =&gt;
+RuleContext rtype sub -&gt; Rule super rtype (State sub)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#trans"><span class="hs-identifier hs-var">trans</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-type">UTXOWS</span></a></span><span> </span><span class="annot"><span class="annottext">(RuleContext 'Transition UTXOWS -&gt; TransitionRule UTXOWS)
+-&gt; RuleContext 'Transition UTXOWS -&gt; TransitionRule UTXOWS
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Environment UTXOWS, State UTXOWS, Signal UTXOWS) -&gt; TRC UTXOWS
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Environment UTXOWS
+</span><a href="#local-6989586621679686212"><span class="hs-identifier hs-var">env</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State UTXOWS
+UTxOState
+</span><a href="#local-6989586621679686217"><span class="hs-identifier hs-var">utxo'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Tx]
+Signal UTXOWS
+</span><a href="#local-6989586621679686216"><span class="hs-identifier hs-var">gamma</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>            </span><span class="annot"><span class="annottext">UTxOState -&gt; F (Clause UTXOWS 'Transition) UTxOState
+forall a. a -&gt; F (Clause UTXOWS 'Transition) a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">UTxOState
+</span><a href="#local-6989586621679686218"><span class="hs-identifier hs-var">utxo''</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679686227"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Embed"><span class="hs-identifier hs-type">Embed</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOW.html#UTXOW"><span class="hs-identifier hs-type">UTXOW</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-type">UTXOWS</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679686232"><span class="annot"><span class="annottext">wrapFailed :: PredicateFailure UTXOW -&gt; PredicateFailure UTXOWS
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#wrapFailed"><span class="hs-identifier hs-var hs-var hs-var hs-var">wrapFailed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure UTXOW -&gt; PredicateFailure UTXOWS
+PredicateFailure UTXOW -&gt; UtxowsPredicateFailure
+</span><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UtxowFailure"><span class="hs-identifier hs-var">UtxowFailure</span></a></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679686236"><span id="local-6989586621679686244"><span id="local-6989586621679686247"><span id="local-6989586621679686250"><span id="local-6989586621679686253"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#HasTrace"><span class="hs-identifier hs-type">HasTrace</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOWS.html#UTXOWS"><span class="hs-identifier hs-type">UTXOWS</span></a></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621679686258"><span class="annot"><span class="annottext">envGen :: Word64 -&gt; Gen (Environment UTXOWS)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#envGen"><span class="hs-identifier hs-var hs-var hs-var hs-var">envGen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall s. HasTrace s =&gt; Word64 -&gt; Gen (Environment s)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#envGen"><span class="hs-identifier hs-var">envGen</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOW.html#UTXOW"><span class="hs-identifier hs-type">UTXOW</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-comment">-- We generate signal for UTXOWS as a list of signals from UTXOW</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679686267"><span class="annot"><span class="annottext">sigGen :: SignalGenerator UTXOWS
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#sigGen"><span class="hs-identifier hs-var hs-var hs-var hs-var">sigGen</span></a></span></span><span> </span><span id="local-6989586621679686268"><span class="annot"><span class="annottext">Environment UTXOWS
+</span><a href="#local-6989586621679686268"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679686269"><span class="annot"><span class="annottext">State UTXOWS
+</span><a href="#local-6989586621679686269"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">TraceOrder -&gt; Trace UTXOW -&gt; [Signal UTXOW]
+forall s. TraceOrder -&gt; Trace s -&gt; [Signal s]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#traceSignals"><span class="hs-identifier hs-var">traceSignals</span></a></span><span> </span><span class="annot"><span class="annottext">TraceOrder
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#OldestFirst"><span class="hs-identifier hs-var">OldestFirst</span></a></span><span> </span><span class="annot"><span class="annottext">(Trace UTXOW -&gt; [Tx])
+-&gt; GenT Identity (Trace UTXOW) -&gt; GenT Identity [Tx]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall s.
+HasTrace s =&gt;
+BaseEnv s
+-&gt; Word64
+-&gt; Environment s
+-&gt; State s
+-&gt; SignalGenerator s
+-&gt; Gen (Trace s)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#genTrace"><span class="hs-identifier hs-var">genTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOW.html#UTXOW"><span class="hs-identifier hs-type">UTXOW</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">20</span></span><span> </span><span class="annot"><span class="annottext">Environment UTXOW
+Environment UTXOWS
+</span><a href="#local-6989586621679686268"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">State UTXOW
+State UTXOWS
+</span><a href="#local-6989586621679686269"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall s. HasTrace s =&gt; SignalGenerator s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#sigGen"><span class="hs-identifier hs-var">sigGen</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Ledger.STS.UTXOW.html#UTXOW"><span class="hs-identifier hs-type">UTXOW</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span></pre></body></html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Mary.Examples</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Mary.Examples.html#ledgerExamples"><span class="hs-identifier">ledgerExamples</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Mary.Examples.html#exampleMultiAssetValue"><span class="hs-identifier">exampleMultiAssetValue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier">NoGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.html"><span class="hs-identifier">Cardano.Ledger.Mary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier">MaryEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Core.html"><span class="hs-identifier">Cardano.Ledger.Mary.Core</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html"><span class="hs-identifier">Cardano.Ledger.Mary.Value</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">singleton</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/l/testlib/doc/html/cardano-ledger-allegra/src/Test.Cardano.Ledger.Allegra.Examples.html"><span class="hs-identifier">Test.Cardano.Ledger.Allegra.Examples</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/l/testlib/doc/html/cardano-ledger-allegra/src/Test.Cardano.Ledger.Allegra.Examples.html#exampleAllegraTxAuxData"><span class="hs-identifier">exampleAllegraTxAuxData</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/l/testlib/doc/html/cardano-ledger-allegra/src/Test.Cardano.Ledger.Allegra.Examples.html#exampleAllegraTxBody"><span class="hs-identifier">exampleAllegraTxBody</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Examples.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Examples</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Examples.html#LedgerExamples"><span class="hs-identifier">LedgerExamples</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Examples.html#mkLedgerExamples"><span class="hs-identifier">mkLedgerExamples</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Examples.html#mkScriptHash"><span class="hs-identifier">mkScriptHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Examples.html#mkWitnessesPreAlonzo"><span class="hs-identifier">mkWitnessesPreAlonzo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Test.Cardano.Ledger.Mary.Examples.html#ledgerExamples"><span class="hs-identifier hs-type">ledgerExamples</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Examples.html#LedgerExamples"><span class="hs-identifier hs-type">LedgerExamples</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span>
+</span><span id="line-30"></span><span id="ledgerExamples"><span class="annot"><span class="annottext">ledgerExamples :: LedgerExamples MaryEra
+</span><a href="Test.Cardano.Ledger.Mary.Examples.html#ledgerExamples"><span class="hs-identifier hs-var hs-var">ledgerExamples</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><span class="annottext">(TxBody MaryEra -&gt; [KeyPair 'Witness] -&gt; TxWits MaryEra)
+-&gt; Value MaryEra
+-&gt; TxBody MaryEra
+-&gt; TxAuxData MaryEra
+-&gt; TranslationContext MaryEra
+-&gt; LedgerExamples MaryEra
+forall era.
+(EraTx era, EraGov era, EraStake era, EraCertState era,
+ PredicateFailure (EraRule &quot;DELEGS&quot; era)
+ ~ ShelleyDelegsPredFailure era,
+ PredicateFailure (EraRule &quot;LEDGER&quot; era)
+ ~ ShelleyLedgerPredFailure era,
+ Default (StashedAVVMAddresses era), AtMostEra &quot;Mary&quot; era) =&gt;
+(TxBody era -&gt; [KeyPair 'Witness] -&gt; TxWits era)
+-&gt; Value era
+-&gt; TxBody era
+-&gt; TxAuxData era
+-&gt; TranslationContext era
+-&gt; LedgerExamples era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Examples.html#mkLedgerExamples"><span class="hs-identifier hs-var">mkLedgerExamples</span></a></span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy MaryEra
+-&gt; TxBody MaryEra -&gt; [KeyPair 'Witness] -&gt; ShelleyTxWits MaryEra
+forall era.
+EraTx era =&gt;
+Proxy era -&gt; TxBody era -&gt; [KeyPair 'Witness] -&gt; ShelleyTxWits era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Examples.html#mkWitnessesPreAlonzo"><span class="hs-identifier hs-var">mkWitnessesPreAlonzo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; MaryValue
+</span><a href="Test.Cardano.Ledger.Mary.Examples.html#exampleMultiAssetValue"><span class="hs-identifier hs-var">exampleMultiAssetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Value MaryEra -&gt; TxBody MaryEra
+forall era.
+(AllegraEraTxBody era, ShelleyEraTxBody era) =&gt;
+Value era -&gt; TxBody era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/l/testlib/doc/html/cardano-ledger-allegra/src/Test.Cardano.Ledger.Allegra.Examples.html#exampleAllegraTxBody"><span class="hs-identifier hs-var">exampleAllegraTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; MaryValue
+</span><a href="Test.Cardano.Ledger.Mary.Examples.html#exampleMultiAssetValue"><span class="hs-identifier hs-var">exampleMultiAssetValue</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>        </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; (TxBody MaryEra -&gt; TxBody MaryEra) -&gt; TxBody MaryEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(MultiAsset -&gt; Identity MultiAsset)
+-&gt; TxBody MaryEra -&gt; Identity (TxBody MaryEra)
+forall era. MaryEraTxBody era =&gt; Lens' (TxBody era) MultiAsset
+Lens' (TxBody MaryEra) MultiAsset
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.TxBody.html#mintTxBodyL"><span class="hs-identifier hs-var">mintTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((MultiAsset -&gt; Identity MultiAsset)
+ -&gt; TxBody MaryEra -&gt; Identity (TxBody MaryEra))
+-&gt; MultiAsset -&gt; TxBody MaryEra -&gt; TxBody MaryEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; MultiAsset
+</span><a href="Test.Cardano.Ledger.Mary.Examples.html#exampleMultiAsset"><span class="hs-identifier hs-var">exampleMultiAsset</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">AllegraTxAuxData MaryEra
+TxAuxData MaryEra
+forall era.
+(AllegraEraScript era, NativeScript era ~ Timelock era) =&gt;
+AllegraTxAuxData era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/l/testlib/doc/html/cardano-ledger-allegra/src/Test.Cardano.Ledger.Allegra.Examples.html#exampleAllegraTxAuxData"><span class="hs-identifier hs-var">exampleAllegraTxAuxData</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="annottext">TranslationContext MaryEra
+NoGenesis MaryEra
+forall era. NoGenesis era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Test.Cardano.Ledger.Mary.Examples.html#exampleMultiAssetValue"><span class="hs-identifier hs-type">exampleMultiAssetValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#MaryValue"><span class="hs-identifier hs-type">MaryValue</span></a></span><span>
+</span><span id="line-41"></span><span id="exampleMultiAssetValue"><span class="annot"><span class="annottext">exampleMultiAssetValue :: Int -&gt; MaryValue
+</span><a href="Test.Cardano.Ledger.Mary.Examples.html#exampleMultiAssetValue"><span class="hs-identifier hs-var hs-var">exampleMultiAssetValue</span></a></span></span><span> </span><span id="local-6989586621679291050"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679291050"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; MultiAsset -&gt; MaryValue
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#MaryValue"><span class="hs-identifier hs-var">MaryValue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">100</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(MultiAsset -&gt; MaryValue) -&gt; MultiAsset -&gt; MaryValue
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; MultiAsset
+</span><a href="Test.Cardano.Ledger.Mary.Examples.html#exampleMultiAsset"><span class="hs-identifier hs-var">exampleMultiAsset</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679291050"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Test.Cardano.Ledger.Mary.Examples.html#exampleMultiAsset"><span class="hs-identifier hs-type">exampleMultiAsset</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#MultiAsset"><span class="hs-identifier hs-type">MultiAsset</span></a></span><span>
+</span><span id="line-44"></span><span id="exampleMultiAsset"><span class="annot"><span class="annottext">exampleMultiAsset :: Int -&gt; MultiAsset
+</span><a href="Test.Cardano.Ledger.Mary.Examples.html#exampleMultiAsset"><span class="hs-identifier hs-var hs-var">exampleMultiAsset</span></a></span></span><span> </span><span id="local-6989586621679291053"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679291053"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="annottext">Map PolicyID (Map AssetName Integer) -&gt; MultiAsset
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#MultiAsset"><span class="hs-identifier hs-var">MultiAsset</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PolicyID
+-&gt; Map AssetName Integer -&gt; Map PolicyID (Map AssetName Integer)
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="annot"><span class="annottext">PolicyID
+</span><a href="#local-6989586621679291055"><span class="hs-identifier hs-var">policyId</span></a></span><span> </span><span class="annot"><span class="annottext">(Map AssetName Integer -&gt; Map PolicyID (Map AssetName Integer))
+-&gt; Map AssetName Integer -&gt; Map PolicyID (Map AssetName Integer)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">AssetName -&gt; Integer -&gt; Map AssetName Integer
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621679291056"><span class="hs-identifier hs-var">couttsCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1000</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>    </span><span id="local-6989586621679291055"><span class="annot"><span class="annottext">policyId :: PolicyID
+</span><a href="#local-6989586621679291055"><span class="hs-identifier hs-var hs-var">policyId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; PolicyID
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#PolicyID"><span class="hs-identifier hs-var">PolicyID</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptHash -&gt; PolicyID) -&gt; ScriptHash -&gt; PolicyID
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Examples.html#mkScriptHash"><span class="hs-identifier hs-var">mkScriptHash</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679291053"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><a href="#local-6989586621679291056"><span class="hs-identifier hs-type">couttsCoin</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#AssetName"><span class="hs-identifier hs-type">AssetName</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span id="local-6989586621679291056"><span class="annot"><span class="annottext">couttsCoin :: AssetName
+</span><a href="#local-6989586621679291056"><span class="hs-identifier hs-var hs-var">couttsCoin</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; AssetName
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#AssetName"><span class="hs-identifier hs-var">AssetName</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><span class="hs-string">&quot;couttsCoin&quot;</span></span><span>
+</span><span id="line-50"></span></pre></body></html>

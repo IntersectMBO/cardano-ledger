@@ -1,0 +1,83 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Mary.TxAuxData</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html"><span class="hs-identifier">Cardano.Ledger.Allegra.TxAuxData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html"><span class="hs-identifier">Cardano.Ledger.Allegra.TxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html#AllegraEraTxAuxData"><span class="hs-identifier">AllegraEraTxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html#AllegraTxAuxData"><span class="hs-identifier">AllegraTxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html#metadataAllegraTxAuxDataL"><span class="hs-identifier">metadataAllegraTxAuxDataL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html#nativeScriptsAllegraTxAuxDataL"><span class="hs-identifier">nativeScriptsAllegraTxAuxDataL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Mary.Era.html"><span class="hs-identifier">Cardano.Ledger.Mary.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier">MaryEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Mary.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Mary.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxAuxData.html"><span class="hs-identifier">Cardano.Ledger.Shelley.TxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Metadata.html#validMetadatum"><span class="hs-identifier">validMetadatum</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">deepseq</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- =======================================</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxAuxData"><span class="hs-identifier hs-type">EraTxAuxData</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TxAuxData"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxAuxData"><span class="hs-identifier hs-var">TxAuxData</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html#AllegraTxAuxData"><span class="hs-identifier hs-type">AllegraTxAuxData</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679280558"><span class="annot"><span class="annottext">mkBasicTxAuxData :: TxAuxData MaryEra
+</span><a href="#local-6989586621679280558"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkBasicTxAuxData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Word64 Metadatum
+-&gt; StrictSeq (NativeScript MaryEra) -&gt; AllegraTxAuxData MaryEra
+forall era.
+(Era era, EncCBOR (NativeScript era)) =&gt;
+Map Word64 Metadatum
+-&gt; StrictSeq (NativeScript era) -&gt; AllegraTxAuxData era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html#AllegraTxAuxData"><span class="hs-identifier hs-var">AllegraTxAuxData</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word64 Metadatum
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (Timelock MaryEra)
+StrictSeq (NativeScript MaryEra)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679280566"><span class="annot"><span class="annottext">metadataTxAuxDataL :: Lens' (TxAuxData MaryEra) (Map Word64 Metadatum)
+</span><a href="#local-6989586621679280566"><span class="hs-identifier hs-var hs-var hs-var hs-var">metadataTxAuxDataL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map Word64 Metadatum -&gt; f (Map Word64 Metadatum))
+-&gt; AllegraTxAuxData MaryEra -&gt; f (AllegraTxAuxData MaryEra)
+(Map Word64 Metadatum -&gt; f (Map Word64 Metadatum))
+-&gt; TxAuxData MaryEra -&gt; f (TxAuxData MaryEra)
+forall era.
+(Era era, EncCBOR (NativeScript era)) =&gt;
+Lens' (AllegraTxAuxData era) (Map Word64 Metadatum)
+Lens' (AllegraTxAuxData MaryEra) (Map Word64 Metadatum)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html#metadataAllegraTxAuxDataL"><span class="hs-identifier hs-var">metadataAllegraTxAuxDataL</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679280577"><span class="annot"><span class="annottext">validateTxAuxData :: ProtVer -&gt; TxAuxData MaryEra -&gt; Bool
+</span><a href="#local-6989586621679280577"><span class="hs-identifier hs-var hs-var hs-var hs-var">validateTxAuxData</span></a></span></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html#AllegraTxAuxData"><span class="hs-identifier hs-type">AllegraTxAuxData</span></a></span><span> </span><span id="local-6989586621679280579"><span class="annot"><span class="annottext">Map Word64 Metadatum
+</span><a href="#local-6989586621679280579"><span class="hs-identifier hs-var">md</span></a></span></span><span> </span><span id="local-6989586621679280580"><span class="annot"><span class="annottext">StrictSeq (NativeScript MaryEra)
+</span><a href="#local-6989586621679280580"><span class="hs-keyword hs-var">as</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictSeq (Timelock MaryEra)
+StrictSeq (NativeScript MaryEra)
+</span><a href="#local-6989586621679280580"><span class="hs-keyword hs-var">as</span></a></span><span> </span><span class="annot"><span class="annottext">StrictSeq (Timelock MaryEra) -&gt; Bool -&gt; Bool
+forall a b. NFData a =&gt; a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`deepseq`</span></span><span> </span><span class="annot"><span class="annottext">(Metadatum -&gt; Bool) -&gt; Map Word64 Metadatum -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">all</span></span><span> </span><span class="annot"><span class="annottext">Metadatum -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Metadata.html#validMetadatum"><span class="hs-identifier hs-var">validMetadatum</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word64 Metadatum
+</span><a href="#local-6989586621679280579"><span class="hs-identifier hs-var">md</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html#AllegraEraTxAuxData"><span class="hs-identifier hs-type">AllegraEraTxAuxData</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679280592"><span class="annot"><span class="annottext">nativeScriptsTxAuxDataL :: Lens' (TxAuxData MaryEra) (StrictSeq (NativeScript MaryEra))
+</span><a href="#local-6989586621679280592"><span class="hs-identifier hs-var hs-var hs-var hs-var">nativeScriptsTxAuxDataL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(StrictSeq (NativeScript MaryEra)
+ -&gt; f (StrictSeq (NativeScript MaryEra)))
+-&gt; AllegraTxAuxData MaryEra -&gt; f (AllegraTxAuxData MaryEra)
+(StrictSeq (NativeScript MaryEra)
+ -&gt; f (StrictSeq (NativeScript MaryEra)))
+-&gt; TxAuxData MaryEra -&gt; f (TxAuxData MaryEra)
+forall era.
+(Era era, EncCBOR (NativeScript era)) =&gt;
+Lens' (AllegraTxAuxData era) (StrictSeq (NativeScript era))
+Lens' (AllegraTxAuxData MaryEra) (StrictSeq (NativeScript MaryEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html#nativeScriptsAllegraTxAuxDataL"><span class="hs-identifier hs-var">nativeScriptsAllegraTxAuxDataL</span></a></span><span>
+</span><span id="line-39"></span></pre></body></html>

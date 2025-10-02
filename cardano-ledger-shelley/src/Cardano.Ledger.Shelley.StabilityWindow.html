@@ -1,0 +1,94 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Shelley.StabilityWindow</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.StabilityWindow.html#computeStabilityWindow"><span class="hs-identifier">computeStabilityWindow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.StabilityWindow.html#computeRandomnessStabilisationWindow"><span class="hs-identifier">computeRandomnessStabilisationWindow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- | Calculate the stability window (e.g. the number of slots needed for a block</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- to become stable) from the security param and the active slot coefficient.</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- The value 3k/f is determined to be a suitabe value as per</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- https://docs.google.com/document/d/1B8BNMx8jVWRjYiUBOaI3jfZ7dQNvNTSDODvT5iOuYCU/edit#heading=h.qh2zcajmu6hm</span><span>
+</span><span id="line-14"></span><span class="annot"><a href="Cardano.Ledger.Shelley.StabilityWindow.html#computeStabilityWindow"><span class="hs-identifier hs-type">computeStabilityWindow</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ActiveSlotCoeff"><span class="hs-identifier hs-type">ActiveSlotCoeff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-18"></span><span id="computeStabilityWindow"><span class="annot"><span class="annottext">computeStabilityWindow :: Word64 -&gt; ActiveSlotCoeff -&gt; Word64
+</span><a href="Cardano.Ledger.Shelley.StabilityWindow.html#computeStabilityWindow"><span class="hs-identifier hs-var hs-var">computeStabilityWindow</span></a></span></span><span> </span><span id="local-6989586621679502861"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679502861"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679502862"><span class="annot"><span class="annottext">ActiveSlotCoeff
+</span><a href="#local-6989586621679502862"><span class="hs-identifier hs-var">asc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><span class="annottext">Rational -&gt; Word64
+forall b. Integral b =&gt; Rational -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">ceiling</span></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Word64) -&gt; Rational -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Rational
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679502861"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; NonZero Rational -&gt; Rational
+forall a. Fractional a =&gt; a -&gt; NonZero a -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#%2F."><span class="hs-operator hs-var">/.</span></a></span><span> </span><span class="annot"><span class="annottext">NonZero Rational
+</span><a href="#local-6989586621679502866"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>    </span><span id="local-6989586621679502866"><span class="annot"><span class="annottext">f :: NonZero Rational
+</span><a href="#local-6989586621679502866"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PositiveUnitInterval -&gt; NonZero Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#positiveUnitIntervalNonZeroRational"><span class="hs-identifier hs-var">positiveUnitIntervalNonZeroRational</span></a></span><span> </span><span class="annot"><span class="annottext">(PositiveUnitInterval -&gt; NonZero Rational)
+-&gt; (ActiveSlotCoeff -&gt; PositiveUnitInterval)
+-&gt; ActiveSlotCoeff
+-&gt; NonZero Rational
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ActiveSlotCoeff -&gt; PositiveUnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#activeSlotVal"><span class="hs-identifier hs-var">activeSlotVal</span></a></span><span> </span><span class="annot"><span class="annottext">(ActiveSlotCoeff -&gt; NonZero Rational)
+-&gt; ActiveSlotCoeff -&gt; NonZero Rational
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ActiveSlotCoeff
+</span><a href="#local-6989586621679502862"><span class="hs-identifier hs-var">asc</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- | Calculate the randomness stabilisation window from the security param and</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- the active slot coefficient.</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- The value 4k/f is determined to be a suitabe value as per</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- https://docs.google.com/document/d/1B8BNMx8jVWRjYiUBOaI3jfZ7dQNvNTSDODvT5iOuYCU/edit#heading=h.qh2zcajmu6hm</span><span>
+</span><span id="line-28"></span><span class="annot"><a href="Cardano.Ledger.Shelley.StabilityWindow.html#computeRandomnessStabilisationWindow"><span class="hs-identifier hs-type">computeRandomnessStabilisationWindow</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ActiveSlotCoeff"><span class="hs-identifier hs-type">ActiveSlotCoeff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-32"></span><span id="computeRandomnessStabilisationWindow"><span class="annot"><span class="annottext">computeRandomnessStabilisationWindow :: Word64 -&gt; ActiveSlotCoeff -&gt; Word64
+</span><a href="Cardano.Ledger.Shelley.StabilityWindow.html#computeRandomnessStabilisationWindow"><span class="hs-identifier hs-var hs-var">computeRandomnessStabilisationWindow</span></a></span></span><span> </span><span id="local-6989586621679502870"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679502870"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679502871"><span class="annot"><span class="annottext">ActiveSlotCoeff
+</span><a href="#local-6989586621679502871"><span class="hs-identifier hs-var">asc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="annottext">Rational -&gt; Word64
+forall b. Integral b =&gt; Rational -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">ceiling</span></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Word64) -&gt; Rational -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rational
+</span><span class="hs-number">4</span></span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Rational -&gt; Rational
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Rational
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679502870"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; NonZero Rational -&gt; Rational
+forall a. Fractional a =&gt; a -&gt; NonZero a -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.NonZero.html#%2F."><span class="hs-operator hs-var">/.</span></a></span><span> </span><span class="annot"><span class="annottext">NonZero Rational
+</span><a href="#local-6989586621679502872"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>    </span><span id="local-6989586621679502872"><span class="annot"><span class="annottext">f :: NonZero Rational
+</span><a href="#local-6989586621679502872"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PositiveUnitInterval -&gt; NonZero Rational
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#positiveUnitIntervalNonZeroRational"><span class="hs-identifier hs-var">positiveUnitIntervalNonZeroRational</span></a></span><span> </span><span class="annot"><span class="annottext">(PositiveUnitInterval -&gt; NonZero Rational)
+-&gt; (ActiveSlotCoeff -&gt; PositiveUnitInterval)
+-&gt; ActiveSlotCoeff
+-&gt; NonZero Rational
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ActiveSlotCoeff -&gt; PositiveUnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#activeSlotVal"><span class="hs-identifier hs-var">activeSlotVal</span></a></span><span> </span><span class="annot"><span class="annottext">(ActiveSlotCoeff -&gt; NonZero Rational)
+-&gt; ActiveSlotCoeff -&gt; NonZero Rational
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ActiveSlotCoeff
+</span><a href="#local-6989586621679502871"><span class="hs-identifier hs-var">asc</span></a></span><span>
+</span><span id="line-36"></span></pre></body></html>

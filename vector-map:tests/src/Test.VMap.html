@@ -1,0 +1,495 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.VMap</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.List</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">List</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html"><span class="hs-identifier">Data.VMap</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">VMap</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Common.html"><span class="hs-identifier">Test.Common</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">type</span><span> </span><span id="MapT"><span class="annot"><a href="Test.VMap.html#MapT"><span class="hs-identifier hs-var">MapT</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">type</span><span> </span><span id="VMapT"><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-var">VMapT</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#VMap"><span class="hs-identifier hs-type">VMap</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#VB"><span class="hs-identifier hs-type">VB</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#VP"><span class="hs-identifier hs-type">VP</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-16"></span><span>  </span><span id="local-6989586621679091448"><span id="local-6989586621679091449"><span id="local-6989586621679091450"><span id="local-6989586621679091451"><span id="local-6989586621679091768"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679091448"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/vector-0.13.2.0-15435dd5a5c5a17cbf505ae33b795526bd282aac3fd70b1e0e6fd56344cf8f72/share/doc/html/src/Data.Vector.Generic.Base.html#Vector"><span class="hs-identifier hs-type">Vector</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679091449"><span class="hs-identifier hs-type">kv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679091448"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/vector-0.13.2.0-15435dd5a5c5a17cbf505ae33b795526bd282aac3fd70b1e0e6fd56344cf8f72/share/doc/html/src/Data.Vector.Generic.Base.html#Vector"><span class="hs-identifier hs-type">Vector</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679091450"><span class="hs-identifier hs-type">vv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679091451"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679091448"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679091451"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#VMap"><span class="hs-identifier hs-type">VMap</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679091449"><span class="hs-identifier hs-type">kv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679091450"><span class="hs-identifier hs-type">vv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679091448"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679091451"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>  </span><span id="local-6989586621679091778"><span class="annot"><span class="annottext">arbitrary :: Gen (VMap kv vv k v)
+</span><a href="#local-6989586621679091778"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="annottext">Map k v -&gt; VMap kv vv k v
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+Map k v -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromMap"><span class="hs-identifier hs-var">VMap.fromMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Map k v -&gt; VMap kv vv k v)
+-&gt; ([(k, v)] -&gt; Map k v) -&gt; [(k, v)] -&gt; VMap kv vv k v
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[(k, v)] -&gt; Map k v
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="annot"><span class="annottext">([(k, v)] -&gt; VMap kv vv k v)
+-&gt; Gen [(k, v)] -&gt; Gen (VMap kv vv k v)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen [(k, v)]
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span id="local-6989586621679091471"><span class="annot"><a href="Test.VMap.html#prop_Roundtrip"><span class="hs-identifier hs-type">prop_Roundtrip</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679091471"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679091471"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span></span><span>
+</span><span id="line-23"></span><span id="prop_Roundtrip"><span class="annot"><span class="annottext">prop_Roundtrip :: forall a. (VMapT -&gt; a) -&gt; (a -&gt; VMapT) -&gt; VMapT -&gt; Property
+</span><a href="Test.VMap.html#prop_Roundtrip"><span class="hs-identifier hs-var hs-var">prop_Roundtrip</span></a></span></span><span> </span><span id="local-6989586621679091787"><span class="annot"><span class="annottext">VMapT -&gt; a
+</span><a href="#local-6989586621679091787"><span class="hs-identifier hs-var">to</span></a></span></span><span> </span><span id="local-6989586621679091788"><span class="annot"><span class="annottext">a -&gt; VMapT
+</span><a href="#local-6989586621679091788"><span class="hs-identifier hs-var">from</span></a></span></span><span> </span><span id="local-6989586621679091789"><span class="annot"><span class="annottext">VMapT
+</span><a href="#local-6989586621679091789"><span class="hs-identifier hs-var">km</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; VMapT
+</span><a href="#local-6989586621679091788"><span class="hs-identifier hs-var">from</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VMapT -&gt; a
+</span><a href="#local-6989586621679091787"><span class="hs-identifier hs-var">to</span></a></span><span> </span><span class="annot"><span class="annottext">VMapT
+</span><a href="#local-6989586621679091789"><span class="hs-identifier hs-var">km</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">VMapT -&gt; VMapT -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">VMapT
+</span><a href="#local-6989586621679091789"><span class="hs-identifier hs-var">km</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span id="local-6989586621679091474"><span class="annot"><a href="Test.VMap.html#prop_AsMapTo"><span class="hs-identifier hs-type">prop_AsMapTo</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621679091474"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679091474"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679091474"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.VMap.html#MapT"><span class="hs-identifier hs-type">MapT</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679091474"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span></span><span>
+</span><span id="line-27"></span><span id="prop_AsMapTo"><span class="annot"><span class="annottext">prop_AsMapTo :: forall a.
+(Show a, Eq a) =&gt;
+(VMapT -&gt; a) -&gt; (MapT -&gt; a) -&gt; VMapT -&gt; Property
+</span><a href="Test.VMap.html#prop_AsMapTo"><span class="hs-identifier hs-var hs-var">prop_AsMapTo</span></a></span></span><span> </span><span id="local-6989586621679091798"><span class="annot"><span class="annottext">VMapT -&gt; a
+</span><a href="#local-6989586621679091798"><span class="hs-identifier hs-var">fromVM</span></a></span></span><span> </span><span id="local-6989586621679091799"><span class="annot"><span class="annottext">MapT -&gt; a
+</span><a href="#local-6989586621679091799"><span class="hs-identifier hs-var">fromM</span></a></span></span><span> </span><span id="local-6989586621679091800"><span class="annot"><span class="annottext">VMapT
+</span><a href="#local-6989586621679091800"><span class="hs-identifier hs-var">vm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VMapT -&gt; a
+</span><a href="#local-6989586621679091798"><span class="hs-identifier hs-var">fromVM</span></a></span><span> </span><span class="annot"><span class="annottext">VMapT
+</span><a href="#local-6989586621679091800"><span class="hs-identifier hs-var">vm</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">MapT -&gt; a
+</span><a href="#local-6989586621679091799"><span class="hs-identifier hs-var">fromM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VMapT -&gt; MapT
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+VMap kv vv k v -&gt; Map k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#toMap"><span class="hs-identifier hs-var">toMap</span></a></span><span> </span><span class="annot"><span class="annottext">VMapT
+</span><a href="#local-6989586621679091800"><span class="hs-identifier hs-var">vm</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span id="local-6989586621679091481"><span class="annot"><a href="Test.VMap.html#prop_AsMapFrom"><span class="hs-identifier hs-type">prop_AsMapFrom</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679091481"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679091481"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.VMap.html#MapT"><span class="hs-identifier hs-type">MapT</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679091481"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span></span><span>
+</span><span id="line-30"></span><span id="prop_AsMapFrom"><span class="annot"><span class="annottext">prop_AsMapFrom :: forall a. (a -&gt; VMapT) -&gt; (a -&gt; MapT) -&gt; a -&gt; Property
+</span><a href="Test.VMap.html#prop_AsMapFrom"><span class="hs-identifier hs-var hs-var">prop_AsMapFrom</span></a></span></span><span> </span><span id="local-6989586621679091809"><span class="annot"><span class="annottext">a -&gt; VMapT
+</span><a href="#local-6989586621679091809"><span class="hs-identifier hs-var">mkVMap</span></a></span></span><span> </span><span id="local-6989586621679091810"><span class="annot"><span class="annottext">a -&gt; MapT
+</span><a href="#local-6989586621679091810"><span class="hs-identifier hs-var">mkMap</span></a></span></span><span> </span><span id="local-6989586621679091811"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679091811"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VMapT -&gt; MapT
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+VMap kv vv k v -&gt; Map k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#toMap"><span class="hs-identifier hs-var">toMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; VMapT
+</span><a href="#local-6989586621679091809"><span class="hs-identifier hs-var">mkVMap</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679091811"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MapT -&gt; MapT -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; MapT
+</span><a href="#local-6989586621679091810"><span class="hs-identifier hs-var">mkMap</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679091811"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><a href="Test.VMap.html#vMapTests"><span class="hs-identifier hs-type">vMapTests</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-33"></span><span id="vMapTests"><span class="annot"><span class="annottext">vMapTests :: TestTree
+</span><a href="Test.VMap.html#vMapTests"><span class="hs-identifier hs-var hs-var">vMapTests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;VMap&quot;</span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-37"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;roundtrip&quot;</span></span><span>
+</span><span id="line-38"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; (VMapT -&gt; Property) -&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;to/fromAscDistinctList&quot;</span></span><span> </span><span class="annot"><span class="annottext">((VMapT -&gt; Property) -&gt; TestTree)
+-&gt; (VMapT -&gt; Property) -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-39"></span><span>            </span><span class="annot"><span class="annottext">(VMapT -&gt; [(Char, Int)])
+-&gt; ([(Char, Int)] -&gt; VMapT) -&gt; VMapT -&gt; Property
+forall a. (VMapT -&gt; a) -&gt; (a -&gt; VMapT) -&gt; VMapT -&gt; Property
+</span><a href="Test.VMap.html#prop_Roundtrip"><span class="hs-identifier hs-var">prop_Roundtrip</span></a></span><span> </span><span class="annot"><span class="annottext">VMapT -&gt; [(Char, Int)]
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+VMap kv vv k v -&gt; [(k, v)]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#toAscList"><span class="hs-identifier hs-var">VMap.toAscList</span></a></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)] -&gt; VMapT
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+[(k, v)] -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromDistinctAscList"><span class="hs-identifier hs-var">VMap.fromDistinctAscList</span></a></span><span>
+</span><span id="line-40"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (VMapT -&gt; Property) -&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;to/fromAscList&quot;</span></span><span> </span><span class="annot"><span class="annottext">((VMapT -&gt; Property) -&gt; TestTree)
+-&gt; (VMapT -&gt; Property) -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(VMapT -&gt; [(Char, Int)])
+-&gt; ([(Char, Int)] -&gt; VMapT) -&gt; VMapT -&gt; Property
+forall a. (VMapT -&gt; a) -&gt; (a -&gt; VMapT) -&gt; VMapT -&gt; Property
+</span><a href="Test.VMap.html#prop_Roundtrip"><span class="hs-identifier hs-var">prop_Roundtrip</span></a></span><span> </span><span class="annot"><span class="annottext">VMapT -&gt; [(Char, Int)]
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+VMap kv vv k v -&gt; [(k, v)]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#toAscList"><span class="hs-identifier hs-var">VMap.toAscList</span></a></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)] -&gt; VMapT
+forall k (kv :: * -&gt; *) (vv :: * -&gt; *) v.
+(Eq k, Vector kv k, Vector vv v) =&gt;
+[(k, v)] -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromAscList"><span class="hs-identifier hs-var">VMap.fromAscList</span></a></span><span>
+</span><span id="line-41"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (VMapT -&gt; Property) -&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;to/fromList&quot;</span></span><span> </span><span class="annot"><span class="annottext">((VMapT -&gt; Property) -&gt; TestTree)
+-&gt; (VMapT -&gt; Property) -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(VMapT -&gt; [(Char, Int)])
+-&gt; ([(Char, Int)] -&gt; VMapT) -&gt; VMapT -&gt; Property
+forall a. (VMapT -&gt; a) -&gt; (a -&gt; VMapT) -&gt; VMapT -&gt; Property
+</span><a href="Test.VMap.html#prop_Roundtrip"><span class="hs-identifier hs-var">prop_Roundtrip</span></a></span><span> </span><span class="annot"><span class="annottext">VMapT -&gt; [(Char, Int)]
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+VMap kv vv k v -&gt; [(k, v)]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#toAscList"><span class="hs-identifier hs-var">VMap.toAscList</span></a></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)] -&gt; VMapT
+forall k (kv :: * -&gt; *) (vv :: * -&gt; *) v.
+(Ord k, Vector kv k, Vector vv v) =&gt;
+[(k, v)] -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromList"><span class="hs-identifier hs-var">VMap.fromList</span></a></span><span>
+</span><span id="line-42"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (VMapT -&gt; Property) -&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;to/fromMap&quot;</span></span><span> </span><span class="annot"><span class="annottext">((VMapT -&gt; Property) -&gt; TestTree)
+-&gt; (VMapT -&gt; Property) -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(VMapT -&gt; MapT) -&gt; (MapT -&gt; VMapT) -&gt; VMapT -&gt; Property
+forall a. (VMapT -&gt; a) -&gt; (a -&gt; VMapT) -&gt; VMapT -&gt; Property
+</span><a href="Test.VMap.html#prop_Roundtrip"><span class="hs-identifier hs-var">prop_Roundtrip</span></a></span><span> </span><span class="annot"><span class="annottext">VMapT -&gt; MapT
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+VMap kv vv k v -&gt; Map k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#toMap"><span class="hs-identifier hs-var">VMap.toMap</span></a></span><span> </span><span class="annot"><span class="annottext">MapT -&gt; VMapT
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+Map k v -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromMap"><span class="hs-identifier hs-var">VMap.fromMap</span></a></span><span>
+</span><span id="line-43"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-45"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;asMap&quot;</span></span><span>
+</span><span id="line-46"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; ([(Char, Int)] -&gt; Property) -&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fromList&quot;</span></span><span> </span><span class="annot"><span class="annottext">(([(Char, Int)] -&gt; Property) -&gt; TestTree)
+-&gt; ([(Char, Int)] -&gt; Property) -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">([(Char, Int)] -&gt; VMapT)
+-&gt; ([(Char, Int)] -&gt; MapT) -&gt; [(Char, Int)] -&gt; Property
+forall a. (a -&gt; VMapT) -&gt; (a -&gt; MapT) -&gt; a -&gt; Property
+</span><a href="Test.VMap.html#prop_AsMapFrom"><span class="hs-identifier hs-var">prop_AsMapFrom</span></a></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)] -&gt; VMapT
+forall k (kv :: * -&gt; *) (vv :: * -&gt; *) v.
+(Ord k, Vector kv k, Vector vv v) =&gt;
+[(k, v)] -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromList"><span class="hs-identifier hs-var">VMap.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)] -&gt; MapT
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span>
+</span><span id="line-47"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; ([(Char, Int)] -&gt; Fun (Char, Int, Int) Int -&gt; Property)
+-&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fromAscListWithKey&quot;</span></span><span> </span><span class="annot"><span class="annottext">(([(Char, Int)] -&gt; Fun (Char, Int, Int) Int -&gt; Property)
+ -&gt; TestTree)
+-&gt; ([(Char, Int)] -&gt; Fun (Char, Int, Int) Int -&gt; Property)
+-&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679091819"><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091819"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679091820"><span class="annot"><span class="annottext">Fun (Char, Int, Int) Int
+</span><a href="#local-6989586621679091820"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-48"></span><span>            </span><span class="annot"><span class="annottext">([(Char, Int)] -&gt; VMapT)
+-&gt; ([(Char, Int)] -&gt; MapT) -&gt; [(Char, Int)] -&gt; Property
+forall a. (a -&gt; VMapT) -&gt; (a -&gt; MapT) -&gt; a -&gt; Property
+</span><a href="Test.VMap.html#prop_AsMapFrom"><span class="hs-identifier hs-var">prop_AsMapFrom</span></a></span><span>
+</span><span id="line-49"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Int -&gt; Int -&gt; Int) -&gt; [(Char, Int)] -&gt; VMapT
+forall k (kv :: * -&gt; *) (vv :: * -&gt; *) v.
+(Eq k, Vector kv k, Vector vv v) =&gt;
+(k -&gt; v -&gt; v -&gt; v) -&gt; [(k, v)] -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromAscListWithKey"><span class="hs-identifier hs-var">VMap.fromAscListWithKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Fun (Char, Int, Int) Int -&gt; Char -&gt; Int -&gt; Int -&gt; Int
+forall a b c d. Fun (a, b, c) d -&gt; a -&gt; b -&gt; c -&gt; d
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Function.html#applyFun3"><span class="hs-identifier hs-var">applyFun3</span></a></span><span> </span><span class="annot"><span class="annottext">Fun (Char, Int, Int) Int
+</span><a href="#local-6989586621679091820"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Int -&gt; Int -&gt; Int) -&gt; [(Char, Int)] -&gt; MapT
+forall k a. Eq k =&gt; (k -&gt; a -&gt; a -&gt; a) -&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromAscListWithKey</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Fun (Char, Int, Int) Int -&gt; Char -&gt; Int -&gt; Int -&gt; Int
+forall a b c d. Fun (a, b, c) d -&gt; a -&gt; b -&gt; c -&gt; d
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Function.html#applyFun3"><span class="hs-identifier hs-var">applyFun3</span></a></span><span> </span><span class="annot"><span class="annottext">Fun (Char, Int, Int) Int
+</span><a href="#local-6989586621679091820"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((Char, Int) -&gt; Char) -&gt; [(Char, Int)] -&gt; [(Char, Int)]
+forall b a. Ord b =&gt; (a -&gt; b) -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">List.sortOn</span></span><span> </span><span class="annot"><span class="annottext">(Char, Int) -&gt; Char
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091819"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Int -&gt; [(Char, Int)] -&gt; Fun (Char, Int, Int) Int -&gt; Property)
+-&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fromAscListWithKeyN&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Int -&gt; [(Char, Int)] -&gt; Fun (Char, Int, Int) Int -&gt; Property)
+ -&gt; TestTree)
+-&gt; (Int -&gt; [(Char, Int)] -&gt; Fun (Char, Int, Int) Int -&gt; Property)
+-&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679091826"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091826"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679091827"><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091827"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span id="local-6989586621679091828"><span class="annot"><span class="annottext">Fun (Char, Int, Int) Int
+</span><a href="#local-6989586621679091828"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-53"></span><span>            </span><span class="annot"><span class="annottext">([(Char, Int)] -&gt; VMapT)
+-&gt; ([(Char, Int)] -&gt; MapT) -&gt; [(Char, Int)] -&gt; Property
+forall a. (a -&gt; VMapT) -&gt; (a -&gt; MapT) -&gt; a -&gt; Property
+</span><a href="Test.VMap.html#prop_AsMapFrom"><span class="hs-identifier hs-var">prop_AsMapFrom</span></a></span><span>
+</span><span id="line-54"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; (Char -&gt; Int -&gt; Int -&gt; Int) -&gt; [(Char, Int)] -&gt; VMapT
+forall k (kv :: * -&gt; *) (vv :: * -&gt; *) v.
+(Eq k, Vector kv k, Vector vv v) =&gt;
+Int -&gt; (k -&gt; v -&gt; v -&gt; v) -&gt; [(k, v)] -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromAscListWithKeyN"><span class="hs-identifier hs-var">VMap.fromAscListWithKeyN</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091826"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Fun (Char, Int, Int) Int -&gt; Char -&gt; Int -&gt; Int -&gt; Int
+forall a b c d. Fun (a, b, c) d -&gt; a -&gt; b -&gt; c -&gt; d
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Function.html#applyFun3"><span class="hs-identifier hs-var">applyFun3</span></a></span><span> </span><span class="annot"><span class="annottext">Fun (Char, Int, Int) Int
+</span><a href="#local-6989586621679091828"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Int -&gt; Int -&gt; Int) -&gt; [(Char, Int)] -&gt; MapT
+forall k a. Eq k =&gt; (k -&gt; a -&gt; a -&gt; a) -&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromAscListWithKey</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Fun (Char, Int, Int) Int -&gt; Char -&gt; Int -&gt; Int -&gt; Int
+forall a b c d. Fun (a, b, c) d -&gt; a -&gt; b -&gt; c -&gt; d
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Function.html#applyFun3"><span class="hs-identifier hs-var">applyFun3</span></a></span><span> </span><span class="annot"><span class="annottext">Fun (Char, Int, Int) Int
+</span><a href="#local-6989586621679091828"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(Char, Int)] -&gt; MapT)
+-&gt; ([(Char, Int)] -&gt; [(Char, Int)]) -&gt; [(Char, Int)] -&gt; MapT
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; [(Char, Int)] -&gt; [(Char, Int)]
+forall a. Int -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">take</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091826"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((Char, Int) -&gt; Char) -&gt; [(Char, Int)] -&gt; [(Char, Int)]
+forall b a. Ord b =&gt; (a -&gt; b) -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">List.sortOn</span></span><span> </span><span class="annot"><span class="annottext">(Char, Int) -&gt; Char
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091827"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (VMapT -&gt; Property) -&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;toAscList&quot;</span></span><span> </span><span class="annot"><span class="annottext">((VMapT -&gt; Property) -&gt; TestTree)
+-&gt; (VMapT -&gt; Property) -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(VMapT -&gt; [(Char, Int)])
+-&gt; (MapT -&gt; [(Char, Int)]) -&gt; VMapT -&gt; Property
+forall a.
+(Show a, Eq a) =&gt;
+(VMapT -&gt; a) -&gt; (MapT -&gt; a) -&gt; VMapT -&gt; Property
+</span><a href="Test.VMap.html#prop_AsMapTo"><span class="hs-identifier hs-var">prop_AsMapTo</span></a></span><span> </span><span class="annot"><span class="annottext">VMapT -&gt; [(Char, Int)]
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+VMap kv vv k v -&gt; [(k, v)]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#toAscList"><span class="hs-identifier hs-var">VMap.toAscList</span></a></span><span> </span><span class="annot"><span class="annottext">MapT -&gt; [(Char, Int)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">Map.toAscList</span></span><span>
+</span><span id="line-58"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (Fun (Char, Int) String -&gt; VMapT -&gt; Property) -&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;foldMapWithKey&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Fun (Char, Int) String -&gt; VMapT -&gt; Property) -&gt; TestTree)
+-&gt; (Fun (Char, Int) String -&gt; VMapT -&gt; Property) -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679091832"><span class="annot"><span class="annottext">Fun (Char, Int) String
+</span><a href="#local-6989586621679091832"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-59"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679091833"><span class="annot"><span class="annottext">f' :: Char -&gt; Int -&gt; String
+</span><a href="#local-6989586621679091833"><span class="hs-identifier hs-var hs-var">f'</span></a></span></span><span> </span><span id="local-6989586621679091834"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091834"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679091835"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091835"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Fun (Char, Int) String -&gt; Char -&gt; Int -&gt; String
+forall a b c. Fun (a, b) c -&gt; a -&gt; b -&gt; c
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Function.html#applyFun2"><span class="hs-identifier hs-var">applyFun2</span></a></span><span> </span><span class="annot"><span class="annottext">Fun (Char, Int) String
+</span><a href="#local-6989586621679091832"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091834"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091835"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-60"></span><span>             </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(VMapT -&gt; String) -&gt; (MapT -&gt; String) -&gt; VMapT -&gt; Property
+forall a.
+(Show a, Eq a) =&gt;
+(VMapT -&gt; a) -&gt; (MapT -&gt; a) -&gt; VMapT -&gt; Property
+</span><a href="Test.VMap.html#prop_AsMapTo"><span class="hs-identifier hs-var">prop_AsMapTo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Int -&gt; String) -&gt; VMapT -&gt; String
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v m.
+(Vector kv k, Vector vv v, Monoid m) =&gt;
+(k -&gt; v -&gt; m) -&gt; VMap kv vv k v -&gt; m
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#foldMapWithKey"><span class="hs-identifier hs-var">VMap.foldMapWithKey</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Int -&gt; String
+</span><a href="#local-6989586621679091833"><span class="hs-identifier hs-var">f'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Int -&gt; String) -&gt; MapT -&gt; String
+forall m k a. Monoid m =&gt; (k -&gt; a -&gt; m) -&gt; Map k a -&gt; m
+</span><span class="hs-identifier hs-var">Map.foldMapWithKey</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Int -&gt; String
+</span><a href="#local-6989586621679091833"><span class="hs-identifier hs-var">f'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (Char -&gt; VMapT -&gt; Property) -&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;lookup&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Char -&gt; VMapT -&gt; Property) -&gt; TestTree)
+-&gt; (Char -&gt; VMapT -&gt; Property) -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679091839"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091839"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(VMapT -&gt; Maybe Int) -&gt; (MapT -&gt; Maybe Int) -&gt; VMapT -&gt; Property
+forall a.
+(Show a, Eq a) =&gt;
+(VMapT -&gt; a) -&gt; (MapT -&gt; a) -&gt; VMapT -&gt; Property
+</span><a href="Test.VMap.html#prop_AsMapTo"><span class="hs-identifier hs-var">prop_AsMapTo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; VMapT -&gt; Maybe Int
+forall k (kv :: * -&gt; *) (vv :: * -&gt; *) v.
+(Ord k, Vector kv k, Vector vv v) =&gt;
+k -&gt; VMap kv vv k v -&gt; Maybe v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#lookup"><span class="hs-identifier hs-var">VMap.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091839"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; MapT -&gt; Maybe Int
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091839"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (Char -&gt; Int -&gt; [(Char, Int)] -&gt; Property) -&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;lookup (existing)&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Char -&gt; Int -&gt; [(Char, Int)] -&gt; Property) -&gt; TestTree)
+-&gt; (Char -&gt; Int -&gt; [(Char, Int)] -&gt; Property) -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679091842"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091842"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679091843"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091843"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679091844"><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091844"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-63"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679091847"><span class="annot"><span class="annottext">xs' :: [(Char, Int)]
+</span><a href="#local-6989586621679091847"><span class="hs-identifier hs-var hs-var">xs'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091844"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)] -&gt; [(Char, Int)] -&gt; [(Char, Int)]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091842"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091843"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>             </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; VMapT -&gt; Maybe Int
+forall k (kv :: * -&gt; *) (vv :: * -&gt; *) v.
+(Ord k, Vector kv k, Vector vv v) =&gt;
+k -&gt; VMap kv vv k v -&gt; Maybe v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#lookup"><span class="hs-identifier hs-var">VMap.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091842"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Char, Int)] -&gt; VMapT
+forall k (kv :: * -&gt; *) (vv :: * -&gt; *) v.
+(Ord k, Vector kv k, Vector vv v) =&gt;
+[(k, v)] -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromList"><span class="hs-identifier hs-var">VMap.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091847"><span class="hs-identifier hs-var">xs'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Int -&gt; Maybe Int -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091843"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>                  </span><span class="annot"><span class="annottext">Property -&gt; Property -&gt; Property
+forall prop1 prop2.
+(Testable prop1, Testable prop2) =&gt;
+prop1 -&gt; prop2 -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#.%26%26."><span class="hs-operator hs-var">.&amp;&amp;.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; MapT -&gt; Maybe Int
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091842"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Char, Int)] -&gt; MapT
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091847"><span class="hs-identifier hs-var">xs'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.VMap.html#MapT"><span class="hs-identifier hs-type">MapT</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Int -&gt; Maybe Int -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091843"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (Int -&gt; Char -&gt; VMapT -&gt; Property) -&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;finsWithDefault&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Int -&gt; Char -&gt; VMapT -&gt; Property) -&gt; TestTree)
+-&gt; (Int -&gt; Char -&gt; VMapT -&gt; Property) -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679091849"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091849"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span id="local-6989586621679091850"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091850"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-67"></span><span>            </span><span class="annot"><span class="annottext">(VMapT -&gt; Int) -&gt; (MapT -&gt; Int) -&gt; VMapT -&gt; Property
+forall a.
+(Show a, Eq a) =&gt;
+(VMapT -&gt; a) -&gt; (MapT -&gt; a) -&gt; VMapT -&gt; Property
+</span><a href="Test.VMap.html#prop_AsMapTo"><span class="hs-identifier hs-var">prop_AsMapTo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; VMapT -&gt; Int
+forall k (kv :: * -&gt; *) (vv :: * -&gt; *) v.
+(Ord k, Vector kv k, Vector vv v) =&gt;
+v -&gt; k -&gt; VMap kv vv k v -&gt; v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#findWithDefault"><span class="hs-identifier hs-var">VMap.findWithDefault</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091849"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091850"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; MapT -&gt; Int
+forall k a. Ord k =&gt; a -&gt; k -&gt; Map k a -&gt; a
+</span><span class="hs-identifier hs-var">Map.findWithDefault</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091849"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091850"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (Char -&gt; Int -&gt; [(Char, Int)] -&gt; Property) -&gt; TestTree
+forall a. Testable a =&gt; String -&gt; a -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-quickcheck-0.11.1-a6e9951148459b597606684bef39d5db052b5c7504d645a5ed13f64b535ff547/share/doc/html/src/Test.Tasty.QuickCheck.html#testProperty"><span class="hs-identifier hs-var">testProperty</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;finsWithDefault (existing)&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Char -&gt; Int -&gt; [(Char, Int)] -&gt; Property) -&gt; TestTree)
+-&gt; (Char -&gt; Int -&gt; [(Char, Int)] -&gt; Property) -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679091853"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091853"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679091854"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091854"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679091855"><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091855"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-69"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679091857"><span class="annot"><span class="annottext">xs' :: [(Char, Int)]
+</span><a href="#local-6989586621679091857"><span class="hs-identifier hs-var hs-var">xs'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091855"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)] -&gt; [(Char, Int)] -&gt; [(Char, Int)]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091853"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091854"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span><span>             </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; VMapT -&gt; Int
+forall k (kv :: * -&gt; *) (vv :: * -&gt; *) v.
+(Ord k, Vector kv k, Vector vv v) =&gt;
+v -&gt; k -&gt; VMap kv vv k v -&gt; v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#findWithDefault"><span class="hs-identifier hs-var">VMap.findWithDefault</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+forall a. HasCallStack =&gt; a
+</span><span class="hs-identifier hs-var">undefined</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091853"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Char, Int)] -&gt; VMapT
+forall k (kv :: * -&gt; *) (vv :: * -&gt; *) v.
+(Ord k, Vector kv k, Vector vv v) =&gt;
+[(k, v)] -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromList"><span class="hs-identifier hs-var">VMap.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091857"><span class="hs-identifier hs-var">xs'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091854"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>                  </span><span class="annot"><span class="annottext">Property -&gt; Property -&gt; Property
+forall prop1 prop2.
+(Testable prop1, Testable prop2) =&gt;
+prop1 -&gt; prop2 -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#.%26%26."><span class="hs-operator hs-var">.&amp;&amp;.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; MapT -&gt; Int
+forall k a. Ord k =&gt; a -&gt; k -&gt; Map k a -&gt; a
+</span><span class="hs-identifier hs-var">Map.findWithDefault</span></span><span> </span><span class="annot"><span class="annottext">Int
+forall a. HasCallStack =&gt; a
+</span><span class="hs-identifier hs-var">undefined</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679091853"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Char, Int)] -&gt; MapT
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="annot"><span class="annottext">[(Char, Int)]
+</span><a href="#local-6989586621679091857"><span class="hs-identifier hs-var">xs'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.VMap.html#MapT"><span class="hs-identifier hs-type">MapT</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Property
+forall a. (Eq a, Show a) =&gt; a -&gt; a -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679091854"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; [Laws] -&gt; TestTree
+</span><a href="Test.Common.html#testLawsGroup"><span class="hs-identifier hs-var">testLawsGroup</span></a></span><span>
+</span><span id="line-74"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;classes&quot;</span></span><span>
+</span><span id="line-75"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Proxy VMapT -&gt; Laws
+forall a. (Eq a, Arbitrary a, Show a) =&gt; Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Eq.html#eqLaws"><span class="hs-identifier hs-var">eqLaws</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy VMapT -&gt; Laws
+forall a.
+(Semigroup a, Eq a, Arbitrary a, Show a) =&gt;
+Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Semigroup.html#semigroupLaws"><span class="hs-identifier hs-var">semigroupLaws</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy VMapT -&gt; Laws
+forall a. (Monoid a, Eq a, Arbitrary a, Show a) =&gt; Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Monoid.html#monoidLaws"><span class="hs-identifier hs-var">monoidLaws</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy VMapT -&gt; Laws
+forall a.
+(IsList a, Show a, Show (Item a), Arbitrary a, Arbitrary (Item a),
+ Eq a) =&gt;
+Proxy a -&gt; Laws
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quickcheck-classes-base-0.6.2.0-f3dfca5674ca7eebffa1d6cb39270fd27974562c6670190553725897e2cca355/share/doc/html/src/Test.QuickCheck.Classes.Base.IsList.html#isListLaws"><span class="hs-identifier hs-var">isListLaws</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.VMap.html#VMapT"><span class="hs-identifier hs-type">VMapT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span></pre></body></html>

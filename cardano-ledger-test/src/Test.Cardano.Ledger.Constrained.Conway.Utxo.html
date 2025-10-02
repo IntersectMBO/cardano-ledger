@@ -1,0 +1,1071 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-16"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- | Specs necessary to generate, environment, state, and signal</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- for the UTXO rule</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Utxo</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.TxOut.html"><span class="hs-identifier">Cardano.Ledger.Babbage.TxOut</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Coders.html"><span class="hs-identifier">Cardano.Ledger.Binary.Coders</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#Decode"><span class="hs-identifier">Decode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Encode"><span class="hs-identifier">Encode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#decode"><span class="hs-identifier">decode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#encode"><span class="hs-identifier">encode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator">(!&gt;)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator">(&lt;!)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Core.html"><span class="hs-identifier">Cardano.Ledger.Conway.Core</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier">Era</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#EraPParams"><span class="hs-identifier">EraPParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier">EraTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxAuxData"><span class="hs-identifier">EraTxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxWits"><span class="hs-identifier">EraTxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMaxTxSizeL"><span class="hs-identifier">ppMaxTxSizeL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier">GovActionId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.html"><span class="hs-identifier">Cardano.Ledger.Conway.State</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.API.Types.html"><span class="hs-identifier">Cardano.Ledger.Shelley.API.Types</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Rules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Identity</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html#epochFromSlot"><span class="hs-identifier">epochFromSlot</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#utxoEnvCertStateL"><span class="hs-identifier">utxoEnvCertStateL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.API.html"><span class="hs-identifier">Constrained.API</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Reader</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">runReader</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(&amp;)</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator">(.~)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/l/testlib/doc/html/cardano-ledger-babbage/src/Test.Cardano.Ledger.Babbage.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Babbage.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier">Gen</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier">ToExpr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#oneof"><span class="hs-identifier">oneof</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Gov.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Gov</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Gov.html#proposalsSpec"><span class="hs-identifier">proposalsSpec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse</span></a></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.TreeDiff.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.TreeDiff</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Utils.html"><span class="hs-identifier">Test.Cardano.Ledger.Core.Utils</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Utils.html#testGlobals"><span class="hs-identifier">testGlobals</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.GenState.html"><span class="hs-identifier">Test.Cardano.Ledger.Generic.GenState</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.GenState.html#GenEnv"><span class="hs-identifier">GenEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.GenState.html#GenSize"><span class="hs-identifier">GenSize</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.GenState.html#GenState"><span class="hs-identifier">GenState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.GenState.html#initialLedgerState"><span class="hs-identifier">initialLedgerState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.GenState.html#runGenRS"><span class="hs-identifier">runGenRS</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.GenState.html"><span class="hs-identifier">Test.Cardano.Ledger.Generic.GenState</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">GenSize</span></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.Instances.html"><span class="hs-identifier">Test.Cardano.Ledger.Generic.Instances</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.TxGen.html"><span class="hs-identifier">Test.Cardano.Ledger.Generic.TxGen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Generic.TxGen.html#genAlonzoTx"><span class="hs-identifier">genAlonzoTx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682771281"><span id="local-6989586621682771291"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generic.html#HasSimpleRep"><span class="hs-identifier hs-type">HasSimpleRep</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DepositPurpose"><span class="hs-identifier hs-type">DepositPurpose</span></a></span></span></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682771377"><span id="local-6989586621682771383"><span id="local-6989586621682771388"><span id="local-6989586621682771398"><span id="local-6989586621682771406"><span id="local-6989586621682771411"><span id="local-6989586621682771416"><span id="local-6989586621682771421"><span id="local-6989586621682771424"><span id="local-6989586621682771427"><span id="local-6989586621682771430"><span id="local-6989586621682771433"><span id="local-6989586621682771436"><span id="local-6989586621682771439"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DepositPurpose"><span class="hs-identifier hs-type">DepositPurpose</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#witnessDepositPurpose"><span class="hs-identifier hs-type">witnessDepositPurpose</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682770587"><span class="annot"><a href="#local-6989586621682770587"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770587"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770587"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DepositPurpose"><span class="hs-identifier hs-type">DepositPurpose</span></a></span><span>
+</span><span id="line-71"></span><span id="witnessDepositPurpose"><span class="annot"><span class="annottext">witnessDepositPurpose :: forall era. Era era =&gt; WitUniv era -&gt; Specification DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#witnessDepositPurpose"><span class="hs-identifier hs-var hs-var">witnessDepositPurpose</span></a></span></span><span> </span><span id="local-6989586621682771658"><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682771658"><span class="hs-identifier hs-var">univ</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term DepositPurpose -&gt; Pred) -&gt; Specification DepositPurpose
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term DepositPurpose -&gt; Pred) -&gt; Specification DepositPurpose)
+-&gt; (Term DepositPurpose -&gt; Pred) -&gt; Specification DepositPurpose
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term DepositPurpose
+</span><span class="">[var|depPurpose|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term DepositPurpose
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps)) (Cases (SimpleRep DepositPurpose)))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term DepositPurpose
+</span><a href="#local-6989586621682771660"><span class="hs-identifier hs-var">depPurpose</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">-- CredentialDeposit !(Credential 'Staking c)</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args (Credential 'Staking))) Pred
+-&gt; Weighted (BinderD Deps) (Credential 'Staking)
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args (Credential 'Staking))) Pred
+ -&gt; Weighted (BinderD Deps) (Credential 'Staking))
+-&gt; FunTy (MapList Term (Args (Credential 'Staking))) Pred
+-&gt; Weighted (BinderD Deps) (Credential 'Staking)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682771664"><span class="annot"><span class="annottext">Term (Credential 'Staking)
+</span><a href="#local-6989586621682771664"><span class="hs-identifier hs-var">cred</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Credential 'Staking) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682771658"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'Staking)
+</span><a href="#local-6989586621682771664"><span class="hs-identifier hs-var">cred</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-comment">-- PoolDeposit !(KeyHash 'StakePool c)</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args (KeyHash 'StakePool))) Pred
+-&gt; Weighted (BinderD Deps) (KeyHash 'StakePool)
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args (KeyHash 'StakePool))) Pred
+ -&gt; Weighted (BinderD Deps) (KeyHash 'StakePool))
+-&gt; FunTy (MapList Term (Args (KeyHash 'StakePool))) Pred
+-&gt; Weighted (BinderD Deps) (KeyHash 'StakePool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682771666"><span class="annot"><span class="annottext">Term (KeyHash 'StakePool)
+</span><a href="#local-6989586621682771666"><span class="hs-identifier hs-var">keyhash</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (KeyHash 'StakePool) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682771658"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term (KeyHash 'StakePool)
+</span><a href="#local-6989586621682771666"><span class="hs-identifier hs-var">keyhash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- DRepDeposit !(Credential 'DRepRole c)</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args (Credential 'DRepRole))) Pred
+-&gt; Weighted (BinderD Deps) (Credential 'DRepRole)
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args (Credential 'DRepRole))) Pred
+ -&gt; Weighted (BinderD Deps) (Credential 'DRepRole))
+-&gt; FunTy (MapList Term (Args (Credential 'DRepRole))) Pred
+-&gt; Weighted (BinderD Deps) (Credential 'DRepRole)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682771667"><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><a href="#local-6989586621682771667"><span class="hs-identifier hs-var">drep</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Credential 'DRepRole) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682771658"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><a href="#local-6989586621682771667"><span class="hs-identifier hs-var">drep</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- GovActionDeposit</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args GovActionId)) Bool
+-&gt; Weighted (BinderD Deps) GovActionId
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args GovActionId)) Bool
+ -&gt; Weighted (BinderD Deps) GovActionId)
+-&gt; FunTy (MapList Term (Args GovActionId)) Bool
+-&gt; Weighted (BinderD Deps) GovActionId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps GovActionId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">data</span><span> </span><span id="DepositPurpose"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DepositPurpose"><span class="hs-identifier hs-var">DepositPurpose</span></a></span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="CredentialDeposit"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#CredentialDeposit"><span class="hs-identifier hs-var">CredentialDeposit</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="PoolDeposit"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#PoolDeposit"><span class="hs-identifier hs-var">PoolDeposit</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-type">StakePool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="DRepDeposit"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DRepDeposit"><span class="hs-identifier hs-var">DRepDeposit</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#DRepRole"><span class="hs-identifier hs-type">DRepRole</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GovActionDeposit"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#GovActionDeposit"><span class="hs-identifier hs-var">GovActionDeposit</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier hs-type">GovActionId</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682771673"><span id="local-6989586621682771675"><span class="annot"><span class="annottext">(forall x. DepositPurpose -&gt; Rep DepositPurpose x)
+-&gt; (forall x. Rep DepositPurpose x -&gt; DepositPurpose)
+-&gt; Generic DepositPurpose
+forall x. Rep DepositPurpose x -&gt; DepositPurpose
+forall x. DepositPurpose -&gt; Rep DepositPurpose x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. DepositPurpose -&gt; Rep DepositPurpose x
+from :: forall x. DepositPurpose -&gt; Rep DepositPurpose x
+$cto :: forall x. Rep DepositPurpose x -&gt; DepositPurpose
+to :: forall x. Rep DepositPurpose x -&gt; DepositPurpose
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682771678"><span id="local-6989586621682771687"><span class="annot"><span class="annottext">DepositPurpose -&gt; DepositPurpose -&gt; Bool
+(DepositPurpose -&gt; DepositPurpose -&gt; Bool)
+-&gt; (DepositPurpose -&gt; DepositPurpose -&gt; Bool) -&gt; Eq DepositPurpose
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+== :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+$c/= :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+/= :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682771691"><span id="local-6989586621682771705"><span id="local-6989586621682771708"><span class="annot"><span class="annottext">Int -&gt; DepositPurpose -&gt; ShowS
+[DepositPurpose] -&gt; ShowS
+DepositPurpose -&gt; String
+(Int -&gt; DepositPurpose -&gt; ShowS)
+-&gt; (DepositPurpose -&gt; String)
+-&gt; ([DepositPurpose] -&gt; ShowS)
+-&gt; Show DepositPurpose
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DepositPurpose -&gt; ShowS
+showsPrec :: Int -&gt; DepositPurpose -&gt; ShowS
+$cshow :: DepositPurpose -&gt; String
+show :: DepositPurpose -&gt; String
+$cshowList :: [DepositPurpose] -&gt; ShowS
+showList :: [DepositPurpose] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682771714"><span id="local-6989586621682771723"><span id="local-6989586621682771727"><span id="local-6989586621682771730"><span id="local-6989586621682771733"><span id="local-6989586621682771736"><span id="local-6989586621682771739"><span class="annot"><span class="annottext">Eq DepositPurpose
+Eq DepositPurpose =&gt;
+(DepositPurpose -&gt; DepositPurpose -&gt; Ordering)
+-&gt; (DepositPurpose -&gt; DepositPurpose -&gt; Bool)
+-&gt; (DepositPurpose -&gt; DepositPurpose -&gt; Bool)
+-&gt; (DepositPurpose -&gt; DepositPurpose -&gt; Bool)
+-&gt; (DepositPurpose -&gt; DepositPurpose -&gt; Bool)
+-&gt; (DepositPurpose -&gt; DepositPurpose -&gt; DepositPurpose)
+-&gt; (DepositPurpose -&gt; DepositPurpose -&gt; DepositPurpose)
+-&gt; Ord DepositPurpose
+DepositPurpose -&gt; DepositPurpose -&gt; Bool
+DepositPurpose -&gt; DepositPurpose -&gt; Ordering
+DepositPurpose -&gt; DepositPurpose -&gt; DepositPurpose
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: DepositPurpose -&gt; DepositPurpose -&gt; Ordering
+compare :: DepositPurpose -&gt; DepositPurpose -&gt; Ordering
+$c&lt; :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+&lt; :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+$c&lt;= :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+&lt;= :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+$c&gt; :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+&gt; :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+$c&gt;= :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+&gt;= :: DepositPurpose -&gt; DepositPurpose -&gt; Bool
+$cmax :: DepositPurpose -&gt; DepositPurpose -&gt; DepositPurpose
+max :: DepositPurpose -&gt; DepositPurpose -&gt; DepositPurpose
+$cmin :: DepositPurpose -&gt; DepositPurpose -&gt; DepositPurpose
+min :: DepositPurpose -&gt; DepositPurpose -&gt; DepositPurpose
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682771744"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DepositPurpose"><span class="hs-identifier hs-type">DepositPurpose</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621682771762"><span class="annot"><span class="annottext">arbitrary :: Gen DepositPurpose
+</span><a href="#local-6989586621682771762"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><span class="annottext">[Gen DepositPurpose] -&gt; Gen DepositPurpose
+forall a. HasCallStack =&gt; [Gen a] -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#oneof"><span class="hs-identifier hs-var">oneof</span></a></span><span>
+</span><span id="line-92"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#CredentialDeposit"><span class="hs-identifier hs-var">CredentialDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(Credential 'Staking -&gt; DepositPurpose)
+-&gt; Gen (Credential 'Staking) -&gt; Gen DepositPurpose
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Credential 'Staking)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-93"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#PoolDeposit"><span class="hs-identifier hs-var">PoolDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyHash 'StakePool -&gt; DepositPurpose)
+-&gt; Gen (KeyHash 'StakePool) -&gt; Gen DepositPurpose
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (KeyHash 'StakePool)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-94"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DRepDeposit"><span class="hs-identifier hs-var">DRepDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(Credential 'DRepRole -&gt; DepositPurpose)
+-&gt; Gen (Credential 'DRepRole) -&gt; Gen DepositPurpose
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Credential 'DRepRole)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-95"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GovActionId -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#GovActionDeposit"><span class="hs-identifier hs-var">GovActionDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(GovActionId -&gt; DepositPurpose)
+-&gt; Gen GovActionId -&gt; Gen DepositPurpose
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen GovActionId
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-96"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682771769"><span id="local-6989586621682771773"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DepositPurpose"><span class="hs-identifier hs-type">DepositPurpose</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-99"></span><span>  </span><span id="local-6989586621682771805"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s DepositPurpose
+</span><a href="#local-6989586621682771805"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><span class="annottext">Decode ('Closed 'Dense) DepositPurpose -&gt; Decoder s DepositPurpose
+forall t (w :: Wrapped) s. Typeable t =&gt; Decode w t -&gt; Decoder s t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#decode"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">(Decode ('Closed 'Dense) DepositPurpose
+ -&gt; Decoder s DepositPurpose)
+-&gt; ((Word -&gt; Decode 'Open DepositPurpose)
+    -&gt; Decode ('Closed 'Dense) DepositPurpose)
+-&gt; (Word -&gt; Decode 'Open DepositPurpose)
+-&gt; Decoder s DepositPurpose
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Text
+-&gt; (Word -&gt; Decode 'Open DepositPurpose)
+-&gt; Decode ('Closed 'Dense) DepositPurpose
+forall t.
+Text -&gt; (Word -&gt; Decode 'Open t) -&gt; Decode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#Summands"><span class="hs-identifier hs-var">Summands</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;DepositPurpose&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Word -&gt; Decode 'Open DepositPurpose) -&gt; Decoder s DepositPurpose)
+-&gt; (Word -&gt; Decode 'Open DepositPurpose)
+-&gt; Decoder s DepositPurpose
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-101"></span><span>      </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Credential 'Staking -&gt; DepositPurpose)
+-&gt; Decode 'Open (Credential 'Staking -&gt; DepositPurpose)
+forall t. t -&gt; Decode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#SumD"><span class="hs-identifier hs-var">SumD</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#CredentialDeposit"><span class="hs-identifier hs-var">CredentialDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Decode 'Open (Credential 'Staking -&gt; DepositPurpose)
+-&gt; Decode ('Closed Any) (Credential 'Staking)
+-&gt; Decode 'Open DepositPurpose
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) (Credential 'Staking)
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-103"></span><span>        </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(KeyHash 'StakePool -&gt; DepositPurpose)
+-&gt; Decode 'Open (KeyHash 'StakePool -&gt; DepositPurpose)
+forall t. t -&gt; Decode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#SumD"><span class="hs-identifier hs-var">SumD</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#PoolDeposit"><span class="hs-identifier hs-var">PoolDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Decode 'Open (KeyHash 'StakePool -&gt; DepositPurpose)
+-&gt; Decode ('Closed Any) (KeyHash 'StakePool)
+-&gt; Decode 'Open DepositPurpose
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) (KeyHash 'StakePool)
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-104"></span><span>        </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Credential 'DRepRole -&gt; DepositPurpose)
+-&gt; Decode 'Open (Credential 'DRepRole -&gt; DepositPurpose)
+forall t. t -&gt; Decode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#SumD"><span class="hs-identifier hs-var">SumD</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DRepDeposit"><span class="hs-identifier hs-var">DRepDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Decode 'Open (Credential 'DRepRole -&gt; DepositPurpose)
+-&gt; Decode ('Closed Any) (Credential 'DRepRole)
+-&gt; Decode 'Open DepositPurpose
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) (Credential 'DRepRole)
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-105"></span><span>        </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GovActionId -&gt; DepositPurpose)
+-&gt; Decode 'Open (GovActionId -&gt; DepositPurpose)
+forall t. t -&gt; Decode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#SumD"><span class="hs-identifier hs-var">SumD</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#GovActionDeposit"><span class="hs-identifier hs-var">GovActionDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Decode 'Open (GovActionId -&gt; DepositPurpose)
+-&gt; Decode ('Closed Any) GovActionId -&gt; Decode 'Open DepositPurpose
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) GovActionId
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-106"></span><span>        </span><span id="local-6989586621682771811"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621682771811"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Decode 'Open DepositPurpose
+forall (w :: Wrapped) t. Word -&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#Invalid"><span class="hs-identifier hs-var">Invalid</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621682771811"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682771817"><span id="local-6989586621682771821"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DepositPurpose"><span class="hs-identifier hs-type">DepositPurpose</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-109"></span><span>  </span><span id="local-6989586621682771834"><span class="annot"><span class="annottext">encCBOR :: DepositPurpose -&gt; Encoding
+</span><a href="#local-6989586621682771834"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">Encode 'Open DepositPurpose -&gt; Encoding
+forall (w :: Wrapped) t. Encode w t -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">(Encode 'Open DepositPurpose -&gt; Encoding)
+-&gt; (DepositPurpose -&gt; Encode 'Open DepositPurpose)
+-&gt; DepositPurpose
+-&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#CredentialDeposit"><span class="hs-identifier hs-type">CredentialDeposit</span></a></span><span> </span><span id="local-6989586621682771836"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621682771836"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Credential 'Staking -&gt; DepositPurpose)
+-&gt; Word -&gt; Encode 'Open (Credential 'Staking -&gt; DepositPurpose)
+forall t. t -&gt; Word -&gt; Encode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Sum"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#CredentialDeposit"><span class="hs-identifier hs-var">CredentialDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Encode 'Open (Credential 'Staking -&gt; DepositPurpose)
+-&gt; Encode ('Closed 'Dense) (Credential 'Staking)
+-&gt; Encode 'Open DepositPurpose
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+-&gt; Encode ('Closed 'Dense) (Credential 'Staking)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621682771836"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-112"></span><span>      </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#PoolDeposit"><span class="hs-identifier hs-type">PoolDeposit</span></a></span><span> </span><span id="local-6989586621682771839"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621682771839"><span class="hs-identifier hs-var">kh</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(KeyHash 'StakePool -&gt; DepositPurpose)
+-&gt; Word -&gt; Encode 'Open (KeyHash 'StakePool -&gt; DepositPurpose)
+forall t. t -&gt; Word -&gt; Encode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Sum"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#PoolDeposit"><span class="hs-identifier hs-var">PoolDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Encode 'Open (KeyHash 'StakePool -&gt; DepositPurpose)
+-&gt; Encode ('Closed 'Dense) (KeyHash 'StakePool)
+-&gt; Encode 'Open DepositPurpose
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool -&gt; Encode ('Closed 'Dense) (KeyHash 'StakePool)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621682771839"><span class="hs-identifier hs-var">kh</span></a></span><span>
+</span><span id="line-113"></span><span>      </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DRepDeposit"><span class="hs-identifier hs-type">DRepDeposit</span></a></span><span> </span><span id="local-6989586621682771840"><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><a href="#local-6989586621682771840"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Credential 'DRepRole -&gt; DepositPurpose)
+-&gt; Word -&gt; Encode 'Open (Credential 'DRepRole -&gt; DepositPurpose)
+forall t. t -&gt; Word -&gt; Encode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Sum"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DRepDeposit"><span class="hs-identifier hs-var">DRepDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Encode 'Open (Credential 'DRepRole -&gt; DepositPurpose)
+-&gt; Encode ('Closed 'Dense) (Credential 'DRepRole)
+-&gt; Encode 'Open DepositPurpose
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole
+-&gt; Encode ('Closed 'Dense) (Credential 'DRepRole)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole
+</span><a href="#local-6989586621682771840"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#GovActionDeposit"><span class="hs-identifier hs-type">GovActionDeposit</span></a></span><span> </span><span id="local-6989586621682771841"><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621682771841"><span class="hs-identifier hs-var">gaid</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(GovActionId -&gt; DepositPurpose)
+-&gt; Word -&gt; Encode 'Open (GovActionId -&gt; DepositPurpose)
+forall t. t -&gt; Word -&gt; Encode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Sum"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId -&gt; DepositPurpose
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#GovActionDeposit"><span class="hs-identifier hs-var">GovActionDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">Encode 'Open (GovActionId -&gt; DepositPurpose)
+-&gt; Encode ('Closed 'Dense) GovActionId
+-&gt; Encode 'Open DepositPurpose
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId -&gt; Encode ('Closed 'Dense) GovActionId
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621682771841"><span class="hs-identifier hs-var">gaid</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682771843"><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DepositPurpose"><span class="hs-identifier hs-type">DepositPurpose</span></a></span></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682771876"><span id="local-6989586621682771883"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier hs-type">ToExpr</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#DepositPurpose"><span class="hs-identifier hs-type">DepositPurpose</span></a></span></span></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#utxoEnvSpec"><span class="hs-identifier hs-type">utxoEnvSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-121"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-122"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#UtxoEnv"><span class="hs-identifier hs-type">UtxoEnv</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span id="utxoEnvSpec"><span class="annot"><span class="annottext">utxoEnvSpec :: UtxoExecContext ConwayEra -&gt; Specification (UtxoEnv ConwayEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#utxoEnvSpec"><span class="hs-identifier hs-var hs-var">utxoEnvSpec</span></a></span></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621682771938"><span id="local-6989586621682771939"><span id="local-6989586621682771940"><span class="annot"><span class="annottext">Tx ConwayEra
+UTxO ConwayEra
+UtxoEnv ConwayEra
+uecTx :: Tx ConwayEra
+uecUTxO :: UTxO ConwayEra
+uecUtxoEnv :: UtxoEnv ConwayEra
+uecTx :: forall era. UtxoExecContext era -&gt; Tx era
+uecUTxO :: forall era. UtxoExecContext era -&gt; UTxO era
+uecUtxoEnv :: forall era. UtxoExecContext era -&gt; UtxoEnv era
+</span><a href="#local-6989586621682771938"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><span class="annottext">(Term (UtxoEnv ConwayEra) -&gt; Term Bool)
+-&gt; Specification (UtxoEnv ConwayEra)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (UtxoEnv ConwayEra) -&gt; Term Bool)
+ -&gt; Specification (UtxoEnv ConwayEra))
+-&gt; (Term (UtxoEnv ConwayEra) -&gt; Term Bool)
+-&gt; Specification (UtxoEnv ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682771944"><span class="annot"><span class="annottext">Term (UtxoEnv ConwayEra)
+</span><a href="#local-6989586621682771944"><span class="hs-identifier hs-var">utxoEnv</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">Term (UtxoEnv ConwayEra)
+</span><a href="#local-6989586621682771944"><span class="hs-identifier hs-var">utxoEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Term (UtxoEnv ConwayEra) -&gt; Term (UtxoEnv ConwayEra) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoEnv ConwayEra -&gt; Term (UtxoEnv ConwayEra)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoEnv ConwayEra
+</span><a href="#local-6989586621682771940"><span class="hs-identifier hs-var">uecUtxoEnv</span></a></span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#utxoStateSpec"><span class="hs-identifier hs-type">utxoStateSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#UtxoEnv"><span class="hs-identifier hs-type">UtxoEnv</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#UTxOState"><span class="hs-identifier hs-type">UTxOState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span id="utxoStateSpec"><span class="annot"><span class="annottext">utxoStateSpec :: UtxoExecContext ConwayEra
+-&gt; UtxoEnv ConwayEra -&gt; Specification (UTxOState ConwayEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#utxoStateSpec"><span class="hs-identifier hs-var hs-var">utxoStateSpec</span></a></span></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621682771948"><span class="annot"><span class="annottext">UTxO ConwayEra
+uecUTxO :: forall era. UtxoExecContext era -&gt; UTxO era
+uecUTxO :: UTxO ConwayEra
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#uecUTxO"><span class="hs-identifier hs-var hs-var">uecUTxO</span></a></span></span><span class="hs-special">}</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#UtxoEnv"><span class="hs-identifier hs-type">UtxoEnv</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621682771950"><span class="annot"><span class="annottext">SlotNo
+ueSlot :: SlotNo
+ueSlot :: forall era. UtxoEnv era -&gt; SlotNo
+</span><a href="#local-6989586621682771950"><span class="hs-identifier hs-var hs-var">ueSlot</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682771952"><span class="annot"><span class="annottext">CertState ConwayEra
+ueCertState :: CertState ConwayEra
+ueCertState :: forall era. UtxoEnv era -&gt; CertState era
+</span><a href="#local-6989586621682771952"><span class="hs-identifier hs-var hs-var">ueCertState</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><span class="annottext">(Term (UTxOState ConwayEra) -&gt; Pred)
+-&gt; Specification (UTxOState ConwayEra)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (UTxOState ConwayEra) -&gt; Pred)
+ -&gt; Specification (UTxOState ConwayEra))
+-&gt; (Term (UTxOState ConwayEra) -&gt; Pred)
+-&gt; Specification (UTxOState ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682771954"><span class="annot"><span class="annottext">Term (UTxOState ConwayEra)
+</span><a href="#local-6989586621682771954"><span class="hs-identifier hs-var">utxoState</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>    </span><span class="annot"><span class="annottext">Term (UTxOState ConwayEra)
+-&gt; FunTy
+     (MapList Term (ProductAsList (UTxOState ConwayEra))) [Pred]
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (UTxOState ConwayEra)
+</span><a href="#local-6989586621682771954"><span class="hs-identifier hs-var">utxoState</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (UTxOState ConwayEra))) [Pred]
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (UTxOState ConwayEra))) [Pred]
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-134"></span><span>      </span><span class="hs-glyph">\</span><span id="local-6989586621682771956"><span class="annot"><span class="annottext">Term (UTxO ConwayEra)
+</span><a href="#local-6989586621682771956"><span class="hs-identifier hs-var">utxosUtxo</span></a></span></span><span>
+</span><span id="line-135"></span><span>       </span><span id="local-6989586621682771957"><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682771957"><span class="hs-identifier hs-var">_utxosDeposited</span></a></span></span><span>
+</span><span id="line-136"></span><span>       </span><span id="local-6989586621682771958"><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682771958"><span class="hs-identifier hs-var">_utxosFees</span></a></span></span><span>
+</span><span id="line-137"></span><span>       </span><span id="local-6989586621682771959"><span class="annot"><span class="annottext">Term (ConwayGovState ConwayEra)
+</span><a href="#local-6989586621682771959"><span class="hs-identifier hs-var">utxosGovState</span></a></span></span><span>
+</span><span id="line-138"></span><span>       </span><span id="local-6989586621682771960"><span class="annot"><span class="annottext">TermD Deps (ConwayInstantStake ConwayEra)
+</span><a href="#local-6989586621682771960"><span class="hs-identifier hs-var">_utxosStakeDistr</span></a></span></span><span>
+</span><span id="line-139"></span><span>       </span><span id="local-6989586621682771961"><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682771961"><span class="hs-identifier hs-var">_utxosDonation</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-140"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (UTxO ConwayEra)
+</span><a href="#local-6989586621682771956"><span class="hs-identifier hs-var">utxosUtxo</span></a></span><span> </span><span class="annot"><span class="annottext">Term (UTxO ConwayEra) -&gt; Term (UTxO ConwayEra) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO ConwayEra -&gt; Term (UTxO ConwayEra)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO ConwayEra
+</span><a href="#local-6989586621682771948"><span class="hs-identifier hs-var">uecUTxO</span></a></span><span>
+</span><span id="line-141"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (ConwayGovState ConwayEra)
+-&gt; FunTy
+     (MapList Term (ProductAsList (ConwayGovState ConwayEra))) Pred
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (ConwayGovState ConwayEra)
+</span><a href="#local-6989586621682771959"><span class="hs-identifier hs-var">utxosGovState</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (ProductAsList (ConwayGovState ConwayEra))) Pred
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (ConwayGovState ConwayEra))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682771963"><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+</span><a href="#local-6989586621682771963"><span class="hs-identifier hs-var">props</span></a></span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (StrictMaybe (Committee ConwayEra))
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682771964"><span class="annot"><span class="annottext">Term (Constitution ConwayEra)
+</span><a href="#local-6989586621682771964"><span class="hs-identifier hs-var">constitution</span></a></span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (PParams ConwayEra)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (PParams ConwayEra)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (FuturePParams ConwayEra)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (DRepPulsingState ConwayEra)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-142"></span><span>              </span><span class="annot"><span class="annottext">Term (Constitution ConwayEra)
+-&gt; FunTy
+     (MapList Term (ProductAsList (Constitution ConwayEra))) Pred
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Constitution ConwayEra)
+</span><a href="#local-6989586621682771964"><span class="hs-identifier hs-var">constitution</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (Constitution ConwayEra))) Pred
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (Constitution ConwayEra))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps Anchor
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682771965"><span class="annot"><span class="annottext">Term (StrictMaybe ScriptHash)
+</span><a href="#local-6989586621682771965"><span class="hs-identifier hs-var">policy</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-143"></span><span>                </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+-&gt; Specification (Proposals ConwayEra) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+</span><a href="#local-6989586621682771963"><span class="hs-identifier hs-var">props</span></a></span><span> </span><span class="annot"><span class="annottext">(Specification (Proposals ConwayEra) -&gt; Pred)
+-&gt; Specification (Proposals ConwayEra) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term EpochNo
+-&gt; Term (StrictMaybe ScriptHash)
+-&gt; Term (CertState ConwayEra)
+-&gt; Specification (Proposals ConwayEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Gov.html#proposalsSpec"><span class="hs-identifier hs-var">proposalsSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochNo -&gt; Term EpochNo
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621682771967"><span class="hs-identifier hs-var">curEpoch</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term (StrictMaybe ScriptHash)
+</span><a href="#local-6989586621682771965"><span class="hs-identifier hs-var">policy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConwayCertState ConwayEra -&gt; Term (ConwayCertState ConwayEra)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">CertState ConwayEra
+ConwayCertState ConwayEra
+</span><a href="#local-6989586621682771952"><span class="hs-identifier hs-var">ueCertState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621682771967"><span class="annot"><span class="annottext">curEpoch :: EpochNo
+</span><a href="#local-6989586621682771967"><span class="hs-identifier hs-var hs-var">curEpoch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Reader Globals EpochNo -&gt; Globals -&gt; EpochNo
+forall r a. Reader r a -&gt; r -&gt; a
+</span><span class="hs-identifier hs-var">runReader</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SlotNo -&gt; Reader Globals EpochNo
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html#epochFromSlot"><span class="hs-identifier hs-var">epochFromSlot</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621682771950"><span class="hs-identifier hs-var">ueSlot</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Globals
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Utils.html#testGlobals"><span class="hs-identifier hs-var">testGlobals</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="hs-keyword">data</span><span> </span><span id="UtxoExecContext"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-var">UtxoExecContext</span></a></span></span><span> </span><span id="local-6989586621682770726"><span class="annot"><a href="#local-6989586621682770726"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UtxoExecContext"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-var">UtxoExecContext</span></a></span></span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="uecTx"><span class="annot"><span class="annottext">forall era. UtxoExecContext era -&gt; Tx era
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#uecTx"><span class="hs-identifier hs-var hs-var">uecTx</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770726"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="uecUTxO"><span class="annot"><span class="annottext">forall era. UtxoExecContext era -&gt; UTxO era
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#uecUTxO"><span class="hs-identifier hs-var hs-var">uecUTxO</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770726"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="uecUtxoEnv"><span class="annot"><span class="annottext">forall era. UtxoExecContext era -&gt; UtxoEnv era
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#uecUtxoEnv"><span class="hs-identifier hs-var hs-var">uecUtxoEnv</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#UtxoEnv"><span class="hs-identifier hs-type">UtxoEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770726"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682771969"><span id="local-6989586621682771971"><span class="annot"><span class="annottext">(forall x. UtxoExecContext era -&gt; Rep (UtxoExecContext era) x)
+-&gt; (forall x. Rep (UtxoExecContext era) x -&gt; UtxoExecContext era)
+-&gt; Generic (UtxoExecContext era)
+forall x. Rep (UtxoExecContext era) x -&gt; UtxoExecContext era
+forall x. UtxoExecContext era -&gt; Rep (UtxoExecContext era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x. Rep (UtxoExecContext era) x -&gt; UtxoExecContext era
+forall era x. UtxoExecContext era -&gt; Rep (UtxoExecContext era) x
+$cfrom :: forall era x. UtxoExecContext era -&gt; Rep (UtxoExecContext era) x
+from :: forall x. UtxoExecContext era -&gt; Rep (UtxoExecContext era) x
+$cto :: forall era x. Rep (UtxoExecContext era) x -&gt; UtxoExecContext era
+to :: forall x. Rep (UtxoExecContext era) x -&gt; UtxoExecContext era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-156"></span><span>  </span><span id="local-6989586621682770762"><span id="local-6989586621682771978"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">EraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770762"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-type">TxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770762"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxAuxData"><span class="hs-identifier hs-type">TxAuxData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770762"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier hs-type">EraCertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770762"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770762"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-164"></span><span>  </span><span id="local-6989586621682770772"><span id="local-6989586621682772028"><span id="local-6989586621682772035"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">EraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770772"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier hs-type">ToExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770772"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier hs-type">ToExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770772"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier hs-type">ToExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-type">TxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770772"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier hs-type">ToExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxAuxData"><span class="hs-identifier hs-type">TxAuxData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770772"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier hs-type">ToExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-type">PParamsHKD</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="annot"><a href="#local-6989586621682770772"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier hs-type">EraCertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770772"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier hs-type">ToExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#CertState"><span class="hs-identifier hs-type">CertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770772"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier hs-type">ToExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770772"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-174"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tree-diff-0.3.4-ef016b9048a98243efba583942a384684f7a662dffbb0844de08f7ab79f0b6af/share/doc/html/src/Data.TreeDiff.Class.html#ToExpr"><span class="hs-identifier hs-type">ToExpr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770772"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-177"></span><span>  </span><span id="local-6989586621682770775"><span id="local-6989586621682772086"><span id="local-6989586621682772090"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#EraPParams"><span class="hs-identifier hs-type">EraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770775"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770775"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770775"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxAuxData"><span class="hs-identifier hs-type">TxAuxData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770775"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-type">TxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770775"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770775"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier hs-type">EraCertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770775"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-184"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-185"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770775"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-187"></span><span>  </span><span id="local-6989586621682772100"><span class="annot"><span class="annottext">encCBOR :: UtxoExecContext era -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span id="local-6989586621682772101"><span class="annot"><span class="annottext">x :: UtxoExecContext era
+</span><a href="#local-6989586621682772101"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">UTxO era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">UtxoEnv era
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621682772102"><span id="local-6989586621682772103"><span id="local-6989586621682772104"><span class="annot"><span class="annottext">Tx era
+UTxO era
+UtxoEnv era
+uecTx :: forall era. UtxoExecContext era -&gt; Tx era
+uecUTxO :: forall era. UtxoExecContext era -&gt; UTxO era
+uecUtxoEnv :: forall era. UtxoExecContext era -&gt; UtxoEnv era
+uecTx :: Tx era
+uecUTxO :: UTxO era
+uecUtxoEnv :: UtxoEnv era
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#uecTx"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UtxoExecContext era
+</span><a href="#local-6989586621682772101"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-189"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Encode ('Closed 'Dense) (UtxoExecContext era) -&gt; Encoding
+forall (w :: Wrapped) t. Encode w t -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">(Encode ('Closed 'Dense) (UtxoExecContext era) -&gt; Encoding)
+-&gt; Encode ('Closed 'Dense) (UtxoExecContext era) -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-190"></span><span>          </span><span class="annot"><span class="annottext">(Tx era -&gt; UTxO era -&gt; UtxoEnv era -&gt; UtxoExecContext era)
+-&gt; Encode
+     ('Closed 'Dense)
+     (Tx era -&gt; UTxO era -&gt; UtxoEnv era -&gt; UtxoExecContext era)
+forall t. t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Rec"><span class="hs-identifier hs-var">Rec</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era -&gt; UTxO era -&gt; UtxoEnv era -&gt; UtxoExecContext era
+forall era.
+Tx era -&gt; UTxO era -&gt; UtxoEnv era -&gt; UtxoExecContext era
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-var">UtxoExecContext</span></a></span><span>
+</span><span id="line-191"></span><span>            </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Dense)
+  (Tx era -&gt; UTxO era -&gt; UtxoEnv era -&gt; UtxoExecContext era)
+-&gt; Encode ('Closed 'Dense) (Tx era)
+-&gt; Encode
+     ('Closed 'Dense) (UTxO era -&gt; UtxoEnv era -&gt; UtxoExecContext era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era -&gt; Encode ('Closed 'Dense) (Tx era)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621682772102"><span class="hs-identifier hs-var">uecTx</span></a></span><span>
+</span><span id="line-192"></span><span>            </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Dense) (UTxO era -&gt; UtxoEnv era -&gt; UtxoExecContext era)
+-&gt; Encode ('Closed 'Dense) (UTxO era)
+-&gt; Encode ('Closed 'Dense) (UtxoEnv era -&gt; UtxoExecContext era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO era -&gt; Encode ('Closed 'Dense) (UTxO era)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO era
+</span><a href="#local-6989586621682772103"><span class="hs-identifier hs-var">uecUTxO</span></a></span><span>
+</span><span id="line-193"></span><span>            </span><span class="annot"><span class="annottext">Encode ('Closed 'Dense) (UtxoEnv era -&gt; UtxoExecContext era)
+-&gt; Encode ('Closed 'Dense) (UtxoEnv era)
+-&gt; Encode ('Closed 'Dense) (UtxoExecContext era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoEnv era -&gt; Encode ('Closed 'Dense) (UtxoEnv era)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoEnv era
+</span><a href="#local-6989586621682772104"><span class="hs-identifier hs-var">uecUtxoEnv</span></a></span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621682770782"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#CertState"><span class="hs-identifier hs-type">CertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770782"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#ConwayCertState"><span class="hs-identifier hs-type">ConwayCertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770782"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770782"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#ConwayCertState"><span class="hs-identifier hs-type">ConwayCertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770782"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-196"></span><span>  </span><span id="local-6989586621682772113"><span class="annot"><span class="annottext">inject :: UtxoExecContext era -&gt; ConwayCertState era
+</span><a href="#local-6989586621682772113"><span class="hs-identifier hs-var hs-var hs-var hs-var">inject</span></a></span></span><span> </span><span id="local-6989586621682772115"><span class="annot"><span class="annottext">UtxoExecContext era
+</span><a href="#local-6989586621682772115"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UtxoExecContext era -&gt; UtxoEnv era
+forall era. UtxoExecContext era -&gt; UtxoEnv era
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#uecUtxoEnv"><span class="hs-identifier hs-var">uecUtxoEnv</span></a></span><span> </span><span class="annot"><span class="annottext">UtxoExecContext era
+</span><a href="#local-6989586621682772115"><span class="hs-identifier hs-var">ctx</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">UtxoEnv era
+-&gt; Getting
+     (ConwayCertState era) (UtxoEnv era) (ConwayCertState era)
+-&gt; ConwayCertState era
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(CertState era -&gt; Const (ConwayCertState era) (CertState era))
+-&gt; UtxoEnv era -&gt; Const (ConwayCertState era) (UtxoEnv era)
+Getting (ConwayCertState era) (UtxoEnv era) (ConwayCertState era)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(CertState era -&gt; f (CertState era))
+-&gt; UtxoEnv era -&gt; f (UtxoEnv era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#utxoEnvCertStateL"><span class="hs-identifier hs-var">utxoEnvCertStateL</span></a></span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span><span id="local-6989586621682770790"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#utxoTxSpec"><span class="hs-identifier hs-type">utxoTxSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-199"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770790"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-200"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770790"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-201"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682770790"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-202"></span><span id="utxoTxSpec"><span class="annot"><span class="annottext">utxoTxSpec :: forall era.
+HasSpec (Tx era) =&gt;
+UtxoExecContext era -&gt; Specification (Tx era)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#utxoTxSpec"><span class="hs-identifier hs-var hs-var">utxoTxSpec</span></a></span></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621682772122"><span class="annot"><span class="annottext">Tx era
+uecTx :: forall era. UtxoExecContext era -&gt; Tx era
+uecTx :: Tx era
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#uecTx"><span class="hs-identifier hs-var hs-var">uecTx</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-203"></span><span>  </span><span class="annot"><span class="annottext">(Term (Tx era) -&gt; Term Bool) -&gt; Specification (Tx era)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Tx era) -&gt; Term Bool) -&gt; Specification (Tx era))
+-&gt; (Term (Tx era) -&gt; Term Bool) -&gt; Specification (Tx era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682772123"><span class="annot"><span class="annottext">Term (Tx era)
+</span><a href="#local-6989586621682772123"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term (Tx era)
+</span><a href="#local-6989586621682772123"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Tx era) -&gt; Term (Tx era) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era -&gt; Term (Tx era)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621682772122"><span class="hs-identifier hs-var">uecTx</span></a></span><span>
+</span><span id="line-204"></span><span>
+</span><span id="line-205"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#correctAddrAndWFCoin"><span class="hs-identifier hs-type">correctAddrAndWFCoin</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-206"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-207"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Pred"><span class="hs-identifier hs-type">Pred</span></a></span><span>
+</span><span id="line-208"></span><span id="correctAddrAndWFCoin"><span class="annot"><span class="annottext">correctAddrAndWFCoin :: Term (TxOut ConwayEra) -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#correctAddrAndWFCoin"><span class="hs-identifier hs-var hs-var">correctAddrAndWFCoin</span></a></span></span><span> </span><span id="local-6989586621682772125"><span class="annot"><span class="annottext">Term (TxOut ConwayEra)
+</span><a href="#local-6989586621682772125"><span class="hs-identifier hs-var">txOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-209"></span><span>  </span><span class="annot"><span class="annottext">Term (BabbageTxOut ConwayEra)
+-&gt; FunTy
+     (MapList Term (ProductAsList (BabbageTxOut ConwayEra))) [Pred]
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (TxOut ConwayEra)
+Term (BabbageTxOut ConwayEra)
+</span><a href="#local-6989586621682772125"><span class="hs-identifier hs-var">txOut</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (ProductAsList (BabbageTxOut ConwayEra))) [Pred]
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (BabbageTxOut ConwayEra))) [Pred]
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682772126"><span class="annot"><span class="annottext">Term Addr
+</span><a href="#local-6989586621682772126"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span id="local-6989586621682772127"><span class="annot"><span class="annottext">Term MaryValue
+</span><a href="#local-6989586621682772127"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (Datum ConwayEra)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (StrictMaybe (AlonzoScript ConwayEra))
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-210"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term MaryValue
+-&gt; FunTy (MapList Term (ProductAsList MaryValue)) [Term Bool]
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term MaryValue
+</span><a href="#local-6989586621682772127"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList MaryValue)) [Term Bool]
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList MaryValue)) [Term Bool]
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682772128"><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682772128"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Term Coin
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term Coin -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682772128"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682772128"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term Coin -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Term Coin
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-211"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term Addr
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep Addr))) Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term Addr
+</span><a href="#local-6989586621682772126"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-212"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy
+  (MapList
+     Term
+     (Args (Prod Network (Prod (Credential 'Payment) StakeReference))))
+  (Term Bool)
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod Network (Prod (Credential 'Payment) StakeReference))
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term
+      (Args (Prod Network (Prod (Credential 'Payment) StakeReference))))
+   (Term Bool)
+ -&gt; Weighted
+      (BinderD Deps)
+      (Prod Network (Prod (Credential 'Payment) StakeReference)))
+-&gt; FunTy
+     (MapList
+        Term
+        (Args (Prod Network (Prod (Credential 'Payment) StakeReference))))
+     (Term Bool)
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod Network (Prod (Credential 'Payment) StakeReference))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682772132"><span class="annot"><span class="annottext">Term Network
+</span><a href="#local-6989586621682772132"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (Credential 'Payment)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps StakeReference
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Network
+</span><a href="#local-6989586621682772132"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Term Network -&gt; Term Network -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Network -&gt; Term Network
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-213"></span><span>        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">FunTy (MapList Term (Args BootstrapAddress)) Pred
+-&gt; Weighted (BinderD Deps) BootstrapAddress
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args BootstrapAddress)) Pred
+ -&gt; Weighted (BinderD Deps) BootstrapAddress)
+-&gt; FunTy (MapList Term (Args BootstrapAddress)) Pred
+-&gt; Weighted (BinderD Deps) BootstrapAddress
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682772134"><span class="annot"><span class="annottext">Term BootstrapAddress
+</span><a href="#local-6989586621682772134"><span class="hs-identifier hs-var">bootstrapAddr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-214"></span><span>            </span><span class="annot"><span class="annottext">Term BootstrapAddress
+-&gt; FunTy (MapList Term (ProductAsList BootstrapAddress)) Pred
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term BootstrapAddress
+</span><a href="#local-6989586621682772134"><span class="hs-identifier hs-var">bootstrapAddr</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList BootstrapAddress)) Pred
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList BootstrapAddress)) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps (AbstractHash Blake2b_224 Address')
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682772135"><span class="annot"><span class="annottext">Term NetworkMagic
+</span><a href="#local-6989586621682772135"><span class="hs-identifier hs-var">nm</span></a></span></span><span> </span><span class="annot"><span class="annottext">TermD Deps AddrType
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-215"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term NetworkMagic
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps)) (Cases (SimpleRep NetworkMagic)))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term NetworkMagic
+</span><a href="#local-6989586621682772135"><span class="hs-identifier hs-var">nm</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-216"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args ())) Bool -&gt; Weighted (BinderD Deps) ()
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args ())) Bool -&gt; Weighted (BinderD Deps) ())
+-&gt; FunTy (MapList Term (Args ())) Bool
+-&gt; Weighted (BinderD Deps) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-217"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args Word32)) Bool
+-&gt; Weighted (BinderD Deps) Word32
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Word32)) Bool
+ -&gt; Weighted (BinderD Deps) Word32)
+-&gt; FunTy (MapList Term (Args Word32)) Bool
+-&gt; Weighted (BinderD Deps) Word32
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps Word32
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>
+</span><span id="line-218"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-219"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-220"></span><span>
+</span><span id="line-221"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#genUtxoExecContext"><span class="hs-identifier hs-type">genUtxoExecContext</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span id="genUtxoExecContext"><span class="annot"><span class="annottext">genUtxoExecContext :: Gen (UtxoExecContext ConwayEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#genUtxoExecContext"><span class="hs-identifier hs-var hs-var">genUtxoExecContext</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-223"></span><span>  </span><span id="local-6989586621682772137"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621682772137"><span class="hs-identifier hs-var">ueSlot</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen SlotNo
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-224"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-225"></span><span>    </span><span id="local-6989586621682772138"><span class="annot"><span class="annottext">genSize :: GenSize
+</span><a href="#local-6989586621682772138"><span class="hs-identifier hs-var hs-var">genSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-226"></span><span>      </span><span class="annot"><span class="annottext">GenSize
+</span><a href="Test.Cardano.Ledger.Generic.GenState.html#small"><span class="hs-identifier hs-var">GenSize.small</span></a></span><span>
+</span><span id="line-227"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.GenState.html#invalidScriptFreq"><span class="hs-identifier hs-var">invalidScriptFreq</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="hs-comment">-- TODO make the test work with invalid scripts</span><span>
+</span><span id="line-228"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.GenState.html#regCertFreq"><span class="hs-identifier hs-var">regCertFreq</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0</span></span><span>
+</span><span id="line-229"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.GenState.html#delegCertFreq"><span class="hs-identifier hs-var">delegCertFreq</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0</span></span><span>
+</span><span id="line-230"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-231"></span><span>  </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621682772143"><span class="annot"><span class="annottext">UTxO ConwayEra
+</span><a href="#local-6989586621682772143"><span class="hs-identifier hs-var">uecUTxO</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682772144"><span class="annot"><span class="annottext">Tx ConwayEra
+</span><a href="#local-6989586621682772144"><span class="hs-identifier hs-var">uecTx</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621682772145"><span class="annot"><span class="annottext">GenState ConwayEra
+</span><a href="#local-6989586621682772145"><span class="hs-identifier hs-var">gs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GenSize
+-&gt; GenRS ConwayEra (UTxO ConwayEra, Tx ConwayEra)
+-&gt; Gen ((UTxO ConwayEra, Tx ConwayEra), GenState ConwayEra)
+forall era a.
+EraGenericGen era =&gt;
+GenSize -&gt; GenRS era a -&gt; Gen (a, GenState era)
+</span><a href="Test.Cardano.Ledger.Generic.GenState.html#runGenRS"><span class="hs-identifier hs-var">runGenRS</span></a></span><span> </span><span class="annot"><span class="annottext">GenSize
+</span><a href="#local-6989586621682772138"><span class="hs-identifier hs-var">genSize</span></a></span><span> </span><span class="annot"><span class="annottext">(GenRS ConwayEra (UTxO ConwayEra, Tx ConwayEra)
+ -&gt; Gen ((UTxO ConwayEra, Tx ConwayEra), GenState ConwayEra))
+-&gt; GenRS ConwayEra (UTxO ConwayEra, Tx ConwayEra)
+-&gt; Gen ((UTxO ConwayEra, Tx ConwayEra), GenState ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; GenRS ConwayEra (UTxO ConwayEra, Tx ConwayEra)
+forall era.
+EraGenericGen era =&gt;
+SlotNo -&gt; GenRS era (UTxO era, Tx era)
+</span><a href="Test.Cardano.Ledger.Generic.TxGen.html#genAlonzoTx"><span class="hs-identifier hs-var">genAlonzoTx</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621682772137"><span class="hs-identifier hs-var">ueSlot</span></a></span><span>
+</span><span id="line-232"></span><span>  </span><span class="hs-keyword">let</span><span>
+</span><span id="line-233"></span><span>    </span><span id="local-6989586621682772146"><span class="annot"><span class="annottext">txSize :: Word32
+</span><a href="#local-6989586621682772146"><span class="hs-identifier hs-var hs-var">txSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra
+</span><a href="#local-6989586621682772144"><span class="hs-identifier hs-var">uecTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra -&gt; Getting Word32 (Tx ConwayEra) Word32 -&gt; Word32
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Word32 (Tx ConwayEra) Word32
+forall era.
+(EraTx era, HasCallStack) =&gt;
+SimpleGetter (Tx era) Word32
+SimpleGetter (Tx ConwayEra) Word32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#sizeTxF"><span class="hs-identifier hs-var">sizeTxF</span></a></span><span>
+</span><span id="line-234"></span><span>    </span><span id="local-6989586621682772148"><span class="annot"><span class="annottext">lState :: LedgerState ConwayEra
+</span><a href="#local-6989586621682772148"><span class="hs-identifier hs-var hs-var">lState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenState ConwayEra -&gt; LedgerState ConwayEra
+forall era. Reflect era =&gt; GenState era -&gt; LedgerState era
+</span><a href="Test.Cardano.Ledger.Generic.GenState.html#initialLedgerState"><span class="hs-identifier hs-var">initialLedgerState</span></a></span><span> </span><span class="annot"><span class="annottext">GenState ConwayEra
+</span><a href="#local-6989586621682772145"><span class="hs-identifier hs-var">gs</span></a></span><span>
+</span><span id="line-235"></span><span>    </span><span id="local-6989586621682772149"><span class="annot"><span class="annottext">ueCertState :: CertState ConwayEra
+</span><a href="#local-6989586621682772149"><span class="hs-identifier hs-var hs-var">ueCertState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LedgerState ConwayEra -&gt; CertState ConwayEra
+forall era. LedgerState era -&gt; CertState era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#lsCertState"><span class="hs-identifier hs-var">lsCertState</span></a></span><span> </span><span class="annot"><span class="annottext">LedgerState ConwayEra
+</span><a href="#local-6989586621682772148"><span class="hs-identifier hs-var">lState</span></a></span><span>
+</span><span id="line-236"></span><span>    </span><span id="local-6989586621682772151"><span class="annot"><span class="annottext">uePParams :: PParams ConwayEra
+</span><a href="#local-6989586621682772151"><span class="hs-identifier hs-var hs-var">uePParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-237"></span><span>      </span><span class="annot"><span class="annottext">GenEnv ConwayEra -&gt; PParams ConwayEra
+forall era. GenEnv era -&gt; PParams era
+</span><a href="Test.Cardano.Ledger.Generic.GenState.html#gePParams"><span class="hs-identifier hs-var">gePParams</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GenState ConwayEra -&gt; GenEnv ConwayEra
+forall era. GenState era -&gt; GenEnv era
+</span><a href="Test.Cardano.Ledger.Generic.GenState.html#gsGenEnv"><span class="hs-identifier hs-var">gsGenEnv</span></a></span><span> </span><span class="annot"><span class="annottext">GenState ConwayEra
+</span><a href="#local-6989586621682772145"><span class="hs-identifier hs-var">gs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-238"></span><span>        </span><span class="annot"><span class="annottext">PParams ConwayEra
+-&gt; (PParams ConwayEra -&gt; PParams ConwayEra) -&gt; PParams ConwayEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; Identity Word32)
+-&gt; PParams ConwayEra -&gt; Identity (PParams ConwayEra)
+forall era. EraPParams era =&gt; Lens' (PParams era) Word32
+Lens' (PParams ConwayEra) Word32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMaxTxSizeL"><span class="hs-identifier hs-var">ppMaxTxSizeL</span></a></span><span> </span><span class="annot"><span class="annottext">((Word32 -&gt; Identity Word32)
+ -&gt; PParams ConwayEra -&gt; Identity (PParams ConwayEra))
+-&gt; Word32 -&gt; PParams ConwayEra -&gt; PParams ConwayEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Word32
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621682772146"><span class="hs-identifier hs-var">txSize</span></a></span><span>
+</span><span id="line-239"></span><span>        </span><span class="annot"><span class="annottext">PParams ConwayEra
+-&gt; (PParams ConwayEra -&gt; PParams ConwayEra) -&gt; PParams ConwayEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(ProtVer -&gt; Identity ProtVer)
+-&gt; PParams ConwayEra -&gt; Identity (PParams ConwayEra)
+forall era. EraPParams era =&gt; Lens' (PParams era) ProtVer
+Lens' (PParams ConwayEra) ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppProtocolVersionL"><span class="hs-identifier hs-var">ppProtocolVersionL</span></a></span><span> </span><span class="annot"><span class="annottext">((ProtVer -&gt; Identity ProtVer)
+ -&gt; PParams ConwayEra -&gt; Identity (PParams ConwayEra))
+-&gt; ProtVer -&gt; PParams ConwayEra -&gt; PParams ConwayEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Natural -&gt; ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier hs-var">ProtVer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">10</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-240"></span><span>    </span><span id="local-6989586621682772157"><span class="annot"><span class="annottext">uecUtxoEnv :: UtxoEnv ConwayEra
+</span><a href="#local-6989586621682772157"><span class="hs-identifier hs-var hs-var">uecUtxoEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#UtxoEnv"><span class="hs-identifier hs-type">UtxoEnv</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">PParams ConwayEra
+CertState ConwayEra
+SlotNo
+ueSlot :: SlotNo
+ueCertState :: CertState ConwayEra
+ueSlot :: SlotNo
+ueCertState :: CertState ConwayEra
+uePParams :: PParams ConwayEra
+uePParams :: PParams ConwayEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#ueSlot"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-241"></span><span>  </span><span class="annot"><span class="annottext">UtxoExecContext ConwayEra -&gt; Gen (UtxoExecContext ConwayEra)
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#UtxoExecContext"><span class="hs-identifier hs-type">UtxoExecContext</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">Tx ConwayEra
+UTxO ConwayEra
+UtxoEnv ConwayEra
+uecTx :: Tx ConwayEra
+uecUTxO :: UTxO ConwayEra
+uecUtxoEnv :: UtxoEnv ConwayEra
+uecUTxO :: UTxO ConwayEra
+uecTx :: Tx ConwayEra
+uecUtxoEnv :: UtxoEnv ConwayEra
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Utxo.html#uecTx"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-242"></span></pre></body></html>

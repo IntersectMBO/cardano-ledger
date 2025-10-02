@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Certs</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html"><span class="hs-identifier">Cardano.Ledger.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#RewardAccount"><span class="hs-identifier">RewardAccount</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Core.html"><span class="hs-identifier">Cardano.Ledger.Conway.Core</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.html"><span class="hs-identifier">Cardano.Ledger.Conway.Rules</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Identity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Identity</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">keysSet</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Foreign.API.html"><span class="hs-identifier">MAlonzo.Code.Ledger.Foreign.API</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Agda</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-30"></span><span>  </span><span id="local-6989586621679508304"><span id="local-6989586621679508305"><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier hs-type">SpecTranslate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679508304"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-type">PParamsHKD</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="annot"><a href="#local-6989586621679508305"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecRep"><span class="hs-identifier hs-type">SpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-type">PParamsHKD</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="annot"><a href="#local-6989586621679508305"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.PParams.html#PParams"><span class="hs-identifier hs-type">Agda.PParams</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679508304"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679508305"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679508304"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#RewardAccount"><span class="hs-identifier hs-type">RewardAccount</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier hs-type">SpecTranslate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679508304"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#CertsEnv"><span class="hs-identifier hs-type">CertsEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679508305"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="SpecRep"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecRep"><span class="hs-identifier hs-var">SpecRep</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#CertsEnv"><span class="hs-identifier hs-type">CertsEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679508305"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Certs.html#CertEnv"><span class="hs-identifier hs-type">Agda.CertEnv</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679508411"><span class="annot"><span class="annottext">toSpecRep :: CertsEnv era -&gt; SpecTransM ctx (SpecRep (CertsEnv era))
+</span><a href="#local-6989586621679508411"><span class="hs-identifier hs-var hs-var hs-var hs-var">toSpecRep</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#CertsEnv"><span class="hs-identifier hs-type">CertsEnv</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679508414"><span id="local-6989586621679508415"><span id="local-6989586621679508416"><span id="local-6989586621679508417"><span id="local-6989586621679508418"><span class="annot"><span class="annottext">Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
+StrictMaybe (Committee era)
+Tx era
+PParams era
+EpochNo
+certsTx :: Tx era
+certsPParams :: PParams era
+certsCurrentEpoch :: EpochNo
+certsCurrentCommittee :: StrictMaybe (Committee era)
+certsCommitteeProposals :: Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
+certsTx :: forall era. CertsEnv era -&gt; Tx era
+certsPParams :: forall era. CertsEnv era -&gt; PParams era
+certsCurrentEpoch :: forall era. CertsEnv era -&gt; EpochNo
+certsCurrentCommittee :: forall era. CertsEnv era -&gt; StrictMaybe (Committee era)
+certsCommitteeProposals :: forall era.
+CertsEnv era
+-&gt; Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
+</span><a href="#local-6989586621679508414"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621679508424"><span class="annot"><span class="annottext">VotingProcedures era
+</span><a href="#local-6989586621679508424"><span class="hs-identifier hs-var">votes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall b ctx. Inject ctx b =&gt; SpecTransM ctx b
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#askCtx"><span class="hs-identifier hs-var">askCtx</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679508305"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>    </span><span id="local-6989586621679508426"><span class="annot"><span class="annottext">Map RewardAccount Coin
+</span><a href="#local-6989586621679508426"><span class="hs-identifier hs-var">withdrawals</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall b ctx. Inject ctx b =&gt; SpecTransM ctx b
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#askCtx"><span class="hs-identifier hs-var">askCtx</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#RewardAccount"><span class="hs-identifier hs-type">RewardAccount</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679508427"><span class="annot"><span class="annottext">ccColdCreds :: Set (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621679508427"><span class="hs-identifier hs-var hs-var">ccColdCreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Committee era -&gt; Set (Credential 'ColdCommitteeRole))
+-&gt; StrictMaybe (Committee era)
+-&gt; Set (Credential 'ColdCommitteeRole)
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; StrictMaybe a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><span class="hs-identifier hs-var">foldMap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (Credential 'ColdCommitteeRole) EpochNo
+-&gt; Set (Credential 'ColdCommitteeRole)
+forall k a. Map k a -&gt; Set k
+</span><span class="hs-identifier hs-var">keysSet</span></span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'ColdCommitteeRole) EpochNo
+ -&gt; Set (Credential 'ColdCommitteeRole))
+-&gt; (Committee era -&gt; Map (Credential 'ColdCommitteeRole) EpochNo)
+-&gt; Committee era
+-&gt; Set (Credential 'ColdCommitteeRole)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Committee era -&gt; Map (Credential 'ColdCommitteeRole) EpochNo
+forall era.
+Committee era -&gt; Map (Credential 'ColdCommitteeRole) EpochNo
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#committeeMembers"><span class="hs-identifier hs-var">committeeMembers</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictMaybe (Committee era)
+</span><a href="#local-6989586621679508417"><span class="hs-identifier hs-var">certsCurrentCommittee</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="annottext">Integer
+-&gt; PParams
+-&gt; [GovVote]
+-&gt; HSMap RwdAddr Integer
+-&gt; HSSet Credential
+-&gt; CertEnv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Certs.html#MkCertEnv"><span class="hs-identifier hs-var">Agda.MkCertEnv</span></a></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="annottext">(Integer
+ -&gt; PParams
+ -&gt; [GovVote]
+ -&gt; HSMap RwdAddr Integer
+ -&gt; HSSet Credential
+ -&gt; CertEnv)
+-&gt; SpecTransM ctx Integer
+-&gt; SpecTransM
+     ctx
+     (PParams
+      -&gt; [GovVote]
+      -&gt; HSMap RwdAddr Integer
+      -&gt; HSSet Credential
+      -&gt; CertEnv)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; SpecTransM ctx (SpecRep EpochNo)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679508416"><span class="hs-identifier hs-var">certsCurrentEpoch</span></a></span><span>
+</span><span id="line-44"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  (PParams
+   -&gt; [GovVote]
+   -&gt; HSMap RwdAddr Integer
+   -&gt; HSSet Credential
+   -&gt; CertEnv)
+-&gt; SpecTransM ctx PParams
+-&gt; SpecTransM
+     ctx
+     ([GovVote] -&gt; HSMap RwdAddr Integer -&gt; HSSet Credential -&gt; CertEnv)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; SpecTransM ctx (SpecRep (PParams era))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679508415"><span class="hs-identifier hs-var">certsPParams</span></a></span><span>
+</span><span id="line-45"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  ([GovVote] -&gt; HSMap RwdAddr Integer -&gt; HSSet Credential -&gt; CertEnv)
+-&gt; SpecTransM ctx [GovVote]
+-&gt; SpecTransM
+     ctx (HSMap RwdAddr Integer -&gt; HSSet Credential -&gt; CertEnv)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">VotingProcedures era
+-&gt; SpecTransM ctx (SpecRep (VotingProcedures era))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">VotingProcedures era
+</span><a href="#local-6989586621679508424"><span class="hs-identifier hs-var">votes</span></a></span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx (HSMap RwdAddr Integer -&gt; HSSet Credential -&gt; CertEnv)
+-&gt; SpecTransM ctx (HSMap RwdAddr Integer)
+-&gt; SpecTransM ctx (HSSet Credential -&gt; CertEnv)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Map RewardAccount Coin
+-&gt; SpecTransM ctx (SpecRep (Map RewardAccount Coin))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">Map RewardAccount Coin
+</span><a href="#local-6989586621679508426"><span class="hs-identifier hs-var">withdrawals</span></a></span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM ctx (HSSet Credential -&gt; CertEnv)
+-&gt; SpecTransM ctx (HSSet Credential) -&gt; SpecTransM ctx CertEnv
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set (Credential 'ColdCommitteeRole)
+-&gt; SpecTransM ctx (SpecRep (Set (Credential 'ColdCommitteeRole)))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621679508427"><span class="hs-identifier hs-var">ccColdCreds</span></a></span><span>
+</span><span id="line-48"></span></pre></body></html>

@@ -1,0 +1,515 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ExistentialQuantification #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.TxIn</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier">TxId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier">TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier">TxIn</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#mkTxInPartial"><span class="hs-identifier">mkTxInPartial</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#txInToText"><span class="hs-identifier">txInToText</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#TxIx"><span class="hs-identifier">TxIx</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html"><span class="hs-identifier">Cardano.Crypto.Hash.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashToTextAsHex"><span class="hs-identifier">hashToTextAsHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#TxIx"><span class="hs-identifier">TxIx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#mkTxIxPartial"><span class="hs-identifier">mkTxIxPartial</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#DecShareCBOR"><span class="hs-identifier">DecShareCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TokenType"><span class="hs-identifier">TokenType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeMemPack"><span class="hs-identifier">decodeMemPack</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeRecordNamed"><span class="hs-identifier">decodeRecordNamed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeListLen"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#peekTokenType"><span class="hs-identifier">peekTokenType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier">EraIndependentTxBody</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#SafeHash"><span class="hs-identifier">SafeHash</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#extractHash"><span class="hs-identifier">extractHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier">FromJSON</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.html"><span class="hs-identifier">Data.Aeson.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSONKey"><span class="hs-identifier">ToJSONKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#toJSONKeyText"><span class="hs-identifier">toJSONKeyText</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html"><span class="hs-identifier">Data.MemPack</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Text</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Stack</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">HasCallStack</span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- ===================================================================================</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- Because we expect other Era's to import and use TxId, TxIn, TxOut, we use the weakest</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- constraint possible when deriving their instances. A Stronger constraint, Gathering</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- many constraints together, like:  type Strong = (C1 x, C2 x, ..., Cn x)</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- may make this file look systematic by having things like:</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- derving instance (Strong x) =&gt; Foo x,  for many Foo (Eq, Show, NfData, etc) BUT this</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- forces unnecessary requirements on any new Era which tries to embed one of these</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- types in their own datatypes, if they then try and derive (Foo TheirDataType).</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- ====================================================================================</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><span class="hs-comment">-- | A unique ID of a transaction, which is computable from the transaction.</span></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">newtype</span><span> </span><span id="TxId"><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-var">TxId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxId"><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-var">TxId</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unTxId"><span class="annot"><span class="annottext">TxId -&gt; SafeHash EraIndependentTxBody
+</span><a href="Cardano.Ledger.TxIn.html#unTxId"><span class="hs-identifier hs-var hs-var">unTxId</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#SafeHash"><span class="hs-identifier hs-type">SafeHash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-type">EraIndependentTxBody</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679461506"><span id="local-6989586621679461512"><span id="local-6989586621679461516"><span class="annot"><span class="annottext">Int -&gt; TxId -&gt; ShowS
+[TxId] -&gt; ShowS
+TxId -&gt; String
+(Int -&gt; TxId -&gt; ShowS)
+-&gt; (TxId -&gt; String) -&gt; ([TxId] -&gt; ShowS) -&gt; Show TxId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TxId -&gt; ShowS
+showsPrec :: Int -&gt; TxId -&gt; ShowS
+$cshow :: TxId -&gt; String
+show :: TxId -&gt; String
+$cshowList :: [TxId] -&gt; ShowS
+showList :: [TxId] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461520"><span id="local-6989586621679461525"><span class="annot"><span class="annottext">TxId -&gt; TxId -&gt; Bool
+(TxId -&gt; TxId -&gt; Bool) -&gt; (TxId -&gt; TxId -&gt; Bool) -&gt; Eq TxId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TxId -&gt; TxId -&gt; Bool
+== :: TxId -&gt; TxId -&gt; Bool
+$c/= :: TxId -&gt; TxId -&gt; Bool
+/= :: TxId -&gt; TxId -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461533"><span id="local-6989586621679461538"><span id="local-6989586621679461542"><span id="local-6989586621679461546"><span id="local-6989586621679461550"><span id="local-6989586621679461554"><span id="local-6989586621679461558"><span class="annot"><span class="annottext">Eq TxId
+Eq TxId =&gt;
+(TxId -&gt; TxId -&gt; Ordering)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; TxId)
+-&gt; (TxId -&gt; TxId -&gt; TxId)
+-&gt; Ord TxId
+TxId -&gt; TxId -&gt; Bool
+TxId -&gt; TxId -&gt; Ordering
+TxId -&gt; TxId -&gt; TxId
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TxId -&gt; TxId -&gt; Ordering
+compare :: TxId -&gt; TxId -&gt; Ordering
+$c&lt; :: TxId -&gt; TxId -&gt; Bool
+&lt; :: TxId -&gt; TxId -&gt; Bool
+$c&lt;= :: TxId -&gt; TxId -&gt; Bool
+&lt;= :: TxId -&gt; TxId -&gt; Bool
+$c&gt; :: TxId -&gt; TxId -&gt; Bool
+&gt; :: TxId -&gt; TxId -&gt; Bool
+$c&gt;= :: TxId -&gt; TxId -&gt; Bool
+&gt;= :: TxId -&gt; TxId -&gt; Bool
+$cmax :: TxId -&gt; TxId -&gt; TxId
+max :: TxId -&gt; TxId -&gt; TxId
+$cmin :: TxId -&gt; TxId -&gt; TxId
+min :: TxId -&gt; TxId -&gt; TxId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461564"><span id="local-6989586621679461566"><span class="annot"><span class="annottext">(forall x. TxId -&gt; Rep TxId x)
+-&gt; (forall x. Rep TxId x -&gt; TxId) -&gt; Generic TxId
+forall x. Rep TxId x -&gt; TxId
+forall x. TxId -&gt; Rep TxId x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. TxId -&gt; Rep TxId x
+from :: forall x. TxId -&gt; Rep TxId x
+$cto :: forall x. Rep TxId x -&gt; TxId
+to :: forall x. Rep TxId x -&gt; TxId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679461570"><span id="local-6989586621679461575"><span id="local-6989586621679461579"><span class="annot"><span class="annottext">Context -&gt; TxId -&gt; IO (Maybe ThunkInfo)
+Proxy TxId -&gt; String
+(Context -&gt; TxId -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; TxId -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy TxId -&gt; String)
+-&gt; NoThunks TxId
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; TxId -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; TxId -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; TxId -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; TxId -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy TxId -&gt; String
+showTypeOf :: Proxy TxId -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461585"><span id="local-6989586621679461590"><span id="local-6989586621679461594"><span id="local-6989586621679461598"><span id="local-6989586621679461602"><span class="annot"><span class="annottext">[TxId] -&gt; Value
+[TxId] -&gt; Encoding
+TxId -&gt; Bool
+TxId -&gt; Value
+TxId -&gt; Encoding
+(TxId -&gt; Value)
+-&gt; (TxId -&gt; Encoding)
+-&gt; ([TxId] -&gt; Value)
+-&gt; ([TxId] -&gt; Encoding)
+-&gt; (TxId -&gt; Bool)
+-&gt; ToJSON TxId
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: TxId -&gt; Value
+toJSON :: TxId -&gt; Value
+$ctoEncoding :: TxId -&gt; Encoding
+toEncoding :: TxId -&gt; Encoding
+$ctoJSONList :: [TxId] -&gt; Value
+toJSONList :: [TxId] -&gt; Value
+$ctoEncodingList :: [TxId] -&gt; Encoding
+toEncodingList :: [TxId] -&gt; Encoding
+$comitField :: TxId -&gt; Bool
+omitField :: TxId -&gt; Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461608"><span id="local-6989586621679461613"><span id="local-6989586621679461617"><span class="annot"><span class="annottext">Maybe TxId
+Value -&gt; Parser [TxId]
+Value -&gt; Parser TxId
+(Value -&gt; Parser TxId)
+-&gt; (Value -&gt; Parser [TxId]) -&gt; Maybe TxId -&gt; FromJSON TxId
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser TxId
+parseJSON :: Value -&gt; Parser TxId
+$cparseJSONList :: Value -&gt; Parser [TxId]
+parseJSONList :: Value -&gt; Parser [TxId]
+$comittedField :: Maybe TxId
+omittedField :: Maybe TxId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461625"><span id="local-6989586621679461633"><span id="local-6989586621679461640"><span class="annot"><span class="annottext">Typeable TxId
+Typeable TxId =&gt;
+(TxId -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy TxId -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [TxId] -&gt; Size)
+-&gt; EncCBOR TxId
+TxId -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [TxId] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy TxId -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+$cencCBOR :: TxId -&gt; Encoding
+encCBOR :: TxId -&gt; Encoding
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy TxId -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy TxId -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [TxId] -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [TxId] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461649"><span id="local-6989586621679461655"><span id="local-6989586621679461660"><span class="annot"><span class="annottext">Typeable TxId
+Typeable TxId =&gt;
+(forall s. Decoder s TxId)
+-&gt; (forall s. Proxy TxId -&gt; Decoder s ())
+-&gt; (Proxy TxId -&gt; Text)
+-&gt; DecCBOR TxId
+Proxy TxId -&gt; Text
+forall s. Decoder s TxId
+forall a.
+Typeable a =&gt;
+(forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy TxId -&gt; Decoder s ()
+$cdecCBOR :: forall s. Decoder s TxId
+decCBOR :: forall s. Decoder s TxId
+$cdropCBOR :: forall s. Proxy TxId -&gt; Decoder s ()
+dropCBOR :: forall s. Proxy TxId -&gt; Decoder s ()
+$clabel :: Proxy TxId -&gt; Text
+label :: Proxy TxId -&gt; Text
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461667"><span class="annot"><span class="annottext">TxId -&gt; ()
+(TxId -&gt; ()) -&gt; NFData TxId
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: TxId -&gt; ()
+rnf :: TxId -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461674"><span id="local-6989586621679461679"><span id="local-6989586621679461683"><span id="local-6989586621679461689"><span class="annot"><span class="annottext">String
+String
+-&gt; (TxId -&gt; Int)
+-&gt; (forall s. TxId -&gt; Pack s ())
+-&gt; (forall b s. Buffer b =&gt; Unpack s b TxId)
+-&gt; MemPack TxId
+TxId -&gt; Int
+forall a.
+String
+-&gt; (a -&gt; Int)
+-&gt; (forall s. a -&gt; Pack s ())
+-&gt; (forall b s. Buffer b =&gt; Unpack s b a)
+-&gt; MemPack a
+forall s. TxId -&gt; Pack s ()
+forall b s. Buffer b =&gt; Unpack s b TxId
+$ctypeName :: String
+typeName :: String
+$cpackedByteCount :: TxId -&gt; Int
+packedByteCount :: TxId -&gt; Int
+$cpackM :: forall s. TxId -&gt; Pack s ()
+packM :: forall s. TxId -&gt; Pack s ()
+$cunpackM :: forall b s. Buffer b =&gt; Unpack s b TxId
+unpackM :: forall b s. Buffer b =&gt; Unpack s b TxId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#MemPack"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MemPack</span></a></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679461699"><span id="local-6989586621679461703"><span id="local-6989586621679461706"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679461710"><span class="annot"><span class="annottext">toJSON :: TxIn -&gt; Value
+</span><a href="#local-6989586621679461710"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#toJSON"><span class="hs-identifier hs-var">toJSON</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Value) -&gt; (TxIn -&gt; Text) -&gt; TxIn -&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Text
+</span><a href="Cardano.Ledger.TxIn.html#txInToText"><span class="hs-identifier hs-var">txInToText</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621679461714"><span class="annot"><span class="annottext">toEncoding :: TxIn -&gt; Encoding
+</span><a href="#local-6989586621679461714"><span class="hs-identifier hs-var hs-var hs-var hs-var">toEncoding</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Encoding
+forall a. ToJSON a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#toEncoding"><span class="hs-identifier hs-var">toEncoding</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Encoding) -&gt; (TxIn -&gt; Text) -&gt; TxIn -&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Text
+</span><a href="Cardano.Ledger.TxIn.html#txInToText"><span class="hs-identifier hs-var">txInToText</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679461718"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSONKey"><span class="hs-identifier hs-type">ToJSONKey</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679461723"><span class="annot"><span class="annottext">toJSONKey :: ToJSONKeyFunction TxIn
+</span><a href="#local-6989586621679461723"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSONKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TxIn -&gt; Text) -&gt; ToJSONKeyFunction TxIn
+forall a. (a -&gt; Text) -&gt; ToJSONKeyFunction a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#toJSONKeyText"><span class="hs-identifier hs-var">toJSONKeyText</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Text
+</span><a href="Cardano.Ledger.TxIn.html#txInToText"><span class="hs-identifier hs-var">txInToText</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Cardano.Ledger.TxIn.html#txInToText"><span class="hs-identifier hs-type">txInToText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-71"></span><span id="txInToText"><span class="annot"><span class="annottext">txInToText :: TxIn -&gt; Text
+</span><a href="Cardano.Ledger.TxIn.html#txInToText"><span class="hs-identifier hs-var hs-var">txInToText</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span id="local-6989586621679461725"><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody
+</span><a href="#local-6989586621679461725"><span class="hs-identifier hs-var">txidHash</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679461726"><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621679461726"><span class="hs-identifier hs-var">ix</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody -&gt; Text
+forall h a. Hash h a -&gt; Text
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashToTextAsHex"><span class="hs-identifier hs-var">hashToTextAsHex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody -&gt; Hash HASH EraIndependentTxBody
+forall i. SafeHash i -&gt; Hash HASH i
+</span><a href="Cardano.Ledger.Hashes.html#extractHash"><span class="hs-identifier hs-var">extractHash</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody
+</span><a href="#local-6989586621679461725"><span class="hs-identifier hs-var">txidHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><span class="hs-identifier hs-var">Text.pack</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;#&quot;</span></span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><span class="hs-identifier hs-var">Text.pack</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxIx -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621679461726"><span class="hs-identifier hs-var">ix</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><span class="hs-comment">-- | The input of a UTxO.</span></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">data</span><span> </span><span id="TxIn"><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxIn"><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#TxIx"><span class="hs-identifier hs-type">TxIx</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679461730"><span id="local-6989586621679461732"><span class="annot"><span class="annottext">(forall x. TxIn -&gt; Rep TxIn x)
+-&gt; (forall x. Rep TxIn x -&gt; TxIn) -&gt; Generic TxIn
+forall x. Rep TxIn x -&gt; TxIn
+forall x. TxIn -&gt; Rep TxIn x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. TxIn -&gt; Rep TxIn x
+from :: forall x. TxIn -&gt; Rep TxIn x
+$cto :: forall x. Rep TxIn x -&gt; TxIn
+to :: forall x. Rep TxIn x -&gt; TxIn
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461735"><span id="local-6989586621679461740"><span class="annot"><span class="annottext">TxIn -&gt; TxIn -&gt; Bool
+(TxIn -&gt; TxIn -&gt; Bool) -&gt; (TxIn -&gt; TxIn -&gt; Bool) -&gt; Eq TxIn
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TxIn -&gt; TxIn -&gt; Bool
+== :: TxIn -&gt; TxIn -&gt; Bool
+$c/= :: TxIn -&gt; TxIn -&gt; Bool
+/= :: TxIn -&gt; TxIn -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461746"><span id="local-6989586621679461751"><span id="local-6989586621679461755"><span id="local-6989586621679461759"><span id="local-6989586621679461762"><span id="local-6989586621679461765"><span id="local-6989586621679461768"><span class="annot"><span class="annottext">Eq TxIn
+Eq TxIn =&gt;
+(TxIn -&gt; TxIn -&gt; Ordering)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; TxIn)
+-&gt; (TxIn -&gt; TxIn -&gt; TxIn)
+-&gt; Ord TxIn
+TxIn -&gt; TxIn -&gt; Bool
+TxIn -&gt; TxIn -&gt; Ordering
+TxIn -&gt; TxIn -&gt; TxIn
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TxIn -&gt; TxIn -&gt; Ordering
+compare :: TxIn -&gt; TxIn -&gt; Ordering
+$c&lt; :: TxIn -&gt; TxIn -&gt; Bool
+&lt; :: TxIn -&gt; TxIn -&gt; Bool
+$c&lt;= :: TxIn -&gt; TxIn -&gt; Bool
+&lt;= :: TxIn -&gt; TxIn -&gt; Bool
+$c&gt; :: TxIn -&gt; TxIn -&gt; Bool
+&gt; :: TxIn -&gt; TxIn -&gt; Bool
+$c&gt;= :: TxIn -&gt; TxIn -&gt; Bool
+&gt;= :: TxIn -&gt; TxIn -&gt; Bool
+$cmax :: TxIn -&gt; TxIn -&gt; TxIn
+max :: TxIn -&gt; TxIn -&gt; TxIn
+$cmin :: TxIn -&gt; TxIn -&gt; TxIn
+min :: TxIn -&gt; TxIn -&gt; TxIn
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679461771"><span id="local-6989586621679461776"><span id="local-6989586621679461780"><span class="annot"><span class="annottext">Int -&gt; TxIn -&gt; ShowS
+[TxIn] -&gt; ShowS
+TxIn -&gt; String
+(Int -&gt; TxIn -&gt; ShowS)
+-&gt; (TxIn -&gt; String) -&gt; ([TxIn] -&gt; ShowS) -&gt; Show TxIn
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TxIn -&gt; ShowS
+showsPrec :: Int -&gt; TxIn -&gt; ShowS
+$cshow :: TxIn -&gt; String
+show :: TxIn -&gt; String
+$cshowList :: [TxIn] -&gt; ShowS
+showList :: [TxIn] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679461783"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#MemPack"><span class="hs-identifier hs-type">MemPack</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679461795"><span class="annot"><span class="annottext">packedByteCount :: TxIn -&gt; Int
+</span><a href="#local-6989586621679461795"><span class="hs-identifier hs-var hs-var hs-var hs-var">packedByteCount</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span id="local-6989586621679461797"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679461797"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span id="local-6989586621679461798"><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621679461798"><span class="hs-identifier hs-var">txIx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Int
+forall a. MemPack a =&gt; a -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packedByteCount"><span class="hs-identifier hs-var">packedByteCount</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679461797"><span class="hs-identifier hs-var">txId</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">TxIx -&gt; Int
+forall a. MemPack a =&gt; a -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packedByteCount"><span class="hs-identifier hs-var">packedByteCount</span></a></span><span> </span><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621679461798"><span class="hs-identifier hs-var">txIx</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packedByteCount"><span class="hs-pragma hs-type">packedByteCount</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621679461804"><span class="annot"><span class="annottext">packM :: forall s. TxIn -&gt; Pack s ()
+</span><a href="#local-6989586621679461804"><span class="hs-identifier hs-var hs-var hs-var hs-var">packM</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span id="local-6989586621679461806"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679461806"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span id="local-6989586621679461807"><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621679461807"><span class="hs-identifier hs-var">txIx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Pack s ()
+forall a s. MemPack a =&gt; a -&gt; Pack s ()
+forall s. TxId -&gt; Pack s ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packM"><span class="hs-identifier hs-var">packM</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679461806"><span class="hs-identifier hs-var">txId</span></a></span><span> </span><span class="annot"><span class="annottext">Pack s () -&gt; Pack s () -&gt; Pack s ()
+forall a b. Pack s a -&gt; Pack s b -&gt; Pack s b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxIx -&gt; Pack s ()
+forall a s. MemPack a =&gt; a -&gt; Pack s ()
+forall s. TxIx -&gt; Pack s ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packM"><span class="hs-identifier hs-var">packM</span></a></span><span> </span><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621679461807"><span class="hs-identifier hs-var">txIx</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#packM"><span class="hs-pragma hs-type">packM</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621679461817"><span class="annot"><span class="annottext">unpackM :: forall b s. Buffer b =&gt; Unpack s b TxIn
+</span><a href="#local-6989586621679461817"><span class="hs-identifier hs-var hs-var hs-var hs-var">unpackM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; TxIx -&gt; TxIn
+</span><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span><span> </span><span class="annot"><span class="annottext">(TxId -&gt; TxIx -&gt; TxIn)
+-&gt; Unpack s b TxId -&gt; Unpack s b (TxIx -&gt; TxIn)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Unpack s b TxId
+forall a b s. (MemPack a, Buffer b) =&gt; Unpack s b a
+forall b s. Buffer b =&gt; Unpack s b TxId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#unpackM"><span class="hs-identifier hs-var">unpackM</span></a></span><span> </span><span class="annot"><span class="annottext">Unpack s b (TxIx -&gt; TxIn) -&gt; Unpack s b TxIx -&gt; Unpack s b TxIn
+forall a b. Unpack s b (a -&gt; b) -&gt; Unpack s b a -&gt; Unpack s b b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Unpack s b TxIx
+forall a b s. (MemPack a, Buffer b) =&gt; Unpack s b a
+forall b s. Buffer b =&gt; Unpack s b TxIx
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#unpackM"><span class="hs-identifier hs-var">unpackM</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/mempack-0.2.0.0-ff6d622b816122e3f66d74f22f129bc2b6f4ac3b35e97400ea8704a2196f890e/share/doc/html/src/Data.MemPack.html#unpackM"><span class="hs-pragma hs-type">unpackM</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- | Construct `TxIn` while throwing an error for an out of range `TxIx`. Make</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- sure to use it only for testing.</span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Cardano.Ledger.TxIn.html#mkTxInPartial"><span class="hs-identifier hs-type">mkTxInPartial</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span>
+</span><span id="line-91"></span><span id="mkTxInPartial"><span class="annot"><span class="annottext">mkTxInPartial :: HasCallStack =&gt; TxId -&gt; Integer -&gt; TxIn
+</span><a href="Cardano.Ledger.TxIn.html#mkTxInPartial"><span class="hs-identifier hs-var hs-var">mkTxInPartial</span></a></span></span><span> </span><span id="local-6989586621679461824"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679461824"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; TxIx -&gt; TxIn
+</span><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679461824"><span class="hs-identifier hs-var">txId</span></a></span><span> </span><span class="annot"><span class="annottext">(TxIx -&gt; TxIn) -&gt; (Integer -&gt; TxIx) -&gt; Integer -&gt; TxIn
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; TxIx
+Integer -&gt; TxIx
+</span><a href="Cardano.Ledger.BaseTypes.html#mkTxIxPartial"><span class="hs-identifier hs-var">mkTxIxPartial</span></a></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679461826"><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679461845"><span id="local-6989586621679461849"><span id="local-6989586621679461855"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span></span></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679461886"><span id="local-6989586621679461890"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679461898"><span class="annot"><span class="annottext">encCBOR :: TxIn -&gt; Encoding
+</span><a href="#local-6989586621679461898"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span id="local-6989586621679461900"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679461900"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span id="local-6989586621679461901"><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621679461901"><span class="hs-identifier hs-var">index</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeListLen"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679461900"><span class="hs-identifier hs-var">txId</span></a></span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxIx -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621679461901"><span class="hs-identifier hs-var">index</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679461906"><span id="local-6989586621679461910"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>  </span><span id="local-6989586621679461922"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s TxIn
+</span><a href="#local-6989586621679461922"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; (TxIn -&gt; Int) -&gt; Decoder s TxIn -&gt; Decoder s TxIn
+forall a s. Text -&gt; (a -&gt; Int) -&gt; Decoder s a -&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeRecordNamed"><span class="hs-identifier hs-var">decodeRecordNamed</span></a></span><span>
+</span><span id="line-106"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;TxIn&quot;</span></span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; TxIn -&gt; Int
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId -&gt; TxIx -&gt; TxIn
+</span><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span><span> </span><span class="annot"><span class="annottext">(TxId -&gt; TxIx -&gt; TxIn)
+-&gt; Decoder s TxId -&gt; Decoder s (TxIx -&gt; TxIn)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s TxId
+forall s. Decoder s TxId
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (TxIx -&gt; TxIn) -&gt; Decoder s TxIx -&gt; Decoder s TxIn
+forall a b. Decoder s (a -&gt; b) -&gt; Decoder s a -&gt; Decoder s b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s TxIx
+forall s. Decoder s TxIx
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679461929"><span id="local-6989586621679461934"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#DecShareCBOR"><span class="hs-identifier hs-type">DecShareCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621679461943"><span class="annot"><span class="annottext">decShareCBOR :: forall s. Share TxIn -&gt; Decoder s TxIn
+</span><a href="#local-6989586621679461943"><span class="hs-identifier hs-var hs-var hs-var hs-var">decShareCBOR</span></a></span></span><span> </span><span class="annot"><span class="annottext">Share TxIn
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">Decoder s TokenType
+forall s. Decoder s TokenType
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#peekTokenType"><span class="hs-identifier hs-var">peekTokenType</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s TokenType
+-&gt; (TokenType -&gt; Decoder s TxIn) -&gt; Decoder s TxIn
+forall a b. Decoder s a -&gt; (a -&gt; Decoder s b) -&gt; Decoder s b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-113"></span><span>      </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeBytes"><span class="hs-identifier hs-var">TypeBytes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Decoder s TxIn
+forall a s. MemPack a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeMemPack"><span class="hs-identifier hs-var">decodeMemPack</span></a></span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeBytesIndef"><span class="hs-identifier hs-var">TypeBytesIndef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Decoder s TxIn
+forall a s. MemPack a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeMemPack"><span class="hs-identifier hs-var">decodeMemPack</span></a></span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><span class="annottext">TokenType
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Decoder s TxIn
+forall s. Decoder s TxIn
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-116"></span></pre></body></html>

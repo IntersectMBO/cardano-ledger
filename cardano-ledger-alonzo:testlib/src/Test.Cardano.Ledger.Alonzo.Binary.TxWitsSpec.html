@@ -1,0 +1,508 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Core.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Core</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Plutus.Context</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Scripts</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.TxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html#AlonzoTxWits"><span class="hs-identifier">AlonzoTxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Read.html#DeserialiseFailure"><span class="hs-identifier">DeserialiseFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html"><span class="hs-identifier">Cardano.Ledger.Binary.Decoding</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html"><span class="hs-identifier">Cardano.Ledger.Binary.Encoding</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.List</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">isPrefixOf</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.List.NonEmpty</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NE</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Arbitrary</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.Annotator.html"><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Binary.Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680185846"><span class="annot"><a href="#local-6989586621680185846"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#EraPlutusContext"><span class="hs-identifier hs-type">EraPlutusContext</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185846"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#NativeScript"><span class="hs-identifier hs-type">NativeScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185846"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-35"></span><span id="spec"><span class="annot"><span class="annottext">spec :: forall era.
+(EraPlutusContext era, Arbitrary (NativeScript era)) =&gt;
+Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;AlonzoTxWits deserialization&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;plutus scripts&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><span class="annottext">forall era. AlonzoEraScript era =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#emptyFieldsProps"><span class="hs-identifier hs-var">emptyFieldsProps</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185846"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="annottext">forall era. EraPlutusContext era =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#plutusScriptsProp"><span class="hs-identifier hs-var">plutusScriptsProp</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185846"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-40"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(AlonzoEraScript era, Arbitrary (NativeScript era)) =&gt;
+Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#nativeScriptsProp"><span class="hs-identifier hs-var">nativeScriptsProp</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185846"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#emptyFieldsProps"><span class="hs-identifier hs-type">emptyFieldsProps</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680185862"><span class="annot"><a href="#local-6989586621680185862"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AlonzoEraScript"><span class="hs-identifier hs-type">AlonzoEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185862"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-44"></span><span id="emptyFieldsProps"><span class="annot"><span class="annottext">emptyFieldsProps :: forall era. AlonzoEraScript era =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#emptyFieldsProps"><span class="hs-identifier hs-var hs-var">emptyFieldsProps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fails to deserialize if fields contain an empty collection&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Spec) -&gt; Property -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">[Property] -&gt; Property
+forall prop. Testable prop =&gt; [prop] -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#conjoin"><span class="hs-identifier hs-var">conjoin</span></a></span><span> </span><span class="annot"><span class="annottext">([Property] -&gt; Property) -&gt; [Property] -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><span class="annottext">Int -&gt; Property
+</span><a href="#local-6989586621680186005"><span class="hs-identifier hs-var">emptyFieldProp</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Property) -&gt; [Int] -&gt; [Property]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">7</span></span><span class="hs-special">]</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><a href="#local-6989586621680186005"><span class="hs-identifier hs-type">emptyFieldProp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span id="local-6989586621680186005"><span class="annot"><span class="annottext">emptyFieldProp :: Int -&gt; Property
+</span><a href="#local-6989586621680186005"><span class="hs-identifier hs-var hs-var">emptyFieldProp</span></a></span></span><span> </span><span id="local-6989586621680186007"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680186007"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">IO () -&gt; Property
+forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; Property) -&gt; IO () -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><span class="annottext">forall era.
+(AlonzoEraScript era, HasCallStack) =&gt;
+Version -&gt; Encoding -&gt; String -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#expectDeserialiseFailureFromVersion"><span class="hs-identifier hs-var">expectDeserialiseFailureFromVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185862"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-53"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">9</span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Encoding
+forall {k}. (Ord k, EncCBOR k) =&gt; k -&gt; Encoding
+</span><a href="#local-6989586621680186011"><span class="hs-identifier hs-var">emptyEnc</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680186007"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>          </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Empty list&quot;</span></span><span>
+</span><span id="line-56"></span><span>    </span><span id="local-6989586621680186011"><span class="annot"><span class="annottext">emptyEnc :: k -&gt; Encoding
+</span><a href="#local-6989586621680186011"><span class="hs-identifier hs-var hs-var">emptyEnc</span></a></span></span><span> </span><span id="local-6989586621680186028"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621680186028"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k Encoding -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">(Map k Encoding -&gt; Encoding) -&gt; Map k Encoding -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">k -&gt; Encoding -&gt; Map k Encoding
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621680186028"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Encoding] -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#plutusScriptsProp"><span class="hs-identifier hs-type">plutusScriptsProp</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680185863"><span class="annot"><a href="#local-6989586621680185863"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#EraPlutusContext"><span class="hs-identifier hs-type">EraPlutusContext</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185863"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-60"></span><span id="plutusScriptsProp"><span class="annot"><span class="annottext">plutusScriptsProp :: forall era. EraPlutusContext era =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#plutusScriptsProp"><span class="hs-identifier hs-var hs-var">plutusScriptsProp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fails to deserialize if empty or if it contains duplicates, starting with Conway&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Spec) -&gt; Property -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">[Property] -&gt; Property
+forall prop. Testable prop =&gt; [prop] -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#conjoin"><span class="hs-identifier hs-var">conjoin</span></a></span><span> </span><span class="annot"><span class="annottext">([Property] -&gt; Property) -&gt; [Property] -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-63"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">SupportedLanguage era -&gt; Property
+</span><a href="#local-6989586621680186060"><span class="hs-identifier hs-var">distinctProp</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SupportedLanguage era -&gt; Property
+</span><a href="#local-6989586621680186061"><span class="hs-identifier hs-var">duplicateProp</span></a></span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-66"></span><span>        </span><span class="annot"><span class="annottext">[SupportedLanguage era -&gt; Property]
+-&gt; [SupportedLanguage era] -&gt; [Property]
+forall a b. [a -&gt; b] -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">NonEmpty (SupportedLanguage era) -&gt; [SupportedLanguage era]
+forall a. NonEmpty a -&gt; [a]
+</span><span class="hs-identifier hs-var">NE.toList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, EraPlutusContext era) =&gt;
+NonEmpty (SupportedLanguage era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#supportedLanguages"><span class="hs-identifier hs-var">supportedLanguages</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185863"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>    </span><span id="local-6989586621680186060"><span class="annot"><span class="annottext">distinctProp :: SupportedLanguage era -&gt; Property
+</span><a href="#local-6989586621680186060"><span class="hs-identifier hs-var hs-var">distinctProp</span></a></span></span><span> </span><span id="local-6989586621680186063"><span class="annot"><span class="annottext">SupportedLanguage era
+</span><a href="#local-6989586621680186063"><span class="hs-identifier hs-var">lang</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-69"></span><span>      </span><span class="annot"><span class="annottext">Gen Encoding
+-&gt; (Encoding -&gt; String) -&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall prop a.
+Testable prop =&gt;
+Gen a -&gt; (a -&gt; String) -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAllShow"><span class="hs-identifier hs-var">forAllShow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SupportedLanguage era -&gt; Bool -&gt; Gen Encoding
+</span><a href="#local-6989586621680186065"><span class="hs-identifier hs-var">genEncoding</span></a></span><span> </span><span class="annot"><span class="annottext">SupportedLanguage era
+</span><a href="#local-6989586621680186063"><span class="hs-identifier hs-var">lang</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Encoding -&gt; String
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#showEnc"><span class="hs-identifier hs-var">showEnc</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185863"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Encoding -&gt; IO ()) -&gt; Property)
+-&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-70"></span><span>        </span><span class="annot"><span class="annottext">forall era.
+(AlonzoEraScript era, HasCallStack) =&gt;
+Encoding -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#expectDeserialiseSuccess"><span class="hs-identifier hs-var">expectDeserialiseSuccess</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185863"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621680186061"><span class="annot"><span class="annottext">duplicateProp :: SupportedLanguage era -&gt; Property
+</span><a href="#local-6989586621680186061"><span class="hs-identifier hs-var hs-var">duplicateProp</span></a></span></span><span> </span><span id="local-6989586621680186068"><span class="annot"><span class="annottext">SupportedLanguage era
+</span><a href="#local-6989586621680186068"><span class="hs-identifier hs-var">lang</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-73"></span><span>      </span><span class="annot"><span class="annottext">Gen Encoding
+-&gt; (Encoding -&gt; String) -&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall prop a.
+Testable prop =&gt;
+Gen a -&gt; (a -&gt; String) -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAllShow"><span class="hs-identifier hs-var">forAllShow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SupportedLanguage era -&gt; Bool -&gt; Gen Encoding
+</span><a href="#local-6989586621680186065"><span class="hs-identifier hs-var">genEncoding</span></a></span><span> </span><span class="annot"><span class="annottext">SupportedLanguage era
+</span><a href="#local-6989586621680186068"><span class="hs-identifier hs-var">lang</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Encoding -&gt; String
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#showEnc"><span class="hs-identifier hs-var">showEnc</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185863"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Encoding -&gt; IO ()) -&gt; Property)
+-&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-74"></span><span>        </span><span class="hs-glyph">\</span><span id="local-6989586621680186069"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680186069"><span class="hs-identifier hs-var">enc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>          </span><span class="annot"><span class="annottext">forall era.
+(AlonzoEraScript era, HasCallStack) =&gt;
+Version -&gt; Encoding -&gt; String -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#expectDeserialiseFailureFromVersion"><span class="hs-identifier hs-var">expectDeserialiseFailureFromVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185863"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-76"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">9</span></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>            </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680186069"><span class="hs-identifier hs-var">enc</span></a></span><span>
+</span><span id="line-78"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Final number of elements&quot;</span></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><a href="#local-6989586621680186065"><span class="hs-identifier hs-type">genEncoding</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#SupportedLanguage"><span class="hs-identifier hs-type">SupportedLanguage</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185863"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span>
+</span><span id="line-81"></span><span>    </span><span id="local-6989586621680186065"><span class="annot"><span class="annottext">genEncoding :: SupportedLanguage era -&gt; Bool -&gt; Gen Encoding
+</span><a href="#local-6989586621680186065"><span class="hs-identifier hs-var hs-var">genEncoding</span></a></span></span><span> </span><span id="local-6989586621680186070"><span class="annot"><span class="annottext">supportedLanguage :: SupportedLanguage era
+</span><a href="#local-6989586621680186070"><span class="hs-identifier hs-var">supportedLanguage</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Plutus.Context.html#SupportedLanguage"><span class="hs-identifier hs-type">SupportedLanguage</span></a></span><span> </span><span id="local-6989586621680186086"><span class="annot"><span class="annottext">SLanguage l
+</span><a href="#local-6989586621680186086"><span class="hs-identifier hs-var">slang</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621680186087"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680186087"><span class="hs-identifier hs-var">duplicate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-82"></span><span>      </span><span id="local-6989586621680186088"><span class="annot"><span class="annottext">PlutusScript era
+</span><a href="#local-6989586621680186088"><span class="hs-identifier hs-var">plutusScript</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SupportedLanguage era -&gt; Gen (PlutusScript era)
+forall era. SupportedLanguage era -&gt; Gen (PlutusScript era)
+</span><a href="Test.Cardano.Ledger.Alonzo.Arbitrary.html#genPlutusScript"><span class="hs-identifier hs-var">genPlutusScript</span></a></span><span> </span><span class="annot"><span class="annottext">SupportedLanguage era
+</span><a href="#local-6989586621680186070"><span class="hs-identifier hs-var">supportedLanguage</span></a></span><span>
+</span><span id="line-83"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680186090"><span class="annot"><span class="annottext">plutusScripts :: [PlutusScript era]
+</span><a href="#local-6989586621680186090"><span class="hs-identifier hs-var hs-var">plutusScripts</span></a></span></span><span>
+</span><span id="line-84"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680186087"><span class="hs-identifier hs-var">duplicate</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">PlutusScript era
+</span><a href="#local-6989586621680186088"><span class="hs-identifier hs-var">plutusScript</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PlutusScript era
+</span><a href="#local-6989586621680186088"><span class="hs-identifier hs-var">plutusScript</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">PlutusScript era
+</span><a href="#local-6989586621680186088"><span class="hs-identifier hs-var">plutusScript</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><span class="annottext">Encoding -&gt; Gen Encoding
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; Gen Encoding) -&gt; Encoding -&gt; Gen Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map Int Encoding -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Int Encoding -&gt; Encoding) -&gt; Map Int Encoding -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Encoding -&gt; Map Int Encoding
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SLanguage l -&gt; Int
+forall (l :: Language). SLanguage l -&gt; Int
+</span><a href="#local-6989586621680186091"><span class="hs-identifier hs-var">keys</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage l
+</span><a href="#local-6989586621680186086"><span class="hs-identifier hs-var">slang</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[PlutusBinary] -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PlutusScript era -&gt; PlutusBinary
+forall era. AlonzoEraScript era =&gt; PlutusScript era -&gt; PlutusBinary
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#plutusScriptBinary"><span class="hs-identifier hs-var">plutusScriptBinary</span></a></span><span> </span><span class="annot"><span class="annottext">(PlutusScript era -&gt; PlutusBinary)
+-&gt; [PlutusScript era] -&gt; [PlutusBinary]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[PlutusScript era]
+</span><a href="#local-6989586621680186090"><span class="hs-identifier hs-var">plutusScripts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>    </span><span id="local-6989586621680185916"><span class="annot"><a href="#local-6989586621680186091"><span class="hs-identifier hs-type">keys</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SLanguage"><span class="hs-identifier hs-type">SLanguage</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185916"><span class="hs-identifier hs-type">l</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span></span><span>
+</span><span id="line-88"></span><span>    </span><span id="local-6989586621680186091"><span class="annot"><span class="annottext">keys :: forall (l :: Language). SLanguage l -&gt; Int
+</span><a href="#local-6989586621680186091"><span class="hs-identifier hs-var hs-var">keys</span></a></span></span><span> </span><span class="annot"><span class="annottext">SLanguage l
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SPlutusV1"><span class="hs-identifier hs-var">SPlutusV1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><a href="#local-6989586621680186091"><span class="hs-identifier hs-var">keys</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage l
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SPlutusV2"><span class="hs-identifier hs-var">SPlutusV2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><a href="#local-6989586621680186091"><span class="hs-identifier hs-var">keys</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage l
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SPlutusV3"><span class="hs-identifier hs-var">SPlutusV3</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">7</span></span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><a href="#local-6989586621680186091"><span class="hs-identifier hs-var">keys</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage l
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#SPlutusV4"><span class="hs-identifier hs-var">SPlutusV4</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#nativeScriptsProp"><span class="hs-identifier hs-type">nativeScriptsProp</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680185864"><span class="annot"><a href="#local-6989586621680185864"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AlonzoEraScript"><span class="hs-identifier hs-type">AlonzoEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185864"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#NativeScript"><span class="hs-identifier hs-type">NativeScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185864"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-99"></span><span id="nativeScriptsProp"><span class="annot"><span class="annottext">nativeScriptsProp :: forall era.
+(AlonzoEraScript era, Arbitrary (NativeScript era)) =&gt;
+Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#nativeScriptsProp"><span class="hs-identifier hs-var hs-var">nativeScriptsProp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fails to deserialize if empty, starting with Conway&quot;</span></span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><span class="annottext">Property
+</span><a href="#local-6989586621680186123"><span class="hs-identifier hs-var">distinctProp</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>    </span><span id="local-6989586621680186123"><span class="annot"><span class="annottext">distinctProp :: Property
+</span><a href="#local-6989586621680186123"><span class="hs-identifier hs-var hs-var">distinctProp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>      </span><span class="annot"><span class="annottext">Gen Encoding
+-&gt; (Encoding -&gt; String) -&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall prop a.
+Testable prop =&gt;
+Gen a -&gt; (a -&gt; String) -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAllShow"><span class="hs-identifier hs-var">forAllShow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Gen Encoding
+</span><a href="#local-6989586621680186124"><span class="hs-identifier hs-var">genEncoding</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Encoding -&gt; String
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#showEnc"><span class="hs-identifier hs-var">showEnc</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185864"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Encoding -&gt; IO ()) -&gt; Property)
+-&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><span class="annottext">forall era.
+(AlonzoEraScript era, HasCallStack) =&gt;
+Encoding -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#expectDeserialiseSuccess"><span class="hs-identifier hs-var">expectDeserialiseSuccess</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185864"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-comment">-- TODO: enable this after we enforce distinct entries for Annotator</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">-- duplicateProp =</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">--   forAllShow (genEncoding True) (showEnc  @era) $</span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-comment">--     \enc -&gt;</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-comment">--       expectDeserialiseFailureFromVersion @era</span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-comment">--       (natVersion @9)</span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-comment">--       enc</span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-comment">--       &quot;Final number of elements&quot;</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><a href="#local-6989586621680186124"><span class="hs-identifier hs-type">genEncoding</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621680186124"><span class="annot"><span class="annottext">genEncoding :: Bool -&gt; Gen Encoding
+</span><a href="#local-6989586621680186124"><span class="hs-identifier hs-var hs-var">genEncoding</span></a></span></span><span> </span><span id="local-6989586621680186125"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680186125"><span class="hs-identifier hs-var">duplicate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-119"></span><span>      </span><span id="local-6989586621680186126"><span class="annot"><span class="annottext">NativeScript era
+</span><a href="#local-6989586621680186126"><span class="hs-identifier hs-var">nativeScript</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era. Arbitrary (NativeScript era) =&gt; Gen (NativeScript era)
+</span><a href="Test.Cardano.Ledger.Alonzo.Arbitrary.html#genNativeScript"><span class="hs-identifier hs-var">genNativeScript</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185864"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680186128"><span class="annot"><span class="annottext">nativeScripts :: [NativeScript era]
+</span><a href="#local-6989586621680186128"><span class="hs-identifier hs-var hs-var">nativeScripts</span></a></span></span><span>
+</span><span id="line-121"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680186125"><span class="hs-identifier hs-var">duplicate</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">NativeScript era
+</span><a href="#local-6989586621680186126"><span class="hs-identifier hs-var">nativeScript</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">NativeScript era
+</span><a href="#local-6989586621680186126"><span class="hs-identifier hs-var">nativeScript</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-122"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">NativeScript era
+</span><a href="#local-6989586621680186126"><span class="hs-identifier hs-var">nativeScript</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span>      </span><span class="annot"><span class="annottext">Encoding -&gt; Gen Encoding
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; Gen Encoding) -&gt; Encoding -&gt; Gen Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map Int Encoding -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Int Encoding -&gt; Encoding) -&gt; Map Int Encoding -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Encoding -&gt; Map Int Encoding
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[NativeScript era] -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">[NativeScript era]
+</span><a href="#local-6989586621680186128"><span class="hs-identifier hs-var">nativeScripts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#expectDeserialiseSuccess"><span class="hs-identifier hs-type">expectDeserialiseSuccess</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680185907"><span class="annot"><a href="#local-6989586621680185907"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AlonzoEraScript"><span class="hs-identifier hs-type">AlonzoEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185907"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span id="expectDeserialiseSuccess"><span class="annot"><span class="annottext">expectDeserialiseSuccess :: forall era.
+(AlonzoEraScript era, HasCallStack) =&gt;
+Encoding -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#expectDeserialiseSuccess"><span class="hs-identifier hs-var hs-var">expectDeserialiseSuccess</span></a></span></span><span> </span><span id="local-6989586621680186138"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680186138"><span class="hs-identifier hs-var">enc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><span class="annottext">forall era.
+AlonzoEraScript era =&gt;
+Encoding
+-&gt; (Either DecoderError (Annotator (AlonzoTxWits era)) -&gt; IO ())
+-&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#encodeAndCheckDecoded"><span class="hs-identifier hs-var">encodeAndCheckDecoded</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185907"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680186138"><span class="hs-identifier hs-var">enc</span></a></span><span> </span><span class="annot"><span class="annottext">((Either DecoderError (Annotator (AlonzoTxWits era)) -&gt; IO ())
+ -&gt; IO ())
+-&gt; (Either DecoderError (Annotator (AlonzoTxWits era)) -&gt; IO ())
+-&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-glyph">\</span><span id="local-6989586621680186140"><span class="annot"><span class="annottext">Either DecoderError (Annotator (AlonzoTxWits era))
+</span><a href="#local-6989586621680186140"><span class="hs-identifier hs-var">decoded</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO (Annotator (AlonzoTxWits era)) -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><span class="hs-identifier hs-var">void</span></span><span> </span><span class="annot"><span class="annottext">(IO (Annotator (AlonzoTxWits era)) -&gt; IO ())
+-&gt; IO (Annotator (AlonzoTxWits era)) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Either DecoderError (Annotator (AlonzoTxWits era))
+-&gt; IO (Annotator (AlonzoTxWits era))
+forall a b. (HasCallStack, Show a) =&gt; Either a b -&gt; IO b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Expectations.html#expectRight"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError (Annotator (AlonzoTxWits era))
+</span><a href="#local-6989586621680186140"><span class="hs-identifier hs-var">decoded</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#expectDeserialiseFailureFromVersion"><span class="hs-identifier hs-type">expectDeserialiseFailureFromVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680185880"><span class="annot"><a href="#local-6989586621680185880"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AlonzoEraScript"><span class="hs-identifier hs-type">AlonzoEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185880"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-138"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-139"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-141"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span id="expectDeserialiseFailureFromVersion"><span class="annot"><span class="annottext">expectDeserialiseFailureFromVersion :: forall era.
+(AlonzoEraScript era, HasCallStack) =&gt;
+Version -&gt; Encoding -&gt; String -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#expectDeserialiseFailureFromVersion"><span class="hs-identifier hs-var hs-var">expectDeserialiseFailureFromVersion</span></a></span></span><span> </span><span id="local-6989586621680186161"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621680186161"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621680186162"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680186162"><span class="hs-identifier hs-var">enc</span></a></span></span><span> </span><span id="local-6989586621680186163"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680186163"><span class="hs-identifier hs-var">errMsgPrefix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><span class="annottext">forall era.
+AlonzoEraScript era =&gt;
+Encoding
+-&gt; (Either DecoderError (Annotator (AlonzoTxWits era)) -&gt; IO ())
+-&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#encodeAndCheckDecoded"><span class="hs-identifier hs-var">encodeAndCheckDecoded</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185880"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680186162"><span class="hs-identifier hs-var">enc</span></a></span><span> </span><span class="annot"><span class="annottext">((Either DecoderError (Annotator (AlonzoTxWits era)) -&gt; IO ())
+ -&gt; IO ())
+-&gt; (Either DecoderError (Annotator (AlonzoTxWits era)) -&gt; IO ())
+-&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-glyph">\</span><span id="local-6989586621680186164"><span class="annot"><span class="annottext">Either DecoderError (Annotator (AlonzoTxWits era))
+</span><a href="#local-6989586621680186164"><span class="hs-identifier hs-var">decoded</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-145"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185880"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Version -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621680186161"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-146"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">IO (Annotator (AlonzoTxWits era)) -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><span class="hs-identifier hs-var">void</span></span><span> </span><span class="annot"><span class="annottext">(IO (Annotator (AlonzoTxWits era)) -&gt; IO ())
+-&gt; IO (Annotator (AlonzoTxWits era)) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Either DecoderError (Annotator (AlonzoTxWits era))
+-&gt; IO (Annotator (AlonzoTxWits era))
+forall a b. (HasCallStack, Show a) =&gt; Either a b -&gt; IO b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Expectations.html#expectRight"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError (Annotator (AlonzoTxWits era))
+</span><a href="#local-6989586621680186164"><span class="hs-identifier hs-var">decoded</span></a></span><span>
+</span><span id="line-147"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Either DecoderError () -&gt; String -&gt; IO ()
+forall t.
+(HasCallStack, Show t) =&gt;
+Either DecoderError t -&gt; String -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#expectDeserialiseFailure"><span class="hs-identifier hs-var">expectDeserialiseFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Either DecoderError (Annotator (AlonzoTxWits era))
+-&gt; Either DecoderError ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><span class="hs-identifier hs-var">void</span></span><span> </span><span class="annot"><span class="annottext">Either DecoderError (Annotator (AlonzoTxWits era))
+</span><a href="#local-6989586621680186164"><span class="hs-identifier hs-var">decoded</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680186163"><span class="hs-identifier hs-var">errMsgPrefix</span></a></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span id="local-6989586621680185937"><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#expectDeserialiseFailure"><span class="hs-identifier hs-type">expectDeserialiseFailure</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621680185937"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185937"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-152"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-153"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-154"></span><span id="expectDeserialiseFailure"><span class="annot"><span class="annottext">expectDeserialiseFailure :: forall t.
+(HasCallStack, Show t) =&gt;
+Either DecoderError t -&gt; String -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#expectDeserialiseFailure"><span class="hs-identifier hs-var hs-var">expectDeserialiseFailure</span></a></span></span><span> </span><span id="local-6989586621680186180"><span class="annot"><span class="annottext">Either DecoderError t
+</span><a href="#local-6989586621680186180"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span id="local-6989586621680186181"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680186181"><span class="hs-identifier hs-var">errMsgPrefix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-155"></span><span>  </span><span id="local-6989586621680186182"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621680186182"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Either DecoderError t -&gt; IO DecoderError
+forall b a. (HasCallStack, Show b) =&gt; Either a b -&gt; IO a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Expectations.html#expectLeft"><span class="hs-identifier hs-var">expectLeft</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError t
+</span><a href="#local-6989586621680186180"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621680186182"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; (DecoderError -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-157"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderErrorDeserialiseFailure"><span class="hs-identifier hs-type">DecoderErrorDeserialiseFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Read.html#DeserialiseFailure"><span class="hs-identifier hs-type">DeserialiseFailure</span></a></span><span> </span><span class="annot"><span class="annottext">ByteOffset
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621680186187"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680186187"><span class="hs-identifier hs-var">errMsg</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-158"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680186181"><span class="hs-identifier hs-var">errMsgPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Bool
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; Bool
+</span><span class="hs-operator hs-var">`isPrefixOf`</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621680186187"><span class="hs-identifier hs-var">errMsg</span></a></span><span>
+</span><span id="line-159"></span><span>    </span><span class="annot"><span class="annottext">DecoderError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#encodeAndCheckDecoded"><span class="hs-identifier hs-type">encodeAndCheckDecoded</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680185929"><span class="annot"><a href="#local-6989586621680185929"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-163"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AlonzoEraScript"><span class="hs-identifier hs-type">AlonzoEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185929"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-164"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html#AlonzoTxWits"><span class="hs-identifier hs-type">AlonzoTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185929"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-166"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span id="encodeAndCheckDecoded"><span class="annot"><span class="annottext">encodeAndCheckDecoded :: forall era.
+AlonzoEraScript era =&gt;
+Encoding
+-&gt; (Either DecoderError (Annotator (AlonzoTxWits era)) -&gt; IO ())
+-&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#encodeAndCheckDecoded"><span class="hs-identifier hs-var hs-var">encodeAndCheckDecoded</span></a></span></span><span> </span><span id="local-6989586621680186197"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680186197"><span class="hs-identifier hs-var">enc</span></a></span></span><span> </span><span id="local-6989586621680186198"><span class="annot"><span class="annottext">Either DecoderError (Annotator (AlonzoTxWits era)) -&gt; IO ()
+</span><a href="#local-6989586621680186198"><span class="hs-identifier hs-var">check</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680186199"><span class="annot"><span class="annottext">ver :: Version
+</span><a href="#local-6989586621680186199"><span class="hs-identifier hs-var hs-var">ver</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185929"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-169"></span><span>      </span><span id="local-6989586621680186200"><span class="annot"><span class="annottext">bytes :: ByteString
+</span><a href="#local-6989586621680186200"><span class="hs-identifier hs-var hs-var">bytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621680186199"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680186197"><span class="hs-identifier hs-var">enc</span></a></span><span>
+</span><span id="line-170"></span><span>  </span><span class="annot"><span class="annottext">Either DecoderError (Annotator (AlonzoTxWits era)) -&gt; IO ()
+</span><a href="#local-6989586621680186198"><span class="hs-identifier hs-var">check</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a.
+DecCBOR a =&gt;
+Version -&gt; ByteString -&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull"><span class="hs-identifier hs-var">decodeFull</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html#AlonzoTxWits"><span class="hs-identifier hs-type">AlonzoTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185929"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621680186199"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680186200"><span class="hs-identifier hs-var">bytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#showEnc"><span class="hs-identifier hs-type">showEnc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680185906"><span class="annot"><a href="#local-6989586621680185906"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185906"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-173"></span><span id="showEnc"><span class="annot"><span class="annottext">showEnc :: forall era. Era era =&gt; Encoding -&gt; String
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec.html#showEnc"><span class="hs-identifier hs-var hs-var">showEnc</span></a></span></span><span> </span><span id="local-6989586621680186207"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680186207"><span class="hs-identifier hs-var">enc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; String) -&gt; Encoding -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#toPlainEncoding"><span class="hs-identifier hs-var">toPlainEncoding</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185906"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680186207"><span class="hs-identifier hs-var">enc</span></a></span><span>
+</span><span id="line-174"></span></pre></body></html>

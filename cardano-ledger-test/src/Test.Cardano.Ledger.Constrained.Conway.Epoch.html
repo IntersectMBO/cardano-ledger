@@ -1,0 +1,800 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- | Specs necessary to generate, environment, state, and signal</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- for the EPOCH rule</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Epoch</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.API.Types.html"><span class="hs-identifier">Cardano.Ledger.Shelley.API.Types</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.API.html"><span class="hs-identifier">Constrained.API</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Extras.html"><span class="hs-identifier">Lens.Micro.Extras</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Gov.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Gov</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Instances</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">data</span><span> </span><span id="EpochExecEnv"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#EpochExecEnv"><span class="hs-identifier hs-var">EpochExecEnv</span></a></span></span><span> </span><span id="local-6989586621682692035"><span class="annot"><a href="#local-6989586621682692035"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="EpochExecEnv"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#EpochExecEnv"><span class="hs-identifier hs-var">EpochExecEnv</span></a></span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="eeeStakeDistr"><span class="annot"><span class="annottext">forall era.
+EpochExecEnv era -&gt; Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#eeeStakeDistr"><span class="hs-identifier hs-var hs-var">eeeStakeDistr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier hs-type">CompactForm</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="eeeEpochNo"><span class="annot"><span class="annottext">forall era. EpochExecEnv era -&gt; EpochNo
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#eeeEpochNo"><span class="hs-identifier hs-var hs-var">eeeEpochNo</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621682692934"><span id="local-6989586621682692936"><span class="annot"><span class="annottext">(forall x. EpochExecEnv era -&gt; Rep (EpochExecEnv era) x)
+-&gt; (forall x. Rep (EpochExecEnv era) x -&gt; EpochExecEnv era)
+-&gt; Generic (EpochExecEnv era)
+forall x. Rep (EpochExecEnv era) x -&gt; EpochExecEnv era
+forall x. EpochExecEnv era -&gt; Rep (EpochExecEnv era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x. Rep (EpochExecEnv era) x -&gt; EpochExecEnv era
+forall era x. EpochExecEnv era -&gt; Rep (EpochExecEnv era) x
+$cfrom :: forall era x. EpochExecEnv era -&gt; Rep (EpochExecEnv era) x
+from :: forall x. EpochExecEnv era -&gt; Rep (EpochExecEnv era) x
+$cto :: forall era x. Rep (EpochExecEnv era) x -&gt; EpochExecEnv era
+to :: forall x. Rep (EpochExecEnv era) x -&gt; EpochExecEnv era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682692940"><span id="local-6989586621682692948"><span class="annot"><span class="annottext">EpochExecEnv era -&gt; EpochExecEnv era -&gt; Bool
+(EpochExecEnv era -&gt; EpochExecEnv era -&gt; Bool)
+-&gt; (EpochExecEnv era -&gt; EpochExecEnv era -&gt; Bool)
+-&gt; Eq (EpochExecEnv era)
+forall era. EpochExecEnv era -&gt; EpochExecEnv era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era. EpochExecEnv era -&gt; EpochExecEnv era -&gt; Bool
+== :: EpochExecEnv era -&gt; EpochExecEnv era -&gt; Bool
+$c/= :: forall era. EpochExecEnv era -&gt; EpochExecEnv era -&gt; Bool
+/= :: EpochExecEnv era -&gt; EpochExecEnv era -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621682692955"><span id="local-6989586621682692965"><span id="local-6989586621682692969"><span class="annot"><span class="annottext">Int -&gt; EpochExecEnv era -&gt; ShowS
+[EpochExecEnv era] -&gt; ShowS
+EpochExecEnv era -&gt; String
+(Int -&gt; EpochExecEnv era -&gt; ShowS)
+-&gt; (EpochExecEnv era -&gt; String)
+-&gt; ([EpochExecEnv era] -&gt; ShowS)
+-&gt; Show (EpochExecEnv era)
+forall era. Int -&gt; EpochExecEnv era -&gt; ShowS
+forall era. [EpochExecEnv era] -&gt; ShowS
+forall era. EpochExecEnv era -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall era. Int -&gt; EpochExecEnv era -&gt; ShowS
+showsPrec :: Int -&gt; EpochExecEnv era -&gt; ShowS
+$cshow :: forall era. EpochExecEnv era -&gt; String
+show :: EpochExecEnv era -&gt; String
+$cshowList :: forall era. [EpochExecEnv era] -&gt; ShowS
+showList :: [EpochExecEnv era] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#epochEnvSpec"><span class="hs-identifier hs-type">epochEnvSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#EpochExecEnv"><span class="hs-identifier hs-type">EpochExecEnv</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span id="epochEnvSpec"><span class="annot"><span class="annottext">epochEnvSpec :: Specification (EpochExecEnv ConwayEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#epochEnvSpec"><span class="hs-identifier hs-var hs-var">epochEnvSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Specification (EpochExecEnv ConwayEra)
+forall a. Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.API.html#trueSpec"><span class="hs-identifier hs-var">trueSpec</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#epochStateSpec"><span class="hs-identifier hs-type">epochStateSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#EpochState"><span class="hs-identifier hs-type">EpochState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span id="epochStateSpec"><span class="annot"><span class="annottext">epochStateSpec :: Term EpochNo -&gt; Specification (EpochState ConwayEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#epochStateSpec"><span class="hs-identifier hs-var hs-var">epochStateSpec</span></a></span></span><span> </span><span id="local-6989586621682692977"><span class="annot"><span class="annottext">Term EpochNo
+</span><a href="#local-6989586621682692977"><span class="hs-identifier hs-var">epochNo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (EpochState ConwayEra) -&gt; Pred)
+-&gt; Specification (EpochState ConwayEra)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (EpochState ConwayEra) -&gt; Pred)
+ -&gt; Specification (EpochState ConwayEra))
+-&gt; (Term (EpochState ConwayEra) -&gt; Pred)
+-&gt; Specification (EpochState ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682692979"><span class="annot"><span class="annottext">Term (EpochState ConwayEra)
+</span><a href="#local-6989586621682692979"><span class="hs-identifier hs-var">es</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">Term (EpochState ConwayEra)
+-&gt; FunTy (MapList Term (ProductAsList (EpochState ConwayEra))) Pred
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (EpochState ConwayEra)
+</span><a href="#local-6989586621682692979"><span class="hs-identifier hs-var">es</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (EpochState ConwayEra))) Pred
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList (EpochState ConwayEra))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682692981"><span class="annot"><span class="annottext">TermD Deps ChainAccountState
+</span><a href="#local-6989586621682692981"><span class="hs-identifier hs-var">_accountState</span></a></span></span><span> </span><span id="local-6989586621682692982"><span class="annot"><span class="annottext">Term (LedgerState ConwayEra)
+</span><a href="#local-6989586621682692982"><span class="hs-identifier hs-var">ledgerState</span></a></span></span><span> </span><span id="local-6989586621682692983"><span class="annot"><span class="annottext">TermD Deps SnapShots
+</span><a href="#local-6989586621682692983"><span class="hs-identifier hs-var">_snapShots</span></a></span></span><span> </span><span id="local-6989586621682692984"><span class="annot"><span class="annottext">TermD Deps NonMyopic
+</span><a href="#local-6989586621682692984"><span class="hs-identifier hs-var">_nonMyopic</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><span class="annottext">Term (LedgerState ConwayEra)
+-&gt; FunTy
+     (MapList Term (ProductAsList (LedgerState ConwayEra))) Pred
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (LedgerState ConwayEra)
+</span><a href="#local-6989586621682692982"><span class="hs-identifier hs-var">ledgerState</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (LedgerState ConwayEra))) Pred
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (LedgerState ConwayEra))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682692985"><span class="annot"><span class="annottext">Term (UTxOState ConwayEra)
+</span><a href="#local-6989586621682692985"><span class="hs-identifier hs-var">utxoState</span></a></span></span><span> </span><span id="local-6989586621682692986"><span class="annot"><span class="annottext">TermD Deps (ConwayCertState ConwayEra)
+</span><a href="#local-6989586621682692986"><span class="hs-identifier hs-var">certState</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-42"></span><span>      </span><span class="annot"><span class="annottext">Term (UTxOState ConwayEra)
+-&gt; FunTy (MapList Term (ProductAsList (UTxOState ConwayEra))) Pred
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (UTxOState ConwayEra)
+</span><a href="#local-6989586621682692985"><span class="hs-identifier hs-var">utxoState</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (UTxOState ConwayEra))) Pred
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList (UTxOState ConwayEra))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682692987"><span class="annot"><span class="annottext">TermD Deps (UTxO ConwayEra)
+</span><a href="#local-6989586621682692987"><span class="hs-identifier hs-var">_utxo</span></a></span></span><span> </span><span id="local-6989586621682692988"><span class="annot"><span class="annottext">TermD Deps Coin
+</span><a href="#local-6989586621682692988"><span class="hs-identifier hs-var">_deposited</span></a></span></span><span> </span><span id="local-6989586621682692989"><span class="annot"><span class="annottext">TermD Deps Coin
+</span><a href="#local-6989586621682692989"><span class="hs-identifier hs-var">_fees</span></a></span></span><span> </span><span id="local-6989586621682692990"><span class="annot"><span class="annottext">Term (ConwayGovState ConwayEra)
+</span><a href="#local-6989586621682692990"><span class="hs-identifier hs-var">govState</span></a></span></span><span> </span><span id="local-6989586621682692991"><span class="annot"><span class="annottext">TermD Deps (ConwayInstantStake ConwayEra)
+</span><a href="#local-6989586621682692991"><span class="hs-identifier hs-var">_stakeDistr</span></a></span></span><span> </span><span id="local-6989586621682692992"><span class="annot"><span class="annottext">TermD Deps Coin
+</span><a href="#local-6989586621682692992"><span class="hs-identifier hs-var">_donation</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><span class="annottext">Term (ConwayGovState ConwayEra)
+-&gt; FunTy
+     (MapList Term (ProductAsList (ConwayGovState ConwayEra))) [Pred]
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (ConwayGovState ConwayEra)
+</span><a href="#local-6989586621682692990"><span class="hs-identifier hs-var">govState</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (ProductAsList (ConwayGovState ConwayEra))) [Pred]
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (ConwayGovState ConwayEra))) [Pred]
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+</span><span class="">[var|proposals|]</span></span><span> </span><span id="local-6989586621682692995"><span class="annot"><span class="annottext">TermD Deps (StrictMaybe (Committee ConwayEra))
+</span><a href="#local-6989586621682692995"><span class="hs-identifier hs-var">_committee</span></a></span></span><span> </span><span id="local-6989586621682692996"><span class="annot"><span class="annottext">Term (Constitution ConwayEra)
+</span><a href="#local-6989586621682692996"><span class="hs-identifier hs-var">constitution</span></a></span></span><span> </span><span id="local-6989586621682692997"><span class="annot"><span class="annottext">TermD Deps (PParams ConwayEra)
+</span><a href="#local-6989586621682692997"><span class="hs-identifier hs-var">_curPParams</span></a></span></span><span> </span><span id="local-6989586621682692998"><span class="annot"><span class="annottext">TermD Deps (PParams ConwayEra)
+</span><a href="#local-6989586621682692998"><span class="hs-identifier hs-var">_prevPParams</span></a></span></span><span> </span><span id="local-6989586621682692999"><span class="annot"><span class="annottext">TermD Deps (FuturePParams ConwayEra)
+</span><a href="#local-6989586621682692999"><span class="hs-identifier hs-var">_futPParams</span></a></span></span><span> </span><span id="local-6989586621682693000"><span class="annot"><span class="annottext">Term (DRepPulsingState ConwayEra)
+</span><a href="#local-6989586621682693000"><span class="hs-identifier hs-var">drepPulsingState</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-44"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (Constitution ConwayEra)
+-&gt; FunTy
+     (MapList Term (ProductAsList (Constitution ConwayEra))) Pred
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Constitution ConwayEra)
+</span><a href="#local-6989586621682692996"><span class="hs-identifier hs-var">constitution</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (Constitution ConwayEra))) Pred
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (Constitution ConwayEra))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps Anchor
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682693001"><span class="annot"><span class="annottext">Term (StrictMaybe ScriptHash)
+</span><a href="#local-6989586621682693001"><span class="hs-identifier hs-var">policy</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-45"></span><span>              </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+</span><a href="#local-6989586621682692993"><span class="hs-identifier hs-var">proposals</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+-&gt; Specification (Proposals ConwayEra) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-operator hs-var">`satisfies`</span></a></span><span> </span><span class="annot"><span class="annottext">Term EpochNo
+-&gt; Term (StrictMaybe ScriptHash)
+-&gt; Term (CertState ConwayEra)
+-&gt; Specification (Proposals ConwayEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Gov.html#proposalsSpec"><span class="hs-identifier hs-var">proposalsSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Term EpochNo
+</span><a href="#local-6989586621682692977"><span class="hs-identifier hs-var">epochNo</span></a></span><span> </span><span class="annot"><span class="annottext">Term (StrictMaybe ScriptHash)
+</span><a href="#local-6989586621682693001"><span class="hs-identifier hs-var">policy</span></a></span><span> </span><span class="annot"><span class="annottext">Term (CertState ConwayEra)
+TermD Deps (ConwayCertState ConwayEra)
+</span><a href="#local-6989586621682692986"><span class="hs-identifier hs-var">certState</span></a></span><span>
+</span><span id="line-46"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (DRepPulsingState ConwayEra)
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps))
+        (Cases (SimpleRep (DRepPulsingState ConwayEra))))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span>
+</span><span id="line-47"></span><span>              </span><span class="annot"><span class="annottext">Term (DRepPulsingState ConwayEra)
+</span><a href="#local-6989586621682693000"><span class="hs-identifier hs-var">drepPulsingState</span></a></span><span>
+</span><span id="line-48"></span><span>              </span><span class="hs-comment">-- DRPulsing</span><span>
+</span><span id="line-49"></span><span>              </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">FunTy
+  (MapList
+     Term
+     (Args (DRepPulser ConwayEra Identity (RatifyState ConwayEra))))
+  Pred
+-&gt; Weighted
+     (BinderD Deps)
+     (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term
+      (Args (DRepPulser ConwayEra Identity (RatifyState ConwayEra))))
+   Pred
+ -&gt; Weighted
+      (BinderD Deps)
+      (DRepPulser ConwayEra Identity (RatifyState ConwayEra)))
+-&gt; FunTy
+     (MapList
+        Term
+        (Args (DRepPulser ConwayEra Identity (RatifyState ConwayEra))))
+     Pred
+-&gt; Weighted
+     (BinderD Deps)
+     (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682693006"><span class="annot"><span class="annottext">Term (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
+</span><a href="#local-6989586621682693006"><span class="hs-identifier hs-var">pulser</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-50"></span><span>                  </span><span class="annot"><span class="annottext">Term (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
+-&gt; FunTy
+     (MapList
+        Term
+        (ProductAsList
+           (DRepPulser ConwayEra Identity (RatifyState ConwayEra))))
+     [Pred]
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
+</span><a href="#local-6989586621682693006"><span class="hs-identifier hs-var">pulser</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term
+      (ProductAsList
+         (DRepPulser ConwayEra Identity (RatifyState ConwayEra))))
+   [Pred]
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList
+        Term
+        (ProductAsList
+           (DRepPulser ConwayEra Identity (RatifyState ConwayEra))))
+     [Pred]
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682693007"><span class="annot"><span class="annottext">TermD Deps Int
+</span><a href="#local-6989586621682693007"><span class="hs-identifier hs-var">_size</span></a></span></span><span> </span><span id="local-6989586621682693008"><span class="annot"><span class="annottext">TermD Deps (ConwayAccounts ConwayEra)
+</span><a href="#local-6989586621682693008"><span class="hs-identifier hs-var">_stakeMap</span></a></span></span><span> </span><span id="local-6989586621682693009"><span class="annot"><span class="annottext">TermD Deps Int
+</span><a href="#local-6989586621682693009"><span class="hs-identifier hs-var">_index</span></a></span></span><span> </span><span id="local-6989586621682693010"><span class="annot"><span class="annottext">TermD Deps (ConwayInstantStake ConwayEra)
+</span><a href="#local-6989586621682693010"><span class="hs-identifier hs-var">_stakeDistr</span></a></span></span><span> </span><span id="local-6989586621682693011"><span class="annot"><span class="annottext">TermD Deps PoolDistr
+</span><a href="#local-6989586621682693011"><span class="hs-identifier hs-var">_stakePoolDistr</span></a></span></span><span> </span><span id="local-6989586621682693012"><span class="annot"><span class="annottext">TermD Deps (Map DRep (CompactForm Coin))
+</span><a href="#local-6989586621682693012"><span class="hs-identifier hs-var">_drepDistr</span></a></span></span><span> </span><span id="local-6989586621682693013"><span class="annot"><span class="annottext">TermD Deps (Map (Credential 'DRepRole) DRepState)
+</span><a href="#local-6989586621682693013"><span class="hs-identifier hs-var">_drepState</span></a></span></span><span> </span><span id="local-6989586621682693014"><span class="annot"><span class="annottext">Term EpochNo
+</span><a href="#local-6989586621682693014"><span class="hs-identifier hs-var">pulseEpoch</span></a></span></span><span> </span><span id="local-6989586621682693015"><span class="annot"><span class="annottext">TermD Deps (CommitteeState ConwayEra)
+</span><a href="#local-6989586621682693015"><span class="hs-identifier hs-var">_committeeState</span></a></span></span><span> </span><span id="local-6989586621682693016"><span class="annot"><span class="annottext">TermD Deps (EnactState ConwayEra)
+</span><a href="#local-6989586621682693016"><span class="hs-identifier hs-var">_enactState</span></a></span></span><span> </span><span id="local-6989586621682693017"><span class="annot"><span class="annottext">Term (StrictSeq (GovActionState ConwayEra))
+</span><a href="#local-6989586621682693017"><span class="hs-identifier hs-var">pulseProposals</span></a></span></span><span> </span><span id="local-6989586621682693018"><span class="annot"><span class="annottext">TermD Deps (Map (Credential 'Staking) (CompactForm Coin))
+</span><a href="#local-6989586621682693018"><span class="hs-identifier hs-var">_proposalDeposits</span></a></span></span><span> </span><span id="local-6989586621682693019"><span class="annot"><span class="annottext">TermD Deps (Map (KeyHash 'StakePool) StakePoolState)
+</span><a href="#local-6989586621682693019"><span class="hs-identifier hs-var">_poolParams</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-51"></span><span>                    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term EpochNo
+</span><a href="#local-6989586621682693014"><span class="hs-identifier hs-var">pulseEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Term EpochNo -&gt; Term EpochNo -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term EpochNo
+</span><a href="#local-6989586621682692977"><span class="hs-identifier hs-var">epochNo</span></a></span><span>
+</span><span id="line-52"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (StrictSeq (GovActionState ConwayEra))
+-&gt; (Term (GovActionState ConwayEra) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (StrictSeq (GovActionState ConwayEra))
+</span><a href="#local-6989586621682693017"><span class="hs-identifier hs-var">pulseProposals</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (GovActionState ConwayEra) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (GovActionState ConwayEra) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682693023"><span class="annot"><span class="annottext">Term (GovActionState ConwayEra)
+</span><a href="#local-6989586621682693023"><span class="hs-identifier hs-var">gas</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-53"></span><span>                        </span><span class="annot"><span class="annottext">Term (GovActionState ConwayEra)
+-&gt; FunTy
+     (MapList Term (ProductAsList (GovActionState ConwayEra))) Pred
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (GovActionState ConwayEra)
+</span><a href="#local-6989586621682693023"><span class="hs-identifier hs-var">gas</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (ProductAsList (GovActionState ConwayEra))) Pred
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (GovActionState ConwayEra))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682693024"><span class="annot"><span class="annottext">Term GovActionId
+</span><a href="#local-6989586621682693024"><span class="hs-identifier hs-var">gasIdPulse</span></a></span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (Map (Credential 'HotCommitteeRole) Vote)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (Map (Credential 'DRepRole) Vote)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (Map (KeyHash 'StakePool) Vote)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (ProposalProcedure ConwayEra)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Term EpochNo
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Term EpochNo
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-54"></span><span>                          </span><span class="annot"><span class="annottext">Term GovActionId -&gt; Term (Proposals ConwayEra) -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#proposalExists"><span class="hs-identifier hs-var">proposalExists</span></a></span><span> </span><span class="annot"><span class="annottext">Term GovActionId
+</span><a href="#local-6989586621682693024"><span class="hs-identifier hs-var">gasIdPulse</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+</span><a href="#local-6989586621682692993"><span class="hs-identifier hs-var">proposals</span></a></span><span>
+</span><span id="line-55"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="hs-comment">-- TODO: something is wrong in this case and I haven't figured out what yet</span><span>
+</span><span id="line-56"></span><span>                      </span><span class="annot"><span class="annottext">Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-57"></span><span>                    </span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>              </span><span class="hs-comment">-- DRComplete</span><span>
+</span><span id="line-60"></span><span>              </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">FunTy
+  (MapList
+     Term
+     (Args (Prod (PulsingSnapshot ConwayEra) (RatifyState ConwayEra))))
+  Pred
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod (PulsingSnapshot ConwayEra) (RatifyState ConwayEra))
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term
+      (Args (Prod (PulsingSnapshot ConwayEra) (RatifyState ConwayEra))))
+   Pred
+ -&gt; Weighted
+      (BinderD Deps)
+      (Prod (PulsingSnapshot ConwayEra) (RatifyState ConwayEra)))
+-&gt; FunTy
+     (MapList
+        Term
+        (Args (Prod (PulsingSnapshot ConwayEra) (RatifyState ConwayEra))))
+     Pred
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod (PulsingSnapshot ConwayEra) (RatifyState ConwayEra))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682693026"><span class="annot"><span class="annottext">TermD Deps (PulsingSnapshot ConwayEra)
+</span><a href="#local-6989586621682693026"><span class="hs-identifier hs-var">_snap</span></a></span></span><span> </span><span id="local-6989586621682693027"><span class="annot"><span class="annottext">Term (RatifyState ConwayEra)
+</span><a href="#local-6989586621682693027"><span class="hs-identifier hs-var">ratifyState</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-61"></span><span>                  </span><span class="annot"><span class="annottext">Term (RatifyState ConwayEra)
+-&gt; FunTy
+     (MapList Term (ProductAsList (RatifyState ConwayEra))) [Pred]
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (RatifyState ConwayEra)
+</span><a href="#local-6989586621682693027"><span class="hs-identifier hs-var">ratifyState</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (ProductAsList (RatifyState ConwayEra))) [Pred]
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (RatifyState ConwayEra))) [Pred]
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682693028"><span class="annot"><span class="annottext">TermD Deps (EnactState ConwayEra)
+</span><a href="#local-6989586621682693028"><span class="hs-identifier hs-var">enactState</span></a></span></span><span> </span><span class="annot"><span class="annottext">Term (Seq (GovActionState ConwayEra))
+</span><span class="">[var|enacted|]</span></span><span> </span><span class="annot"><span class="annottext">Term (Set GovActionId)
+</span><span class="">[var|expired|]</span></span><span> </span><span id="local-6989586621682693031"><span class="annot"><span class="annottext">Term Bool
+</span><a href="#local-6989586621682693031"><span class="hs-identifier hs-var">_delayed</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-62"></span><span>                    </span><span class="hs-special">[</span><span> </span><span class="hs-comment">-- This may seem strange, but if expired is too big, the 'forAll expired' will fail</span><span>
+</span><span id="line-63"></span><span>                      </span><span class="hs-comment">-- There can't exist more expired proposals, than there are proposals.</span><span>
+</span><span id="line-64"></span><span>                      </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+-&gt; (Proposals ConwayEra -&gt; Integer)
+-&gt; (Term Integer -&gt; [Pred])
+-&gt; Pred
+forall a b p.
+(HasSpec a, HasSpec b, IsPred p) =&gt;
+Term a -&gt; (a -&gt; b) -&gt; (Term b -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#reify"><span class="hs-identifier hs-var">reify</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+</span><a href="#local-6989586621682692993"><span class="hs-identifier hs-var">proposals</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Integer)
+-&gt; (Proposals ConwayEra -&gt; Int) -&gt; Proposals ConwayEra -&gt; Integer
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Proposals ConwayEra -&gt; Int
+forall era. Proposals era -&gt; Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsSize"><span class="hs-identifier hs-var">proposalsSize</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Term Integer -&gt; [Pred]) -&gt; Pred)
+-&gt; (Term Integer -&gt; [Pred]) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="">[var|sz|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-65"></span><span>                        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Term Bool -&gt; Term Bool -&gt; Pred
+forall p q. (IsPred p, IsPred q) =&gt; Term Bool -&gt; p -&gt; q -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.TheKnot.html#ifElse"><span class="hs-identifier hs-var">ifElse</span></a></span><span>
+</span><span id="line-66"></span><span>                            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term Integer
+</span><a href="#local-6989586621682693035"><span class="hs-identifier hs-var">sz</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>                            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Set GovActionId)
+</span><a href="#local-6989586621682693030"><span class="hs-identifier hs-var">expired</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set GovActionId) -&gt; Term (Set GovActionId) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set GovActionId)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>                            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Set GovActionId) -&gt; Term Integer
+forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set GovActionId)
+</span><a href="#local-6989586621682693030"><span class="hs-identifier hs-var">expired</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer
+</span><a href="#local-6989586621682693035"><span class="hs-identifier hs-var">sz</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>                        </span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (Set GovActionId) -&gt; Term Integer
+forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set GovActionId)
+</span><a href="#local-6989586621682693030"><span class="hs-identifier hs-var">expired</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="hs-number">30</span></span><span>
+</span><span id="line-71"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (Set GovActionId) -&gt; (Term GovActionId -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set GovActionId)
+</span><a href="#local-6989586621682693030"><span class="hs-identifier hs-var">expired</span></a></span><span> </span><span class="annot"><span class="annottext">((Term GovActionId -&gt; Pred) -&gt; Pred)
+-&gt; (Term GovActionId -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term GovActionId
+</span><span class="">[var| gasIdExpire |]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-72"></span><span>                        </span><span class="annot"><span class="annottext">Term GovActionId -&gt; Term (Proposals ConwayEra) -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#proposalExists"><span class="hs-identifier hs-var">proposalExists</span></a></span><span> </span><span class="annot"><span class="annottext">Term GovActionId
+</span><a href="#local-6989586621682693040"><span class="hs-identifier hs-var">gasIdExpire</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+</span><a href="#local-6989586621682692993"><span class="hs-identifier hs-var">proposals</span></a></span><span>
+</span><span id="line-73"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="hs-comment">-- TODO: this isn't enough, we need to ensure it's at most</span><span>
+</span><span id="line-74"></span><span>                      </span><span class="hs-comment">-- one of each type of action that's being enacted</span><span>
+</span><span id="line-75"></span><span>                      </span><span class="annot"><span class="annottext">Term (Seq (GovActionState ConwayEra))
+-&gt; (Term (GovActionState ConwayEra) -&gt; [Pred]) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Seq (GovActionState ConwayEra))
+</span><a href="#local-6989586621682693029"><span class="hs-identifier hs-var">enacted</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (GovActionState ConwayEra) -&gt; [Pred]) -&gt; Pred)
+-&gt; (Term (GovActionState ConwayEra) -&gt; [Pred]) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (GovActionState ConwayEra)
+</span><span class="">[var|govact|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-76"></span><span>                        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+-&gt; (Proposals ConwayEra -&gt; [GovActionState ConwayEra])
+-&gt; (Term [GovActionState ConwayEra] -&gt; Term Bool)
+-&gt; Pred
+forall a b p.
+(HasSpec a, HasSpec b, IsPred p) =&gt;
+Term a -&gt; (a -&gt; b) -&gt; (Term b -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#reify"><span class="hs-identifier hs-var">reify</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+</span><a href="#local-6989586621682692993"><span class="hs-identifier hs-var">proposals</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals ConwayEra -&gt; [GovActionState ConwayEra]
+forall era. Proposals era -&gt; [GovActionState era]
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#enactableProposals"><span class="hs-identifier hs-var">enactableProposals</span></a></span><span> </span><span class="annot"><span class="annottext">((Term [GovActionState ConwayEra] -&gt; Term Bool) -&gt; Pred)
+-&gt; (Term [GovActionState ConwayEra] -&gt; Term Bool) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term [GovActionState ConwayEra]
+</span><span class="">[var|enactable|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term (GovActionState ConwayEra)
+</span><a href="#local-6989586621682693041"><span class="hs-identifier hs-var">govact</span></a></span><span> </span><span class="annot"><span class="annottext">Term (GovActionState ConwayEra)
+-&gt; Term [GovActionState ConwayEra] -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term [a] -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.List.html#elem_"><span class="hs-operator hs-var">`elem_`</span></a></span><span> </span><span class="annot"><span class="annottext">Term [GovActionState ConwayEra]
+</span><a href="#local-6989586621682693043"><span class="hs-identifier hs-var">enactable</span></a></span><span>
+</span><span id="line-77"></span><span>                        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#not_"><span class="hs-identifier hs-var">not_</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Term Bool) -&gt; Term Bool -&gt; Term Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (GovActionState ConwayEra) -&gt; Term GovActionId
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#gasId_"><span class="hs-identifier hs-var">gasId_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (GovActionState ConwayEra)
+</span><a href="#local-6989586621682693041"><span class="hs-identifier hs-var">govact</span></a></span><span> </span><span class="annot"><span class="annottext">Term GovActionId -&gt; Term (Set GovActionId) -&gt; Term Bool
+forall a. (Ord a, HasSpec a) =&gt; Term a -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Set.html#member_"><span class="hs-operator hs-var">`member_`</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set GovActionId)
+</span><a href="#local-6989586621682693030"><span class="hs-identifier hs-var">expired</span></a></span><span>
+</span><span id="line-78"></span><span>                        </span><span class="hs-special">]</span><span>
+</span><span id="line-79"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="hs-comment">-- TODO: this is a hack to get around the todo above!</span><span>
+</span><span id="line-80"></span><span>                      </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (Seq (GovActionState ConwayEra)) -&gt; Term Integer
+forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Seq (GovActionState ConwayEra))
+</span><a href="#local-6989586621682693029"><span class="hs-identifier hs-var">enacted</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-81"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TermD Deps (EnactState ConwayEra)
+-&gt; FunTy (MapList Term (ProductAsList (EnactState ConwayEra))) Pred
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">TermD Deps (EnactState ConwayEra)
+</span><a href="#local-6989586621682693028"><span class="hs-identifier hs-var">enactState</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (EnactState ConwayEra))) Pred
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList (EnactState ConwayEra))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-82"></span><span>                        </span><span class="hs-glyph">\</span><span id="local-6989586621682693048"><span class="annot"><span class="annottext">TermD Deps (StrictMaybe (Committee ConwayEra))
+</span><a href="#local-6989586621682693048"><span class="hs-identifier hs-var">_cc</span></a></span></span><span> </span><span id="local-6989586621682693049"><span class="annot"><span class="annottext">Term (Constitution ConwayEra)
+</span><a href="#local-6989586621682693049"><span class="hs-identifier hs-var">_con</span></a></span></span><span> </span><span id="local-6989586621682693050"><span class="annot"><span class="annottext">TermD Deps (PParams ConwayEra)
+</span><a href="#local-6989586621682693050"><span class="hs-identifier hs-var">_cpp</span></a></span></span><span> </span><span id="local-6989586621682693051"><span class="annot"><span class="annottext">TermD Deps (PParams ConwayEra)
+</span><a href="#local-6989586621682693051"><span class="hs-identifier hs-var">_ppp</span></a></span></span><span> </span><span id="local-6989586621682693052"><span class="annot"><span class="annottext">TermD Deps Coin
+</span><a href="#local-6989586621682693052"><span class="hs-identifier hs-var">_tr</span></a></span></span><span> </span><span id="local-6989586621682693053"><span class="annot"><span class="annottext">TermD Deps (Map (Credential 'Staking) Coin)
+</span><a href="#local-6989586621682693053"><span class="hs-identifier hs-var">_wth</span></a></span></span><span> </span><span id="local-6989586621682693054"><span class="annot"><span class="annottext">Term (GovRelation StrictMaybe)
+</span><a href="#local-6989586621682693054"><span class="hs-identifier hs-var">prevGACTIDS</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-83"></span><span>                          </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+-&gt; (Proposals ConwayEra -&gt; GovRelation StrictMaybe)
+-&gt; (Term (GovRelation StrictMaybe) -&gt; Term Bool)
+-&gt; Pred
+forall a b p.
+(HasSpec a, HasSpec b, IsPred p) =&gt;
+Term a -&gt; (a -&gt; b) -&gt; (Term b -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#reify"><span class="hs-identifier hs-var">reify</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+</span><a href="#local-6989586621682692993"><span class="hs-identifier hs-var">proposals</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovRelation PRoot -&gt; GovRelation StrictMaybe
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#toPrevGovActionIds"><span class="hs-identifier hs-var">toPrevGovActionIds</span></a></span><span> </span><span class="annot"><span class="annottext">(GovRelation PRoot -&gt; GovRelation StrictMaybe)
+-&gt; (Proposals ConwayEra -&gt; GovRelation PRoot)
+-&gt; Proposals ConwayEra
+-&gt; GovRelation StrictMaybe
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Getting
+  (GovRelation PRoot) (Proposals ConwayEra) (GovRelation PRoot)
+-&gt; Proposals ConwayEra -&gt; GovRelation PRoot
+forall a s. Getting a s a -&gt; s -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Extras.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (GovRelation PRoot) (Proposals ConwayEra) (GovRelation PRoot)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovRelation PRoot -&gt; f (GovRelation PRoot))
+-&gt; Proposals era -&gt; f (Proposals era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#pRootsL"><span class="hs-identifier hs-var">pRootsL</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (GovRelation StrictMaybe)
+</span><a href="#local-6989586621682693054"><span class="hs-identifier hs-var">prevGACTIDS</span></a></span><span> </span><span class="annot"><span class="annottext">Term (GovRelation StrictMaybe)
+-&gt; Term (GovRelation StrictMaybe) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>                    </span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#proposalExists"><span class="hs-identifier hs-type">proposalExists</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier hs-type">GovActionId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#Proposals"><span class="hs-identifier hs-type">Proposals</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Pred"><span class="hs-identifier hs-type">Pred</span></a></span><span>
+</span><span id="line-92"></span><span id="proposalExists"><span class="annot"><span class="annottext">proposalExists :: Term GovActionId -&gt; Term (Proposals ConwayEra) -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#proposalExists"><span class="hs-identifier hs-var hs-var">proposalExists</span></a></span></span><span> </span><span id="local-6989586621682693058"><span class="annot"><span class="annottext">Term GovActionId
+</span><a href="#local-6989586621682693058"><span class="hs-identifier hs-var">gasId</span></a></span></span><span> </span><span id="local-6989586621682693059"><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+</span><a href="#local-6989586621682693059"><span class="hs-identifier hs-var">proposals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+-&gt; (Proposals ConwayEra
+    -&gt; Map GovActionId (GovActionState ConwayEra))
+-&gt; (Term (Map GovActionId (GovActionState ConwayEra)) -&gt; Term Bool)
+-&gt; Pred
+forall a b p.
+(HasSpec a, HasSpec b, IsPred p) =&gt;
+Term a -&gt; (a -&gt; b) -&gt; (Term b -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#reify"><span class="hs-identifier hs-var">reify</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Proposals ConwayEra)
+</span><a href="#local-6989586621682693059"><span class="hs-identifier hs-var">proposals</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals ConwayEra -&gt; Map GovActionId (GovActionState ConwayEra)
+forall era. Proposals era -&gt; Map GovActionId (GovActionState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsActionsMap"><span class="hs-identifier hs-var">proposalsActionsMap</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Map GovActionId (GovActionState ConwayEra)) -&gt; Term Bool)
+ -&gt; Pred)
+-&gt; (Term (Map GovActionId (GovActionState ConwayEra)) -&gt; Term Bool)
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Map GovActionId (GovActionState ConwayEra))
+</span><span class="">[var|actionMap|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">Term GovActionId
+</span><a href="#local-6989586621682693058"><span class="hs-identifier hs-var">gasId</span></a></span><span> </span><span class="annot"><span class="annottext">Term GovActionId
+-&gt; Term (Map GovActionId (GovActionState ConwayEra)) -&gt; Term Bool
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term k -&gt; Term (Map k v) -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#mapMember_"><span class="hs-operator hs-var">`mapMember_`</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map GovActionId (GovActionState ConwayEra))
+</span><a href="#local-6989586621682693061"><span class="hs-identifier hs-var">actionMap</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#epochSignalSpec"><span class="hs-identifier hs-type">epochSignalSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-97"></span><span id="epochSignalSpec"><span class="annot"><span class="annottext">epochSignalSpec :: EpochNo -&gt; Specification EpochNo
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#epochSignalSpec"><span class="hs-identifier hs-var hs-var">epochSignalSpec</span></a></span></span><span> </span><span id="local-6989586621682693064"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621682693064"><span class="hs-identifier hs-var">curEpoch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term EpochNo -&gt; Term Bool) -&gt; Specification EpochNo
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term EpochNo -&gt; Term Bool) -&gt; Specification EpochNo)
+-&gt; (Term EpochNo -&gt; Term Bool) -&gt; Specification EpochNo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682693065"><span class="annot"><span class="annottext">Term EpochNo
+</span><a href="#local-6989586621682693065"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">Term EpochNo -&gt; Term [EpochNo] -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term [a] -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.List.html#elem_"><span class="hs-identifier hs-var">elem_</span></a></span><span> </span><span class="annot"><span class="annottext">Term EpochNo
+</span><a href="#local-6989586621682693065"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[EpochNo] -&gt; Term [EpochNo]
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621682693064"><span class="hs-identifier hs-var">curEpoch</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo
+forall a. Enum a =&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">succ</span></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621682693064"><span class="hs-identifier hs-var">curEpoch</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span id="local-6989586621682692096"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#enactableProposals"><span class="hs-identifier hs-type">enactableProposals</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#Proposals"><span class="hs-identifier hs-type">Proposals</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682692096"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionState"><span class="hs-identifier hs-type">GovActionState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682692096"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-101"></span><span id="enactableProposals"><span class="annot"><span class="annottext">enactableProposals :: forall era. Proposals era -&gt; [GovActionState era]
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#enactableProposals"><span class="hs-identifier hs-var hs-var">enactableProposals</span></a></span></span><span> </span><span id="local-6989586621682693070"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621682693070"><span class="hs-identifier hs-var">proposals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621682693071"><span class="hs-identifier hs-var">gact'</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621682693072"><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621682693072"><span class="hs-identifier hs-var">gact</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StrictSeq (GovActionState era) -&gt; [GovActionState era]
+forall a. StrictSeq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proposals era -&gt; StrictSeq (GovActionState era)
+forall era. Proposals era -&gt; StrictSeq (GovActionState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsActions"><span class="hs-identifier hs-var">proposalsActions</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621682693070"><span class="hs-identifier hs-var">proposals</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="local-6989586621682693071"><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621682693071"><span class="hs-identifier hs-var">gact'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GovActionState era
+-&gt; [GovActionState era]
+-&gt; (forall {p :: GovActionPurpose}.
+    (forall (f1 :: * -&gt; *) (f2 :: * -&gt; *).
+     Functor f2 =&gt;
+     (f1 (GovPurposeId p) -&gt; f2 (f1 (GovPurposeId p)))
+     -&gt; GovRelation f1 -&gt; f2 (GovRelation f1))
+    -&gt; StrictMaybe (GovPurposeId p)
+    -&gt; GovPurposeId p
+    -&gt; [GovActionState era])
+-&gt; [GovActionState era]
+forall era a.
+GovActionState era
+-&gt; a
+-&gt; (forall (p :: GovActionPurpose).
+    (forall (f1 :: * -&gt; *) (f2 :: * -&gt; *).
+     Functor f2 =&gt;
+     (f1 (GovPurposeId p) -&gt; f2 (f1 (GovPurposeId p)))
+     -&gt; GovRelation f1 -&gt; f2 (GovRelation f1))
+    -&gt; StrictMaybe (GovPurposeId p) -&gt; GovPurposeId p -&gt; a)
+-&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#withGovActionParent"><span class="hs-identifier hs-var">withGovActionParent</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621682693072"><span class="hs-identifier hs-var">gact</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621682693072"><span class="hs-identifier hs-var">gact</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">((forall {p :: GovActionPurpose}.
+  (forall (f1 :: * -&gt; *) (f2 :: * -&gt; *).
+   Functor f2 =&gt;
+   (f1 (GovPurposeId p) -&gt; f2 (f1 (GovPurposeId p)))
+   -&gt; GovRelation f1 -&gt; f2 (GovRelation f1))
+  -&gt; StrictMaybe (GovPurposeId p)
+  -&gt; GovPurposeId p
+  -&gt; [GovActionState era])
+ -&gt; [GovActionState era])
+-&gt; (forall {p :: GovActionPurpose}.
+    (forall (f1 :: * -&gt; *) (f2 :: * -&gt; *).
+     Functor f2 =&gt;
+     (f1 (GovPurposeId p) -&gt; f2 (f1 (GovPurposeId p)))
+     -&gt; GovRelation f1 -&gt; f2 (GovRelation f1))
+    -&gt; StrictMaybe (GovPurposeId p)
+    -&gt; GovPurposeId p
+    -&gt; [GovActionState era])
+-&gt; [GovActionState era]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-105"></span><span>      </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">forall (f1 :: * -&gt; *) (f2 :: * -&gt; *).
+Functor f2 =&gt;
+(f1 (GovPurposeId p) -&gt; f2 (f1 (GovPurposeId p)))
+-&gt; GovRelation f1 -&gt; f2 (GovRelation f1)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682693076"><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId p)
+</span><a href="#local-6989586621682693076"><span class="hs-identifier hs-var">mparent</span></a></span></span><span> </span><span class="annot"><span class="annottext">GovPurposeId p
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-106"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId p)
+</span><a href="#local-6989586621682693076"><span class="hs-identifier hs-var">mparent</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-107"></span><span>          </span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId p)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621682693072"><span class="hs-identifier hs-var">gact</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-108"></span><span>          </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-type">SJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovPurposeId"><span class="hs-identifier hs-type">GovPurposeId</span></a></span><span> </span><span id="local-6989586621682693080"><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621682693080"><span class="hs-identifier hs-var">gpid'</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">GovActionId -&gt; Proposals era -&gt; Bool
+forall era. GovActionId -&gt; Proposals era -&gt; Bool
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#isRoot"><span class="hs-identifier hs-var">isRoot</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621682693080"><span class="hs-identifier hs-var">gpid'</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621682693070"><span class="hs-identifier hs-var">proposals</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">GovActionState era
+</span><a href="#local-6989586621682693072"><span class="hs-identifier hs-var">gact</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-110"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span id="local-6989586621682692122"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#isRoot"><span class="hs-identifier hs-type">isRoot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier hs-type">GovActionId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#Proposals"><span class="hs-identifier hs-type">Proposals</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682692122"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-114"></span><span id="isRoot"><span class="annot"><span class="annottext">isRoot :: forall era. GovActionId -&gt; Proposals era -&gt; Bool
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Epoch.html#isRoot"><span class="hs-identifier hs-var hs-var">isRoot</span></a></span></span><span> </span><span id="local-6989586621682693089"><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621682693089"><span class="hs-identifier hs-var">gid</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Getting (GovRelation PRoot) (Proposals era) (GovRelation PRoot)
+-&gt; Proposals era -&gt; GovRelation PRoot
+forall a s. Getting a s a -&gt; s -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Extras.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (GovRelation PRoot) (Proposals era) (GovRelation PRoot)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(GovRelation PRoot -&gt; f (GovRelation PRoot))
+-&gt; Proposals era -&gt; f (Proposals era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#pRootsL"><span class="hs-identifier hs-var">pRootsL</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovRelation"><span class="hs-identifier hs-type">GovRelation</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621682693091"><span id="local-6989586621682693092"><span id="local-6989586621682693093"><span id="local-6989586621682693094"><span class="annot"><span class="annottext">PRoot (GovPurposeId 'PParamUpdatePurpose)
+PRoot (GovPurposeId 'HardForkPurpose)
+PRoot (GovPurposeId 'CommitteePurpose)
+PRoot (GovPurposeId 'ConstitutionPurpose)
+grPParamUpdate :: PRoot (GovPurposeId 'PParamUpdatePurpose)
+grHardFork :: PRoot (GovPurposeId 'HardForkPurpose)
+grCommittee :: PRoot (GovPurposeId 'CommitteePurpose)
+grConstitution :: PRoot (GovPurposeId 'ConstitutionPurpose)
+grPParamUpdate :: forall (f :: * -&gt; *).
+GovRelation f -&gt; f (GovPurposeId 'PParamUpdatePurpose)
+grHardFork :: forall (f :: * -&gt; *).
+GovRelation f -&gt; f (GovPurposeId 'HardForkPurpose)
+grCommittee :: forall (f :: * -&gt; *).
+GovRelation f -&gt; f (GovPurposeId 'CommitteePurpose)
+grConstitution :: forall (f :: * -&gt; *).
+GovRelation f -&gt; f (GovPurposeId 'ConstitutionPurpose)
+</span><a href="#local-6989586621682693091"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><span class="annottext">GovActionId -&gt; StrictMaybe GovActionId
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621682693089"><span class="hs-identifier hs-var">gid</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><span class="annottext">StrictMaybe GovActionId -&gt; [StrictMaybe GovActionId] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><span class="hs-operator hs-var">`elem`</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">PRoot (GovPurposeId 'PParamUpdatePurpose)
+-&gt; StrictMaybe GovActionId
+forall {p :: GovActionPurpose}.
+PRoot (GovPurposeId p) -&gt; StrictMaybe GovActionId
+</span><a href="#local-6989586621682693100"><span class="hs-identifier hs-var">getGID</span></a></span><span> </span><span class="annot"><span class="annottext">PRoot (GovPurposeId 'PParamUpdatePurpose)
+</span><a href="#local-6989586621682693091"><span class="hs-identifier hs-var">grPParamUpdate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PRoot (GovPurposeId 'HardForkPurpose) -&gt; StrictMaybe GovActionId
+forall {p :: GovActionPurpose}.
+PRoot (GovPurposeId p) -&gt; StrictMaybe GovActionId
+</span><a href="#local-6989586621682693100"><span class="hs-identifier hs-var">getGID</span></a></span><span> </span><span class="annot"><span class="annottext">PRoot (GovPurposeId 'HardForkPurpose)
+</span><a href="#local-6989586621682693092"><span class="hs-identifier hs-var">grHardFork</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PRoot (GovPurposeId 'CommitteePurpose) -&gt; StrictMaybe GovActionId
+forall {p :: GovActionPurpose}.
+PRoot (GovPurposeId p) -&gt; StrictMaybe GovActionId
+</span><a href="#local-6989586621682693100"><span class="hs-identifier hs-var">getGID</span></a></span><span> </span><span class="annot"><span class="annottext">PRoot (GovPurposeId 'CommitteePurpose)
+</span><a href="#local-6989586621682693093"><span class="hs-identifier hs-var">grCommittee</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PRoot (GovPurposeId 'ConstitutionPurpose)
+-&gt; StrictMaybe GovActionId
+forall {p :: GovActionPurpose}.
+PRoot (GovPurposeId p) -&gt; StrictMaybe GovActionId
+</span><a href="#local-6989586621682693100"><span class="hs-identifier hs-var">getGID</span></a></span><span> </span><span class="annot"><span class="annottext">PRoot (GovPurposeId 'ConstitutionPurpose)
+</span><a href="#local-6989586621682693094"><span class="hs-identifier hs-var">grConstitution</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621682693100"><span class="annot"><span class="annottext">getGID :: PRoot (GovPurposeId p) -&gt; StrictMaybe GovActionId
+</span><a href="#local-6989586621682693100"><span class="hs-identifier hs-var hs-var">getGID</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GovPurposeId p -&gt; GovActionId)
+-&gt; StrictMaybe (GovPurposeId p) -&gt; StrictMaybe GovActionId
+forall a b. (a -&gt; b) -&gt; StrictMaybe a -&gt; StrictMaybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">GovPurposeId p -&gt; GovActionId
+forall (p :: GovActionPurpose). GovPurposeId p -&gt; GovActionId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#unGovPurposeId"><span class="hs-identifier hs-var">unGovPurposeId</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe (GovPurposeId p) -&gt; StrictMaybe GovActionId)
+-&gt; (PRoot (GovPurposeId p) -&gt; StrictMaybe (GovPurposeId p))
+-&gt; PRoot (GovPurposeId p)
+-&gt; StrictMaybe GovActionId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PRoot (GovPurposeId p) -&gt; StrictMaybe (GovPurposeId p)
+forall a. PRoot a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#prRoot"><span class="hs-identifier hs-var">prRoot</span></a></span><span>
+</span><span id="line-119"></span></pre></body></html>

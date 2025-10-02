@@ -1,0 +1,1072 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Chain.Byron.API</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#genApplyMempoolPayloadErr"><span class="hs-identifier">genApplyMempoolPayloadErr</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#ts_mempoolValidation"><span class="hs-identifier">ts_mempoolValidation</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#ts_roundTripApplyMempoolPayloadErrCompat"><span class="hs-identifier">ts_roundTripApplyMempoolPayloadErrCompat</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#ts_scheduledDelegations"><span class="hs-identifier">ts_scheduledDelegations</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#tests"><span class="hs-identifier">tests</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Block.html"><span class="hs-identifier">Byron.Spec.Chain.STS.Block</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Rule.Chain.html"><span class="hs-identifier">Byron.Spec.Chain.STS.Rule.Chain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Rule.Chain.html#CHAIN"><span class="hs-identifier">CHAIN</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Rule.Epoch.html"><span class="hs-identifier">Byron.Spec.Chain.STS.Rule.Epoch</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Rule.SigCnt.html"><span class="hs-identifier">Byron.Spec.Chain.STS.Rule.SigCnt</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html"><span class="hs-identifier">Byron.Spec.Ledger.Core</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Spec</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html"><span class="hs-identifier">Byron.Spec.Ledger.Delegation</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Spec</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html"><span class="hs-identifier">Byron.Spec.Ledger.STS.UTXO</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXOW.html"><span class="hs-identifier">Byron.Spec.Ledger.STS.UTXOW</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html"><span class="hs-identifier">Byron.Spec.Ledger.Update</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Spec</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.html"><span class="hs-identifier">Cardano.Chain.Block</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.ValidationMode.html#BlockValidationMode"><span class="hs-identifier">BlockValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#ChainValidationError"><span class="hs-identifier">ChainValidationError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#ChainValidationState"><span class="hs-identifier">ChainValidationState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Header.html#HeaderHash"><span class="hs-identifier">HeaderHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#initialChainValidationState"><span class="hs-identifier">initialChainValidationState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.html"><span class="hs-identifier">Cardano.Chain.Byron.API</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Mempool.html#ApplyMempoolPayloadErr"><span class="hs-identifier">ApplyMempoolPayloadErr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Validation.html#applyChainTick"><span class="hs-identifier">applyChainTick</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Mempool.html#applyMempoolPayload"><span class="hs-identifier">applyMempoolPayload</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Common.html#getDelegationMap"><span class="hs-identifier">getDelegationMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Protocol.html#previewDelegationMap"><span class="hs-identifier">previewDelegationMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Common.html#reAnnotateUsing"><span class="hs-identifier">reAnnotateUsing</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Validation.html#validateBlock"><span class="hs-identifier">validateBlock</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Genesis.html"><span class="hs-identifier">Cardano.Chain.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Genesis.Config.html#configSlotSecurityParam"><span class="hs-identifier">configSlotSecurityParam</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Genesis.html"><span class="hs-identifier">Cardano.Chain.Genesis</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Genesis</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.MempoolPayload.html"><span class="hs-identifier">Cardano.Chain.MempoolPayload</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.MempoolPayload.html#AMempoolPayload"><span class="hs-identifier">AMempoolPayload</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.MempoolPayload.html#MempoolPayload"><span class="hs-identifier">MempoolPayload</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.html"><span class="hs-identifier">Cardano.Chain.Slotting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotCount.html#SlotCount"><span class="hs-identifier">SlotCount</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier">SlotNumber</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.html"><span class="hs-identifier">Cardano.Chain.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.ValidationMode.html#TxValidationMode"><span class="hs-identifier">TxValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.ValidationMode.html"><span class="hs-identifier">Cardano.Chain.ValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.ValidationMode.html#ValidationMode"><span class="hs-identifier">ValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.html"><span class="hs-identifier">Cardano.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.ProtocolMagic.html#ProtocolMagicId"><span class="hs-identifier">ProtocolMagicId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Hashing.html"><span class="hs-identifier">Cardano.Crypto.Hashing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier">decCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier">encCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS</span></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Coerce</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">coerce</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#Gen"><span class="hs-identifier">Gen</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Group"><span class="hs-identifier">Group</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#annotateShow"><span class="hs-identifier">annotateShow</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier">forAll</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#property"><span class="hs-identifier">property</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#%3D%3D%3D"><span class="hs-operator">(===)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Gen.html"><span class="hs-identifier">Hedgehog.Gen</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Gen</span></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Range.html"><span class="hs-identifier">Hedgehog.Range</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Range</span></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Block.Model.html"><span class="hs-identifier">Test.Cardano.Chain.Block.Model</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.Block.Model.html#elaborateAndUpdate"><span class="hs-identifier">elaborateAndUpdate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Block.Model.html#elaborateBlock"><span class="hs-identifier">elaborateBlock</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Delegation.Gen.html"><span class="hs-identifier">Test.Cardano.Chain.Delegation.Gen</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Dlg</span></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Block.html"><span class="hs-identifier">Test.Cardano.Chain.Elaboration.Block</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Block.html#AbstractToConcreteIdMaps"><span class="hs-identifier">AbstractToConcreteIdMaps</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Block.html#abEnvToCfg"><span class="hs-identifier">abEnvToCfg</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Delegation.html"><span class="hs-identifier">Test.Cardano.Chain.Elaboration.Delegation</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Delegation.html#elaborateDCert"><span class="hs-identifier">elaborateDCert</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Update.html"><span class="hs-identifier">Test.Cardano.Chain.Elaboration.Update</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Update.html#elaborateUpdateProposal"><span class="hs-identifier">elaborateUpdateProposal</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Update.html#elaborateVote"><span class="hs-identifier">elaborateVote</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.UTxO.Gen.html"><span class="hs-identifier">Test.Cardano.Chain.UTxO.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.UTxO.Gen.html#genUTxOValidationError"><span class="hs-identifier">genUTxOValidationError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.UTxO.Model.html"><span class="hs-identifier">Test.Cardano.Chain.UTxO.Model</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.UTxO.Model.html#elaborateInitialUTxO"><span class="hs-identifier">elaborateInitialUTxO</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.UTxO.Model.html#elaborateTxWitsBSWithMap"><span class="hs-identifier">elaborateTxWitsBSWithMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Update.Gen.html"><span class="hs-identifier">Test.Cardano.Chain.Update.Gen</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UpdateIface</span></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Gen.html"><span class="hs-identifier">Test.Cardano.Crypto.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Gen.html#feedPM"><span class="hs-identifier">feedPM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#roundTripsCBORShow"><span class="hs-identifier">roundTripsCBORShow</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html"><span class="hs-identifier">Test.Control.State.Transition.Generator</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS</span></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html"><span class="hs-identifier">Test.Control.State.Transition.Trace</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS</span></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Options.html"><span class="hs-identifier">Test.Options</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Options.html#TSGroup"><span class="hs-identifier">TSGroup</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier">TSProperty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Options.html#eachOfTS"><span class="hs-identifier">eachOfTS</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Options.html#withTestsTS"><span class="hs-identifier">withTestsTS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#tests"><span class="hs-identifier hs-type">tests</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSGroup"><span class="hs-identifier hs-type">TSGroup</span></a></span><span>
+</span><span id="line-76"></span><span id="tests"><span class="annot"><span class="annottext">tests :: TSGroup
+</span><a href="Test.Cardano.Chain.Byron.API.html#tests"><span class="hs-identifier hs-var hs-var">tests</span></a></span></span><span> </span><span id="local-6989586621679380377"><span class="annot"><span class="annottext">TestScenario
+</span><a href="#local-6989586621679380377"><span class="hs-identifier hs-var">scenario</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="annottext">GroupName -&gt; [(PropertyName, Property)] -&gt; Group
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Group"><span class="hs-identifier hs-var">Group</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="annottext">GroupName
+</span><span class="hs-string">&quot;Test.Cardano.Chain.Byron.API&quot;</span></span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropertyName
+</span><span class="hs-string">&quot;ts_chainTick&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TSProperty
+</span><a href="Test.Cardano.Chain.Byron.API.html#ts_chainTick"><span class="hs-identifier hs-var">ts_chainTick</span></a></span><span> </span><span class="annot"><span class="annottext">TestScenario
+</span><a href="#local-6989586621679380377"><span class="hs-identifier hs-var">scenario</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropertyName
+</span><span class="hs-string">&quot;ts_roundTripApplyMempoolPayloadErrCompat&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TSProperty
+</span><a href="Test.Cardano.Chain.Byron.API.html#ts_roundTripApplyMempoolPayloadErrCompat"><span class="hs-identifier hs-var">ts_roundTripApplyMempoolPayloadErrCompat</span></a></span><span> </span><span class="annot"><span class="annottext">TestScenario
+</span><a href="#local-6989586621679380377"><span class="hs-identifier hs-var">scenario</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropertyName
+</span><span class="hs-string">&quot;ts_scheduledDelegations&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TSProperty
+</span><a href="Test.Cardano.Chain.Byron.API.html#ts_scheduledDelegations"><span class="hs-identifier hs-var">ts_scheduledDelegations</span></a></span><span> </span><span class="annot"><span class="annottext">TestScenario
+</span><a href="#local-6989586621679380377"><span class="hs-identifier hs-var">scenario</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PropertyName
+</span><span class="hs-string">&quot;ts_mempoolValidation&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TSProperty
+</span><a href="Test.Cardano.Chain.Byron.API.html#ts_mempoolValidation"><span class="hs-identifier hs-var">ts_mempoolValidation</span></a></span><span> </span><span class="annot"><span class="annottext">TestScenario
+</span><a href="#local-6989586621679380377"><span class="hs-identifier hs-var">scenario</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#ts_roundTripApplyMempoolPayloadErrCompat"><span class="hs-identifier hs-type">ts_roundTripApplyMempoolPayloadErrCompat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-86"></span><span id="ts_roundTripApplyMempoolPayloadErrCompat"><span class="annot"><span class="annottext">ts_roundTripApplyMempoolPayloadErrCompat :: TSProperty
+</span><a href="Test.Cardano.Chain.Byron.API.html#ts_roundTripApplyMempoolPayloadErrCompat"><span class="hs-identifier hs-var hs-var">ts_roundTripApplyMempoolPayloadErrCompat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><span class="annottext">TestLimit
+-&gt; Gen ApplyMempoolPayloadErr
+-&gt; (ApplyMempoolPayloadErr -&gt; PropertyT IO ())
+-&gt; TSProperty
+forall a.
+(Show a, HasCallStack) =&gt;
+TestLimit -&gt; Gen a -&gt; (a -&gt; PropertyT IO ()) -&gt; TSProperty
+</span><a href="Test.Options.html#eachOfTS"><span class="hs-identifier hs-var">eachOfTS</span></a></span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">20</span></span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ProtocolMagicId -&gt; Gen ApplyMempoolPayloadErr)
+-&gt; Gen ApplyMempoolPayloadErr
+forall a. (ProtocolMagicId -&gt; Gen a) -&gt; Gen a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Gen.html#feedPM"><span class="hs-identifier hs-var">feedPM</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; Gen ApplyMempoolPayloadErr
+</span><a href="Test.Cardano.Chain.Byron.API.html#genApplyMempoolPayloadErr"><span class="hs-identifier hs-var">genApplyMempoolPayloadErr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">ApplyMempoolPayloadErr -&gt; PropertyT IO ()
+forall a (m :: * -&gt; *).
+(DecCBOR a, EncCBOR a, Eq a, MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#roundTripsCBORShow"><span class="hs-identifier hs-var">roundTripsCBORShow</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#genApplyMempoolPayloadErr"><span class="hs-identifier hs-type">genApplyMempoolPayloadErr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.ProtocolMagic.html#ProtocolMagicId"><span class="hs-identifier hs-type">ProtocolMagicId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Mempool.html#ApplyMempoolPayloadErr"><span class="hs-identifier hs-type">ApplyMempoolPayloadErr</span></a></span><span>
+</span><span id="line-93"></span><span id="genApplyMempoolPayloadErr"><span class="annot"><span class="annottext">genApplyMempoolPayloadErr :: ProtocolMagicId -&gt; Gen ApplyMempoolPayloadErr
+</span><a href="Test.Cardano.Chain.Byron.API.html#genApplyMempoolPayloadErr"><span class="hs-identifier hs-var hs-var">genApplyMempoolPayloadErr</span></a></span></span><span> </span><span id="local-6989586621679380380"><span class="annot"><span class="annottext">ProtocolMagicId
+</span><a href="#local-6989586621679380380"><span class="hs-identifier hs-var">pm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="annottext">[Gen ApplyMempoolPayloadErr] -&gt; Gen ApplyMempoolPayloadErr
+forall (m :: * -&gt; *) a. (HasCallStack, MonadGen m) =&gt; [m a] -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#choice"><span class="hs-identifier hs-var">Gen.choice</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">UTxOValidationError -&gt; ApplyMempoolPayloadErr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Mempool.html#MempoolTxErr"><span class="hs-identifier hs-var">MempoolTxErr</span></a></span><span> </span><span class="annot"><span class="annottext">(UTxOValidationError -&gt; ApplyMempoolPayloadErr)
+-&gt; GenT Identity UTxOValidationError -&gt; Gen ApplyMempoolPayloadErr
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">GenT Identity UTxOValidationError
+</span><a href="Test.Cardano.Chain.UTxO.Gen.html#genUTxOValidationError"><span class="hs-identifier hs-var">genUTxOValidationError</span></a></span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Error -&gt; ApplyMempoolPayloadErr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Mempool.html#MempoolDlgErr"><span class="hs-identifier hs-var">MempoolDlgErr</span></a></span><span> </span><span class="annot"><span class="annottext">(Error -&gt; ApplyMempoolPayloadErr)
+-&gt; GenT Identity Error -&gt; Gen ApplyMempoolPayloadErr
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">GenT Identity Error
+</span><a href="Test.Cardano.Chain.Delegation.Gen.html#genError"><span class="hs-identifier hs-var">Dlg.genError</span></a></span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Error -&gt; ApplyMempoolPayloadErr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Mempool.html#MempoolUpdateProposalErr"><span class="hs-identifier hs-var">MempoolUpdateProposalErr</span></a></span><span> </span><span class="annot"><span class="annottext">(Error -&gt; ApplyMempoolPayloadErr)
+-&gt; GenT Identity Error -&gt; Gen ApplyMempoolPayloadErr
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; GenT Identity Error
+</span><a href="Test.Cardano.Chain.Update.Gen.html#genError"><span class="hs-identifier hs-var">UpdateIface.genError</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId
+</span><a href="#local-6989586621679380380"><span class="hs-identifier hs-var">pm</span></a></span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Error -&gt; ApplyMempoolPayloadErr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Mempool.html#MempoolUpdateVoteErr"><span class="hs-identifier hs-var">MempoolUpdateVoteErr</span></a></span><span> </span><span class="annot"><span class="annottext">(Error -&gt; ApplyMempoolPayloadErr)
+-&gt; GenT Identity Error -&gt; Gen ApplyMempoolPayloadErr
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; GenT Identity Error
+</span><a href="Test.Cardano.Chain.Update.Gen.html#genError"><span class="hs-identifier hs-var">UpdateIface.genError</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId
+</span><a href="#local-6989586621679380380"><span class="hs-identifier hs-var">pm</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#setupChainValidationState"><span class="hs-identifier hs-type">setupChainValidationState</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#Trace"><span class="hs-identifier hs-type">STS.Trace</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Rule.Chain.html#CHAIN"><span class="hs-identifier hs-type">CHAIN</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#ChainValidationState"><span class="hs-identifier hs-type">ChainValidationState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Genesis.Config.html#Config"><span class="hs-identifier hs-type">Genesis.Config</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Block.html#AbstractToConcreteIdMaps"><span class="hs-identifier hs-type">AbstractToConcreteIdMaps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span id="setupChainValidationState"><span class="annot"><span class="annottext">setupChainValidationState :: Trace CHAIN
+-&gt; (ChainValidationState, Config, AbstractToConcreteIdMaps)
+</span><a href="Test.Cardano.Chain.Byron.API.html#setupChainValidationState"><span class="hs-identifier hs-var hs-var">setupChainValidationState</span></a></span></span><span> </span><span id="local-6989586621679380390"><span class="annot"><span class="annottext">Trace CHAIN
+</span><a href="#local-6989586621679380390"><span class="hs-identifier hs-var">sampleTrace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380391"><span class="annot"><span class="annottext">chainEnv :: Environment CHAIN
+</span><a href="#local-6989586621679380391"><span class="hs-identifier hs-var">chainEnv</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Slot
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380392"><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679380392"><span class="hs-identifier hs-var">abstractInitialUTxO</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Set VKeyGenesis
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PParams
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BlockCount
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace CHAIN -&gt; Environment CHAIN
+forall s. Trace s -&gt; Environment s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#_traceEnv"><span class="hs-identifier hs-var">STS._traceEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Trace CHAIN
+</span><a href="#local-6989586621679380390"><span class="hs-identifier hs-var">sampleTrace</span></a></span><span>
+</span><span id="line-106"></span><span>      </span><span id="local-6989586621679380394"><span class="annot"><span class="annottext">config :: Config
+</span><a href="#local-6989586621679380394"><span class="hs-identifier hs-var hs-var">config</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Environment CHAIN -&gt; Config
+</span><a href="Test.Cardano.Chain.Elaboration.Block.html#abEnvToCfg"><span class="hs-identifier hs-var">abEnvToCfg</span></a></span><span> </span><span class="annot"><span class="annottext">(Slot, UTxO, Set VKeyGenesis, PParams, BlockCount)
+Environment CHAIN
+</span><a href="#local-6989586621679380391"><span class="hs-identifier hs-var">chainEnv</span></a></span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679380395"><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679380395"><span class="hs-identifier hs-var">initialUTxO</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380396"><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679380396"><span class="hs-identifier hs-var">txIdMap</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO -&gt; (UTxO, Map TxId TxId)
+</span><a href="Test.Cardano.Chain.UTxO.Model.html#elaborateInitialUTxO"><span class="hs-identifier hs-var">elaborateInitialUTxO</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679380392"><span class="hs-identifier hs-var">abstractInitialUTxO</span></a></span><span>
+</span><span id="line-108"></span><span>      </span><span id="local-6989586621679380399"><span class="annot"><span class="annottext">initialAbstractToConcreteIdMaps :: AbstractToConcreteIdMaps
+</span><a href="#local-6989586621679380399"><span class="hs-identifier hs-var hs-var">initialAbstractToConcreteIdMaps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AbstractToConcreteIdMaps
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Block.html#transactionIds"><span class="hs-identifier hs-var">transactionIds</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679380396"><span class="hs-identifier hs-type">txIdMap</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-109"></span><span>      </span><span id="local-6989586621679380410"><span class="annot"><span class="annottext">initialStateNoUTxO :: ChainValidationState
+</span><a href="#local-6989586621679380410"><span class="hs-identifier hs-var hs-var">initialStateNoUTxO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Error -&gt; ChainValidationState)
+-&gt; (ChainValidationState -&gt; ChainValidationState)
+-&gt; Either Error ChainValidationState
+-&gt; ChainValidationState
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><span class="hs-identifier hs-var">either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; ChainValidationState
+forall a. HasCallStack =&gt; Text -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Panic.html#panic"><span class="hs-identifier hs-var">panic</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ChainValidationState)
+-&gt; (Error -&gt; Text) -&gt; Error -&gt; ChainValidationState
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Error -&gt; Text
+forall a b. (Show a, ConvertText String b) =&gt; a -&gt; b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ChainValidationState -&gt; ChainValidationState
+forall (cat :: * -&gt; * -&gt; *) a. Category cat =&gt; cat a a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Base.html#identity"><span class="hs-identifier hs-var">identity</span></a></span><span> </span><span class="annot"><span class="annottext">(Either Error ChainValidationState -&gt; ChainValidationState)
+-&gt; Either Error ChainValidationState -&gt; ChainValidationState
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Config -&gt; Either Error ChainValidationState
+forall (m :: * -&gt; *).
+MonadError Error m =&gt;
+Config -&gt; m ChainValidationState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#initialChainValidationState"><span class="hs-identifier hs-var">initialChainValidationState</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380394"><span class="hs-identifier hs-var">config</span></a></span><span>
+</span><span id="line-110"></span><span>      </span><span id="local-6989586621679380416"><span class="annot"><span class="annottext">initialState :: ChainValidationState
+</span><a href="#local-6989586621679380416"><span class="hs-identifier hs-var hs-var">initialState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380410"><span class="hs-identifier hs-var">initialStateNoUTxO</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#%24sel%3AcvsUtxo%3AChainValidationState"><span class="hs-identifier hs-var">cvsUtxo</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679380395"><span class="hs-identifier hs-type">initialUTxO</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-111"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679380427"><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380427"><span class="hs-identifier hs-var">cvs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380428"><span class="annot"><span class="annottext">AbstractToConcreteIdMaps
+</span><a href="#local-6989586621679380428"><span class="hs-identifier hs-var">abstractToConcreteIdMaps</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>        </span><span class="annot"><span class="annottext">(ChainValidationError
+ -&gt; (ChainValidationState, AbstractToConcreteIdMaps))
+-&gt; ((ChainValidationState, AbstractToConcreteIdMaps)
+    -&gt; (ChainValidationState, AbstractToConcreteIdMaps))
+-&gt; Either
+     ChainValidationError
+     (ChainValidationState, AbstractToConcreteIdMaps)
+-&gt; (ChainValidationState, AbstractToConcreteIdMaps)
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><span class="hs-identifier hs-var">either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; (ChainValidationState, AbstractToConcreteIdMaps)
+forall a. HasCallStack =&gt; Text -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Panic.html#panic"><span class="hs-identifier hs-var">panic</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; (ChainValidationState, AbstractToConcreteIdMaps))
+-&gt; (ChainValidationError -&gt; Text)
+-&gt; ChainValidationError
+-&gt; (ChainValidationState, AbstractToConcreteIdMaps)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ChainValidationError -&gt; Text
+forall a b. (Show a, ConvertText String b) =&gt; a -&gt; b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ChainValidationState, AbstractToConcreteIdMaps)
+-&gt; (ChainValidationState, AbstractToConcreteIdMaps)
+forall (cat :: * -&gt; * -&gt; *) a. Category cat =&gt; cat a a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Base.html#identity"><span class="hs-identifier hs-var">identity</span></a></span><span>
+</span><span id="line-113"></span><span>          </span><span class="annot"><span class="annottext">(Either
+   ChainValidationError
+   (ChainValidationState, AbstractToConcreteIdMaps)
+ -&gt; (ChainValidationState, AbstractToConcreteIdMaps))
+-&gt; Either
+     ChainValidationError
+     (ChainValidationState, AbstractToConcreteIdMaps)
+-&gt; (ChainValidationState, AbstractToConcreteIdMaps)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">((ChainValidationState, AbstractToConcreteIdMaps)
+ -&gt; ((Slot, Seq VKeyGenesis, Hash, UTxOState, DIState, UPIState),
+     Block)
+ -&gt; Either
+      ChainValidationError
+      (ChainValidationState, AbstractToConcreteIdMaps))
+-&gt; (ChainValidationState, AbstractToConcreteIdMaps)
+-&gt; [((Slot, Seq VKeyGenesis, Hash, UTxOState, DIState, UPIState),
+     Block)]
+-&gt; Either
+     ChainValidationError
+     (ChainValidationState, AbstractToConcreteIdMaps)
+forall (t :: * -&gt; *) (m :: * -&gt; *) b a.
+(Foldable t, Monad m) =&gt;
+(b -&gt; a -&gt; m b) -&gt; b -&gt; t a -&gt; m b
+</span><span class="hs-identifier hs-var">foldM</span></span><span>
+</span><span id="line-114"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Config
+-&gt; (ChainValidationState, AbstractToConcreteIdMaps)
+-&gt; (State CHAIN, Block)
+-&gt; Either
+     ChainValidationError
+     (ChainValidationState, AbstractToConcreteIdMaps)
+</span><a href="Test.Cardano.Chain.Block.Model.html#elaborateAndUpdate"><span class="hs-identifier hs-var">elaborateAndUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380394"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380416"><span class="hs-identifier hs-var">initialState</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AbstractToConcreteIdMaps
+</span><a href="#local-6989586621679380399"><span class="hs-identifier hs-var">initialAbstractToConcreteIdMaps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TraceOrder -&gt; Trace CHAIN -&gt; [(State CHAIN, Signal CHAIN)]
+forall s. TraceOrder -&gt; Trace s -&gt; [(State s, Signal s)]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#preStatesAndSignals"><span class="hs-identifier hs-var">STS.preStatesAndSignals</span></a></span><span> </span><span class="annot"><span class="annottext">TraceOrder
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#OldestFirst"><span class="hs-identifier hs-var">STS.OldestFirst</span></a></span><span> </span><span class="annot"><span class="annottext">Trace CHAIN
+</span><a href="#local-6989586621679380390"><span class="hs-identifier hs-var">sampleTrace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380427"><span class="hs-identifier hs-var">cvs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380394"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AbstractToConcreteIdMaps
+</span><a href="#local-6989586621679380428"><span class="hs-identifier hs-var">abstractToConcreteIdMaps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="annot"><span class="hs-comment">-- | getDelegationMap . applyChainTick slot == previewDelegationMap slot</span></span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#ts_scheduledDelegations"><span class="hs-identifier hs-type">ts_scheduledDelegations</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-121"></span><span id="ts_scheduledDelegations"><span class="annot"><span class="annottext">ts_scheduledDelegations :: TSProperty
+</span><a href="Test.Cardano.Chain.Byron.API.html#ts_scheduledDelegations"><span class="hs-identifier hs-var hs-var">ts_scheduledDelegations</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestLimit -&gt; Property -&gt; TSProperty
+</span><a href="Test.Options.html#withTestsTS"><span class="hs-identifier hs-var">withTestsTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">100</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; TSProperty)
+-&gt; (PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; TSProperty
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+PropertyT IO () -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertyT IO () -&gt; TSProperty) -&gt; PropertyT IO () -&gt; TSProperty
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380433"><span class="annot"><span class="annottext">traceLength :: Word64
+</span><a href="#local-6989586621679380433"><span class="hs-identifier hs-var hs-var">traceLength</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">10</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-123"></span><span>  </span><span id="local-6989586621679380434"><span class="annot"><span class="annottext">Trace CHAIN
+</span><a href="#local-6989586621679380434"><span class="hs-identifier hs-var">sampleTrace</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (Trace CHAIN) -&gt; PropertyT IO (Trace CHAIN)
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen (Trace CHAIN) -&gt; PropertyT IO (Trace CHAIN))
+-&gt; Gen (Trace CHAIN) -&gt; PropertyT IO (Trace CHAIN)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall s. HasTrace s =&gt; BaseEnv s -&gt; Word64 -&gt; Gen (Trace s)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#trace"><span class="hs-identifier hs-var">STS.trace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Rule.Chain.html#CHAIN"><span class="hs-identifier hs-type">CHAIN</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380433"><span class="hs-identifier hs-var">traceLength</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679380436"><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380436"><span class="hs-identifier hs-var">cvs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380437"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380437"><span class="hs-identifier hs-var">config</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AbstractToConcreteIdMaps
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace CHAIN
+-&gt; (ChainValidationState, Config, AbstractToConcreteIdMaps)
+</span><a href="Test.Cardano.Chain.Byron.API.html#setupChainValidationState"><span class="hs-identifier hs-var">setupChainValidationState</span></a></span><span> </span><span class="annot"><span class="annottext">Trace CHAIN
+</span><a href="#local-6989586621679380434"><span class="hs-identifier hs-var">sampleTrace</span></a></span><span>
+</span><span id="line-125"></span><span>      </span><span id="local-6989586621679380439"><span class="annot"><span class="annottext">n :: Word64
+</span><a href="#local-6989586621679380439"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotNumber -&gt; Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotNumber.html#unSlotNumber"><span class="hs-identifier hs-var">unSlotNumber</span></a></span><span> </span><span class="annot"><span class="annottext">(SlotNumber -&gt; Word64)
+-&gt; (ChainValidationState -&gt; SlotNumber)
+-&gt; ChainValidationState
+-&gt; Word64
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ChainValidationState -&gt; SlotNumber
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#%24sel%3AcvsLastSlot%3AChainValidationState"><span class="hs-identifier hs-var">cvsLastSlot</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainValidationState -&gt; Word64) -&gt; ChainValidationState -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380436"><span class="hs-identifier hs-var">cvs</span></a></span><span>
+</span><span id="line-126"></span><span>      </span><span id="local-6989586621679380443"><span class="annot"><span class="annottext">k :: Word64
+</span><a href="#local-6989586621679380443"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotCount -&gt; Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotCount.html#unSlotCount"><span class="hs-identifier hs-var">unSlotCount</span></a></span><span> </span><span class="annot"><span class="annottext">(SlotCount -&gt; Word64) -&gt; (Config -&gt; SlotCount) -&gt; Config -&gt; Word64
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Config -&gt; SlotCount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Genesis.Config.html#configSlotSecurityParam"><span class="hs-identifier hs-var">configSlotSecurityParam</span></a></span><span> </span><span class="annot"><span class="annottext">(Config -&gt; Word64) -&gt; Config -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380437"><span class="hs-identifier hs-var">config</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679380445"><span class="annot"><span class="annottext">SlotNumber
+</span><a href="#local-6989586621679380445"><span class="hs-identifier hs-var">slotNumber</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen SlotNumber -&gt; PropertyT IO SlotNumber
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen SlotNumber -&gt; PropertyT IO SlotNumber)
+-&gt; Gen SlotNumber -&gt; PropertyT IO SlotNumber
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; SlotNumber
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier hs-var">SlotNumber</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; SlotNumber) -&gt; GenT Identity Word64 -&gt; Gen SlotNumber
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Range Word64 -&gt; GenT Identity Word64
+forall (m :: * -&gt; *). MonadGen m =&gt; Range Word64 -&gt; m Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#word64"><span class="hs-identifier hs-var">Gen.word64</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Range Word64
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#linear"><span class="hs-identifier hs-var">Range.linear</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380439"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380439"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380443"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380451"><span class="annot"><span class="annottext">tickedDelegationMap :: Map
+</span><a href="#local-6989586621679380451"><span class="hs-identifier hs-var hs-var">tickedDelegationMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ChainValidationState -&gt; Map
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Common.html#getDelegationMap"><span class="hs-identifier hs-var">getDelegationMap</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainValidationState -&gt; Map) -&gt; ChainValidationState -&gt; Map
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Config
+-&gt; SlotNumber -&gt; ChainValidationState -&gt; ChainValidationState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Validation.html#applyChainTick"><span class="hs-identifier hs-var">applyChainTick</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380437"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNumber
+</span><a href="#local-6989586621679380445"><span class="hs-identifier hs-var">slotNumber</span></a></span><span> </span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380436"><span class="hs-identifier hs-var">cvs</span></a></span><span>
+</span><span id="line-129"></span><span>      </span><span id="local-6989586621679380452"><span class="annot"><span class="annottext">anachronisticDelegationMap :: Map
+</span><a href="#local-6989586621679380452"><span class="hs-identifier hs-var hs-var">anachronisticDelegationMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotNumber -&gt; ChainValidationState -&gt; Map
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Protocol.html#previewDelegationMap"><span class="hs-identifier hs-var">previewDelegationMap</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNumber
+</span><a href="#local-6989586621679380445"><span class="hs-identifier hs-var">slotNumber</span></a></span><span> </span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380436"><span class="hs-identifier hs-var">cvs</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><span class="annottext">Map
+</span><a href="#local-6989586621679380451"><span class="hs-identifier hs-var">tickedDelegationMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map -&gt; Map -&gt; PropertyT IO ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, Eq a, Show a, HasCallStack) =&gt;
+a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+</span><a href="#local-6989586621679380452"><span class="hs-identifier hs-var">anachronisticDelegationMap</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- | Given three slots, a &lt; b &lt; c, ticking from a to b and then b to c</span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- | should be the same as ticking from a to c.</span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#ts_chainTick"><span class="hs-identifier hs-type">ts_chainTick</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-135"></span><span id="ts_chainTick"><span class="annot"><span class="annottext">ts_chainTick :: TSProperty
+</span><a href="Test.Cardano.Chain.Byron.API.html#ts_chainTick"><span class="hs-identifier hs-var hs-var">ts_chainTick</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestLimit -&gt; Property -&gt; TSProperty
+</span><a href="Test.Options.html#withTestsTS"><span class="hs-identifier hs-var">withTestsTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">100</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; TSProperty)
+-&gt; (PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; TSProperty
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+PropertyT IO () -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertyT IO () -&gt; TSProperty) -&gt; PropertyT IO () -&gt; TSProperty
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380454"><span class="annot"><span class="annottext">traceLength :: Word64
+</span><a href="#local-6989586621679380454"><span class="hs-identifier hs-var hs-var">traceLength</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">10</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621679380455"><span class="annot"><span class="annottext">Trace CHAIN
+</span><a href="#local-6989586621679380455"><span class="hs-identifier hs-var">sampleTrace</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (Trace CHAIN) -&gt; PropertyT IO (Trace CHAIN)
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen (Trace CHAIN) -&gt; PropertyT IO (Trace CHAIN))
+-&gt; Gen (Trace CHAIN) -&gt; PropertyT IO (Trace CHAIN)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall s. HasTrace s =&gt; BaseEnv s -&gt; Word64 -&gt; Gen (Trace s)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#trace"><span class="hs-identifier hs-var">STS.trace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Rule.Chain.html#CHAIN"><span class="hs-identifier hs-type">CHAIN</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380454"><span class="hs-identifier hs-var">traceLength</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679380456"><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380456"><span class="hs-identifier hs-var">cvs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380457"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380457"><span class="hs-identifier hs-var">config</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AbstractToConcreteIdMaps
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace CHAIN
+-&gt; (ChainValidationState, Config, AbstractToConcreteIdMaps)
+</span><a href="Test.Cardano.Chain.Byron.API.html#setupChainValidationState"><span class="hs-identifier hs-var">setupChainValidationState</span></a></span><span> </span><span class="annot"><span class="annottext">Trace CHAIN
+</span><a href="#local-6989586621679380455"><span class="hs-identifier hs-var">sampleTrace</span></a></span><span>
+</span><span id="line-139"></span><span>      </span><span id="local-6989586621679380459"><span class="annot"><span class="annottext">n0 :: Word64
+</span><a href="#local-6989586621679380459"><span class="hs-identifier hs-var hs-var">n0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotNumber -&gt; Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotNumber.html#unSlotNumber"><span class="hs-identifier hs-var">unSlotNumber</span></a></span><span> </span><span class="annot"><span class="annottext">(SlotNumber -&gt; Word64)
+-&gt; (ChainValidationState -&gt; SlotNumber)
+-&gt; ChainValidationState
+-&gt; Word64
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ChainValidationState -&gt; SlotNumber
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#%24sel%3AcvsLastSlot%3AChainValidationState"><span class="hs-identifier hs-var">cvsLastSlot</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainValidationState -&gt; Word64) -&gt; ChainValidationState -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380456"><span class="hs-identifier hs-var">cvs</span></a></span><span>
+</span><span id="line-140"></span><span>      </span><span id="local-6989586621679380461"><span class="annot"><span class="annottext">k :: Word64
+</span><a href="#local-6989586621679380461"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotCount -&gt; Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotCount.html#unSlotCount"><span class="hs-identifier hs-var">unSlotCount</span></a></span><span> </span><span class="annot"><span class="annottext">(SlotCount -&gt; Word64) -&gt; (Config -&gt; SlotCount) -&gt; Config -&gt; Word64
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Config -&gt; SlotCount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Genesis.Config.html#configSlotSecurityParam"><span class="hs-identifier hs-var">configSlotSecurityParam</span></a></span><span> </span><span class="annot"><span class="annottext">(Config -&gt; Word64) -&gt; Config -&gt; Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380457"><span class="hs-identifier hs-var">config</span></a></span><span>
+</span><span id="line-141"></span><span>  </span><span id="local-6989586621679380462"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380462"><span class="hs-identifier hs-var">n2</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GenT Identity Word64 -&gt; PropertyT IO Word64
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(GenT Identity Word64 -&gt; PropertyT IO Word64)
+-&gt; GenT Identity Word64 -&gt; PropertyT IO Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Range Word64 -&gt; GenT Identity Word64
+forall (m :: * -&gt; *). MonadGen m =&gt; Range Word64 -&gt; m Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#word64"><span class="hs-identifier hs-var">Gen.word64</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Range Word64
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#linear"><span class="hs-identifier hs-var">Range.linear</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380459"><span class="hs-identifier hs-var">n0</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380459"><span class="hs-identifier hs-var">n0</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380461"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>  </span><span id="local-6989586621679380463"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380463"><span class="hs-identifier hs-var">n1</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GenT Identity Word64 -&gt; PropertyT IO Word64
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(GenT Identity Word64 -&gt; PropertyT IO Word64)
+-&gt; GenT Identity Word64 -&gt; PropertyT IO Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Range Word64 -&gt; GenT Identity Word64
+forall (m :: * -&gt; *). MonadGen m =&gt; Range Word64 -&gt; m Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#word64"><span class="hs-identifier hs-var">Gen.word64</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Range Word64
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#linear"><span class="hs-identifier hs-var">Range.linear</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380459"><span class="hs-identifier hs-var">n0</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380462"><span class="hs-identifier hs-var">n2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380464"><span class="annot"><span class="annottext">tick :: Word64 -&gt; ChainValidationState -&gt; ChainValidationState
+</span><a href="#local-6989586621679380464"><span class="hs-identifier hs-var hs-var">tick</span></a></span></span><span> </span><span id="local-6989586621679380465"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380465"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Config
+-&gt; SlotNumber -&gt; ChainValidationState -&gt; ChainValidationState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Validation.html#applyChainTick"><span class="hs-identifier hs-var">applyChainTick</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380457"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SlotNumber
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier hs-var">SlotNumber</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380465"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; ChainValidationState -&gt; ChainValidationState
+</span><a href="#local-6989586621679380464"><span class="hs-identifier hs-var">tick</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380462"><span class="hs-identifier hs-var">n2</span></a></span><span> </span><span class="annot"><span class="annottext">(ChainValidationState -&gt; ChainValidationState)
+-&gt; (ChainValidationState -&gt; ChainValidationState)
+-&gt; ChainValidationState
+-&gt; ChainValidationState
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; ChainValidationState -&gt; ChainValidationState
+</span><a href="#local-6989586621679380464"><span class="hs-identifier hs-var">tick</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380463"><span class="hs-identifier hs-var">n1</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380456"><span class="hs-identifier hs-var">cvs</span></a></span><span> </span><span class="annot"><span class="annottext">ChainValidationState -&gt; ChainValidationState -&gt; PropertyT IO ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, Eq a, Show a, HasCallStack) =&gt;
+a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; ChainValidationState -&gt; ChainValidationState
+</span><a href="#local-6989586621679380464"><span class="hs-identifier hs-var">tick</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380462"><span class="hs-identifier hs-var">n2</span></a></span><span> </span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380456"><span class="hs-identifier hs-var">cvs</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- | A transaction should validate in the mempool at a given slot when</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--   it validates in a block issued for that same slot.</span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Test.Cardano.Chain.Byron.API.html#ts_mempoolValidation"><span class="hs-identifier hs-type">ts_mempoolValidation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-149"></span><span id="ts_mempoolValidation"><span class="annot"><span class="annottext">ts_mempoolValidation :: TSProperty
+</span><a href="Test.Cardano.Chain.Byron.API.html#ts_mempoolValidation"><span class="hs-identifier hs-var hs-var">ts_mempoolValidation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestLimit -&gt; Property -&gt; TSProperty
+</span><a href="Test.Options.html#withTestsTS"><span class="hs-identifier hs-var">withTestsTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">100</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; TSProperty)
+-&gt; (PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; TSProperty
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+PropertyT IO () -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertyT IO () -&gt; TSProperty) -&gt; PropertyT IO () -&gt; TSProperty
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380467"><span class="annot"><span class="annottext">traceLength :: Word64
+</span><a href="#local-6989586621679380467"><span class="hs-identifier hs-var hs-var">traceLength</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">10</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-151"></span><span>  </span><span id="local-6989586621679380468"><span class="annot"><span class="annottext">Trace CHAIN
+</span><a href="#local-6989586621679380468"><span class="hs-identifier hs-var">sampleTrace</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (Trace CHAIN) -&gt; PropertyT IO (Trace CHAIN)
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen (Trace CHAIN) -&gt; PropertyT IO (Trace CHAIN))
+-&gt; Gen (Trace CHAIN) -&gt; PropertyT IO (Trace CHAIN)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall s. HasTrace s =&gt; BaseEnv s -&gt; Word64 -&gt; Gen (Trace s)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#trace"><span class="hs-identifier hs-var">STS.trace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Rule.Chain.html#CHAIN"><span class="hs-identifier hs-type">CHAIN</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380467"><span class="hs-identifier hs-var">traceLength</span></a></span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier hs-type">Spec.Slot</span></a></span><span> </span><span id="local-6989586621679380470"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380470"><span class="hs-identifier hs-var">slot</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380471"><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679380471"><span class="hs-identifier hs-var">utxo0</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Set VKeyGenesis
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PParams
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380472"><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679380472"><span class="hs-identifier hs-var">blockCount</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace CHAIN -&gt; Environment CHAIN
+forall s. Trace s -&gt; Environment s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#_traceEnv"><span class="hs-identifier hs-var">STS._traceEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Trace CHAIN
+</span><a href="#local-6989586621679380468"><span class="hs-identifier hs-var">sampleTrace</span></a></span><span>
+</span><span id="line-153"></span><span>      </span><span id="local-6989586621679380473"><span class="annot"><span class="annottext">abstractChainState :: State CHAIN
+</span><a href="#local-6989586621679380473"><span class="hs-identifier hs-var">abstractChainState</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679380474"><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679380474"><span class="hs-identifier hs-var">_stateSlot</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380475"><span class="annot"><span class="annottext">Seq VKeyGenesis
+</span><a href="#local-6989586621679380475"><span class="hs-identifier hs-var">allowedDelegators</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380476"><span class="annot"><span class="annottext">Hash
+</span><a href="#local-6989586621679380476"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380477"><span class="annot"><span class="annottext">UTxOState
+</span><a href="#local-6989586621679380477"><span class="hs-identifier hs-var">utxoState</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380478"><span class="annot"><span class="annottext">DIState
+</span><a href="#local-6989586621679380478"><span class="hs-identifier hs-var">diState</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380479"><span class="annot"><span class="annottext">UPIState
+</span><a href="#local-6989586621679380479"><span class="hs-identifier hs-var">upiState</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-154"></span><span>        </span><span class="annot"><span class="annottext">Trace CHAIN -&gt; State CHAIN
+forall s. Trace s -&gt; State s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#lastState"><span class="hs-identifier hs-var">STS.lastState</span></a></span><span> </span><span class="annot"><span class="annottext">Trace CHAIN
+</span><a href="#local-6989586621679380468"><span class="hs-identifier hs-var">sampleTrace</span></a></span><span>
+</span><span id="line-155"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679380481"><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380481"><span class="hs-identifier hs-var">cvs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380482"><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380482"><span class="hs-identifier hs-var">config</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380483"><span class="annot"><span class="annottext">AbstractToConcreteIdMaps
+</span><a href="#local-6989586621679380483"><span class="hs-identifier hs-var">abstractToConcreteIdMaps</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace CHAIN
+-&gt; (ChainValidationState, Config, AbstractToConcreteIdMaps)
+</span><a href="Test.Cardano.Chain.Byron.API.html#setupChainValidationState"><span class="hs-identifier hs-var">setupChainValidationState</span></a></span><span> </span><span class="annot"><span class="annottext">Trace CHAIN
+</span><a href="#local-6989586621679380468"><span class="hs-identifier hs-var">sampleTrace</span></a></span><span>
+</span><span id="line-156"></span><span>      </span><span id="local-6989586621679380484"><span class="annot"><span class="annottext">pm :: ProtocolMagicId
+</span><a href="#local-6989586621679380484"><span class="hs-identifier hs-var hs-var">pm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Config -&gt; ProtocolMagicId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Genesis.Config.html#configProtocolMagicId"><span class="hs-identifier hs-var">Genesis.configProtocolMagicId</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380482"><span class="hs-identifier hs-var">config</span></a></span><span>
+</span><span id="line-157"></span><span>      </span><span id="local-6989586621679380486"><span class="annot"><span class="annottext">txIdMap :: Map TxId TxId
+</span><a href="#local-6989586621679380486"><span class="hs-identifier hs-var hs-var">txIdMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AbstractToConcreteIdMaps -&gt; Map TxId TxId
+</span><a href="Test.Cardano.Chain.Elaboration.Block.html#transactionIds"><span class="hs-identifier hs-var">transactionIds</span></a></span><span> </span><span class="annot"><span class="annottext">AbstractToConcreteIdMaps
+</span><a href="#local-6989586621679380483"><span class="hs-identifier hs-var">abstractToConcreteIdMaps</span></a></span><span>
+</span><span id="line-158"></span><span>      </span><span id="local-6989586621679380487"><span class="annot"><span class="annottext">upIdMap :: Map UpId UpId
+</span><a href="#local-6989586621679380487"><span class="hs-identifier hs-var hs-var">upIdMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AbstractToConcreteIdMaps -&gt; Map UpId UpId
+</span><a href="Test.Cardano.Chain.Elaboration.Block.html#proposalIds"><span class="hs-identifier hs-var">proposalIds</span></a></span><span> </span><span class="annot"><span class="annottext">AbstractToConcreteIdMaps
+</span><a href="#local-6989586621679380483"><span class="hs-identifier hs-var">abstractToConcreteIdMaps</span></a></span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621679380489"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380489"><span class="hs-identifier hs-var">genSlot</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GenT Identity Word64 -&gt; PropertyT IO Word64
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(GenT Identity Word64 -&gt; PropertyT IO Word64)
+-&gt; GenT Identity Word64 -&gt; PropertyT IO Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380470"><span class="hs-identifier hs-var">slot</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; Word64) -&gt; GenT Identity Word64 -&gt; GenT Identity Word64
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Range Word64 -&gt; GenT Identity Word64
+forall (m :: * -&gt; *) a. (MonadGen m, Integral a) =&gt; Range a -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#integral"><span class="hs-identifier hs-var">Gen.integral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Range Word64
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#linear"><span class="hs-identifier hs-var">Range.linear</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">20</span></span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380491"><span class="annot"><span class="annottext">nextSlot :: Slot
+</span><a href="#local-6989586621679380491"><span class="hs-identifier hs-var hs-var">nextSlot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier hs-var">Spec.Slot</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380489"><span class="hs-identifier hs-var">genSlot</span></a></span><span>
+</span><span id="line-161"></span><span>      </span><span id="local-6989586621679380492"><span class="annot"><span class="annottext">pparams :: PParams
+</span><a href="#local-6989586621679380492"><span class="hs-identifier hs-var hs-var">pparams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UPIState -&gt; PParams
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#protocolParameters"><span class="hs-identifier hs-var">Spec.protocolParameters</span></a></span><span> </span><span class="annot"><span class="annottext">UPIState
+</span><a href="#local-6989586621679380479"><span class="hs-identifier hs-var">upiState</span></a></span><span>
+</span><span id="line-162"></span><span>      </span><span id="local-6989586621679380494"><span class="annot"><span class="annottext">utxoEnv :: UTxOEnv
+</span><a href="#local-6989586621679380494"><span class="hs-identifier hs-var hs-var">utxoEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO -&gt; PParams -&gt; UTxOEnv
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXO.html#UTxOEnv"><span class="hs-identifier hs-var">STS.UTxOEnv</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679380471"><span class="hs-identifier hs-var">utxo0</span></a></span><span> </span><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679380492"><span class="hs-identifier hs-var">pparams</span></a></span><span>
+</span><span id="line-163"></span><span>  </span><span id="local-6989586621679380496"><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679380496"><span class="hs-identifier hs-var">transaction</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (Signal UTXOW) -&gt; PropertyT IO (Signal UTXOW)
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen (Signal UTXOW) -&gt; PropertyT IO (Signal UTXOW))
+-&gt; Gen (Signal UTXOW) -&gt; PropertyT IO (Signal UTXOW)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall s. HasTrace s =&gt; SignalGenerator s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#sigGen"><span class="hs-identifier hs-var">STS.sigGen</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.STS.UTXOW.html#UTXOW"><span class="hs-identifier hs-type">STS.UTXOW</span></a></span><span> </span><span class="annot"><span class="annottext">UTxOEnv
+Environment UTXOW
+</span><a href="#local-6989586621679380494"><span class="hs-identifier hs-var">utxoEnv</span></a></span><span> </span><span class="annot"><span class="annottext">UTxOState
+State UTXOW
+</span><a href="#local-6989586621679380477"><span class="hs-identifier hs-var">utxoState</span></a></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380498"><span class="annot"><span class="annottext">txAux :: ATxAux ByteString
+</span><a href="#local-6989586621679380498"><span class="hs-identifier hs-var hs-var">txAux</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ATxAux ByteString, Map TxId TxId) -&gt; ATxAux ByteString
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">((ATxAux ByteString, Map TxId TxId) -&gt; ATxAux ByteString)
+-&gt; (ATxAux ByteString, Map TxId TxId) -&gt; ATxAux ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map TxId TxId -&gt; Tx -&gt; (ATxAux ByteString, Map TxId TxId)
+</span><a href="Test.Cardano.Chain.UTxO.Model.html#elaborateTxWitsBSWithMap"><span class="hs-identifier hs-var">elaborateTxWitsBSWithMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679380486"><span class="hs-identifier hs-var">txIdMap</span></a></span><span> </span><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679380496"><span class="hs-identifier hs-var">transaction</span></a></span><span>
+</span><span id="line-165"></span><span>      </span><span id="local-6989586621679380500"><span class="annot"><span class="annottext">mempoolTx :: AMempoolPayload ByteString
+</span><a href="#local-6989586621679380500"><span class="hs-identifier hs-var hs-var">mempoolTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString -&gt; AMempoolPayload ByteString
+forall a. ATxAux a -&gt; AMempoolPayload a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.MempoolPayload.html#MempoolTx"><span class="hs-identifier hs-var">MempoolTx</span></a></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679380498"><span class="hs-identifier hs-var">txAux</span></a></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380508"><span class="annot"><span class="annottext">dsEnv :: DSEnv
+</span><a href="#local-6989586621679380508"><span class="hs-identifier hs-var hs-var">dsEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-168"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSEnv"><span class="hs-identifier hs-type">Spec.DSEnv</span></a></span><span>
+</span><span id="line-169"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">_dSEnvAllowedDelegators :: Set VKeyGenesis
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvAllowedDelegators"><span class="hs-identifier hs-var">Spec._dSEnvAllowedDelegators</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[VKeyGenesis] -&gt; Set VKeyGenesis
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="annot"><span class="annottext">([VKeyGenesis] -&gt; Set VKeyGenesis)
+-&gt; (Seq VKeyGenesis -&gt; [VKeyGenesis])
+-&gt; Seq VKeyGenesis
+-&gt; Set VKeyGenesis
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Seq VKeyGenesis -&gt; [VKeyGenesis]
+forall a. Seq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="annot"><span class="annottext">(Seq VKeyGenesis -&gt; Set VKeyGenesis)
+-&gt; Seq VKeyGenesis -&gt; Set VKeyGenesis
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Seq VKeyGenesis
+</span><a href="#local-6989586621679380475"><span class="hs-identifier hs-var">allowedDelegators</span></a></span><span>
+</span><span id="line-170"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dSEnvEpoch :: Epoch
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvEpoch"><span class="hs-identifier hs-var">Spec._dSEnvEpoch</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Slot -&gt; BlockCount -&gt; Epoch
+Slot -&gt; BlockCount -&gt; Epoch
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Rule.Epoch.html#sEpoch"><span class="hs-identifier hs-var">STS.sEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679380491"><span class="hs-identifier hs-var">nextSlot</span></a></span><span> </span><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679380472"><span class="hs-identifier hs-var">blockCount</span></a></span><span>
+</span><span id="line-171"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dSEnvSlot :: Slot
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvSlot"><span class="hs-identifier hs-var">Spec._dSEnvSlot</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679380491"><span class="hs-identifier hs-var">nextSlot</span></a></span><span>
+</span><span id="line-172"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dSEnvK :: BlockCount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvK"><span class="hs-identifier hs-var">Spec._dSEnvK</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679380472"><span class="hs-identifier hs-var">blockCount</span></a></span><span>
+</span><span id="line-173"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-174"></span><span>  </span><span id="local-6989586621679380517"><span class="annot"><span class="annottext">Maybe DCert
+</span><a href="#local-6989586621679380517"><span class="hs-identifier hs-var">dcert</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (Maybe DCert) -&gt; PropertyT IO (Maybe DCert)
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen (Maybe DCert) -&gt; PropertyT IO (Maybe DCert))
+-&gt; Gen (Maybe DCert) -&gt; PropertyT IO (Maybe DCert)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[DCert] -&gt; Maybe DCert
+forall (f :: * -&gt; *) a. Foldable f =&gt; f a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Base.html#head"><span class="hs-identifier hs-var">head</span></a></span><span> </span><span class="annot"><span class="annottext">([DCert] -&gt; Maybe DCert)
+-&gt; GenT Identity [DCert] -&gt; Gen (Maybe DCert)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">DSEnv -&gt; DIState -&gt; GenT Identity [DCert]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#dcertsGen"><span class="hs-identifier hs-var">Spec.dcertsGen</span></a></span><span> </span><span class="annot"><span class="annottext">DSEnv
+</span><a href="#local-6989586621679380508"><span class="hs-identifier hs-var">dsEnv</span></a></span><span> </span><span class="annot"><span class="annottext">DIState
+</span><a href="#local-6989586621679380478"><span class="hs-identifier hs-var">diState</span></a></span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380524"><span class="annot"><span class="annottext">mempoolDCert :: Maybe (AMempoolPayload ByteString)
+</span><a href="#local-6989586621679380524"><span class="hs-identifier hs-var hs-var">mempoolDCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AMempoolPayload () -&gt; AMempoolPayload ByteString
+</span><a href="#local-6989586621679380525"><span class="hs-identifier hs-var">addAnnotation</span></a></span><span> </span><span class="annot"><span class="annottext">(AMempoolPayload () -&gt; AMempoolPayload ByteString)
+-&gt; (DCert -&gt; AMempoolPayload ())
+-&gt; DCert
+-&gt; AMempoolPayload ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ACertificate () -&gt; AMempoolPayload ()
+forall a. ACertificate a -&gt; AMempoolPayload a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.MempoolPayload.html#MempoolDlg"><span class="hs-identifier hs-var">MempoolDlg</span></a></span><span> </span><span class="annot"><span class="annottext">(ACertificate () -&gt; AMempoolPayload ())
+-&gt; (DCert -&gt; ACertificate ()) -&gt; DCert -&gt; AMempoolPayload ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; DCert -&gt; ACertificate ()
+</span><a href="Test.Cardano.Chain.Elaboration.Delegation.html#elaborateDCert"><span class="hs-identifier hs-var">elaborateDCert</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId
+</span><a href="#local-6989586621679380484"><span class="hs-identifier hs-var">pm</span></a></span><span> </span><span class="annot"><span class="annottext">(DCert -&gt; AMempoolPayload ByteString)
+-&gt; Maybe DCert -&gt; Maybe (AMempoolPayload ByteString)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Maybe DCert
+</span><a href="#local-6989586621679380517"><span class="hs-identifier hs-var">dcert</span></a></span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679380527"><span class="hs-identifier hs-type">upiEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#UPIEnv"><span class="hs-identifier hs-type">Spec.UPIEnv</span></a></span><span>
+</span><span id="line-178"></span><span>      </span><span id="local-6989586621679380527"><span class="annot"><span class="annottext">upiEnv :: UPIEnv
+</span><a href="#local-6989586621679380527"><span class="hs-identifier hs-var hs-var">upiEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-179"></span><span>        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679380491"><span class="hs-identifier hs-var">nextSlot</span></a></span><span>
+</span><span id="line-180"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DIState -&gt; Bimap VKeyGenesis VKey
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateDelegationMap"><span class="hs-identifier hs-var">Spec._dIStateDelegationMap</span></a></span><span> </span><span class="annot"><span class="annottext">DIState
+</span><a href="#local-6989586621679380478"><span class="hs-identifier hs-var">diState</span></a></span><span>
+</span><span id="line-181"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679380472"><span class="hs-identifier hs-var">blockCount</span></a></span><span>
+</span><span id="line-182"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word8) -&gt; Int -&gt; Word8
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Seq VKeyGenesis -&gt; Int
+forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Base.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">Seq VKeyGenesis
+</span><a href="#local-6989586621679380475"><span class="hs-identifier hs-var">allowedDelegators</span></a></span><span>
+</span><span id="line-183"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-184"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679380530"><span class="annot"><span class="annottext">Maybe UProp
+</span><a href="#local-6989586621679380530"><span class="hs-identifier hs-var">uProp</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679380531"><span class="annot"><span class="annottext">[Vote]
+</span><a href="#local-6989586621679380531"><span class="hs-identifier hs-var">vote</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (Maybe UProp, [Vote]) -&gt; PropertyT IO (Maybe UProp, [Vote])
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen (Maybe UProp, [Vote]) -&gt; PropertyT IO (Maybe UProp, [Vote]))
+-&gt; Gen (Maybe UProp, [Vote]) -&gt; PropertyT IO (Maybe UProp, [Vote])
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">([Vote] -&gt; [Vote])
+-&gt; (Maybe UProp, [Vote]) -&gt; (Maybe UProp, [Vote])
+forall a b. (a -&gt; b) -&gt; (Maybe UProp, a) -&gt; (Maybe UProp, b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; [Vote] -&gt; [Vote]
+forall a. Int -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">take</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Maybe UProp, [Vote]) -&gt; (Maybe UProp, [Vote]))
+-&gt; Gen (Maybe UProp, [Vote]) -&gt; Gen (Maybe UProp, [Vote])
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">UPIEnv -&gt; UPIState -&gt; Gen (Maybe UProp, [Vote])
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#updateProposalAndVotesGen"><span class="hs-identifier hs-var">Spec.updateProposalAndVotesGen</span></a></span><span> </span><span class="annot"><span class="annottext">UPIEnv
+</span><a href="#local-6989586621679380527"><span class="hs-identifier hs-var">upiEnv</span></a></span><span> </span><span class="annot"><span class="annottext">UPIState
+</span><a href="#local-6989586621679380479"><span class="hs-identifier hs-var">upiState</span></a></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380539"><span class="annot"><span class="annottext">mempoolUpdatePropAndVote :: [AMempoolPayload ByteString]
+</span><a href="#local-6989586621679380539"><span class="hs-identifier hs-var hs-var">mempoolUpdatePropAndVote</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe UProp
+</span><a href="#local-6989586621679380530"><span class="hs-identifier hs-var">uProp</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-187"></span><span>        </span><span class="annot"><span class="annottext">Maybe UProp
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-188"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679380540"><span class="annot"><span class="annottext">UProp
+</span><a href="#local-6989586621679380540"><span class="hs-identifier hs-var">up</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-189"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380541"><span class="annot"><span class="annottext">up' :: AProposal ()
+</span><a href="#local-6989586621679380541"><span class="hs-identifier hs-var hs-var">up'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; UProp -&gt; AProposal ()
+</span><a href="Test.Cardano.Chain.Elaboration.Update.html#elaborateUpdateProposal"><span class="hs-identifier hs-var">elaborateUpdateProposal</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId
+</span><a href="#local-6989586621679380484"><span class="hs-identifier hs-var">pm</span></a></span><span> </span><span class="annot"><span class="annottext">UProp
+</span><a href="#local-6989586621679380540"><span class="hs-identifier hs-var">up</span></a></span><span>
+</span><span id="line-190"></span><span>              </span><span id="local-6989586621679380546"><span class="annot"><span class="annottext">upIdMap' :: Map UpId UpId
+</span><a href="#local-6989586621679380546"><span class="hs-identifier hs-var hs-var">upIdMap'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpId -&gt; UpId -&gt; Map UpId UpId -&gt; Map UpId UpId
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.insert</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UProp -&gt; UpId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#_upId"><span class="hs-identifier hs-var">Spec._upId</span></a></span><span> </span><span class="annot"><span class="annottext">UProp
+</span><a href="#local-6989586621679380540"><span class="hs-identifier hs-var">up</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AProposal () -&gt; UpId
+forall a. EncCBOR a =&gt; a -&gt; Hash a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Hashing.html#serializeCborHash"><span class="hs-identifier hs-var">H.serializeCborHash</span></a></span><span> </span><span class="annot"><span class="annottext">AProposal ()
+</span><a href="#local-6989586621679380541"><span class="hs-identifier hs-var">up'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map UpId UpId
+</span><a href="#local-6989586621679380487"><span class="hs-identifier hs-var">upIdMap</span></a></span><span>
+</span><span id="line-191"></span><span>              </span><span id="local-6989586621679380551"><span class="annot"><span class="annottext">vote' :: [AVote ()]
+</span><a href="#local-6989586621679380551"><span class="hs-identifier hs-var hs-var">vote'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; Map UpId UpId -&gt; Vote -&gt; AVote ()
+</span><a href="Test.Cardano.Chain.Elaboration.Update.html#elaborateVote"><span class="hs-identifier hs-var">elaborateVote</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId
+</span><a href="#local-6989586621679380484"><span class="hs-identifier hs-var">pm</span></a></span><span> </span><span class="annot"><span class="annottext">Map UpId UpId
+</span><a href="#local-6989586621679380546"><span class="hs-identifier hs-var">upIdMap'</span></a></span><span> </span><span class="annot"><span class="annottext">(Vote -&gt; AVote ()) -&gt; [Vote] -&gt; [AVote ()]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[Vote]
+</span><a href="#local-6989586621679380531"><span class="hs-identifier hs-var">vote</span></a></span><span>
+</span><span id="line-192"></span><span>           </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">AMempoolPayload () -&gt; AMempoolPayload ByteString
+</span><a href="#local-6989586621679380525"><span class="hs-identifier hs-var">addAnnotation</span></a></span><span>
+</span><span id="line-193"></span><span>                </span><span class="annot"><span class="annottext">(AMempoolPayload () -&gt; AMempoolPayload ByteString)
+-&gt; [AMempoolPayload ()] -&gt; [AMempoolPayload ByteString]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">AProposal () -&gt; AMempoolPayload ()
+forall a. AProposal a -&gt; AMempoolPayload a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.MempoolPayload.html#MempoolUpdateProposal"><span class="hs-identifier hs-var">MempoolUpdateProposal</span></a></span><span> </span><span class="annot"><span class="annottext">AProposal ()
+</span><a href="#local-6989586621679380541"><span class="hs-identifier hs-var">up'</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-194"></span><span>                </span><span class="annot"><span class="annottext">[AMempoolPayload ()]
+-&gt; [AMempoolPayload ()] -&gt; [AMempoolPayload ()]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AVote () -&gt; AMempoolPayload ()
+forall a. AVote a -&gt; AMempoolPayload a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.MempoolPayload.html#MempoolUpdateVote"><span class="hs-identifier hs-var">MempoolUpdateVote</span></a></span><span> </span><span class="annot"><span class="annottext">(AVote () -&gt; AMempoolPayload ())
+-&gt; [AVote ()] -&gt; [AMempoolPayload ()]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[AVote ()]
+</span><a href="#local-6989586621679380551"><span class="hs-identifier hs-var">vote'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380556"><span class="annot"><span class="annottext">mempoolPayloads :: [AMempoolPayload ByteString]
+</span><a href="#local-6989586621679380556"><span class="hs-identifier hs-var hs-var">mempoolPayloads</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-197"></span><span>        </span><span class="hs-special">[</span><span class="annot"><span class="annottext">AMempoolPayload ByteString
+</span><a href="#local-6989586621679380500"><span class="hs-identifier hs-var">mempoolTx</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-198"></span><span>          </span><span class="annot"><span class="annottext">[AMempoolPayload ByteString]
+-&gt; [AMempoolPayload ByteString] -&gt; [AMempoolPayload ByteString]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">[AMempoolPayload ByteString]
+</span><a href="#local-6989586621679380539"><span class="hs-identifier hs-var">mempoolUpdatePropAndVote</span></a></span><span>
+</span><span id="line-199"></span><span>          </span><span class="annot"><span class="annottext">[AMempoolPayload ByteString]
+-&gt; [AMempoolPayload ByteString] -&gt; [AMempoolPayload ByteString]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Maybe (AMempoolPayload ByteString) -&gt; [AMempoolPayload ByteString]
+forall a. Maybe a -&gt; [a]
+</span><span class="hs-identifier hs-var">maybeToList</span></span><span> </span><span class="annot"><span class="annottext">Maybe (AMempoolPayload ByteString)
+</span><a href="#local-6989586621679380524"><span class="hs-identifier hs-var">mempoolDCert</span></a></span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span>  </span><span id="local-6989586621679380558"><span class="annot"><span class="annottext">VKey
+</span><a href="#local-6989586621679380558"><span class="hs-identifier hs-var">issuerKey</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-202"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679380559"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-type">STS.Environment</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Rule.SigCnt.html#SIGCNT"><span class="hs-identifier hs-type">STS.SIGCNT</span></a></span><span>
+</span><span id="line-203"></span><span>        </span><span id="local-6989586621679380559"><span class="annot"><span class="annottext">env :: Environment SIGCNT
+</span><a href="#local-6989586621679380559"><span class="hs-identifier hs-var hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-204"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679380492"><span class="hs-identifier hs-var">pparams</span></a></span><span>
+</span><span id="line-205"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DIState -&gt; Bimap VKeyGenesis VKey
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateDelegationMap"><span class="hs-identifier hs-var">Spec._dIStateDelegationMap</span></a></span><span> </span><span class="annot"><span class="annottext">DIState
+</span><a href="#local-6989586621679380478"><span class="hs-identifier hs-var">diState</span></a></span><span>
+</span><span id="line-206"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679380472"><span class="hs-identifier hs-var">blockCount</span></a></span><span>
+</span><span id="line-207"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-208"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Gen VKey -&gt; PropertyT IO VKey
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen VKey -&gt; PropertyT IO VKey) -&gt; Gen VKey -&gt; PropertyT IO VKey
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Environment SIGCNT -&gt; State SIGCNT -&gt; Gen VKey
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Rule.SigCnt.html#issuer"><span class="hs-identifier hs-var">STS.issuer</span></a></span><span> </span><span class="annot"><span class="annottext">Environment SIGCNT
+</span><a href="#local-6989586621679380559"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">Seq VKeyGenesis
+State SIGCNT
+</span><a href="#local-6989586621679380475"><span class="hs-identifier hs-var">allowedDelegators</span></a></span><span>
+</span><span id="line-209"></span><span>  </span><span id="local-6989586621679380561"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679380561"><span class="hs-identifier hs-var">aBlockVersion</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen ProtVer -&gt; PropertyT IO ProtVer
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen ProtVer -&gt; PropertyT IO ProtVer)
+-&gt; Gen ProtVer -&gt; PropertyT IO ProtVer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">UPIEnv -&gt; UPIState -&gt; Gen ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#protocolVersionEndorsementGen"><span class="hs-identifier hs-var">Spec.protocolVersionEndorsementGen</span></a></span><span> </span><span class="annot"><span class="annottext">UPIEnv
+</span><a href="#local-6989586621679380527"><span class="hs-identifier hs-var">upiEnv</span></a></span><span> </span><span class="annot"><span class="annottext">UPIState
+</span><a href="#local-6989586621679380479"><span class="hs-identifier hs-var">upiState</span></a></span><span>
+</span><span id="line-210"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380563"><span class="annot"><span class="annottext">abstractBlock :: Block
+</span><a href="#local-6989586621679380563"><span class="hs-identifier hs-var hs-var">abstractBlock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-211"></span><span>        </span><span class="annot"><span class="annottext">Hash
+-&gt; Slot
+-&gt; VKey
+-&gt; ProtVer
+-&gt; [DCert]
+-&gt; Maybe UProp
+-&gt; [Vote]
+-&gt; [Tx]
+-&gt; Block
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-chain-1.0.1.1/doc/html/byron-spec-chain/src/Byron.Spec.Chain.STS.Block.html#mkBlock"><span class="hs-identifier hs-var">STS.mkBlock</span></a></span><span>
+</span><span id="line-212"></span><span>          </span><span class="annot"><span class="annottext">Hash
+</span><a href="#local-6989586621679380476"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-213"></span><span>          </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679380491"><span class="hs-identifier hs-var">nextSlot</span></a></span><span>
+</span><span id="line-214"></span><span>          </span><span class="annot"><span class="annottext">VKey
+</span><a href="#local-6989586621679380558"><span class="hs-identifier hs-var">issuerKey</span></a></span><span>
+</span><span id="line-215"></span><span>          </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679380561"><span class="hs-identifier hs-var">aBlockVersion</span></a></span><span>
+</span><span id="line-216"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe DCert -&gt; [DCert]
+forall a. Maybe a -&gt; [a]
+</span><span class="hs-identifier hs-var">maybeToList</span></span><span> </span><span class="annot"><span class="annottext">Maybe DCert
+</span><a href="#local-6989586621679380517"><span class="hs-identifier hs-var">dcert</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-217"></span><span>          </span><span class="annot"><span class="annottext">Maybe UProp
+</span><a href="#local-6989586621679380530"><span class="hs-identifier hs-var">uProp</span></a></span><span>
+</span><span id="line-218"></span><span>          </span><span class="annot"><span class="annottext">[Vote]
+</span><a href="#local-6989586621679380531"><span class="hs-identifier hs-var">vote</span></a></span><span>
+</span><span id="line-219"></span><span>          </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679380496"><span class="hs-identifier hs-var">transaction</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-220"></span><span>      </span><span id="local-6989586621679380565"><span class="annot"><span class="annottext">concreteBlock :: ABlock ByteString
+</span><a href="#local-6989586621679380565"><span class="hs-identifier hs-var hs-var">concreteBlock</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-221"></span><span>        </span><span class="annot"><span class="annottext">Config
+-&gt; ChainValidationState
+-&gt; AbstractToConcreteIdMaps
+-&gt; State CHAIN
+-&gt; Block
+-&gt; ABlock ByteString
+</span><a href="Test.Cardano.Chain.Block.Model.html#elaborateBlock"><span class="hs-identifier hs-var">elaborateBlock</span></a></span><span>
+</span><span id="line-222"></span><span>          </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380482"><span class="hs-identifier hs-var">config</span></a></span><span>
+</span><span id="line-223"></span><span>          </span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380481"><span class="hs-identifier hs-var">cvs</span></a></span><span>
+</span><span id="line-224"></span><span>          </span><span class="annot"><span class="annottext">AbstractToConcreteIdMaps
+</span><a href="#local-6989586621679380483"><span class="hs-identifier hs-var">abstractToConcreteIdMaps</span></a></span><span>
+</span><span id="line-225"></span><span>          </span><span class="annot"><span class="annottext">(Slot, Seq VKeyGenesis, Hash, UTxOState, DIState, UPIState)
+State CHAIN
+</span><a href="#local-6989586621679380473"><span class="hs-identifier hs-var">abstractChainState</span></a></span><span>
+</span><span id="line-226"></span><span>          </span><span class="annot"><span class="annottext">Block
+</span><a href="#local-6989586621679380563"><span class="hs-identifier hs-var">abstractBlock</span></a></span><span>
+</span><span id="line-227"></span><span>
+</span><span id="line-228"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679380566"><span class="annot"><span class="annottext">validationMode :: ValidationMode
+</span><a href="#local-6989586621679380566"><span class="hs-identifier hs-var hs-var">validationMode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BlockValidationMode -&gt; TxValidationMode -&gt; ValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.ValidationMode.html#ValidationMode"><span class="hs-identifier hs-var">ValidationMode</span></a></span><span> </span><span class="annot"><span class="annottext">BlockValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.ValidationMode.html#BlockValidation"><span class="hs-identifier hs-var">BlockValidation</span></a></span><span> </span><span class="annot"><span class="annottext">TxValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.ValidationMode.html#TxValidation"><span class="hs-identifier hs-var">TxValidation</span></a></span><span>
+</span><span id="line-229"></span><span>      </span><span class="annot"><a href="#local-6989586621679380570"><span class="hs-identifier hs-type">apply1</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-230"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#ChainValidationState"><span class="hs-identifier hs-type">ChainValidationState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-231"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.MempoolPayload.html#AMempoolPayload"><span class="hs-identifier hs-type">AMempoolPayload</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-232"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Mempool.html#ApplyMempoolPayloadErr"><span class="hs-identifier hs-type">ApplyMempoolPayloadErr</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#ChainValidationState"><span class="hs-identifier hs-type">ChainValidationState</span></a></span><span>
+</span><span id="line-233"></span><span>      </span><span id="local-6989586621679380570"><span class="annot"><span class="annottext">apply1 :: ChainValidationState
+-&gt; AMempoolPayload ByteString
+-&gt; Either ApplyMempoolPayloadErr ChainValidationState
+</span><a href="#local-6989586621679380570"><span class="hs-identifier hs-var hs-var">apply1</span></a></span></span><span> </span><span id="local-6989586621679380571"><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380571"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679380572"><span class="annot"><span class="annottext">AMempoolPayload ByteString
+</span><a href="#local-6989586621679380572"><span class="hs-identifier hs-var">mp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ValidationMode
+-&gt; Config
+-&gt; SlotNumber
+-&gt; AMempoolPayload ByteString
+-&gt; ChainValidationState
+-&gt; Either ApplyMempoolPayloadErr ChainValidationState
+forall (m :: * -&gt; *).
+MonadError ApplyMempoolPayloadErr m =&gt;
+ValidationMode
+-&gt; Config
+-&gt; SlotNumber
+-&gt; AMempoolPayload ByteString
+-&gt; ChainValidationState
+-&gt; m ChainValidationState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Mempool.html#applyMempoolPayload"><span class="hs-identifier hs-var">applyMempoolPayload</span></a></span><span> </span><span class="annot"><span class="annottext">ValidationMode
+</span><a href="#local-6989586621679380566"><span class="hs-identifier hs-var">validationMode</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380482"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SlotNumber
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier hs-var">SlotNumber</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679380489"><span class="hs-identifier hs-var">genSlot</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">AMempoolPayload ByteString
+</span><a href="#local-6989586621679380572"><span class="hs-identifier hs-var">mp</span></a></span><span> </span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380571"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-234"></span><span>      </span><span id="local-6989586621679380576"><span class="annot"><span class="annottext">headerHash :: HeaderHash
+</span><a href="#local-6989586621679380576"><span class="hs-identifier hs-var hs-var">headerHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash Int -&gt; HeaderHash
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Hash Int
+forall a. EncCBOR a =&gt; a -&gt; Hash a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Hashing.html#serializeCborHash"><span class="hs-identifier hs-var">H.serializeCborHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Header.html#HeaderHash"><span class="hs-identifier hs-type">HeaderHash</span></a></span><span>
+</span><span id="line-235"></span><span>      </span><span id="local-6989586621679380579"><span class="annot"><span class="annottext">applyMempoolPayloadResult :: Either ApplyMempoolPayloadErr ChainValidationState
+</span><a href="#local-6989586621679380579"><span class="hs-identifier hs-var hs-var">applyMempoolPayloadResult</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ChainValidationState
+ -&gt; AMempoolPayload ByteString
+ -&gt; Either ApplyMempoolPayloadErr ChainValidationState)
+-&gt; ChainValidationState
+-&gt; [AMempoolPayload ByteString]
+-&gt; Either ApplyMempoolPayloadErr ChainValidationState
+forall (t :: * -&gt; *) (m :: * -&gt; *) b a.
+(Foldable t, Monad m) =&gt;
+(b -&gt; a -&gt; m b) -&gt; b -&gt; t a -&gt; m b
+</span><span class="hs-identifier hs-var">foldM</span></span><span> </span><span class="annot"><span class="annottext">ChainValidationState
+-&gt; AMempoolPayload ByteString
+-&gt; Either ApplyMempoolPayloadErr ChainValidationState
+</span><a href="#local-6989586621679380570"><span class="hs-identifier hs-var">apply1</span></a></span><span> </span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380481"><span class="hs-identifier hs-var">cvs</span></a></span><span> </span><span class="annot"><span class="annottext">[AMempoolPayload ByteString]
+</span><a href="#local-6989586621679380556"><span class="hs-identifier hs-var">mempoolPayloads</span></a></span><span>
+</span><span id="line-236"></span><span>      </span><span id="local-6989586621679380581"><span class="annot"><span class="annottext">validateBlockResult :: Either ChainValidationError ChainValidationState
+</span><a href="#local-6989586621679380581"><span class="hs-identifier hs-var hs-var">validateBlockResult</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-237"></span><span>        </span><span class="annot"><span class="annottext">Config
+-&gt; ValidationMode
+-&gt; ABlock ByteString
+-&gt; HeaderHash
+-&gt; ChainValidationState
+-&gt; Either ChainValidationError ChainValidationState
+forall (m :: * -&gt; *).
+MonadError ChainValidationError m =&gt;
+Config
+-&gt; ValidationMode
+-&gt; ABlock ByteString
+-&gt; HeaderHash
+-&gt; ChainValidationState
+-&gt; m ChainValidationState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Validation.html#validateBlock"><span class="hs-identifier hs-var">validateBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Config
+</span><a href="#local-6989586621679380482"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">ValidationMode
+</span><a href="#local-6989586621679380566"><span class="hs-identifier hs-var">validationMode</span></a></span><span> </span><span class="annot"><span class="annottext">ABlock ByteString
+</span><a href="#local-6989586621679380565"><span class="hs-identifier hs-var">concreteBlock</span></a></span><span> </span><span class="annot"><span class="annottext">HeaderHash
+</span><a href="#local-6989586621679380576"><span class="hs-identifier hs-var">headerHash</span></a></span><span> </span><span class="annot"><span class="annottext">ChainValidationState
+</span><a href="#local-6989586621679380481"><span class="hs-identifier hs-var">cvs</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-238"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#ChainValidationError"><span class="hs-identifier hs-type">ChainValidationError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.Validation.html#ChainValidationState"><span class="hs-identifier hs-type">ChainValidationState</span></a></span><span>
+</span><span id="line-239"></span><span>
+</span><span id="line-240"></span><span>  </span><span class="annot"><span class="annottext">Either ApplyMempoolPayloadErr ChainValidationState
+-&gt; PropertyT IO ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#annotateShow"><span class="hs-identifier hs-var">annotateShow</span></a></span><span> </span><span class="annot"><span class="annottext">Either ApplyMempoolPayloadErr ChainValidationState
+</span><a href="#local-6989586621679380579"><span class="hs-identifier hs-var">applyMempoolPayloadResult</span></a></span><span>
+</span><span id="line-241"></span><span>  </span><span class="annot"><span class="annottext">Either ChainValidationError ChainValidationState -&gt; PropertyT IO ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#annotateShow"><span class="hs-identifier hs-var">annotateShow</span></a></span><span> </span><span class="annot"><span class="annottext">Either ChainValidationError ChainValidationState
+</span><a href="#local-6989586621679380581"><span class="hs-identifier hs-var">validateBlockResult</span></a></span><span>
+</span><span id="line-242"></span><span>  </span><span class="annot"><span class="annottext">Either ChainValidationError ChainValidationState -&gt; Bool
+forall a b. Either a b -&gt; Bool
+</span><span class="hs-identifier hs-var">isRight</span></span><span> </span><span class="annot"><span class="annottext">Either ChainValidationError ChainValidationState
+</span><a href="#local-6989586621679380581"><span class="hs-identifier hs-var">validateBlockResult</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; PropertyT IO ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, Eq a, Show a, HasCallStack) =&gt;
+a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Either ApplyMempoolPayloadErr ChainValidationState -&gt; Bool
+forall a b. Either a b -&gt; Bool
+</span><span class="hs-identifier hs-var">isRight</span></span><span> </span><span class="annot"><span class="annottext">Either ApplyMempoolPayloadErr ChainValidationState
+</span><a href="#local-6989586621679380579"><span class="hs-identifier hs-var">applyMempoolPayloadResult</span></a></span><span>
+</span><span id="line-243"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-244"></span><span>    </span><span class="annot"><a href="#local-6989586621679380525"><span class="hs-identifier hs-type">addAnnotation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.MempoolPayload.html#MempoolPayload"><span class="hs-identifier hs-type">MempoolPayload</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.MempoolPayload.html#AMempoolPayload"><span class="hs-identifier hs-type">AMempoolPayload</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-245"></span><span>    </span><span id="local-6989586621679380525"><span class="annot"><span class="annottext">addAnnotation :: AMempoolPayload () -&gt; AMempoolPayload ByteString
+</span><a href="#local-6989586621679380525"><span class="hs-identifier hs-var hs-var">addAnnotation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AMempoolPayload () -&gt; Encoding)
+-&gt; (forall s. Decoder s (AMempoolPayload ByteSpan))
+-&gt; AMempoolPayload ()
+-&gt; AMempoolPayload ByteString
+forall (f :: * -&gt; *) a.
+Functor f =&gt;
+(f a -&gt; Encoding)
+-&gt; (forall s. Decoder s (f ByteSpan)) -&gt; f a -&gt; f ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Byron.API.Common.html#reAnnotateUsing"><span class="hs-identifier hs-var">reAnnotateUsing</span></a></span><span> </span><span class="annot"><span class="annottext">AMempoolPayload () -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (AMempoolPayload ByteSpan)
+forall s. Decoder s (AMempoolPayload ByteSpan)
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-246"></span></pre></body></html>

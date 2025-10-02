@@ -1,0 +1,431 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- | Pre-generated items to use in traces.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--   Functions in this module make specific assumptions about the sets of keys</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--   involved, and thus cannot be used as generic generators.</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Generator.Presets</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genCoreNodeKeys"><span class="hs-identifier">genCoreNodeKeys</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genIssuerKeys"><span class="hs-identifier">genIssuerKeys</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#coreNodeKeys"><span class="hs-identifier">coreNodeKeys</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#keySpace"><span class="hs-identifier">keySpace</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genEnv"><span class="hs-identifier">genEnv</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genesisDelegs0"><span class="hs-identifier">genesisDelegs0</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.EraGen.html#someKeyPairs"><span class="hs-identifier">someKeyPairs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#keyPairs"><span class="hs-identifier">keyPairs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#scriptSpace"><span class="hs-identifier">scriptSpace</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier">EraScript</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier">hashScript</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#GenDelegPair"><span class="hs-identifier">GenDelegPair</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier">KeyHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier">KeyRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#coerceKeyRole"><span class="hs-identifier">coerceKeyRole</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#hashKey"><span class="hs-identifier">hashKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/doc/html/cardano-protocol-tpraos/src/Cardano.Protocol.Crypto.html"><span class="hs-identifier">Cardano.Protocol.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier">Crypto</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/doc/html/cardano-protocol-tpraos/src/Cardano.Protocol.Crypto.html#hashVerKeyVRF"><span class="hs-identifier">hashVerKeyVRF</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html"><span class="hs-identifier">Test.Cardano.Ledger.Core.KeyPair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier">KeyPair</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes.html#MockCrypto"><span class="hs-identifier">MockCrypto</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Constants</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier">Constants</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Core.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Generator.Core</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.EraGen.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Generator.EraGen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.EraGen.html#EraGen"><span class="hs-identifier">EraGen</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.EraGen.html#allScripts"><span class="hs-identifier">allScripts</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.EraGen.html#someKeyPairs"><span class="hs-identifier">someKeyPairs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Generator.ScriptClass</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#keyPairs"><span class="hs-identifier">keyPairs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Utils.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Utils</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Utils.html#maxKESIterations"><span class="hs-identifier">maxKESIterations</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Utils.html#slotsPerKESIteration"><span class="hs-identifier">slotsPerKESIteration</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.TPraos.Create.html"><span class="hs-identifier">Test.Cardano.Protocol.TPraos.Create</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.TPraos.Create.html#genAllIssuerKeys"><span class="hs-identifier">genAllIssuerKeys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- =================================================================</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- | Example generator environment, consisting of default constants and an</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- corresponding keyspace.</span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genEnv"><span class="hs-identifier hs-type">genEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679561349"><span class="annot"><a href="#local-6989586621679561349"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span id="local-6989586621679561351"><span class="annot"><a href="#local-6989586621679561351"><span class="hs-identifier hs-type">c</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.EraGen.html#EraGen"><span class="hs-identifier hs-type">EraGen</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561349"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561351"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679561349"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Core.html#GenEnv"><span class="hs-identifier hs-type">GenEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561351"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561349"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-59"></span><span id="genEnv"><span class="annot"><span class="annottext">genEnv :: forall era c.
+(EraGen era, Crypto c) =&gt;
+Proxy era -&gt; Constants -&gt; GenEnv c era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genEnv"><span class="hs-identifier hs-var hs-var">genEnv</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679561491"><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561491"><span class="hs-identifier hs-var">constants</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="annottext">KeySpace c era -&gt; ScriptSpace era -&gt; Constants -&gt; GenEnv c era
+forall c era.
+KeySpace c era -&gt; ScriptSpace era -&gt; Constants -&gt; GenEnv c era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Core.html#GenEnv"><span class="hs-identifier hs-var">GenEnv</span></a></span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Constants -&gt; KeySpace c era
+forall era c. (EraGen era, Crypto c) =&gt; Constants -&gt; KeySpace c era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#keySpace"><span class="hs-identifier hs-var">keySpace</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561491"><span class="hs-identifier hs-var">constants</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era.
+EraScript era =&gt;
+[TwoPhase3ArgInfo era] -&gt; [TwoPhase2ArgInfo era] -&gt; ScriptSpace era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#scriptSpace"><span class="hs-identifier hs-var">scriptSpace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679561349"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. EraGen era =&gt; [TwoPhase3ArgInfo era]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.EraGen.html#genEraTwoPhase3Arg"><span class="hs-identifier hs-var">genEraTwoPhase3Arg</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679561349"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. EraGen era =&gt; [TwoPhase2ArgInfo era]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.EraGen.html#genEraTwoPhase2Arg"><span class="hs-identifier hs-var">genEraTwoPhase2Arg</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679561349"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561491"><span class="hs-identifier hs-var">constants</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><span class="hs-comment">-- | An Example Script space for use in Trace generators</span></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#scriptSpace"><span class="hs-identifier hs-type">scriptSpace</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679561369"><span class="annot"><a href="#local-6989586621679561369"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561369"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Core.html#TwoPhase3ArgInfo"><span class="hs-identifier hs-type">TwoPhase3ArgInfo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561369"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Core.html#TwoPhase2ArgInfo"><span class="hs-identifier hs-type">TwoPhase2ArgInfo</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561369"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Core.html#ScriptSpace"><span class="hs-identifier hs-type">ScriptSpace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561369"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-72"></span><span id="scriptSpace"><span class="annot"><span class="annottext">scriptSpace :: forall era.
+EraScript era =&gt;
+[TwoPhase3ArgInfo era] -&gt; [TwoPhase2ArgInfo era] -&gt; ScriptSpace era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#scriptSpace"><span class="hs-identifier hs-var hs-var">scriptSpace</span></a></span></span><span> </span><span id="local-6989586621679561501"><span class="annot"><span class="annottext">[TwoPhase3ArgInfo era]
+</span><a href="#local-6989586621679561501"><span class="hs-identifier hs-var">scripts3</span></a></span></span><span> </span><span id="local-6989586621679561502"><span class="annot"><span class="annottext">[TwoPhase2ArgInfo era]
+</span><a href="#local-6989586621679561502"><span class="hs-identifier hs-var">scripts2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><span class="annottext">[TwoPhase3ArgInfo era]
+-&gt; [TwoPhase2ArgInfo era]
+-&gt; Map ScriptHash (TwoPhase3ArgInfo era)
+-&gt; Map ScriptHash (TwoPhase2ArgInfo era)
+-&gt; ScriptSpace era
+forall era.
+[TwoPhase3ArgInfo era]
+-&gt; [TwoPhase2ArgInfo era]
+-&gt; Map ScriptHash (TwoPhase3ArgInfo era)
+-&gt; Map ScriptHash (TwoPhase2ArgInfo era)
+-&gt; ScriptSpace era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Core.html#ScriptSpace"><span class="hs-identifier hs-var">ScriptSpace</span></a></span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">[TwoPhase3ArgInfo era]
+</span><a href="#local-6989586621679561501"><span class="hs-identifier hs-var">scripts3</span></a></span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">[TwoPhase2ArgInfo era]
+</span><a href="#local-6989586621679561502"><span class="hs-identifier hs-var">scripts2</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(ScriptHash, TwoPhase3ArgInfo era)]
+-&gt; Map ScriptHash (TwoPhase3ArgInfo era)
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">hashScript</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679561369"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TwoPhase3ArgInfo era -&gt; Script era
+forall era. TwoPhase3ArgInfo era -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Core.html#getScript3"><span class="hs-identifier hs-var">getScript3</span></a></span><span> </span><span class="annot"><span class="annottext">TwoPhase3ArgInfo era
+</span><a href="#local-6989586621679561506"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TwoPhase3ArgInfo era
+</span><a href="#local-6989586621679561506"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679561506"><span class="annot"><span class="annottext">TwoPhase3ArgInfo era
+</span><a href="#local-6989586621679561506"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[TwoPhase3ArgInfo era]
+</span><a href="#local-6989586621679561501"><span class="hs-identifier hs-var">scripts3</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(ScriptHash, TwoPhase2ArgInfo era)]
+-&gt; Map ScriptHash (TwoPhase2ArgInfo era)
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">hashScript</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679561369"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TwoPhase2ArgInfo era -&gt; Script era
+forall era. TwoPhase2ArgInfo era -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Core.html#getScript2"><span class="hs-identifier hs-var">getScript2</span></a></span><span> </span><span class="annot"><span class="annottext">TwoPhase2ArgInfo era
+</span><a href="#local-6989586621679561508"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TwoPhase2ArgInfo era
+</span><a href="#local-6989586621679561508"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679561508"><span class="annot"><span class="annottext">TwoPhase2ArgInfo era
+</span><a href="#local-6989586621679561508"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[TwoPhase2ArgInfo era]
+</span><a href="#local-6989586621679561502"><span class="hs-identifier hs-var">scripts2</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><span class="hs-comment">-- | Example keyspace for use in generators</span></span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#keySpace"><span class="hs-identifier hs-type">keySpace</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679561365"><span class="annot"><a href="#local-6989586621679561365"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span id="local-6989586621679561366"><span class="annot"><a href="#local-6989586621679561366"><span class="hs-identifier hs-type">c</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.EraGen.html#EraGen"><span class="hs-identifier hs-type">EraGen</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561365"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561366"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Core.html#KeySpace"><span class="hs-identifier hs-type">KeySpace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561366"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561365"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-87"></span><span id="keySpace"><span class="annot"><span class="annottext">keySpace :: forall era c. (EraGen era, Crypto c) =&gt; Constants -&gt; KeySpace c era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#keySpace"><span class="hs-identifier hs-var hs-var">keySpace</span></a></span></span><span> </span><span id="local-6989586621679561517"><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561517"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><span class="annottext">[(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+-&gt; [AllIssuerKeys c 'GenesisDelegate]
+-&gt; [AllIssuerKeys c 'StakePool]
+-&gt; KeyPairs
+-&gt; [(Script era, Script era)]
+-&gt; KeySpace c era
+forall c era.
+ScriptClass era =&gt;
+[(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+-&gt; [AllIssuerKeys c 'GenesisDelegate]
+-&gt; [AllIssuerKeys c 'StakePool]
+-&gt; KeyPairs
+-&gt; [(Script era, Script era)]
+-&gt; KeySpace c era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Core.html#KeySpace"><span class="hs-identifier hs-var">KeySpace</span></a></span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Constants -&gt; [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+forall c.
+Crypto c =&gt;
+Constants -&gt; [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#coreNodeKeys"><span class="hs-identifier hs-var">coreNodeKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561517"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Constants -&gt; [AllIssuerKeys c 'GenesisDelegate]
+forall c.
+Crypto c =&gt;
+Constants -&gt; [AllIssuerKeys c 'GenesisDelegate]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genesisDelegates"><span class="hs-identifier hs-var">genesisDelegates</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561517"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Constants -&gt; [AllIssuerKeys c 'StakePool]
+forall c. Crypto c =&gt; Constants -&gt; [AllIssuerKeys c 'StakePool]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#stakePoolKeys"><span class="hs-identifier hs-var">stakePoolKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561517"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Constants -&gt; KeyPairs
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#keyPairs"><span class="hs-identifier hs-var">keyPairs</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561517"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. EraGen era =&gt; Constants -&gt; [(Script era, Script era)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.EraGen.html#allScripts"><span class="hs-identifier hs-var">allScripts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679561365"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561517"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- Pairs of (genesis key, node keys)</span><span>
+</span><span id="line-96"></span><span class="hs-comment">--</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- NOTE: we use a seed range in the [1000...] range</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- to create keys that don't overlap with any of the other generated keys</span><span>
+</span><span id="line-99"></span><span id="local-6989586621679561389"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#coreNodeKeys"><span class="hs-identifier hs-type">coreNodeKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561389"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.TPraos.Create.html#AllIssuerKeys"><span class="hs-identifier hs-type">AllIssuerKeys</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561389"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#GenesisDelegate"><span class="hs-identifier hs-type">GenesisDelegate</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span></span><span>
+</span><span id="line-103"></span><span id="coreNodeKeys"><span class="annot"><span class="annottext">coreNodeKeys :: forall c.
+Crypto c =&gt;
+Constants -&gt; [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#coreNodeKeys"><span class="hs-identifier hs-var hs-var">coreNodeKeys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; Int
+-&gt; Gen [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+-&gt; [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+forall a. Int -&gt; Int -&gt; Gen a -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html#runGen"><span class="hs-identifier hs-var">runGen</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">30</span></span><span> </span><span class="annot"><span class="annottext">(Gen [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+ -&gt; [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)])
+-&gt; (Constants
+    -&gt; Gen [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)])
+-&gt; Constants
+-&gt; [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Constants
+-&gt; Gen [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+forall c.
+Crypto c =&gt;
+Constants
+-&gt; Gen [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genCoreNodeKeys"><span class="hs-identifier hs-var">genCoreNodeKeys</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span id="local-6989586621679561399"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genCoreNodeKeys"><span class="hs-identifier hs-type">genCoreNodeKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-106"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561399"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-107"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.TPraos.Create.html#AllIssuerKeys"><span class="hs-identifier hs-type">AllIssuerKeys</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561399"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#GenesisDelegate"><span class="hs-identifier hs-type">GenesisDelegate</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span></span><span>
+</span><span id="line-109"></span><span id="genCoreNodeKeys"><span class="annot"><span class="annottext">genCoreNodeKeys :: forall c.
+Crypto c =&gt;
+Constants
+-&gt; Gen [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genCoreNodeKeys"><span class="hs-identifier hs-var hs-var">genCoreNodeKeys</span></a></span></span><span> </span><span id="local-6989586621679561538"><span class="annot"><span class="annottext">c :: Constants
+</span><a href="#local-6989586621679561538"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679561540"><span class="annot"><span class="annottext">Word64
+numCoreNodes :: Word64
+numCoreNodes :: Constants -&gt; Word64
+</span><a href="#local-6989586621679561540"><span class="hs-identifier hs-var hs-var">numCoreNodes</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><span class="annottext">Int
+-&gt; Gen (GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)
+-&gt; Gen [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+forall (m :: * -&gt; *) a. Applicative m =&gt; Int -&gt; m a -&gt; m [a]
+</span><span class="hs-identifier hs-var">replicateM</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679561540"><span class="hs-identifier hs-var">numCoreNodes</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Gen (GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)
+ -&gt; Gen [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)])
+-&gt; Gen (GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)
+-&gt; Gen [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(GenesisKeyPair c
+ -&gt; AllIssuerKeys c 'GenesisDelegate
+ -&gt; (GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate))
+-&gt; Gen (GenesisKeyPair c)
+-&gt; Gen
+     (AllIssuerKeys c 'GenesisDelegate
+      -&gt; (GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (GenesisKeyPair c)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen
+  (AllIssuerKeys c 'GenesisDelegate
+   -&gt; (GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate))
+-&gt; Gen (AllIssuerKeys c 'GenesisDelegate)
+-&gt; Gen (GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Constants -&gt; Gen (AllIssuerKeys c 'GenesisDelegate)
+forall c (r :: KeyRole).
+Crypto c =&gt;
+Constants -&gt; Gen (AllIssuerKeys c r)
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genIssuerKeys"><span class="hs-identifier hs-var">genIssuerKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561538"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- Pre-generate a set of keys to use for genesis delegates.</span><span>
+</span><span id="line-113"></span><span id="local-6989586621679561390"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genesisDelegates"><span class="hs-identifier hs-type">genesisDelegates</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561390"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.TPraos.Create.html#AllIssuerKeys"><span class="hs-identifier hs-type">AllIssuerKeys</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561390"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#GenesisDelegate"><span class="hs-identifier hs-type">GenesisDelegate</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-114"></span><span id="genesisDelegates"><span class="annot"><span class="annottext">genesisDelegates :: forall c.
+Crypto c =&gt;
+Constants -&gt; [AllIssuerKeys c 'GenesisDelegate]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genesisDelegates"><span class="hs-identifier hs-var hs-var">genesisDelegates</span></a></span></span><span> </span><span id="local-6989586621679561553"><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561553"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Constants -&gt; Word64 -&gt; Word64 -&gt; AllIssuerKeys c 'GenesisDelegate
+forall c (r :: KeyRole).
+Crypto c =&gt;
+Constants -&gt; Word64 -&gt; Word64 -&gt; AllIssuerKeys c r
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#issuerKeys"><span class="hs-identifier hs-var">issuerKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561553"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">20</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679561555"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679561555"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679561555"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">50</span></span><span class="hs-special">]</span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- Pre-generate a set of keys to use for stake pools.</span><span>
+</span><span id="line-120"></span><span id="local-6989586621679561391"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#stakePoolKeys"><span class="hs-identifier hs-type">stakePoolKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561391"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.TPraos.Create.html#AllIssuerKeys"><span class="hs-identifier hs-type">AllIssuerKeys</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561391"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-type">StakePool</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-121"></span><span id="stakePoolKeys"><span class="annot"><span class="annottext">stakePoolKeys :: forall c. Crypto c =&gt; Constants -&gt; [AllIssuerKeys c 'StakePool]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#stakePoolKeys"><span class="hs-identifier hs-var hs-var">stakePoolKeys</span></a></span></span><span> </span><span id="local-6989586621679561562"><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561562"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Constants -&gt; Word64 -&gt; Word64 -&gt; AllIssuerKeys c 'StakePool
+forall c (r :: KeyRole).
+Crypto c =&gt;
+Constants -&gt; Word64 -&gt; Word64 -&gt; AllIssuerKeys c r
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#issuerKeys"><span class="hs-identifier hs-var">issuerKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561562"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">10</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679561563"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679561563"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679561563"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">50</span></span><span class="hs-special">]</span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="annot"><span class="hs-comment">-- | Generate all keys for any entity which will be issuing blocks.</span></span><span>
+</span><span id="line-127"></span><span id="local-6989586621679561423"><span id="local-6989586621679561424"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#issuerKeys"><span class="hs-identifier hs-type">issuerKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561423"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-comment">-- | Namespace parameter. Can be used to differentiate between different</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-comment">--   &quot;types&quot; of issuer.</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.TPraos.Create.html#AllIssuerKeys"><span class="hs-identifier hs-type">AllIssuerKeys</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561423"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561424"><span class="hs-identifier hs-type">r</span></a></span></span></span><span>
+</span><span id="line-135"></span><span id="issuerKeys"><span class="annot"><span class="annottext">issuerKeys :: forall c (r :: KeyRole).
+Crypto c =&gt;
+Constants -&gt; Word64 -&gt; Word64 -&gt; AllIssuerKeys c r
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#issuerKeys"><span class="hs-identifier hs-var hs-var">issuerKeys</span></a></span></span><span> </span><span id="local-6989586621679561569"><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561569"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679561570"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679561570"><span class="hs-identifier hs-var">ns</span></a></span></span><span> </span><span id="local-6989586621679561571"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679561571"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Gen (AllIssuerKeys c r) -&gt; AllIssuerKeys c r
+forall a. Int -&gt; Int -&gt; Gen a -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html#runGen"><span class="hs-identifier hs-var">runGen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679561571"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">30</span></span><span> </span><span class="annot"><span class="annottext">(Gen (AllIssuerKeys c r) -&gt; AllIssuerKeys c r)
+-&gt; Gen (AllIssuerKeys c r) -&gt; AllIssuerKeys c r
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Gen (AllIssuerKeys c r) -&gt; Gen (AllIssuerKeys c r)
+forall n a. Integral n =&gt; n -&gt; Gen a -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#variant"><span class="hs-identifier hs-var">variant</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679561570"><span class="hs-identifier hs-var">ns</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Constants -&gt; Gen (AllIssuerKeys c r)
+forall c (r :: KeyRole).
+Crypto c =&gt;
+Constants -&gt; Gen (AllIssuerKeys c r)
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genIssuerKeys"><span class="hs-identifier hs-var">genIssuerKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561569"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span id="local-6989586621679561420"><span id="local-6989586621679561421"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genIssuerKeys"><span class="hs-identifier hs-type">genIssuerKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Crypto.Internal.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561420"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.TPraos.Create.html#AllIssuerKeys"><span class="hs-identifier hs-type">AllIssuerKeys</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561420"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679561421"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-139"></span><span id="genIssuerKeys"><span class="annot"><span class="annottext">genIssuerKeys :: forall c (r :: KeyRole).
+Crypto c =&gt;
+Constants -&gt; Gen (AllIssuerKeys c r)
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genIssuerKeys"><span class="hs-identifier hs-var hs-var">genIssuerKeys</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679561575"><span class="annot"><span class="annottext">Int
+maxSlotTrace :: Int
+maxSlotTrace :: Constants -&gt; Int
+</span><a href="#local-6989586621679561575"><span class="hs-identifier hs-var hs-var">maxSlotTrace</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; Word64 -&gt; Word64 -&gt; Gen (AllIssuerKeys c r)
+forall c (r :: KeyRole).
+Crypto c =&gt;
+Int -&gt; Word64 -&gt; Word64 -&gt; Gen (AllIssuerKeys c r)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.TPraos.Create.html#genAllIssuerKeys"><span class="hs-identifier hs-var">genAllIssuerKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679561575"><span class="hs-identifier hs-var">maxSlotTrace</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Utils.html#maxKESIterations"><span class="hs-identifier hs-var">maxKESIterations</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Utils.html#slotsPerKESIteration"><span class="hs-identifier hs-var">slotsPerKESIteration</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genesisDelegs0"><span class="hs-identifier hs-type">genesisDelegs0</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-144"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#GenDelegPair"><span class="hs-identifier hs-type">GenDelegPair</span></a></span><span>
+</span><span id="line-145"></span><span id="genesisDelegs0"><span class="annot"><span class="annottext">genesisDelegs0 :: Constants -&gt; Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#genesisDelegs0"><span class="hs-identifier hs-var hs-var">genesisDelegs0</span></a></span></span><span> </span><span id="local-6989586621679561577"><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561577"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-146"></span><span>  </span><span class="annot"><span class="annottext">[(KeyHash 'Genesis, GenDelegPair)]
+-&gt; Map (KeyHash 'Genesis) GenDelegPair
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">GenesisKeyPair c -&gt; KeyHash 'Genesis
+forall {kd :: KeyRole}. KeyPair kd -&gt; KeyHash kd
+</span><a href="#local-6989586621679561578"><span class="hs-identifier hs-var">hashVKey</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisKeyPair c
+</span><a href="#local-6989586621679561579"><span class="hs-identifier hs-var">gkey</span></a></span><span>
+</span><span id="line-148"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KeyHash 'GenesisDelegate
+-&gt; VRFVerKeyHash 'GenDelegVRF -&gt; GenDelegPair
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#GenDelegPair"><span class="hs-identifier hs-var">GenDelegPair</span></a></span><span>
+</span><span id="line-149"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyHash 'GenesisDelegate -&gt; KeyHash 'GenesisDelegate
+forall (r :: KeyRole) (r' :: KeyRole). KeyHash r -&gt; KeyHash r'
+forall (a :: KeyRole -&gt; *) (r :: KeyRole) (r' :: KeyRole).
+HasKeyRole a =&gt;
+a r -&gt; a r'
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#coerceKeyRole"><span class="hs-identifier hs-var">coerceKeyRole</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyHash 'GenesisDelegate -&gt; KeyHash 'GenesisDelegate)
+-&gt; (KeyPair 'GenesisDelegate -&gt; KeyHash 'GenesisDelegate)
+-&gt; KeyPair 'GenesisDelegate
+-&gt; KeyHash 'GenesisDelegate
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">KeyPair 'GenesisDelegate -&gt; KeyHash 'GenesisDelegate
+forall {kd :: KeyRole}. KeyPair kd -&gt; KeyHash kd
+</span><a href="#local-6989586621679561578"><span class="hs-identifier hs-var">hashVKey</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyPair 'GenesisDelegate -&gt; KeyHash 'GenesisDelegate)
+-&gt; KeyPair 'GenesisDelegate -&gt; KeyHash 'GenesisDelegate
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">AllIssuerKeys MockCrypto 'GenesisDelegate
+-&gt; KeyPair 'GenesisDelegate
+forall c (r :: KeyRole). AllIssuerKeys c r -&gt; KeyPair r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.TPraos.Create.html#aikCold"><span class="hs-identifier hs-var">aikCold</span></a></span><span> </span><span class="annot"><span class="annottext">AllIssuerKeys MockCrypto 'GenesisDelegate
+</span><a href="#local-6989586621679561582"><span class="hs-identifier hs-var">pkeys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-150"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall c (r :: KeyRoleVRF).
+Crypto c =&gt;
+VerKeyVRF (VRF c) -&gt; VRFVerKeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/doc/html/cardano-protocol-tpraos/src/Cardano.Protocol.Crypto.html#hashVerKeyVRF"><span class="hs-identifier hs-var">hashVerKeyVRF</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes.html#MockCrypto"><span class="hs-identifier hs-type">MockCrypto</span></a></span><span> </span><span class="annot"><span class="annottext">(VerKeyVRF FakeVRF -&gt; VRFVerKeyHash 'GenDelegVRF)
+-&gt; (VRFKeyPair MockCrypto -&gt; VerKeyVRF FakeVRF)
+-&gt; VRFKeyPair MockCrypto
+-&gt; VRFVerKeyHash 'GenDelegVRF
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">VRFKeyPair MockCrypto -&gt; VerKeyVRF (VRF MockCrypto)
+VRFKeyPair MockCrypto -&gt; VerKeyVRF FakeVRF
+forall c. VRFKeyPair c -&gt; VerKeyVRF (VRF c)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.Crypto.VRF.html#vrfVerKey"><span class="hs-identifier hs-var">vrfVerKey</span></a></span><span> </span><span class="annot"><span class="annottext">(VRFKeyPair MockCrypto -&gt; VRFVerKeyHash 'GenDelegVRF)
+-&gt; VRFKeyPair MockCrypto -&gt; VRFVerKeyHash 'GenDelegVRF
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">AllIssuerKeys MockCrypto 'GenesisDelegate -&gt; VRFKeyPair MockCrypto
+forall c (r :: KeyRole). AllIssuerKeys c r -&gt; VRFKeyPair c
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-protocol-tpraos-1.4.1.0/l/testlib/doc/html/cardano-protocol-tpraos/src/Test.Cardano.Protocol.TPraos.Create.html#aikVrf"><span class="hs-identifier hs-var">aikVrf</span></a></span><span> </span><span class="annot"><span class="annottext">AllIssuerKeys MockCrypto 'GenesisDelegate
+</span><a href="#local-6989586621679561582"><span class="hs-identifier hs-var">pkeys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679561579"><span class="annot"><span class="annottext">GenesisKeyPair c
+</span><a href="#local-6989586621679561579"><span class="hs-identifier hs-var">gkey</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679561582"><span class="annot"><span class="annottext">AllIssuerKeys MockCrypto 'GenesisDelegate
+</span><a href="#local-6989586621679561582"><span class="hs-identifier hs-var">pkeys</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall c.
+Crypto c =&gt;
+Constants -&gt; [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.Presets.html#coreNodeKeys"><span class="hs-identifier hs-var">coreNodeKeys</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes.html#MockCrypto"><span class="hs-identifier hs-type">MockCrypto</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679561577"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-155"></span><span>    </span><span id="local-6989586621679561578"><span class="annot"><span class="annottext">hashVKey :: KeyPair kd -&gt; KeyHash kd
+</span><a href="#local-6989586621679561578"><span class="hs-identifier hs-var hs-var">hashVKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VKey kd -&gt; KeyHash kd
+forall (kd :: KeyRole). VKey kd -&gt; KeyHash kd
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#hashKey"><span class="hs-identifier hs-var">hashKey</span></a></span><span> </span><span class="annot"><span class="annottext">(VKey kd -&gt; KeyHash kd)
+-&gt; (KeyPair kd -&gt; VKey kd) -&gt; KeyPair kd -&gt; KeyHash kd
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">KeyPair kd -&gt; VKey kd
+forall (kd :: KeyRole). KeyPair kd -&gt; VKey kd
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#vKey"><span class="hs-identifier hs-var">vKey</span></a></span><span>
+</span><span id="line-156"></span></pre></body></html>

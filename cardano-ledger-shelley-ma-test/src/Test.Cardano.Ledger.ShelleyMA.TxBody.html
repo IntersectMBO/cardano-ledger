@@ -1,0 +1,407 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- =========================</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.ShelleyMA.TxBody</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txBodyTest"><span class="hs-identifier">txBodyTest</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Allegra.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Scripts.html#ValidityInterval"><span class="hs-identifier">ValidityInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxBody.html"><span class="hs-identifier">Cardano.Ledger.Allegra.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxBody.html#AllegraEraTxBody"><span class="hs-identifier">AllegraEraTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier">StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier">SJust</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier">SNothing</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.html"><span class="hs-identifier">Cardano.Ledger.Mary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier">MaryEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.TxBody.html"><span class="hs-identifier">Cardano.Ledger.Mary.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.TxBody.html#MaryEraTxBody"><span class="hs-identifier">MaryEraTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html"><span class="hs-identifier">Cardano.Ledger.Mary.Value</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#AssetName"><span class="hs-identifier">AssetName</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#MultiAsset"><span class="hs-identifier">MultiAsset</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#PolicyID"><span class="hs-identifier">PolicyID</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.html"><span class="hs-identifier">Cardano.Ledger.MemoBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#getMemoRawBytes"><span class="hs-identifier">getMemoRawBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Scripts</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxBody.html"><span class="hs-identifier">Cardano.Ledger.Shelley.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxBody.html#ShelleyEraTxBody"><span class="hs-identifier">ShelleyEraTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Withdrawals"><span class="hs-identifier">Withdrawals</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html"><span class="hs-identifier">Cardano.Slotting.Slot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier">SlotNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Short</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Short</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier">fromList</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">StrictSeq</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">empty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-test-1.7.0.0/doc/html/cardano-ledger-shelley-test/src/Test.Cardano.Ledger.Shelley.Serialisation.Generators.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Serialisation.Generators</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.html"><span class="hs-identifier">Test.Tasty</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html"><span class="hs-identifier">Test.Tasty.HUnit</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- ====================================================================================================</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- Make a TxBody to test with</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-type">txM</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span>
+</span><span id="line-42"></span><span id="txM"><span class="annot"><span class="annottext">txM :: TxBody MaryEra
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-var hs-var">txM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="annottext">TxBody MaryEra
+forall era. EraTxBody era =&gt; TxBody era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#mkBasicTxBody"><span class="hs-identifier hs-var">mkBasicTxBody</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; (TxBody MaryEra -&gt; TxBody MaryEra) -&gt; TxBody MaryEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(Coin -&gt; Identity Coin)
+-&gt; TxBody MaryEra -&gt; Identity (TxBody MaryEra)
+forall era. EraTxBody era =&gt; Lens' (TxBody era) Coin
+Lens' (TxBody MaryEra) Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#feeTxBodyL"><span class="hs-identifier hs-var">feeTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((Coin -&gt; Identity Coin)
+ -&gt; TxBody MaryEra -&gt; Identity (TxBody MaryEra))
+-&gt; Coin -&gt; TxBody MaryEra -&gt; TxBody MaryEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">6</span></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; (TxBody MaryEra -&gt; TxBody MaryEra) -&gt; TxBody MaryEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(ValidityInterval -&gt; Identity ValidityInterval)
+-&gt; TxBody MaryEra -&gt; Identity (TxBody MaryEra)
+forall era.
+AllegraEraTxBody era =&gt;
+Lens' (TxBody era) ValidityInterval
+Lens' (TxBody MaryEra) ValidityInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxBody.html#vldtTxBodyL"><span class="hs-identifier hs-var">vldtTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((ValidityInterval -&gt; Identity ValidityInterval)
+ -&gt; TxBody MaryEra -&gt; Identity (TxBody MaryEra))
+-&gt; ValidityInterval -&gt; TxBody MaryEra -&gt; TxBody MaryEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe SlotNo -&gt; StrictMaybe SlotNo -&gt; ValidityInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Scripts.html#ValidityInterval"><span class="hs-identifier hs-var">ValidityInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SlotNo -&gt; StrictMaybe SlotNo
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-var">SlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SlotNo -&gt; StrictMaybe SlotNo
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-var">SlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">42</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; (TxBody MaryEra -&gt; TxBody MaryEra) -&gt; TxBody MaryEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(MultiAsset -&gt; Identity MultiAsset)
+-&gt; TxBody MaryEra -&gt; Identity (TxBody MaryEra)
+forall era. MaryEraTxBody era =&gt; Lens' (TxBody era) MultiAsset
+Lens' (TxBody MaryEra) MultiAsset
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.TxBody.html#mintTxBodyL"><span class="hs-identifier hs-var">mintTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((MultiAsset -&gt; Identity MultiAsset)
+ -&gt; TxBody MaryEra -&gt; Identity (TxBody MaryEra))
+-&gt; MultiAsset -&gt; TxBody MaryEra -&gt; TxBody MaryEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">MultiAsset
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#testMint"><span class="hs-identifier hs-var">testMint</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#testMint"><span class="hs-identifier hs-type">testMint</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#MultiAsset"><span class="hs-identifier hs-type">MultiAsset</span></a></span><span>
+</span><span id="line-49"></span><span id="testMint"><span class="annot"><span class="annottext">testMint :: MultiAsset
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#testMint"><span class="hs-identifier hs-var hs-var">testMint</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map PolicyID (Map AssetName Integer) -&gt; MultiAsset
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#MultiAsset"><span class="hs-identifier hs-var">MultiAsset</span></a></span><span> </span><span class="annot"><span class="annottext">(Map PolicyID (Map AssetName Integer) -&gt; MultiAsset)
+-&gt; Map PolicyID (Map AssetName Integer) -&gt; MultiAsset
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PolicyID
+-&gt; Map AssetName Integer -&gt; Map PolicyID (Map AssetName Integer)
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="annot"><span class="annottext">PolicyID
+</span><a href="#local-6989586621679311713"><span class="hs-identifier hs-var">policyId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AssetName -&gt; Integer -&gt; Map AssetName Integer
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="annot"><span class="annottext">AssetName
+</span><a href="#local-6989586621679311714"><span class="hs-identifier hs-var">aname</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>    </span><span id="local-6989586621679311713"><span class="annot"><span class="annottext">policyId :: PolicyID
+</span><a href="#local-6989586621679311713"><span class="hs-identifier hs-var hs-var">policyId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptHash -&gt; PolicyID
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#PolicyID"><span class="hs-identifier hs-var">PolicyID</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptHash -&gt; PolicyID)
+-&gt; (StrictSeq (NativeScript MaryEra) -&gt; ScriptHash)
+-&gt; StrictSeq (NativeScript MaryEra)
+-&gt; PolicyID
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">hashScript</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="annot"><span class="annottext">(Timelock MaryEra -&gt; ScriptHash)
+-&gt; (StrictSeq (NativeScript MaryEra) -&gt; Timelock MaryEra)
+-&gt; StrictSeq (NativeScript MaryEra)
+-&gt; ScriptHash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (NativeScript MaryEra) -&gt; Timelock MaryEra
+StrictSeq (NativeScript MaryEra) -&gt; NativeScript MaryEra
+forall era.
+ShelleyEraScript era =&gt;
+StrictSeq (NativeScript era) -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireAnyOf"><span class="hs-identifier hs-var">RequireAnyOf</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (NativeScript MaryEra) -&gt; PolicyID)
+-&gt; StrictSeq (NativeScript MaryEra) -&gt; PolicyID
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[NativeScript MaryEra] -&gt; StrictSeq (NativeScript MaryEra)
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-52"></span><span>    </span><span id="local-6989586621679311714"><span class="annot"><span class="annottext">aname :: AssetName
+</span><a href="#local-6989586621679311714"><span class="hs-identifier hs-var hs-var">aname</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; AssetName
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Value.html#AssetName"><span class="hs-identifier hs-var">AssetName</span></a></span><span> </span><span class="annot"><span class="annottext">(ShortByteString -&gt; AssetName) -&gt; ShortByteString -&gt; AssetName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShortByteString
+forall a. IsString a =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">fromString</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;asset name&quot;</span></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#fieldTests"><span class="hs-identifier hs-type">fieldTests</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-55"></span><span id="fieldTests"><span class="annot"><span class="annottext">fieldTests :: TestTree
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#fieldTests"><span class="hs-identifier hs-var hs-var">fieldTests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Tests for lenses&quot;</span></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;inputs&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Set TxIn -&gt; Set TxIn -&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;inputs&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody MaryEra
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-var">txM</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; Getting (Set TxIn) (TxBody MaryEra) (Set TxIn) -&gt; Set TxIn
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Set TxIn) (TxBody MaryEra) (Set TxIn)
+forall era. EraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody MaryEra) (Set TxIn)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#inputsTxBodyL"><span class="hs-identifier hs-var">inputsTxBodyL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Set TxIn
+forall a. Set a
+</span><span class="hs-identifier hs-var">empty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;outputs&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+-&gt; StrictSeq (ShelleyTxOut MaryEra)
+-&gt; StrictSeq (ShelleyTxOut MaryEra)
+-&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;outputs&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody MaryEra
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-var">txM</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; Getting
+     (StrictSeq (ShelleyTxOut MaryEra))
+     (TxBody MaryEra)
+     (StrictSeq (ShelleyTxOut MaryEra))
+-&gt; StrictSeq (ShelleyTxOut MaryEra)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (TxOut MaryEra)
+ -&gt; Const
+      (StrictSeq (ShelleyTxOut MaryEra)) (StrictSeq (TxOut MaryEra)))
+-&gt; TxBody MaryEra
+-&gt; Const (StrictSeq (ShelleyTxOut MaryEra)) (TxBody MaryEra)
+Getting
+  (StrictSeq (ShelleyTxOut MaryEra))
+  (TxBody MaryEra)
+  (StrictSeq (ShelleyTxOut MaryEra))
+forall era.
+EraTxBody era =&gt;
+Lens' (TxBody era) (StrictSeq (TxOut era))
+Lens' (TxBody MaryEra) (StrictSeq (TxOut MaryEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#outputsTxBodyL"><span class="hs-identifier hs-var">outputsTxBodyL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictSeq (ShelleyTxOut MaryEra)
+forall a. StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#empty"><span class="hs-identifier hs-var">StrictSeq.empty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;certs&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+-&gt; StrictSeq (ShelleyTxCert MaryEra)
+-&gt; StrictSeq (ShelleyTxCert MaryEra)
+-&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;certs&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody MaryEra
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-var">txM</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; Getting
+     (StrictSeq (ShelleyTxCert MaryEra))
+     (TxBody MaryEra)
+     (StrictSeq (ShelleyTxCert MaryEra))
+-&gt; StrictSeq (ShelleyTxCert MaryEra)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (TxCert MaryEra)
+ -&gt; Const
+      (StrictSeq (ShelleyTxCert MaryEra)) (StrictSeq (TxCert MaryEra)))
+-&gt; TxBody MaryEra
+-&gt; Const (StrictSeq (ShelleyTxCert MaryEra)) (TxBody MaryEra)
+Getting
+  (StrictSeq (ShelleyTxCert MaryEra))
+  (TxBody MaryEra)
+  (StrictSeq (ShelleyTxCert MaryEra))
+forall era.
+EraTxBody era =&gt;
+Lens' (TxBody era) (StrictSeq (TxCert era))
+Lens' (TxBody MaryEra) (StrictSeq (TxCert MaryEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#certsTxBodyL"><span class="hs-identifier hs-var">certsTxBodyL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictSeq (ShelleyTxCert MaryEra)
+forall a. StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Sequence.Strict.html#empty"><span class="hs-identifier hs-var">StrictSeq.empty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span>
+</span><span id="line-62"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;withdrawals&quot;</span></span><span>
+</span><span id="line-63"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Withdrawals -&gt; Withdrawals -&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;withdrawals&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody MaryEra
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-var">txM</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; Getting Withdrawals (TxBody MaryEra) Withdrawals -&gt; Withdrawals
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Withdrawals (TxBody MaryEra) Withdrawals
+forall era. EraTxBody era =&gt; Lens' (TxBody era) Withdrawals
+Lens' (TxBody MaryEra) Withdrawals
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#withdrawalsTxBodyL"><span class="hs-identifier hs-var">withdrawalsTxBodyL</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map RewardAccount Coin -&gt; Withdrawals
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Withdrawals"><span class="hs-identifier hs-var">Withdrawals</span></a></span><span> </span><span class="annot"><span class="annottext">Map RewardAccount Coin
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;txfree&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Coin -&gt; Coin -&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;txfree&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody MaryEra
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-var">txM</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody MaryEra -&gt; Getting Coin (TxBody MaryEra) Coin -&gt; Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Coin (TxBody MaryEra) Coin
+forall era. EraTxBody era =&gt; Lens' (TxBody era) Coin
+Lens' (TxBody MaryEra) Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#feeTxBodyL"><span class="hs-identifier hs-var">feeTxBodyL</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">6</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;vldt&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Assertion -&gt; TestTree) -&gt; Assertion -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-66"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; ValidityInterval -&gt; ValidityInterval -&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;vldt&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody MaryEra
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-var">txM</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; Getting ValidityInterval (TxBody MaryEra) ValidityInterval
+-&gt; ValidityInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting ValidityInterval (TxBody MaryEra) ValidityInterval
+forall era.
+AllegraEraTxBody era =&gt;
+Lens' (TxBody era) ValidityInterval
+Lens' (TxBody MaryEra) ValidityInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxBody.html#vldtTxBodyL"><span class="hs-identifier hs-var">vldtTxBodyL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ValidityInterval -&gt; Assertion) -&gt; ValidityInterval -&gt; Assertion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-67"></span><span>          </span><span class="annot"><span class="annottext">StrictMaybe SlotNo -&gt; StrictMaybe SlotNo -&gt; ValidityInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Scripts.html#ValidityInterval"><span class="hs-identifier hs-var">ValidityInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SlotNo -&gt; StrictMaybe SlotNo
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-var">SlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SlotNo -&gt; StrictMaybe SlotNo
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-var">SlotNo</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">42</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;update&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+-&gt; StrictMaybe (Update MaryEra)
+-&gt; StrictMaybe (Update MaryEra)
+-&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;update&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody MaryEra
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-var">txM</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; Getting
+     (StrictMaybe (Update MaryEra))
+     (TxBody MaryEra)
+     (StrictMaybe (Update MaryEra))
+-&gt; StrictMaybe (Update MaryEra)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictMaybe (Update MaryEra))
+  (TxBody MaryEra)
+  (StrictMaybe (Update MaryEra))
+forall era.
+ShelleyEraTxBody era =&gt;
+Lens' (TxBody era) (StrictMaybe (Update era))
+Lens' (TxBody MaryEra) (StrictMaybe (Update MaryEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxBody.html#updateTxBodyL"><span class="hs-identifier hs-var">updateTxBodyL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictMaybe (Update MaryEra)
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;adHash&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+-&gt; StrictMaybe TxAuxDataHash
+-&gt; StrictMaybe TxAuxDataHash
+-&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;adHash&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody MaryEra
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-var">txM</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; Getting
+     (StrictMaybe TxAuxDataHash)
+     (TxBody MaryEra)
+     (StrictMaybe TxAuxDataHash)
+-&gt; StrictMaybe TxAuxDataHash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictMaybe TxAuxDataHash)
+  (TxBody MaryEra)
+  (StrictMaybe TxAuxDataHash)
+forall era.
+EraTxBody era =&gt;
+Lens' (TxBody era) (StrictMaybe TxAuxDataHash)
+Lens' (TxBody MaryEra) (StrictMaybe TxAuxDataHash)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#auxDataHashTxBodyL"><span class="hs-identifier hs-var">auxDataHashTxBodyL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictMaybe TxAuxDataHash
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mint&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; MultiAsset -&gt; MultiAsset -&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mint&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody MaryEra
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-var">txM</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody MaryEra
+-&gt; Getting MultiAsset (TxBody MaryEra) MultiAsset -&gt; MultiAsset
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting MultiAsset (TxBody MaryEra) MultiAsset
+forall era. MaryEraTxBody era =&gt; Lens' (TxBody era) MultiAsset
+Lens' (TxBody MaryEra) MultiAsset
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.TxBody.html#mintTxBodyL"><span class="hs-identifier hs-var">mintTxBodyL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MultiAsset
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#testMint"><span class="hs-identifier hs-var">testMint</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txBodyTest"><span class="hs-identifier hs-type">txBodyTest</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-74"></span><span id="txBodyTest"><span class="annot"><span class="annottext">txBodyTest :: TestTree
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txBodyTest"><span class="hs-identifier hs-var hs-var">txBodyTest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;TxBody&quot;</span></span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#fieldTests"><span class="hs-identifier hs-var">fieldTests</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;length&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Int -&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+String -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;length&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">57</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShortByteString -&gt; Int
+</span><span class="hs-identifier hs-var">Short.length</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody MaryEra -&gt; ShortByteString
+forall t. Memoized t =&gt; t -&gt; ShortByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#getMemoRawBytes"><span class="hs-identifier hs-var">getMemoRawBytes</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody MaryEra
+</span><a href="Test.Cardano.Ledger.ShelleyMA.TxBody.html#txM"><span class="hs-identifier hs-var">txM</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-80"></span></pre></body></html>

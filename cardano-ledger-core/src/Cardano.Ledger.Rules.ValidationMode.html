@@ -1,0 +1,167 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DefaultSignatures #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FunctionalDependencies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- | Describes modes under which we might validate certain rules in the ledger.</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--   What does this mean? Sometimes, we will want to check only certain</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--   conditions specified in the rules. For example, when replaying a previously</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--   validated chain, we do not care about rerunning _any_ checks, only making</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--   the relevant changes to the ledger state.</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Rules.ValidationMode</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><span class="hs-comment">-- $static</span></span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#lblStatic"><span class="hs-identifier">lblStatic</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#%3F%21%23"><span class="hs-operator">(?!#)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#%3F%21%23%3A"><span class="hs-operator">(?!#:)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#failBecauseS"><span class="hs-identifier">failBecauseS</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Interface for independent Tests</span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier">Inject</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#Test"><span class="hs-identifier">Test</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#runTest"><span class="hs-identifier">runTest</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#runTestOnSignal"><span class="hs-identifier">runTestOnSignal</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier">Inject</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html"><span class="hs-identifier">Control.State.Transition.Extended</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.List.NonEmpty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NonEmpty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.List.NonEmpty</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NE</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/validation-selective-0.2.0.0.0.0.0.0.1-d64e2beb39e4422f988079ac178fdfe6984e51f37c11dc24a1a21874ec6175e8/share/doc/html/src/Validation.html"><span class="hs-identifier">Validation</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- Static checks</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><span class="hs-comment">-- * Static checks</span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- $static</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- Static checks are used to indicate that a particular predicate depends only</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- on the signal to the transition, rather than the state or environment. This</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- is particularly relevant where the signal is something such as a transaction,</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- which is fixed, whereas the state and environment depend upon the chain tip</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- upon which we are trying to build a block.</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- | Indicates that this check depends only upon the signal to the transition,</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- not the state or environment.</span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#lblStatic"><span class="hs-identifier hs-type">lblStatic</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Label"><span class="hs-identifier hs-type">Label</span></a></span><span>
+</span><span id="line-56"></span><span id="lblStatic"><span class="annot"><span class="annottext">lblStatic :: Label
+</span><a href="Cardano.Ledger.Rules.ValidationMode.html#lblStatic"><span class="hs-identifier hs-var hs-var">lblStatic</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot;static&quot;</span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- | Construct a static predicate check.</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--   The choice of '#' as a postfix here is made because often these are crypto</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--   checks.</span><span>
+</span><span id="line-62"></span><span id="local-6989586621679474044"><span id="local-6989586621679474046"><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#%3F%21%23"><span class="hs-operator hs-type">(?!#)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474044"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Rule"><span class="hs-identifier hs-type">Rule</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474044"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474046"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-63"></span><span id="%3F%21%23"><span class="annot"><span class="annottext">?!# :: forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="Cardano.Ledger.Rules.ValidationMode.html#%3F%21%23"><span class="hs-operator hs-var hs-var">(?!#)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmpty Label -&gt; Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+forall sts (ctx :: RuleType).
+NonEmpty Label -&gt; Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#labeledPred"><span class="hs-identifier hs-var">labeledPred</span></a></span><span> </span><span class="annot"><span class="annottext">(NonEmpty Label -&gt; Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ())
+-&gt; NonEmpty Label
+-&gt; Bool
+-&gt; PredicateFailure sts
+-&gt; Rule sts ctx ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Label
+</span><a href="Cardano.Ledger.Rules.ValidationMode.html#lblStatic"><span class="hs-identifier hs-var">lblStatic</span></a></span><span> </span><span class="annot"><span class="annottext">Label -&gt; [Label] -&gt; NonEmpty Label
+forall a. a -&gt; [a] -&gt; NonEmpty a
+</span><span class="hs-operator hs-var">NE.:|</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">infix</span><span> </span><span class="hs-number">1</span><span> </span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#%3F%21%23"><span class="hs-operator hs-type">?!#</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- | Construct a static predicate check with an explanation.</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--   The choice of '#' as a postfix here is made because often these are crypto</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--   checks.</span><span>
+</span><span id="line-71"></span><span id="local-6989586621679474057"><span id="local-6989586621679474058"><span id="local-6989586621679474059"><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#%3F%21%23%3A"><span class="hs-operator hs-type">(?!#:)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="#local-6989586621679474057"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679474057"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474058"><span class="hs-identifier hs-type">sts</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Rule"><span class="hs-identifier hs-type">Rule</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474058"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474059"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-72"></span><span id="%3F%21%23%3A"><span class="annot"><span class="annottext">?!#: :: forall e sts (ctx :: RuleType).
+Either e () -&gt; (e -&gt; PredicateFailure sts) -&gt; Rule sts ctx ()
+</span><a href="Cardano.Ledger.Rules.ValidationMode.html#%3F%21%23%3A"><span class="hs-operator hs-var hs-var">(?!#:)</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonEmpty Label
+-&gt; Either e () -&gt; (e -&gt; PredicateFailure sts) -&gt; Rule sts ctx ()
+forall e sts (ctx :: RuleType).
+NonEmpty Label
+-&gt; Either e () -&gt; (e -&gt; PredicateFailure sts) -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#labeledPredE"><span class="hs-identifier hs-var">labeledPredE</span></a></span><span> </span><span class="annot"><span class="annottext">(NonEmpty Label
+ -&gt; Either e () -&gt; (e -&gt; PredicateFailure sts) -&gt; Rule sts ctx ())
+-&gt; NonEmpty Label
+-&gt; Either e ()
+-&gt; (e -&gt; PredicateFailure sts)
+-&gt; Rule sts ctx ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Label
+</span><a href="Cardano.Ledger.Rules.ValidationMode.html#lblStatic"><span class="hs-identifier hs-var">lblStatic</span></a></span><span> </span><span class="annot"><span class="annottext">Label -&gt; [Label] -&gt; NonEmpty Label
+forall a. a -&gt; [a] -&gt; NonEmpty a
+</span><span class="hs-operator hs-var">NE.:|</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">infix</span><span> </span><span class="hs-number">1</span><span> </span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#%3F%21%23%3A"><span class="hs-operator hs-type">?!#:</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><span class="hs-comment">-- | Fail, if static checks are enabled.</span></span><span>
+</span><span id="line-77"></span><span id="local-6989586621679474066"><span id="local-6989586621679474067"><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#failBecauseS"><span class="hs-identifier hs-type">failBecauseS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474066"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Rule"><span class="hs-identifier hs-type">Rule</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474066"><span class="hs-identifier hs-type">sts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474067"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-78"></span><span id="failBecauseS"><span class="annot"><span class="annottext">failBecauseS :: forall sts (ctx :: RuleType).
+PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="Cardano.Ledger.Rules.ValidationMode.html#failBecauseS"><span class="hs-identifier hs-var hs-var">failBecauseS</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="Cardano.Ledger.Rules.ValidationMode.html#%3F%21%23"><span class="hs-operator hs-var">?!#</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- ===========================================================</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">type</span><span> </span><span id="Test"><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#Test"><span class="hs-identifier hs-var">Test</span></a></span></span><span> </span><span id="local-6989586621679474110"><span class="annot"><a href="#local-6989586621679474110"><span class="hs-identifier hs-type">failure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/validation-selective-0.2.0.0.0.0.0.0.1-d64e2beb39e4422f988079ac178fdfe6984e51f37c11dc24a1a21874ec6175e8/share/doc/html/src/Validation.html#Validation"><span class="hs-identifier hs-type">Validation</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">NonEmpty</span></span><span> </span><span class="annot"><a href="#local-6989586621679474110"><span class="hs-identifier hs-type">failure</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span id="local-6989586621679474070"><span id="local-6989586621679474071"><span id="local-6989586621679474072"><span id="local-6989586621679474076"><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#runTest"><span class="hs-identifier hs-type">runTest</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474070"><span class="hs-identifier hs-type">rule</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474071"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474072"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#Test"><span class="hs-identifier hs-type">Test</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679474071"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474072"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Rule"><span class="hs-identifier hs-type">Rule</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Core.Era.html#EraRule"><span class="hs-identifier hs-type">EraRule</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474070"><span class="hs-identifier hs-type">rule</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474072"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679474076"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-85"></span><span id="runTest"><span class="annot"><span class="annottext">runTest :: forall (rule :: Symbol) (f :: * -&gt; *) era (ctx :: RuleType).
+InjectRuleFailure rule f era =&gt;
+Test (f era) -&gt; Rule (EraRule rule era) ctx ()
+</span><a href="Cardano.Ledger.Rules.ValidationMode.html#runTest"><span class="hs-identifier hs-var hs-var">runTest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(f era -&gt; PredicateFailure (EraRule rule era))
+-&gt; Validation (NonEmpty (f era)) ()
+-&gt; F (Clause (EraRule rule era) ctx) ()
+forall e sts (ctx :: RuleType).
+(e -&gt; PredicateFailure sts)
+-&gt; Validation (NonEmpty e) () -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#validateTrans"><span class="hs-identifier hs-var">validateTrans</span></a></span><span> </span><span class="annot"><span class="annottext">f era -&gt; PredicateFailure (EraRule rule era)
+f era -&gt; EraRuleFailure rule era
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span id="local-6989586621679474118"><span id="local-6989586621679474119"><span id="local-6989586621679474120"><span id="local-6989586621679474121"><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#runTestOnSignal"><span class="hs-identifier hs-type">runTestOnSignal</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474118"><span class="hs-identifier hs-type">rule</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474119"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474120"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Rules.ValidationMode.html#Test"><span class="hs-identifier hs-type">Test</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679474119"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474120"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Rule"><span class="hs-identifier hs-type">Rule</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Core.Era.html#EraRule"><span class="hs-identifier hs-type">EraRule</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474118"><span class="hs-identifier hs-type">rule</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679474120"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679474121"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-88"></span><span id="runTestOnSignal"><span class="annot"><span class="annottext">runTestOnSignal :: forall (rule :: Symbol) (f :: * -&gt; *) era (ctx :: RuleType).
+InjectRuleFailure rule f era =&gt;
+Test (f era) -&gt; Rule (EraRule rule era) ctx ()
+</span><a href="Cardano.Ledger.Rules.ValidationMode.html#runTestOnSignal"><span class="hs-identifier hs-var hs-var">runTestOnSignal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(f era -&gt; PredicateFailure (EraRule rule era))
+-&gt; NonEmpty Label
+-&gt; Validation (NonEmpty (f era)) ()
+-&gt; Rule (EraRule rule era) ctx ()
+forall e sts (ctx :: RuleType).
+(e -&gt; PredicateFailure sts)
+-&gt; NonEmpty Label -&gt; Validation (NonEmpty e) () -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#validateTransLabeled"><span class="hs-identifier hs-var">validateTransLabeled</span></a></span><span> </span><span class="annot"><span class="annottext">f era -&gt; PredicateFailure (EraRule rule era)
+f era -&gt; EraRuleFailure rule era
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(NonEmpty Label
+ -&gt; Validation (NonEmpty (f era)) ()
+ -&gt; Rule (EraRule rule era) ctx ())
+-&gt; NonEmpty Label
+-&gt; Validation (NonEmpty (f era)) ()
+-&gt; Rule (EraRule rule era) ctx ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Label
+</span><a href="Cardano.Ledger.Rules.ValidationMode.html#lblStatic"><span class="hs-identifier hs-var">lblStatic</span></a></span><span> </span><span class="annot"><span class="annottext">Label -&gt; [Label] -&gt; NonEmpty Label
+forall a. a -&gt; [a] -&gt; NonEmpty a
+</span><span class="hs-operator hs-var">NE.:|</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-89"></span></pre></body></html>

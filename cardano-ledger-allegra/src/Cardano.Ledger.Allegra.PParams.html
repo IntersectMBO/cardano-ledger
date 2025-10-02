@@ -1,0 +1,631 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Allegra.PParams</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Allegra.Era.html"><span class="hs-identifier">Cardano.Ledger.Allegra.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier">AllegraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Governance.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Governance</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html"><span class="hs-identifier">Cardano.Ledger.Shelley.PParams</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Coerce</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679290840"><span id="local-6989586621679290852"><span id="local-6989586621679290872"><span id="local-6989586621679290879"><span id="local-6989586621679290886"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#EraPParams"><span class="hs-identifier hs-type">EraPParams</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="PParamsHKD"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-var">PParamsHKD</span></a></span></span><span> </span><span id="local-6989586621679290954"><span class="annot"><a href="#local-6989586621679290954"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#ShelleyPParams"><span class="hs-identifier hs-type">ShelleyPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679290954"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="UpgradePParams"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#UpgradePParams"><span class="hs-identifier hs-var">UpgradePParams</span></a></span></span><span> </span><span id="local-6989586621679290955"><span class="annot"><a href="#local-6989586621679290955"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="DowngradePParams"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#DowngradePParams"><span class="hs-identifier hs-var">DowngradePParams</span></a></span></span><span> </span><span id="local-6989586621679290956"><span class="annot"><a href="#local-6989586621679290956"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>  </span><span id="local-6989586621679290958"><span class="annot"><span class="annottext">emptyPParamsIdentity :: PParamsHKD Identity AllegraEra
+</span><a href="#local-6989586621679290958"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptyPParamsIdentity</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParamsHKD Identity AllegraEra
+ShelleyPParams Identity AllegraEra
+forall era. Era era =&gt; ShelleyPParams Identity era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#emptyShelleyPParams"><span class="hs-identifier hs-var">emptyShelleyPParams</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span id="local-6989586621679290961"><span class="annot"><span class="annottext">emptyPParamsStrictMaybe :: PParamsHKD StrictMaybe AllegraEra
+</span><a href="#local-6989586621679290961"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptyPParamsStrictMaybe</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParamsHKD StrictMaybe AllegraEra
+ShelleyPParams StrictMaybe AllegraEra
+forall era. ShelleyPParams StrictMaybe era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#emptyShelleyPParamsUpdate"><span class="hs-identifier hs-var">emptyShelleyPParamsUpdate</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>  </span><span id="local-6989586621679290967"><span class="annot"><span class="annottext">upgradePParamsHKD :: forall (f :: * -&gt; *).
+(HKDApplicative f, EraPParams (PreviousEra AllegraEra)) =&gt;
+UpgradePParams f AllegraEra
+-&gt; PParamsHKD f (PreviousEra AllegraEra) -&gt; PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679290967"><span class="hs-identifier hs-var hs-var hs-var hs-var">upgradePParamsHKD</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f (PreviousEra AllegraEra) -&gt; PParamsHKD f AllegraEra
+ShelleyPParams f ShelleyEra -&gt; ShelleyPParams f AllegraEra
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-23"></span><span>  </span><span id="local-6989586621679290972"><span class="annot"><span class="annottext">downgradePParamsHKD :: forall (f :: * -&gt; *).
+(HKDFunctor f, EraPParams (PreviousEra AllegraEra)) =&gt;
+DowngradePParams f AllegraEra
+-&gt; PParamsHKD f AllegraEra -&gt; PParamsHKD f (PreviousEra AllegraEra)
+</span><a href="#local-6989586621679290972"><span class="hs-identifier hs-var hs-var hs-var hs-var">downgradePParamsHKD</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; PParamsHKD f (PreviousEra AllegraEra)
+ShelleyPParams f AllegraEra -&gt; ShelleyPParams f ShelleyEra
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>  </span><span id="local-6989586621679290977"><span class="annot"><span class="annottext">hkdMinFeeAL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f Coin)
+</span><a href="#local-6989586621679290977"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdMinFeeAL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f Coin)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Coin -&gt; f (HKD f Coin))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f Coin
+ShelleyPParams f AllegraEra -&gt; HKD f Coin
+forall (f :: * -&gt; *) era. ShelleyPParams f era -&gt; HKD f Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMinFeeA"><span class="hs-identifier hs-var">sppMinFeeA</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f Coin -&gt; f (HKD f Coin))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Coin -&gt; f (HKD f Coin))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679290981"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679290981"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679290982"><span class="annot"><span class="annottext">HKD f Coin
+</span><a href="#local-6989586621679290982"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679290981"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMinFeeA"><span class="hs-identifier hs-var">sppMinFeeA</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679290982"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-26"></span><span>  </span><span id="local-6989586621679290986"><span class="annot"><span class="annottext">hkdMinFeeBL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f Coin)
+</span><a href="#local-6989586621679290986"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdMinFeeBL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f Coin)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Coin -&gt; f (HKD f Coin))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f Coin
+ShelleyPParams f AllegraEra -&gt; HKD f Coin
+forall (f :: * -&gt; *) era. ShelleyPParams f era -&gt; HKD f Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMinFeeB"><span class="hs-identifier hs-var">sppMinFeeB</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f Coin -&gt; f (HKD f Coin))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Coin -&gt; f (HKD f Coin))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679290989"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679290989"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679290990"><span class="annot"><span class="annottext">HKD f Coin
+</span><a href="#local-6989586621679290990"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679290989"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMinFeeB"><span class="hs-identifier hs-var">sppMinFeeB</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679290990"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679290994"><span class="annot"><span class="annottext">hkdMaxBBSizeL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f Word32)
+</span><a href="#local-6989586621679290994"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdMaxBBSizeL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f Word32)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Word32 -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Word32 -&gt; f (HKD f Word32))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f Word32
+ShelleyPParams f AllegraEra -&gt; HKD f Word32
+forall (f :: * -&gt; *) era. ShelleyPParams f era -&gt; HKD f Word32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMaxBBSize"><span class="hs-identifier hs-var">sppMaxBBSize</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f Word32 -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f Word32 -&gt; f (HKD f Word32))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Word32 -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Word32 -&gt; f (HKD f Word32))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679290997"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679290997"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679290998"><span class="annot"><span class="annottext">HKD f Word32
+</span><a href="#local-6989586621679290998"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679290997"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMaxBBSize"><span class="hs-identifier hs-var">sppMaxBBSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679290998"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679291002"><span class="annot"><span class="annottext">hkdMaxTxSizeL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f Word32)
+</span><a href="#local-6989586621679291002"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdMaxTxSizeL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f Word32)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Word32 -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Word32 -&gt; f (HKD f Word32))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f Word32
+ShelleyPParams f AllegraEra -&gt; HKD f Word32
+forall (f :: * -&gt; *) era. ShelleyPParams f era -&gt; HKD f Word32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMaxTxSize"><span class="hs-identifier hs-var">sppMaxTxSize</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f Word32 -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f Word32 -&gt; f (HKD f Word32))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Word32 -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Word32 -&gt; f (HKD f Word32))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291005"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291005"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291006"><span class="annot"><span class="annottext">HKD f Word32
+</span><a href="#local-6989586621679291006"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291005"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMaxTxSize"><span class="hs-identifier hs-var">sppMaxTxSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291006"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679291010"><span class="annot"><span class="annottext">hkdMaxBHSizeL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f Word16)
+</span><a href="#local-6989586621679291010"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdMaxBHSizeL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f Word16)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Word16 -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Word16 -&gt; f (HKD f Word16))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f Word16
+ShelleyPParams f AllegraEra -&gt; HKD f Word16
+forall (f :: * -&gt; *) era. ShelleyPParams f era -&gt; HKD f Word16
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMaxBHSize"><span class="hs-identifier hs-var">sppMaxBHSize</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f Word16 -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f Word16 -&gt; f (HKD f Word16))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Word16 -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Word16 -&gt; f (HKD f Word16))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291013"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291013"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291014"><span class="annot"><span class="annottext">HKD f Word16
+</span><a href="#local-6989586621679291014"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291013"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMaxBHSize"><span class="hs-identifier hs-var">sppMaxBHSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291014"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-30"></span><span>  </span><span id="local-6989586621679291018"><span class="annot"><span class="annottext">hkdKeyDepositL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f Coin)
+</span><a href="#local-6989586621679291018"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdKeyDepositL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f Coin)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Coin -&gt; f (HKD f Coin))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f Coin
+ShelleyPParams f AllegraEra -&gt; HKD f Coin
+forall (f :: * -&gt; *) era. ShelleyPParams f era -&gt; HKD f Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppKeyDeposit"><span class="hs-identifier hs-var">sppKeyDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f Coin -&gt; f (HKD f Coin))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Coin -&gt; f (HKD f Coin))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291021"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291021"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291022"><span class="annot"><span class="annottext">HKD f Coin
+</span><a href="#local-6989586621679291022"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291021"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppKeyDeposit"><span class="hs-identifier hs-var">sppKeyDeposit</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291022"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679291026"><span class="annot"><span class="annottext">hkdPoolDepositCompactL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f (CompactForm Coin))
+</span><a href="#local-6989586621679291026"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdPoolDepositCompactL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f (CompactForm Coin))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f (CompactForm Coin) -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f (CompactForm Coin) -&gt; f (HKD f (CompactForm Coin)))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f (CompactForm Coin)
+ShelleyPParams f AllegraEra -&gt; HKD f (CompactForm Coin)
+forall (f :: * -&gt; *) era.
+ShelleyPParams f era -&gt; HKD f (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppPoolDeposit"><span class="hs-identifier hs-var">sppPoolDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f (CompactForm Coin) -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f (CompactForm Coin) -&gt; f (HKD f (CompactForm Coin)))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f (CompactForm Coin) -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f (CompactForm Coin) -&gt; f (HKD f (CompactForm Coin)))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291029"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291029"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291030"><span class="annot"><span class="annottext">HKD f (CompactForm Coin)
+</span><a href="#local-6989586621679291030"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291029"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppPoolDeposit"><span class="hs-identifier hs-var">sppPoolDeposit</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291030"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679291034"><span class="annot"><span class="annottext">hkdEMaxL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f EpochInterval)
+</span><a href="#local-6989586621679291034"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdEMaxL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f EpochInterval)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f EpochInterval -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f EpochInterval -&gt; f (HKD f EpochInterval))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f EpochInterval
+ShelleyPParams f AllegraEra -&gt; HKD f EpochInterval
+forall (f :: * -&gt; *) era.
+ShelleyPParams f era -&gt; HKD f EpochInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppEMax"><span class="hs-identifier hs-var">sppEMax</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f EpochInterval -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f EpochInterval -&gt; f (HKD f EpochInterval))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f EpochInterval -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f EpochInterval -&gt; f (HKD f EpochInterval))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291037"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291037"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291038"><span class="annot"><span class="annottext">HKD f EpochInterval
+</span><a href="#local-6989586621679291038"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291037"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppEMax"><span class="hs-identifier hs-var">sppEMax</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291038"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679291042"><span class="annot"><span class="annottext">hkdNOptL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f Word16)
+</span><a href="#local-6989586621679291042"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdNOptL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f Word16)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Word16 -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Word16 -&gt; f (HKD f Word16))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f Word16
+ShelleyPParams f AllegraEra -&gt; HKD f Word16
+forall (f :: * -&gt; *) era. ShelleyPParams f era -&gt; HKD f Word16
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppNOpt"><span class="hs-identifier hs-var">sppNOpt</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f Word16 -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f Word16 -&gt; f (HKD f Word16))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Word16 -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Word16 -&gt; f (HKD f Word16))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291045"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291045"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291046"><span class="annot"><span class="annottext">HKD f Word16
+</span><a href="#local-6989586621679291046"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291045"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppNOpt"><span class="hs-identifier hs-var">sppNOpt</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291046"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679291050"><span class="annot"><span class="annottext">hkdA0L :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f NonNegativeInterval)
+</span><a href="#local-6989586621679291050"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdA0L</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f NonNegativeInterval)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f NonNegativeInterval -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f NonNegativeInterval -&gt; f (HKD f NonNegativeInterval))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f NonNegativeInterval
+ShelleyPParams f AllegraEra -&gt; HKD f NonNegativeInterval
+forall (f :: * -&gt; *) era.
+ShelleyPParams f era -&gt; HKD f NonNegativeInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppA0"><span class="hs-identifier hs-var">sppA0</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f NonNegativeInterval -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f NonNegativeInterval -&gt; f (HKD f NonNegativeInterval))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f NonNegativeInterval -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f NonNegativeInterval -&gt; f (HKD f NonNegativeInterval))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291053"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291053"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291054"><span class="annot"><span class="annottext">HKD f NonNegativeInterval
+</span><a href="#local-6989586621679291054"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291053"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppA0"><span class="hs-identifier hs-var">sppA0</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291054"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679291058"><span class="annot"><span class="annottext">hkdRhoL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f UnitInterval)
+</span><a href="#local-6989586621679291058"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdRhoL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f UnitInterval)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f UnitInterval -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f UnitInterval -&gt; f (HKD f UnitInterval))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f UnitInterval
+ShelleyPParams f AllegraEra -&gt; HKD f UnitInterval
+forall (f :: * -&gt; *) era.
+ShelleyPParams f era -&gt; HKD f UnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppRho"><span class="hs-identifier hs-var">sppRho</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f UnitInterval -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f UnitInterval -&gt; f (HKD f UnitInterval))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f UnitInterval -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f UnitInterval -&gt; f (HKD f UnitInterval))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291061"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291061"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291062"><span class="annot"><span class="annottext">HKD f UnitInterval
+</span><a href="#local-6989586621679291062"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291061"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppRho"><span class="hs-identifier hs-var">sppRho</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291062"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679291066"><span class="annot"><span class="annottext">hkdTauL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f UnitInterval)
+</span><a href="#local-6989586621679291066"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdTauL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f UnitInterval)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f UnitInterval -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f UnitInterval -&gt; f (HKD f UnitInterval))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f UnitInterval
+ShelleyPParams f AllegraEra -&gt; HKD f UnitInterval
+forall (f :: * -&gt; *) era.
+ShelleyPParams f era -&gt; HKD f UnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppTau"><span class="hs-identifier hs-var">sppTau</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f UnitInterval -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f UnitInterval -&gt; f (HKD f UnitInterval))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f UnitInterval -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f UnitInterval -&gt; f (HKD f UnitInterval))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291069"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291069"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291070"><span class="annot"><span class="annottext">HKD f UnitInterval
+</span><a href="#local-6989586621679291070"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291069"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppTau"><span class="hs-identifier hs-var">sppTau</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291070"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679291075"><span class="annot"><span class="annottext">hkdDL :: forall (f :: * -&gt; *).
+(HKDFunctor f, AtMostEra &quot;Alonzo&quot; AllegraEra) =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f UnitInterval)
+</span><a href="#local-6989586621679291075"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdDL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f UnitInterval)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f UnitInterval -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f UnitInterval -&gt; f (HKD f UnitInterval))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f UnitInterval
+ShelleyPParams f AllegraEra -&gt; HKD f UnitInterval
+forall (f :: * -&gt; *) era.
+ShelleyPParams f era -&gt; HKD f UnitInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppD"><span class="hs-identifier hs-var">sppD</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f UnitInterval -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f UnitInterval -&gt; f (HKD f UnitInterval))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f UnitInterval -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f UnitInterval -&gt; f (HKD f UnitInterval))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291078"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291078"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291079"><span class="annot"><span class="annottext">HKD f UnitInterval
+</span><a href="#local-6989586621679291079"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291078"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppD"><span class="hs-identifier hs-var">sppD</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291079"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679291084"><span class="annot"><span class="annottext">hkdExtraEntropyL :: forall (f :: * -&gt; *).
+(HKDFunctor f, AtMostEra &quot;Alonzo&quot; AllegraEra) =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f Nonce)
+</span><a href="#local-6989586621679291084"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdExtraEntropyL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f Nonce)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Nonce -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Nonce -&gt; f (HKD f Nonce))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f Nonce
+ShelleyPParams f AllegraEra -&gt; HKD f Nonce
+forall (f :: * -&gt; *) era. ShelleyPParams f era -&gt; HKD f Nonce
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppExtraEntropy"><span class="hs-identifier hs-var">sppExtraEntropy</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f Nonce -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f Nonce -&gt; f (HKD f Nonce))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Nonce -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Nonce -&gt; f (HKD f Nonce))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291087"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291087"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291088"><span class="annot"><span class="annottext">HKD f Nonce
+</span><a href="#local-6989586621679291088"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291087"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppExtraEntropy"><span class="hs-identifier hs-var">sppExtraEntropy</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291088"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621679291093"><span class="annot"><span class="annottext">hkdProtocolVersionL :: forall (f :: * -&gt; *).
+(HKDFunctor f, AtMostEra &quot;Babbage&quot; AllegraEra) =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f ProtVer)
+</span><a href="#local-6989586621679291093"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdProtocolVersionL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f ProtVer)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f ProtVer -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f ProtVer -&gt; f (HKD f ProtVer))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f ProtVer
+ShelleyPParams f AllegraEra -&gt; HKD f ProtVer
+forall (f :: * -&gt; *) era. ShelleyPParams f era -&gt; HKD f ProtVer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppProtocolVersion"><span class="hs-identifier hs-var">sppProtocolVersion</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra
+  -&gt; HKD f ProtVer -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f ProtVer -&gt; f (HKD f ProtVer))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f ProtVer -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f ProtVer -&gt; f (HKD f ProtVer))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291096"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291096"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291097"><span class="annot"><span class="annottext">HKD f ProtVer
+</span><a href="#local-6989586621679291097"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291096"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppProtocolVersion"><span class="hs-identifier hs-var">sppProtocolVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291097"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679291102"><span class="annot"><span class="annottext">hkdMinUTxOValueL :: forall (f :: * -&gt; *).
+(HKDFunctor f, AtMostEra &quot;Mary&quot; AllegraEra) =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f Coin)
+</span><a href="#local-6989586621679291102"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdMinUTxOValueL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f Coin)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Coin -&gt; f (HKD f Coin))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f Coin
+ShelleyPParams f AllegraEra -&gt; HKD f Coin
+forall (f :: * -&gt; *) era. ShelleyPParams f era -&gt; HKD f Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMinUTxOValue"><span class="hs-identifier hs-var">sppMinUTxOValue</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f Coin -&gt; f (HKD f Coin))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Coin -&gt; f (HKD f Coin))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291105"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291105"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291106"><span class="annot"><span class="annottext">HKD f Coin
+</span><a href="#local-6989586621679291106"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291105"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMinUTxOValue"><span class="hs-identifier hs-var">sppMinUTxOValue</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291106"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679291110"><span class="annot"><span class="annottext">hkdMinPoolCostL :: forall (f :: * -&gt; *).
+HKDFunctor f =&gt;
+Lens' (PParamsHKD f AllegraEra) (HKD f Coin)
+</span><a href="#local-6989586621679291110"><span class="hs-identifier hs-var hs-var hs-var hs-var">hkdMinPoolCostL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParamsHKD f AllegraEra -&gt; HKD f Coin)
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Coin -&gt; f (HKD f Coin))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra -&gt; HKD f Coin
+ShelleyPParams f AllegraEra -&gt; HKD f Coin
+forall (f :: * -&gt; *) era. ShelleyPParams f era -&gt; HKD f Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMinPoolCost"><span class="hs-identifier hs-var">sppMinPoolCost</span></a></span><span> </span><span class="annot"><span class="annottext">((PParamsHKD f AllegraEra -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (HKD f Coin -&gt; f (HKD f Coin))
+    -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra))
+-&gt; (PParamsHKD f AllegraEra
+    -&gt; HKD f Coin -&gt; PParamsHKD f AllegraEra)
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (HKD f Coin -&gt; f (HKD f Coin))
+   -&gt; PParamsHKD f AllegraEra -&gt; f (PParamsHKD f AllegraEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679291113"><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291113"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679291114"><span class="annot"><span class="annottext">HKD f Coin
+</span><a href="#local-6989586621679291114"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PParamsHKD f AllegraEra
+</span><a href="#local-6989586621679291113"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#sppMinPoolCost"><span class="hs-identifier hs-var">sppMinPoolCost</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679291114"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679291120"><span class="annot"><span class="annottext">eraPParams :: [PParam AllegraEra]
+</span><a href="#local-6989586621679291120"><span class="hs-identifier hs-var hs-var hs-var hs-var">eraPParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[PParam AllegraEra]
+forall era.
+(EraPParams era, AtMostEra &quot;Mary&quot; era, AtMostEra &quot;Alonzo&quot; era,
+ AtMostEra &quot;Babbage&quot; era) =&gt;
+[PParam era]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.PParams.html#shelleyPParams"><span class="hs-identifier hs-var">shelleyPParams</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#EraGov"><span class="hs-identifier hs-type">EraGov</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="GovState"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#GovState"><span class="hs-identifier hs-var">GovState</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Governance.html#ShelleyGovState"><span class="hs-identifier hs-type">ShelleyGovState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679291238"><span class="annot"><span class="annottext">emptyGovState :: GovState AllegraEra
+</span><a href="#local-6989586621679291238"><span class="hs-identifier hs-var hs-var hs-var hs-var">emptyGovState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GovState AllegraEra
+ShelleyGovState AllegraEra
+forall era. EraPParams era =&gt; ShelleyGovState era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Governance.html#emptyShelleyGovState"><span class="hs-identifier hs-var">emptyShelleyGovState</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679291243"><span class="annot"><span class="annottext">curPParamsGovStateL :: Lens' (GovState AllegraEra) (PParams AllegraEra)
+</span><a href="#local-6989586621679291243"><span class="hs-identifier hs-var hs-var hs-var hs-var">curPParamsGovStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParams AllegraEra -&gt; f (PParams AllegraEra))
+-&gt; GovState AllegraEra -&gt; f (GovState AllegraEra)
+(PParams AllegraEra -&gt; f (PParams AllegraEra))
+-&gt; ShelleyGovState AllegraEra -&gt; f (ShelleyGovState AllegraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(PParams era -&gt; f (PParams era))
+-&gt; ShelleyGovState era -&gt; f (ShelleyGovState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Governance.html#curPParamsShelleyGovStateL"><span class="hs-identifier hs-var">curPParamsShelleyGovStateL</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679291248"><span class="annot"><span class="annottext">prevPParamsGovStateL :: Lens' (GovState AllegraEra) (PParams AllegraEra)
+</span><a href="#local-6989586621679291248"><span class="hs-identifier hs-var hs-var hs-var hs-var">prevPParamsGovStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParams AllegraEra -&gt; f (PParams AllegraEra))
+-&gt; GovState AllegraEra -&gt; f (GovState AllegraEra)
+(PParams AllegraEra -&gt; f (PParams AllegraEra))
+-&gt; ShelleyGovState AllegraEra -&gt; f (ShelleyGovState AllegraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(PParams era -&gt; f (PParams era))
+-&gt; ShelleyGovState era -&gt; f (ShelleyGovState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Governance.html#prevPParamsShelleyGovStateL"><span class="hs-identifier hs-var">prevPParamsShelleyGovStateL</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679291253"><span class="annot"><span class="annottext">futurePParamsGovStateL :: Lens' (GovState AllegraEra) (FuturePParams AllegraEra)
+</span><a href="#local-6989586621679291253"><span class="hs-identifier hs-var hs-var hs-var hs-var">futurePParamsGovStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(FuturePParams AllegraEra -&gt; f (FuturePParams AllegraEra))
+-&gt; GovState AllegraEra -&gt; f (GovState AllegraEra)
+(FuturePParams AllegraEra -&gt; f (FuturePParams AllegraEra))
+-&gt; ShelleyGovState AllegraEra -&gt; f (ShelleyGovState AllegraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(FuturePParams era -&gt; f (FuturePParams era))
+-&gt; ShelleyGovState era -&gt; f (ShelleyGovState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Governance.html#futurePParamsShelleyGovStateL"><span class="hs-identifier hs-var">futurePParamsShelleyGovStateL</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679291258"><span class="annot"><span class="annottext">obligationGovState :: GovState AllegraEra -&gt; Obligations
+</span><a href="#local-6989586621679291258"><span class="hs-identifier hs-var hs-var hs-var hs-var">obligationGovState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Obligations -&gt; ShelleyGovState AllegraEra -&gt; Obligations
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">Obligations
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-56"></span></pre></body></html>

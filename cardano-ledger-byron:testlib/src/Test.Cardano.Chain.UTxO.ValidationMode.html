@@ -1,0 +1,712 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Chain.UTxO.ValidationMode</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#tests"><span class="hs-identifier">tests</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html"><span class="hs-identifier">Byron.Spec.Ledger.Core</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Abstract</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.Generators.html"><span class="hs-identifier">Byron.Spec.Ledger.Core.Generators</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Abstract</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html"><span class="hs-identifier">Byron.Spec.Ledger.UTxO</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Abstract</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.Generators.html"><span class="hs-identifier">Byron.Spec.Ledger.UTxO.Generators</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Abstract</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html"><span class="hs-identifier">Byron.Spec.Ledger.Update</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Abstract</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.Generators.html"><span class="hs-identifier">Byron.Spec.Ledger.Update.Generators</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Abstract</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.html"><span class="hs-identifier">Cardano.Chain.Block</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.ValidationMode.html#BlockValidationMode"><span class="hs-identifier">BlockValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.TxFeePolicy.html#TxFeePolicy"><span class="hs-identifier">TxFeePolicy</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.TxSizeLinear.html#calculateTxSizeLinear"><span class="hs-identifier">calculateTxSizeLinear</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Lovelace.html#lovelaceToInteger"><span class="hs-identifier">lovelaceToInteger</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.html"><span class="hs-identifier">Cardano.Chain.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.TxAux.html#ATxAux"><span class="hs-identifier">ATxAux</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Validation.html#Environment"><span class="hs-identifier">Environment</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Tx.html#TxId"><span class="hs-identifier">TxId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Validation.html#TxValidationError"><span class="hs-identifier">TxValidationError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.ValidationMode.html#TxValidationMode"><span class="hs-identifier">TxValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Validation.html#UTxOValidationError"><span class="hs-identifier">UTxOValidationError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.html"><span class="hs-identifier">Cardano.Chain.UTxO</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UTxO</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.html"><span class="hs-identifier">Cardano.Chain.Update</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier">ProtocolParameters</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.ValidationMode.html"><span class="hs-identifier">Cardano.Chain.ValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.ValidationMode.html#ValidationMode"><span class="hs-identifier">ValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.html"><span class="hs-identifier">Cardano.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.ProtocolMagic.html#getProtocolMagicId"><span class="hs-identifier">getProtocolMagicId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotated"><span class="hs-identifier">Annotated</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/vector-0.13.2.0-15435dd5a5c5a17cbf505ae33b795526bd282aac3fd70b1e0e6fd56344cf8f72/share/doc/html/src/Data.Vector.html"><span class="hs-identifier">Data.Vector</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Gen.html"><span class="hs-identifier">Hedgehog.Gen</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Gen</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Range.html"><span class="hs-identifier">Hedgehog.Range</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Range</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.UTxO.html"><span class="hs-identifier">Test.Cardano.Chain.Elaboration.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.UTxO.html#elaborateTxBS"><span class="hs-identifier">elaborateTxBS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Update.html"><span class="hs-identifier">Test.Cardano.Chain.Elaboration.Update</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.Elaboration.Update.html#elaboratePParams"><span class="hs-identifier">elaboratePParams</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.UTxO.Gen.html"><span class="hs-identifier">Test.Cardano.Chain.UTxO.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.UTxO.Gen.html#genVKWitness"><span class="hs-identifier">genVKWitness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.UTxO.Model.html"><span class="hs-identifier">Test.Cardano.Chain.UTxO.Model</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.UTxO.Model.html#elaborateInitialUTxO"><span class="hs-identifier">elaborateInitialUTxO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Dummy.html"><span class="hs-identifier">Test.Cardano.Crypto.Dummy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Dummy</span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.html"><span class="hs-identifier">Test.Cardano.Prelude</span></a></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Options.html"><span class="hs-identifier">Test.Options</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Options.html#TSGroup"><span class="hs-identifier">TSGroup</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier">TSProperty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Options.html#withTestsTS"><span class="hs-identifier">withTestsTS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- TxValidationMode Properties</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- | Property: When calling 'updateUTxO' given a valid transaction, 'UTxO'</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- validation should pass in all 'TxValidationMode's.</span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#ts_prop_updateUTxO_Valid"><span class="hs-identifier hs-type">ts_prop_updateUTxO_Valid</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-56"></span><span id="ts_prop_updateUTxO_Valid"><span class="annot"><span class="annottext">ts_prop_updateUTxO_Valid :: TSProperty
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#ts_prop_updateUTxO_Valid"><span class="hs-identifier hs-var hs-var">ts_prop_updateUTxO_Valid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">TestLimit -&gt; Property -&gt; TSProperty
+</span><a href="Test.Options.html#withTestsTS"><span class="hs-identifier hs-var">withTestsTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">300</span></span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">(Property -&gt; TSProperty)
+-&gt; (PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; TSProperty
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+PropertyT IO () -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">(PropertyT IO () -&gt; TSProperty) -&gt; PropertyT IO () -&gt; TSProperty
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-60"></span><span>      </span><span class="hs-comment">-- Generate abstract `PParamsAddrsAndUTxO`</span><span>
+</span><span id="line-61"></span><span>      </span><span id="local-6989586621679371661"><span class="annot"><span class="annottext">ppau :: PParamsAddrsAndUTxO
+</span><a href="#local-6989586621679371661"><span class="hs-identifier hs-var">ppau</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#PParamsAddrsAndUTxO"><span class="hs-identifier hs-type">PParamsAddrsAndUTxO</span></a></span><span> </span><span id="local-6989586621679371663"><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679371663"><span class="hs-identifier hs-var">abstractPparams</span></a></span></span><span> </span><span class="annot"><span class="annottext">[Addr]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679371664"><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679371664"><span class="hs-identifier hs-var">abstractUtxo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-62"></span><span>        </span><span class="annot"><span class="annottext">Gen PParamsAddrsAndUTxO -&gt; PropertyT IO PParamsAddrsAndUTxO
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen PParamsAddrsAndUTxO -&gt; PropertyT IO PParamsAddrsAndUTxO)
+-&gt; Gen PParamsAddrsAndUTxO -&gt; PropertyT IO PParamsAddrsAndUTxO
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; Gen PParamsAddrsAndUTxO
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genPParamsAddrsAndUTxO"><span class="hs-identifier hs-var">genPParamsAddrsAndUTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. a -&gt; a -&gt; Range a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#constant"><span class="hs-identifier hs-var">Range.constant</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-comment">-- Elaborate abstract values to concrete.</span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679371668"><span class="annot"><span class="annottext">pparams :: ProtocolParameters
+</span><a href="#local-6989586621679371668"><span class="hs-identifier hs-var hs-var">pparams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams -&gt; ProtocolParameters
+</span><a href="Test.Cardano.Chain.Elaboration.Update.html#elaboratePParams"><span class="hs-identifier hs-var">elaboratePParams</span></a></span><span> </span><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679371663"><span class="hs-identifier hs-var">abstractPparams</span></a></span><span>
+</span><span id="line-66"></span><span>          </span><span class="hs-special">(</span><span id="local-6989586621679371669"><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679371669"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679371670"><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371670"><span class="hs-identifier hs-var">txIdMap</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO -&gt; (UTxO, Map TxId TxId)
+</span><a href="Test.Cardano.Chain.UTxO.Model.html#elaborateInitialUTxO"><span class="hs-identifier hs-var">elaborateInitialUTxO</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679371664"><span class="hs-identifier hs-var">abstractUtxo</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>      </span><span class="hs-comment">-- Generate abstract transaction and elaborate.</span><span>
+</span><span id="line-69"></span><span>      </span><span id="local-6989586621679371671"><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679371671"><span class="hs-identifier hs-var">abstractTxWits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen Tx -&gt; PropertyT IO Tx
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen Tx -&gt; PropertyT IO Tx) -&gt; Gen Tx -&gt; PropertyT IO Tx
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PParamsAddrsAndUTxO -&gt; Map TxId TxId -&gt; Gen Tx
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genValidTxWits"><span class="hs-identifier hs-var">genValidTxWits</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsAddrsAndUTxO
+</span><a href="#local-6989586621679371661"><span class="hs-identifier hs-var">ppau</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371670"><span class="hs-identifier hs-var">txIdMap</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679371673"><span class="annot"><span class="annottext">tx :: ATxAux ByteString
+</span><a href="#local-6989586621679371673"><span class="hs-identifier hs-var hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>            </span><span class="annot"><span class="annottext">(TxId -&gt; TxId) -&gt; Tx -&gt; ATxAux ByteString
+</span><a href="Test.Cardano.Chain.Elaboration.UTxO.html#elaborateTxBS"><span class="hs-identifier hs-var">elaborateTxBS</span></a></span><span>
+</span><span id="line-72"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map TxId TxId -&gt; TxId -&gt; TxId
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#elaborateTxId"><span class="hs-identifier hs-var">elaborateTxId</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371670"><span class="hs-identifier hs-var">txIdMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>              </span><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679371671"><span class="hs-identifier hs-var">abstractTxWits</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-comment">-- Validate the generated concrete transaction</span><span>
+</span><span id="line-76"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679371675"><span class="annot"><span class="annottext">pm :: AProtocolMagic ByteString
+</span><a href="#local-6989586621679371675"><span class="hs-identifier hs-var hs-var">pm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AProtocolMagic ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Dummy.html#aProtocolMagic"><span class="hs-identifier hs-var">Dummy.aProtocolMagic</span></a></span><span>
+</span><span id="line-77"></span><span>          </span><span id="local-6989586621679371677"><span class="annot"><span class="annottext">env :: Environment
+</span><a href="#local-6989586621679371677"><span class="hs-identifier hs-var hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AProtocolMagic ByteString
+-&gt; ProtocolParameters -&gt; UTxOConfiguration -&gt; Environment
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Validation.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span><span> </span><span class="annot"><span class="annottext">AProtocolMagic ByteString
+</span><a href="#local-6989586621679371675"><span class="hs-identifier hs-var">pm</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679371668"><span class="hs-identifier hs-var">pparams</span></a></span><span> </span><span class="annot"><span class="annottext">UTxOConfiguration
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.UTxOConfiguration.html#defaultUTxOConfiguration"><span class="hs-identifier hs-var">UTxO.defaultUTxOConfiguration</span></a></span><span>
+</span><span id="line-78"></span><span>      </span><span id="local-6989586621679371680"><span class="annot"><span class="annottext">ValidationMode
+</span><a href="#local-6989586621679371680"><span class="hs-identifier hs-var">vMode</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen ValidationMode -&gt; PropertyT IO ValidationMode
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen ValidationMode -&gt; PropertyT IO ValidationMode)
+-&gt; Gen ValidationMode -&gt; PropertyT IO ValidationMode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">BlockValidationMode -&gt; TxValidationMode -&gt; ValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.ValidationMode.html#ValidationMode"><span class="hs-identifier hs-var">ValidationMode</span></a></span><span> </span><span class="annot"><span class="annottext">BlockValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.ValidationMode.html#BlockValidation"><span class="hs-identifier hs-var">BlockValidation</span></a></span><span> </span><span class="annot"><span class="annottext">(TxValidationMode -&gt; ValidationMode)
+-&gt; GenT Identity TxValidationMode -&gt; Gen ValidationMode
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">GenT Identity TxValidationMode
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genValidationMode"><span class="hs-identifier hs-var">genValidationMode</span></a></span><span>
+</span><span id="line-79"></span><span>      </span><span id="local-6989586621679371685"><span class="annot"><span class="annottext">Either UTxOValidationError UTxO
+</span><a href="#local-6989586621679371685"><span class="hs-identifier hs-var">updateRes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-80"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReaderT
+  ValidationMode (PropertyT IO) (Either UTxOValidationError UTxO)
+-&gt; ValidationMode -&gt; PropertyT IO (Either UTxOValidationError UTxO)
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><span class="hs-operator hs-var">`runReaderT`</span></span><span> </span><span class="annot"><span class="annottext">ValidationMode
+</span><a href="#local-6989586621679371680"><span class="hs-identifier hs-var">vMode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>          </span><span class="annot"><span class="annottext">(ReaderT
+   ValidationMode (PropertyT IO) (Either UTxOValidationError UTxO)
+ -&gt; PropertyT IO (Either UTxOValidationError UTxO))
+-&gt; (ExceptT
+      UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+    -&gt; ReaderT
+         ValidationMode (PropertyT IO) (Either UTxOValidationError UTxO))
+-&gt; ExceptT
+     UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+-&gt; PropertyT IO (Either UTxOValidationError UTxO)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ExceptT
+  UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+-&gt; ReaderT
+     ValidationMode (PropertyT IO) (Either UTxOValidationError UTxO)
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><span class="hs-identifier hs-var">runExceptT</span></span><span>
+</span><span id="line-82"></span><span>          </span><span class="annot"><span class="annottext">(ExceptT
+   UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+ -&gt; PropertyT IO (Either UTxOValidationError UTxO))
+-&gt; ExceptT
+     UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+-&gt; PropertyT IO (Either UTxOValidationError UTxO)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Environment
+-&gt; UTxO
+-&gt; [ATxAux ByteString]
+-&gt; ExceptT
+     UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+forall (m :: * -&gt; *).
+(MonadError UTxOValidationError m, MonadReader ValidationMode m) =&gt;
+Environment -&gt; UTxO -&gt; [ATxAux ByteString] -&gt; m UTxO
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Validation.html#updateUTxO"><span class="hs-identifier hs-var">UTxO.updateUTxO</span></a></span><span> </span><span class="annot"><span class="annottext">Environment
+</span><a href="#local-6989586621679371677"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679371669"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679371673"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-83"></span><span>      </span><span class="annot"><span class="annottext">PropertyT IO UTxO -&gt; PropertyT IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><span class="hs-identifier hs-var">void</span></span><span> </span><span class="annot"><span class="annottext">(PropertyT IO UTxO -&gt; PropertyT IO ())
+-&gt; PropertyT IO UTxO -&gt; PropertyT IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Either UTxOValidationError UTxO -&gt; PropertyT IO UTxO
+forall (m :: * -&gt; *) x a.
+(MonadTest m, Show x, HasCallStack) =&gt;
+Either x a -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#evalEither"><span class="hs-identifier hs-var">evalEither</span></a></span><span> </span><span class="annot"><span class="annottext">Either UTxOValidationError UTxO
+</span><a href="#local-6989586621679371685"><span class="hs-identifier hs-var">updateRes</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- | Property: When calling 'updateUTxO' given a valid transaction with an</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- invalid witness, 'UTxO' validation should pass in both the</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- 'TxValidationNoCrypto' and 'NoTxValidation' modes. This is because neither</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- of these modes verify the cryptographic integrity of a transaction.</span><span>
+</span><span id="line-89"></span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#ts_prop_updateUTxO_InvalidWit"><span class="hs-identifier hs-type">ts_prop_updateUTxO_InvalidWit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-90"></span><span id="ts_prop_updateUTxO_InvalidWit"><span class="annot"><span class="annottext">ts_prop_updateUTxO_InvalidWit :: TSProperty
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#ts_prop_updateUTxO_InvalidWit"><span class="hs-identifier hs-var hs-var">ts_prop_updateUTxO_InvalidWit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><span class="annottext">TestLimit -&gt; Property -&gt; TSProperty
+</span><a href="Test.Options.html#withTestsTS"><span class="hs-identifier hs-var">withTestsTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">300</span></span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><span class="annottext">(Property -&gt; TSProperty)
+-&gt; (PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; TSProperty
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+PropertyT IO () -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">(PropertyT IO () -&gt; TSProperty) -&gt; PropertyT IO () -&gt; TSProperty
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-94"></span><span>      </span><span class="hs-comment">-- Generate abstract `PParamsAddrsAndUTxO`</span><span>
+</span><span id="line-95"></span><span>      </span><span id="local-6989586621679371694"><span class="annot"><span class="annottext">ppau :: PParamsAddrsAndUTxO
+</span><a href="#local-6989586621679371694"><span class="hs-identifier hs-var">ppau</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#PParamsAddrsAndUTxO"><span class="hs-identifier hs-type">PParamsAddrsAndUTxO</span></a></span><span> </span><span id="local-6989586621679371695"><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679371695"><span class="hs-identifier hs-var">abstractPparams</span></a></span></span><span> </span><span class="annot"><span class="annottext">[Addr]
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679371696"><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679371696"><span class="hs-identifier hs-var">abstractUtxo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><span class="annottext">Gen PParamsAddrsAndUTxO -&gt; PropertyT IO PParamsAddrsAndUTxO
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen PParamsAddrsAndUTxO -&gt; PropertyT IO PParamsAddrsAndUTxO)
+-&gt; Gen PParamsAddrsAndUTxO -&gt; PropertyT IO PParamsAddrsAndUTxO
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; Gen PParamsAddrsAndUTxO
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genPParamsAddrsAndUTxO"><span class="hs-identifier hs-var">genPParamsAddrsAndUTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. a -&gt; a -&gt; Range a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#constant"><span class="hs-identifier hs-var">Range.constant</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>      </span><span class="hs-comment">-- Elaborate abstract values to concrete.</span><span>
+</span><span id="line-99"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679371697"><span class="annot"><span class="annottext">pparams :: ProtocolParameters
+</span><a href="#local-6989586621679371697"><span class="hs-identifier hs-var hs-var">pparams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams -&gt; ProtocolParameters
+</span><a href="Test.Cardano.Chain.Elaboration.Update.html#elaboratePParams"><span class="hs-identifier hs-var">elaboratePParams</span></a></span><span> </span><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679371695"><span class="hs-identifier hs-var">abstractPparams</span></a></span><span>
+</span><span id="line-100"></span><span>          </span><span class="hs-special">(</span><span id="local-6989586621679371698"><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679371698"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679371699"><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371699"><span class="hs-identifier hs-var">txIdMap</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO -&gt; (UTxO, Map TxId TxId)
+</span><a href="Test.Cardano.Chain.UTxO.Model.html#elaborateInitialUTxO"><span class="hs-identifier hs-var">elaborateInitialUTxO</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679371696"><span class="hs-identifier hs-var">abstractUtxo</span></a></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-comment">-- Generate abstract transaction and elaborate.</span><span>
+</span><span id="line-103"></span><span>      </span><span id="local-6989586621679371700"><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679371700"><span class="hs-identifier hs-var">abstractTxWits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen Tx -&gt; PropertyT IO Tx
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen Tx -&gt; PropertyT IO Tx) -&gt; Gen Tx -&gt; PropertyT IO Tx
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PParamsAddrsAndUTxO -&gt; Map TxId TxId -&gt; Gen Tx
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genValidTxWits"><span class="hs-identifier hs-var">genValidTxWits</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsAddrsAndUTxO
+</span><a href="#local-6989586621679371694"><span class="hs-identifier hs-var">ppau</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371699"><span class="hs-identifier hs-var">txIdMap</span></a></span><span>
+</span><span id="line-104"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679371701"><span class="annot"><span class="annottext">tx :: ATxAux ByteString
+</span><a href="#local-6989586621679371701"><span class="hs-identifier hs-var hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>            </span><span class="annot"><span class="annottext">(TxId -&gt; TxId) -&gt; Tx -&gt; ATxAux ByteString
+</span><a href="Test.Cardano.Chain.Elaboration.UTxO.html#elaborateTxBS"><span class="hs-identifier hs-var">elaborateTxBS</span></a></span><span>
+</span><span id="line-106"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map TxId TxId -&gt; TxId -&gt; TxId
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#elaborateTxId"><span class="hs-identifier hs-var">elaborateTxId</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371699"><span class="hs-identifier hs-var">txIdMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>              </span><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679371700"><span class="hs-identifier hs-var">abstractTxWits</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-comment">-- Generate an invalid 'TxWitness' and utilize it in the valid</span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-comment">-- transaction generated above.</span><span>
+</span><span id="line-111"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679371702"><span class="annot"><span class="annottext">pm :: AProtocolMagic ByteString
+</span><a href="#local-6989586621679371702"><span class="hs-identifier hs-var hs-var">pm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AProtocolMagic ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Dummy.html#aProtocolMagic"><span class="hs-identifier hs-var">Dummy.aProtocolMagic</span></a></span><span>
+</span><span id="line-112"></span><span>      </span><span id="local-6989586621679371703"><span class="annot"><span class="annottext">Annotated (Vector TxInWitness) ByteString
+</span><a href="#local-6989586621679371703"><span class="hs-identifier hs-var">invalidWitness</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-113"></span><span>        </span><span class="annot"><span class="annottext">Gen (Annotated (Vector TxInWitness) ByteString)
+-&gt; PropertyT IO (Annotated (Vector TxInWitness) ByteString)
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span>
+</span><span id="line-114"></span><span>          </span><span class="annot"><span class="annottext">(Gen (Annotated (Vector TxInWitness) ByteString)
+ -&gt; PropertyT IO (Annotated (Vector TxInWitness) ByteString))
+-&gt; Gen (Annotated (Vector TxInWitness) ByteString)
+-&gt; PropertyT IO (Annotated (Vector TxInWitness) ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Vector TxInWitness
+-&gt; ByteString -&gt; Annotated (Vector TxInWitness) ByteString
+forall b a. b -&gt; a -&gt; Annotated b a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotated"><span class="hs-identifier hs-var">Annotated</span></a></span><span>
+</span><span id="line-115"></span><span>          </span><span class="annot"><span class="annottext">(Vector TxInWitness
+ -&gt; ByteString -&gt; Annotated (Vector TxInWitness) ByteString)
+-&gt; GenT Identity (Vector TxInWitness)
+-&gt; GenT
+     Identity (ByteString -&gt; Annotated (Vector TxInWitness) ByteString)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">[TxInWitness] -&gt; Vector TxInWitness
+forall a. [a] -&gt; Vector a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/vector-0.13.2.0-15435dd5a5c5a17cbf505ae33b795526bd282aac3fd70b1e0e6fd56344cf8f72/share/doc/html/src/Data.Vector.html#fromList"><span class="hs-identifier hs-var">V.fromList</span></a></span><span>
+</span><span id="line-116"></span><span>                  </span><span class="annot"><span class="annottext">([TxInWitness] -&gt; Vector TxInWitness)
+-&gt; GenT Identity [TxInWitness]
+-&gt; GenT Identity (Vector TxInWitness)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Range Int
+-&gt; GenT Identity TxInWitness -&gt; GenT Identity [TxInWitness]
+forall (m :: * -&gt; *) a. MonadGen m =&gt; Range Int -&gt; m a -&gt; m [a]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#list"><span class="hs-identifier hs-var">Gen.list</span></a></span><span>
+</span><span id="line-117"></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#linear"><span class="hs-identifier hs-var">Range.linear</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; GenT Identity TxInWitness
+</span><a href="Test.Cardano.Chain.UTxO.Gen.html#genVKWitness"><span class="hs-identifier hs-var">genVKWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AProtocolMagic ByteString -&gt; ProtocolMagicId
+forall a. AProtocolMagic a -&gt; ProtocolMagicId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.ProtocolMagic.html#getProtocolMagicId"><span class="hs-identifier hs-var">getProtocolMagicId</span></a></span><span> </span><span class="annot"><span class="annottext">AProtocolMagic ByteString
+</span><a href="#local-6989586621679371702"><span class="hs-identifier hs-var">pm</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>          </span><span class="annot"><span class="annottext">GenT
+  Identity (ByteString -&gt; Annotated (Vector TxInWitness) ByteString)
+-&gt; GenT Identity ByteString
+-&gt; Gen (Annotated (Vector TxInWitness) ByteString)
+forall a b.
+GenT Identity (a -&gt; b) -&gt; GenT Identity a -&gt; GenT Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; GenT Identity ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.Gen.html#genBytes"><span class="hs-identifier hs-var">genBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">32</span></span><span>
+</span><span id="line-121"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679371709"><span class="annot"><span class="annottext">txInvalidWit :: ATxAux ByteString
+</span><a href="#local-6989586621679371709"><span class="hs-identifier hs-var hs-var">txInvalidWit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679371701"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.TxAux.html#aTaWitness"><span class="hs-identifier hs-var">aTaWitness</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679371703"><span class="hs-identifier hs-type">invalidWitness</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>      </span><span class="hs-comment">-- Validate the generated concrete transaction</span><span>
+</span><span id="line-124"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679371711"><span class="annot"><span class="annottext">env :: Environment
+</span><a href="#local-6989586621679371711"><span class="hs-identifier hs-var hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AProtocolMagic ByteString
+-&gt; ProtocolParameters -&gt; UTxOConfiguration -&gt; Environment
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Validation.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span><span> </span><span class="annot"><span class="annottext">AProtocolMagic ByteString
+</span><a href="#local-6989586621679371702"><span class="hs-identifier hs-var">pm</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679371697"><span class="hs-identifier hs-var">pparams</span></a></span><span> </span><span class="annot"><span class="annottext">UTxOConfiguration
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.UTxOConfiguration.html#defaultUTxOConfiguration"><span class="hs-identifier hs-var">UTxO.defaultUTxOConfiguration</span></a></span><span>
+</span><span id="line-125"></span><span>      </span><span id="local-6989586621679371712"><span class="annot"><span class="annottext">ValidationMode
+</span><a href="#local-6989586621679371712"><span class="hs-identifier hs-var">vMode</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen ValidationMode -&gt; PropertyT IO ValidationMode
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">(Gen ValidationMode -&gt; PropertyT IO ValidationMode)
+-&gt; Gen ValidationMode -&gt; PropertyT IO ValidationMode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">BlockValidationMode -&gt; TxValidationMode -&gt; ValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.ValidationMode.html#ValidationMode"><span class="hs-identifier hs-var">ValidationMode</span></a></span><span> </span><span class="annot"><span class="annottext">BlockValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Block.ValidationMode.html#BlockValidation"><span class="hs-identifier hs-var">BlockValidation</span></a></span><span> </span><span class="annot"><span class="annottext">(TxValidationMode -&gt; ValidationMode)
+-&gt; GenT Identity TxValidationMode -&gt; Gen ValidationMode
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">GenT Identity TxValidationMode
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genValidationMode"><span class="hs-identifier hs-var">genValidationMode</span></a></span><span>
+</span><span id="line-126"></span><span>      </span><span id="local-6989586621679371713"><span class="annot"><span class="annottext">Either UTxOValidationError UTxO
+</span><a href="#local-6989586621679371713"><span class="hs-identifier hs-var">updateRes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-127"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReaderT
+  ValidationMode (PropertyT IO) (Either UTxOValidationError UTxO)
+-&gt; ValidationMode -&gt; PropertyT IO (Either UTxOValidationError UTxO)
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><span class="hs-operator hs-var">`runReaderT`</span></span><span> </span><span class="annot"><span class="annottext">ValidationMode
+</span><a href="#local-6989586621679371712"><span class="hs-identifier hs-var">vMode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>          </span><span class="annot"><span class="annottext">(ReaderT
+   ValidationMode (PropertyT IO) (Either UTxOValidationError UTxO)
+ -&gt; PropertyT IO (Either UTxOValidationError UTxO))
+-&gt; (ExceptT
+      UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+    -&gt; ReaderT
+         ValidationMode (PropertyT IO) (Either UTxOValidationError UTxO))
+-&gt; ExceptT
+     UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+-&gt; PropertyT IO (Either UTxOValidationError UTxO)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ExceptT
+  UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+-&gt; ReaderT
+     ValidationMode (PropertyT IO) (Either UTxOValidationError UTxO)
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><span class="hs-identifier hs-var">runExceptT</span></span><span>
+</span><span id="line-129"></span><span>          </span><span class="annot"><span class="annottext">(ExceptT
+   UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+ -&gt; PropertyT IO (Either UTxOValidationError UTxO))
+-&gt; ExceptT
+     UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+-&gt; PropertyT IO (Either UTxOValidationError UTxO)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Environment
+-&gt; UTxO
+-&gt; [ATxAux ByteString]
+-&gt; ExceptT
+     UTxOValidationError (ReaderT ValidationMode (PropertyT IO)) UTxO
+forall (m :: * -&gt; *).
+(MonadError UTxOValidationError m, MonadReader ValidationMode m) =&gt;
+Environment -&gt; UTxO -&gt; [ATxAux ByteString] -&gt; m UTxO
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Validation.html#updateUTxO"><span class="hs-identifier hs-var">UTxO.updateUTxO</span></a></span><span> </span><span class="annot"><span class="annottext">Environment
+</span><a href="#local-6989586621679371711"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679371698"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679371709"><span class="hs-identifier hs-var">txInvalidWit</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-130"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either UTxOValidationError UTxO
+</span><a href="#local-6989586621679371713"><span class="hs-identifier hs-var">updateRes</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-131"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679371714"><span class="annot"><span class="annottext">UTxOValidationError
+</span><a href="#local-6989586621679371714"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-132"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">UTxOValidationError -&gt; Bool
+</span><a href="#local-6989586621679371715"><span class="hs-identifier hs-var">isInvalidWitnessError</span></a></span><span> </span><span class="annot"><span class="annottext">UTxOValidationError
+</span><a href="#local-6989586621679371714"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-133"></span><span>            </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ValidationMode -&gt; TxValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.ValidationMode.html#txValidationMode"><span class="hs-identifier hs-var">txValidationMode</span></a></span><span> </span><span class="annot"><span class="annottext">ValidationMode
+</span><a href="#local-6989586621679371712"><span class="hs-identifier hs-var">vMode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>            </span><span class="annot"><span class="annottext">TxValidationMode -&gt; TxValidationMode -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">TxValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.ValidationMode.html#TxValidation"><span class="hs-identifier hs-var">TxValidation</span></a></span><span>
+</span><span id="line-135"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">PropertyT IO ()
+forall (m :: * -&gt; *). MonadTest m =&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#success"><span class="hs-identifier hs-var">success</span></a></span><span>
+</span><span id="line-136"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">PropertyT IO ()
+forall (m :: * -&gt; *) a. (MonadTest m, HasCallStack) =&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span>
+</span><span id="line-137"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="annot"><span class="annottext">UTxO
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-138"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ValidationMode -&gt; TxValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.ValidationMode.html#txValidationMode"><span class="hs-identifier hs-var">txValidationMode</span></a></span><span> </span><span class="annot"><span class="annottext">ValidationMode
+</span><a href="#local-6989586621679371712"><span class="hs-identifier hs-var">vMode</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">TxValidationMode -&gt; TxValidationMode -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">TxValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.ValidationMode.html#TxValidation"><span class="hs-identifier hs-var">TxValidation</span></a></span><span>
+</span><span id="line-139"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">PropertyT IO ()
+forall (m :: * -&gt; *) a. (MonadTest m, HasCallStack) =&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#failure"><span class="hs-identifier hs-var">failure</span></a></span><span>
+</span><span id="line-140"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">PropertyT IO ()
+forall (m :: * -&gt; *). MonadTest m =&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#success"><span class="hs-identifier hs-var">success</span></a></span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><a href="#local-6989586621679371715"><span class="hs-identifier hs-type">isInvalidWitnessError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Validation.html#UTxOValidationError"><span class="hs-identifier hs-type">UTxOValidationError</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-143"></span><span>    </span><span id="local-6989586621679371715"><span class="annot"><span class="annottext">isInvalidWitnessError :: UTxOValidationError -&gt; Bool
+</span><a href="#local-6989586621679371715"><span class="hs-identifier hs-var hs-var">isInvalidWitnessError</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Validation.html#UTxOValidationTxValidationError"><span class="hs-identifier hs-type">UTxOValidationTxValidationError</span></a></span><span> </span><span id="local-6989586621679371722"><span class="annot"><span class="annottext">TxValidationError
+</span><a href="#local-6989586621679371722"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TxValidationError
+</span><a href="#local-6989586621679371722"><span class="hs-identifier hs-var">err</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Validation.html#TxValidationWitnessWrongSignature"><span class="hs-identifier hs-type">TxValidationWitnessWrongSignature</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-145"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Validation.html#TxValidationWitnessWrongKey"><span class="hs-identifier hs-type">TxValidationWitnessWrongKey</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><span class="annottext">TxValidationError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-147"></span><span>    </span><span class="annot"><a href="#local-6989586621679371715"><span class="hs-identifier hs-var">isInvalidWitnessError</span></a></span><span> </span><span class="annot"><span class="annottext">UTxOValidationError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- Generators</span><span>
+</span><span id="line-151"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genAbstractAddrs"><span class="hs-identifier hs-type">genAbstractAddrs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Addr"><span class="hs-identifier hs-type">Abstract.Addr</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-154"></span><span id="genAbstractAddrs"><span class="annot"><span class="annottext">genAbstractAddrs :: Range Int -&gt; Gen [Addr]
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genAbstractAddrs"><span class="hs-identifier hs-var hs-var">genAbstractAddrs</span></a></span></span><span> </span><span id="local-6989586621679371726"><span class="annot"><span class="annottext">Range Int
+</span><a href="#local-6989586621679371726"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; GenT Identity Addr -&gt; Gen [Addr]
+forall (m :: * -&gt; *) a. MonadGen m =&gt; Range Int -&gt; m a -&gt; m [a]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#list"><span class="hs-identifier hs-var">Gen.list</span></a></span><span> </span><span class="annot"><span class="annottext">Range Int
+</span><a href="#local-6989586621679371726"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">GenT Identity Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.Generators.html#addrGen"><span class="hs-identifier hs-var">Abstract.addrGen</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genInitialAbstractUTxO"><span class="hs-identifier hs-type">genInitialAbstractUTxO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Addr"><span class="hs-identifier hs-type">Abstract.Addr</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">Abstract.UTxO</span></a></span><span>
+</span><span id="line-157"></span><span id="genInitialAbstractUTxO"><span class="annot"><span class="annottext">genInitialAbstractUTxO :: [Addr] -&gt; Gen UTxO
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genInitialAbstractUTxO"><span class="hs-identifier hs-var hs-var">genInitialAbstractUTxO</span></a></span></span><span> </span><span id="local-6989586621679371729"><span class="annot"><span class="annottext">[Addr]
+</span><a href="#local-6989586621679371729"><span class="hs-identifier hs-var">addrs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-158"></span><span>  </span><span class="annot"><span class="annottext">[TxOut] -&gt; UTxO
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html#fromTxOuts"><span class="hs-identifier hs-var">Abstract.fromTxOuts</span></a></span><span> </span><span class="annot"><span class="annottext">([TxOut] -&gt; UTxO) -&gt; GenT Identity [TxOut] -&gt; Gen UTxO
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[Addr] -&gt; GenT Identity [TxOut]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.Generators.html#genInitialTxOuts"><span class="hs-identifier hs-var">Abstract.genInitialTxOuts</span></a></span><span> </span><span class="annot"><span class="annottext">[Addr]
+</span><a href="#local-6989586621679371729"><span class="hs-identifier hs-var">addrs</span></a></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genPParamsAddrsAndUTxO"><span class="hs-identifier hs-type">genPParamsAddrsAndUTxO</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Range for generation of 'Abstract.Addr's.</span></span><span>
+</span><span id="line-162"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#Range"><span class="hs-identifier hs-type">Range</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-163"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#PParamsAddrsAndUTxO"><span class="hs-identifier hs-type">PParamsAddrsAndUTxO</span></a></span><span>
+</span><span id="line-164"></span><span id="genPParamsAddrsAndUTxO"><span class="annot"><span class="annottext">genPParamsAddrsAndUTxO :: Range Int -&gt; Gen PParamsAddrsAndUTxO
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genPParamsAddrsAndUTxO"><span class="hs-identifier hs-var hs-var">genPParamsAddrsAndUTxO</span></a></span></span><span> </span><span id="local-6989586621679371733"><span class="annot"><span class="annottext">Range Int
+</span><a href="#local-6989586621679371733"><span class="hs-identifier hs-var">addrRange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-165"></span><span>  </span><span id="local-6989586621679371734"><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679371734"><span class="hs-identifier hs-var">abstractPparams</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen PParams
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.Generators.html#pparamsGen"><span class="hs-identifier hs-var">Abstract.pparamsGen</span></a></span><span>
+</span><span id="line-166"></span><span>  </span><span id="local-6989586621679371736"><span class="annot"><span class="annottext">[Addr]
+</span><a href="#local-6989586621679371736"><span class="hs-identifier hs-var">abstractAddrs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; Gen [Addr]
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genAbstractAddrs"><span class="hs-identifier hs-var">genAbstractAddrs</span></a></span><span> </span><span class="annot"><span class="annottext">Range Int
+</span><a href="#local-6989586621679371733"><span class="hs-identifier hs-var">addrRange</span></a></span><span>
+</span><span id="line-167"></span><span>  </span><span id="local-6989586621679371737"><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679371737"><span class="hs-identifier hs-var">abstractUtxo</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Addr] -&gt; Gen UTxO
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genInitialAbstractUTxO"><span class="hs-identifier hs-var">genInitialAbstractUTxO</span></a></span><span> </span><span class="annot"><span class="annottext">[Addr]
+</span><a href="#local-6989586621679371736"><span class="hs-identifier hs-var">abstractAddrs</span></a></span><span>
+</span><span id="line-168"></span><span>  </span><span class="annot"><span class="annottext">PParamsAddrsAndUTxO -&gt; Gen PParamsAddrsAndUTxO
+forall a. a -&gt; GenT Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(PParamsAddrsAndUTxO -&gt; Gen PParamsAddrsAndUTxO)
+-&gt; PParamsAddrsAndUTxO -&gt; Gen PParamsAddrsAndUTxO
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PParams -&gt; [Addr] -&gt; UTxO -&gt; PParamsAddrsAndUTxO
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#PParamsAddrsAndUTxO"><span class="hs-identifier hs-var">PParamsAddrsAndUTxO</span></a></span><span> </span><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679371734"><span class="hs-identifier hs-var">abstractPparams</span></a></span><span> </span><span class="annot"><span class="annottext">[Addr]
+</span><a href="#local-6989586621679371736"><span class="hs-identifier hs-var">abstractAddrs</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679371737"><span class="hs-identifier hs-var">abstractUtxo</span></a></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genValidTxWits"><span class="hs-identifier hs-type">genValidTxWits</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-171"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#PParamsAddrsAndUTxO"><span class="hs-identifier hs-type">PParamsAddrsAndUTxO</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-172"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html#TxId"><span class="hs-identifier hs-type">Abstract.TxId</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Tx.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-173"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier hs-type">Abstract.Tx</span></a></span><span>
+</span><span id="line-174"></span><span id="genValidTxWits"><span class="annot"><span class="annottext">genValidTxWits :: PParamsAddrsAndUTxO -&gt; Map TxId TxId -&gt; Gen Tx
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genValidTxWits"><span class="hs-identifier hs-var hs-var">genValidTxWits</span></a></span></span><span> </span><span id="local-6989586621679371738"><span class="annot"><span class="annottext">PParamsAddrsAndUTxO
+</span><a href="#local-6989586621679371738"><span class="hs-identifier hs-var">ppau</span></a></span></span><span> </span><span id="local-6989586621679371739"><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371739"><span class="hs-identifier hs-var">txIdMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-175"></span><span>  </span><span class="annot"><span class="annottext">[Addr] -&gt; (Tx -&gt; Lovelace) -&gt; UTxO -&gt; Gen Tx
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.Generators.html#genTxFromUTxO"><span class="hs-identifier hs-var">Abstract.genTxFromUTxO</span></a></span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><span class="annottext">[Addr]
+</span><a href="#local-6989586621679371741"><span class="hs-identifier hs-var">ppauAddrs</span></a></span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map TxId TxId -&gt; TxFeePolicy -&gt; Tx -&gt; Lovelace
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#abstractTxFee"><span class="hs-identifier hs-var">abstractTxFee</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371739"><span class="hs-identifier hs-var">txIdMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; TxFeePolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Update.ProtocolParameters.html#ppTxFeePolicy"><span class="hs-identifier hs-var">ppTxFeePolicy</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679371744"><span class="hs-identifier hs-var">pparams</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>    </span><span class="annot"><span class="annottext">UTxO
+</span><a href="#local-6989586621679371745"><span class="hs-identifier hs-var">ppauUTxO</span></a></span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-180"></span><span>    </span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#PParamsAddrsAndUTxO"><span class="hs-identifier hs-type">PParamsAddrsAndUTxO</span></a></span><span>
+</span><span id="line-181"></span><span>      </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679371746"><span class="annot"><span class="annottext">PParams
+ppauPParams :: PParams
+ppauPParams :: PParamsAddrsAndUTxO -&gt; PParams
+</span><a href="#local-6989586621679371746"><span class="hs-identifier hs-var hs-var">ppauPParams</span></a></span></span><span>
+</span><span id="line-182"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679371741"><span class="annot"><span class="annottext">[Addr]
+ppauAddrs :: [Addr]
+ppauAddrs :: PParamsAddrsAndUTxO -&gt; [Addr]
+</span><a href="#local-6989586621679371741"><span class="hs-identifier hs-var hs-var">ppauAddrs</span></a></span></span><span>
+</span><span id="line-183"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679371745"><span class="annot"><span class="annottext">UTxO
+ppauUTxO :: UTxO
+ppauUTxO :: PParamsAddrsAndUTxO -&gt; UTxO
+</span><a href="#local-6989586621679371745"><span class="hs-identifier hs-var hs-var">ppauUTxO</span></a></span></span><span>
+</span><span id="line-184"></span><span>      </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParamsAddrsAndUTxO
+</span><a href="#local-6989586621679371738"><span class="hs-identifier hs-var">ppau</span></a></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span>    </span><span id="local-6989586621679371744"><span class="annot"><span class="annottext">pparams :: ProtocolParameters
+</span><a href="#local-6989586621679371744"><span class="hs-identifier hs-var hs-var">pparams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams -&gt; ProtocolParameters
+</span><a href="Test.Cardano.Chain.Elaboration.Update.html#elaboratePParams"><span class="hs-identifier hs-var">elaboratePParams</span></a></span><span> </span><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679371746"><span class="hs-identifier hs-var">ppauPParams</span></a></span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genValidationMode"><span class="hs-identifier hs-type">genValidationMode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.ValidationMode.html#TxValidationMode"><span class="hs-identifier hs-type">TxValidationMode</span></a></span><span>
+</span><span id="line-189"></span><span id="genValidationMode"><span class="annot"><span class="annottext">genValidationMode :: GenT Identity TxValidationMode
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#genValidationMode"><span class="hs-identifier hs-var hs-var">genValidationMode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-190"></span><span>  </span><span class="annot"><span class="annottext">[TxValidationMode] -&gt; GenT Identity TxValidationMode
+forall (f :: * -&gt; *) (m :: * -&gt; *) a.
+(HasCallStack, Foldable f, MonadGen m) =&gt;
+f a -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#element"><span class="hs-identifier hs-var">Gen.element</span></a></span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TxValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.ValidationMode.html#TxValidation"><span class="hs-identifier hs-var">TxValidation</span></a></span><span>
+</span><span id="line-192"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.ValidationMode.html#TxValidationNoCrypto"><span class="hs-identifier hs-var">TxValidationNoCrypto</span></a></span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxValidationMode
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.ValidationMode.html#NoTxValidation"><span class="hs-identifier hs-var">NoTxValidation</span></a></span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- Helpers</span><span>
+</span><span id="line-198"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span class="hs-keyword">data</span><span> </span><span id="PParamsAddrsAndUTxO"><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#PParamsAddrsAndUTxO"><span class="hs-identifier hs-var">PParamsAddrsAndUTxO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PParamsAddrsAndUTxO"><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#PParamsAddrsAndUTxO"><span class="hs-identifier hs-var">PParamsAddrsAndUTxO</span></a></span></span><span>
+</span><span id="line-201"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="ppauPParams"><span class="annot"><span class="annottext">PParamsAddrsAndUTxO -&gt; PParams
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#ppauPParams"><span class="hs-identifier hs-var hs-var">ppauPParams</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#PParams"><span class="hs-identifier hs-type">Abstract.PParams</span></a></span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppauAddrs"><span class="annot"><span class="annottext">PParamsAddrsAndUTxO -&gt; [Addr]
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#ppauAddrs"><span class="hs-identifier hs-var hs-var">ppauAddrs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Addr"><span class="hs-identifier hs-type">Abstract.Addr</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppauUTxO"><span class="annot"><span class="annottext">PParamsAddrsAndUTxO -&gt; UTxO
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#ppauUTxO"><span class="hs-identifier hs-var hs-var">ppauUTxO</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">Abstract.UTxO</span></a></span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-205"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679371752"><span id="local-6989586621679371763"><span id="local-6989586621679371766"><span class="annot"><span class="annottext">Int -&gt; PParamsAddrsAndUTxO -&gt; ShowS
+[PParamsAddrsAndUTxO] -&gt; ShowS
+PParamsAddrsAndUTxO -&gt; String
+(Int -&gt; PParamsAddrsAndUTxO -&gt; ShowS)
+-&gt; (PParamsAddrsAndUTxO -&gt; String)
+-&gt; ([PParamsAddrsAndUTxO] -&gt; ShowS)
+-&gt; Show PParamsAddrsAndUTxO
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PParamsAddrsAndUTxO -&gt; ShowS
+showsPrec :: Int -&gt; PParamsAddrsAndUTxO -&gt; ShowS
+$cshow :: PParamsAddrsAndUTxO -&gt; String
+show :: PParamsAddrsAndUTxO -&gt; String
+$cshowList :: [PParamsAddrsAndUTxO] -&gt; ShowS
+showList :: [PParamsAddrsAndUTxO] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-206"></span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- | Elaborate an 'Abstract.Tx', calculate the 'Concrete.Lovelace' fee, then</span><span>
+</span><span id="line-208"></span><span class="hs-comment">-- convert back to an 'Abstract.Lovelace'.</span><span>
+</span><span id="line-209"></span><span class="hs-comment">-- n.b. Calculating the fee with 'Abstract.pcMinFee', for example, proved to</span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- be ineffective as it utilizes the 'Abstract.Size' of the 'Abstract.Tx' in</span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- its calculation when we really need to take into account the actual</span><span>
+</span><span id="line-212"></span><span class="hs-comment">-- concrete size in bytes.</span><span>
+</span><span id="line-213"></span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#abstractTxFee"><span class="hs-identifier hs-type">abstractTxFee</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-214"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html#TxId"><span class="hs-identifier hs-type">Abstract.TxId</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Tx.html#TxId"><span class="hs-identifier hs-type">UTxO.TxId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-215"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.TxFeePolicy.html#TxFeePolicy"><span class="hs-identifier hs-type">TxFeePolicy</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-216"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier hs-type">Abstract.Tx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-217"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Lovelace"><span class="hs-identifier hs-type">Abstract.Lovelace</span></a></span><span>
+</span><span id="line-218"></span><span id="abstractTxFee"><span class="annot"><span class="annottext">abstractTxFee :: Map TxId TxId -&gt; TxFeePolicy -&gt; Tx -&gt; Lovelace
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#abstractTxFee"><span class="hs-identifier hs-var hs-var">abstractTxFee</span></a></span></span><span> </span><span id="local-6989586621679371773"><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371773"><span class="hs-identifier hs-var">txIdMap</span></a></span></span><span> </span><span id="local-6989586621679371774"><span class="annot"><span class="annottext">TxFeePolicy
+</span><a href="#local-6989586621679371774"><span class="hs-identifier hs-var">tfp</span></a></span></span><span> </span><span id="local-6989586621679371775"><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679371775"><span class="hs-identifier hs-var">aTx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-219"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.TxAux.html#ATxAux"><span class="hs-identifier hs-type">ATxAux</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotated"><span class="hs-identifier hs-type">Annotated</span></a></span><span> </span><span class="annot"><span class="annottext">Tx
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679371777"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679371777"><span class="hs-identifier hs-var">txBytes</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Annotated (Vector TxInWitness) ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-220"></span><span>        </span><span class="annot"><span class="annottext">(TxId -&gt; TxId) -&gt; Tx -&gt; ATxAux ByteString
+</span><a href="Test.Cardano.Chain.Elaboration.UTxO.html#elaborateTxBS"><span class="hs-identifier hs-var">elaborateTxBS</span></a></span><span>
+</span><span id="line-221"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map TxId TxId -&gt; TxId -&gt; TxId
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#elaborateTxId"><span class="hs-identifier hs-var">elaborateTxId</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371773"><span class="hs-identifier hs-var">txIdMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span>          </span><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679371775"><span class="hs-identifier hs-var">aTx</span></a></span><span>
+</span><span id="line-223"></span><span>      </span><span id="local-6989586621679371788"><span class="annot"><span class="annottext">cLovelace :: Lovelace
+</span><a href="#local-6989586621679371788"><span class="hs-identifier hs-var hs-var">cLovelace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TxFeePolicy
+</span><a href="#local-6989586621679371774"><span class="hs-identifier hs-var">tfp</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-224"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.TxFeePolicy.html#TxFeePolicyTxSizeLinear"><span class="hs-identifier hs-type">TxFeePolicyTxSizeLinear</span></a></span><span> </span><span id="local-6989586621679371790"><span class="annot"><span class="annottext">TxSizeLinear
+</span><a href="#local-6989586621679371790"><span class="hs-identifier hs-var">txSizeLinear</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-225"></span><span>          </span><span class="annot"><span class="annottext">(LovelaceError -&gt; Lovelace)
+-&gt; (Lovelace -&gt; Lovelace)
+-&gt; Either LovelaceError Lovelace
+-&gt; Lovelace
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><span class="hs-identifier hs-var">either</span></span><span>
+</span><span id="line-226"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Lovelace
+forall a. HasCallStack =&gt; Text -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Panic.html#panic"><span class="hs-identifier hs-var">panic</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Lovelace)
+-&gt; (LovelaceError -&gt; Text) -&gt; LovelaceError -&gt; Lovelace
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">LovelaceError -&gt; Text
+forall a b. (Show a, ConvertText String b) =&gt; a -&gt; b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-227"></span><span>            </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679371794"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679371794"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679371794"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">TxSizeLinear -&gt; Natural -&gt; Either LovelaceError Lovelace
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.TxSizeLinear.html#calculateTxSizeLinear"><span class="hs-identifier hs-var">calculateTxSizeLinear</span></a></span><span>
+</span><span id="line-229"></span><span>                </span><span class="annot"><span class="annottext">TxSizeLinear
+</span><a href="#local-6989586621679371790"><span class="hs-identifier hs-var">txSizeLinear</span></a></span><span>
+</span><span id="line-230"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Natural
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Natural) -&gt; Int -&gt; Natural
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><span class="hs-identifier hs-var">BS.length</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679371777"><span class="hs-identifier hs-var">txBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-231"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-232"></span><span>  </span><span class="hs-comment">-- Add an extra lovelace to the fee to compensate for rounding errors</span><span>
+</span><span id="line-233"></span><span>  </span><span class="annot"><span class="annottext">Integer -&gt; Lovelace
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Lovelace"><span class="hs-identifier hs-var">Abstract.Lovelace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Lovelace -&gt; Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Lovelace.html#lovelaceToInteger"><span class="hs-identifier hs-var">lovelaceToInteger</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679371788"><span class="hs-identifier hs-var">cLovelace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-234"></span><span>
+</span><span id="line-235"></span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#elaborateTxId"><span class="hs-identifier hs-type">elaborateTxId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html#TxId"><span class="hs-identifier hs-type">Abstract.TxId</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Tx.html#TxId"><span class="hs-identifier hs-type">UTxO.TxId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.UTxO.html#TxId"><span class="hs-identifier hs-type">Abstract.TxId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.UTxO.Tx.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-236"></span><span id="elaborateTxId"><span class="annot"><span class="annottext">elaborateTxId :: Map TxId TxId -&gt; TxId -&gt; TxId
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#elaborateTxId"><span class="hs-identifier hs-var hs-var">elaborateTxId</span></a></span></span><span> </span><span id="local-6989586621679371797"><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371797"><span class="hs-identifier hs-var">txIdMap</span></a></span></span><span> </span><span id="local-6989586621679371798"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679371798"><span class="hs-identifier hs-var">abstractTxId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-237"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Map TxId TxId -&gt; Maybe TxId
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">M.lookup</span></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679371798"><span class="hs-identifier hs-var">abstractTxId</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxId TxId
+</span><a href="#local-6989586621679371797"><span class="hs-identifier hs-var">txIdMap</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-238"></span><span>    </span><span class="annot"><span class="annottext">Maybe TxId
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; TxId
+forall a. HasCallStack =&gt; Text -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Panic.html#panic"><span class="hs-identifier hs-var">panic</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;elaborateTxId: Missing abstract TxId during elaboration&quot;</span></span><span>
+</span><span id="line-239"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679371800"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679371800"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679371800"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-242"></span><span class="hs-comment">-- Main Test Export</span><span>
+</span><span id="line-243"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-244"></span><span>
+</span><span id="line-245"></span><span class="annot"><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#tests"><span class="hs-identifier hs-type">tests</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSGroup"><span class="hs-identifier hs-type">TSGroup</span></a></span><span>
+</span><span id="line-246"></span><span id="tests"><span class="annot"><span class="annottext">tests :: TSGroup
+</span><a href="Test.Cardano.Chain.UTxO.ValidationMode.html#tests"><span class="hs-identifier hs-var hs-var">tests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">$$</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.Tripping.html#discoverPropArg"><span class="hs-identifier hs-type">discoverPropArg</span></a></span><span>
+</span><span id="line-247"></span></pre></body></html>

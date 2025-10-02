@@ -1,0 +1,561 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679238530"><span id="local-6989586621679238531"><span id="local-6989586621679238532"><span id="local-6989586621679238533"><span id="local-6989586621679238534"><span id="local-6989586621679238535"><span id="local-6989586621679238536"></span></span></span></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Byron.Spec.Chain.STS.Rule.Pbft</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Block.html"><span class="hs-identifier">Byron.Spec.Chain.STS.Block</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.SigCnt.html"><span class="hs-identifier">Byron.Spec.Chain.STS.Rule.SigCnt</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html"><span class="hs-identifier">Byron.Spec.Ledger.Core</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html"><span class="hs-identifier">Byron.Spec.Ledger.Update</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/bimap-0.5.0-27098ee257ef2e554baff63313c57dc699014713bec5c50671e808ed86f54646/share/doc/html/src/Data.Bimap.html"><span class="hs-identifier">Data.Bimap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/bimap-0.5.0-27098ee257ef2e554baff63313c57dc699014713bec5c50671e808ed86f54646/share/doc/html/src/Data.Bimap.html#Bimap"><span class="hs-identifier">Bimap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Data</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Data</span></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Sequence</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Seq</span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">data</span><span> </span><span id="PBFT"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#PBFT"><span class="hs-identifier hs-var">PBFT</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679238541"><span id="local-6989586621679238543"><span id="local-6989586621679238545"><span id="local-6989586621679238547"><span id="local-6989586621679238549"><span id="local-6989586621679238555"><span id="local-6989586621679238560"><span id="local-6989586621679238563"><span id="local-6989586621679238566"><span id="local-6989586621679238569"><span id="local-6989586621679238572"><span id="local-6989586621679238575"><span id="local-6989586621679238580"><span id="local-6989586621679238585"><span class="annot"><span class="annottext">Typeable PBFT
+Typeable PBFT =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; PBFT -&gt; c PBFT)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PBFT)
+-&gt; (PBFT -&gt; Constr)
+-&gt; (PBFT -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PBFT))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c PBFT))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; PBFT -&gt; PBFT)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PBFT -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PBFT -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; PBFT -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PBFT -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; PBFT -&gt; m PBFT)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; PBFT -&gt; m PBFT)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; PBFT -&gt; m PBFT)
+-&gt; Data PBFT
+PBFT -&gt; Constr
+PBFT -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; PBFT -&gt; PBFT
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PBFT -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; PBFT -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PBFT -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PBFT -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PBFT -&gt; m PBFT
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PBFT -&gt; m PBFT
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PBFT
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; PBFT -&gt; c PBFT
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PBFT)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c PBFT)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; PBFT -&gt; c PBFT
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; PBFT -&gt; c PBFT
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PBFT
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PBFT
+$ctoConstr :: PBFT -&gt; Constr
+toConstr :: PBFT -&gt; Constr
+$cdataTypeOf :: PBFT -&gt; DataType
+dataTypeOf :: PBFT -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PBFT)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PBFT)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c PBFT)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c PBFT)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; PBFT -&gt; PBFT
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; PBFT -&gt; PBFT
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PBFT -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PBFT -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PBFT -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PBFT -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; PBFT -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; PBFT -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PBFT -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PBFT -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PBFT -&gt; m PBFT
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PBFT -&gt; m PBFT
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PBFT -&gt; m PBFT
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PBFT -&gt; m PBFT
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PBFT -&gt; m PBFT
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; PBFT -&gt; m PBFT
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">data</span><span> </span><span id="PbftPredicateFailure"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#PbftPredicateFailure"><span class="hs-identifier hs-var">PbftPredicateFailure</span></a></span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="SlotNotAfterLastBlock"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#SlotNotAfterLastBlock"><span class="hs-identifier hs-var">SlotNotAfterLastBlock</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="SlotInTheFuture"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#SlotInTheFuture"><span class="hs-identifier hs-var">SlotInTheFuture</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="PrevHashNotMatching"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#PrevHashNotMatching"><span class="hs-identifier hs-var">PrevHashNotMatching</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="InvalidHeaderSignature"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#InvalidHeaderSignature"><span class="hs-identifier hs-var">InvalidHeaderSignature</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Sig"><span class="hs-identifier hs-type">Sig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="SigCountFailure"><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#SigCountFailure"><span class="hs-identifier hs-var">SigCountFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-type">PredicateFailure</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.SigCnt.html#SIGCNT"><span class="hs-identifier hs-type">SIGCNT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679238596"><span id="local-6989586621679238612"><span class="annot"><span class="annottext">PbftPredicateFailure -&gt; PbftPredicateFailure -&gt; Bool
+(PbftPredicateFailure -&gt; PbftPredicateFailure -&gt; Bool)
+-&gt; (PbftPredicateFailure -&gt; PbftPredicateFailure -&gt; Bool)
+-&gt; Eq PbftPredicateFailure
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PbftPredicateFailure -&gt; PbftPredicateFailure -&gt; Bool
+== :: PbftPredicateFailure -&gt; PbftPredicateFailure -&gt; Bool
+$c/= :: PbftPredicateFailure -&gt; PbftPredicateFailure -&gt; Bool
+/= :: PbftPredicateFailure -&gt; PbftPredicateFailure -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679238617"><span id="local-6989586621679238639"><span id="local-6989586621679238643"><span class="annot"><span class="annottext">Int -&gt; PbftPredicateFailure -&gt; ShowS
+[PbftPredicateFailure] -&gt; ShowS
+PbftPredicateFailure -&gt; String
+(Int -&gt; PbftPredicateFailure -&gt; ShowS)
+-&gt; (PbftPredicateFailure -&gt; String)
+-&gt; ([PbftPredicateFailure] -&gt; ShowS)
+-&gt; Show PbftPredicateFailure
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PbftPredicateFailure -&gt; ShowS
+showsPrec :: Int -&gt; PbftPredicateFailure -&gt; ShowS
+$cshow :: PbftPredicateFailure -&gt; String
+show :: PbftPredicateFailure -&gt; String
+$cshowList :: [PbftPredicateFailure] -&gt; ShowS
+showList :: [PbftPredicateFailure] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679238649"><span id="local-6989586621679238665"><span id="local-6989586621679238676"><span id="local-6989586621679238678"><span id="local-6989586621679238680"><span id="local-6989586621679238686"><span id="local-6989586621679238691"><span id="local-6989586621679238694"><span id="local-6989586621679238697"><span id="local-6989586621679238700"><span id="local-6989586621679238703"><span id="local-6989586621679238706"><span id="local-6989586621679238711"><span id="local-6989586621679238716"><span class="annot"><span class="annottext">Typeable PbftPredicateFailure
+Typeable PbftPredicateFailure =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g)
+ -&gt; PbftPredicateFailure
+ -&gt; c PbftPredicateFailure)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PbftPredicateFailure)
+-&gt; (PbftPredicateFailure -&gt; Constr)
+-&gt; (PbftPredicateFailure -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PbftPredicateFailure))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c PbftPredicateFailure))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; PbftPredicateFailure -&gt; PbftPredicateFailure)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PbftPredicateFailure -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PbftPredicateFailure -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; PbftPredicateFailure -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PbftPredicateFailure -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; PbftPredicateFailure -&gt; m PbftPredicateFailure)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; PbftPredicateFailure -&gt; m PbftPredicateFailure)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; PbftPredicateFailure -&gt; m PbftPredicateFailure)
+-&gt; Data PbftPredicateFailure
+PbftPredicateFailure -&gt; Constr
+PbftPredicateFailure -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; PbftPredicateFailure -&gt; PbftPredicateFailure
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PbftPredicateFailure -&gt; u
+forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; PbftPredicateFailure -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PbftPredicateFailure -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PbftPredicateFailure -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PbftPredicateFailure -&gt; m PbftPredicateFailure
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PbftPredicateFailure -&gt; m PbftPredicateFailure
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PbftPredicateFailure
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; PbftPredicateFailure
+-&gt; c PbftPredicateFailure
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PbftPredicateFailure)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c PbftPredicateFailure)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; PbftPredicateFailure
+-&gt; c PbftPredicateFailure
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; PbftPredicateFailure
+-&gt; c PbftPredicateFailure
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PbftPredicateFailure
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c PbftPredicateFailure
+$ctoConstr :: PbftPredicateFailure -&gt; Constr
+toConstr :: PbftPredicateFailure -&gt; Constr
+$cdataTypeOf :: PbftPredicateFailure -&gt; DataType
+dataTypeOf :: PbftPredicateFailure -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PbftPredicateFailure)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c PbftPredicateFailure)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c PbftPredicateFailure)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c PbftPredicateFailure)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; PbftPredicateFailure -&gt; PbftPredicateFailure
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; PbftPredicateFailure -&gt; PbftPredicateFailure
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PbftPredicateFailure -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PbftPredicateFailure -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PbftPredicateFailure -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; PbftPredicateFailure -&gt; r
+$cgmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; PbftPredicateFailure -&gt; [u]
+gmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; PbftPredicateFailure -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PbftPredicateFailure -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; PbftPredicateFailure -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PbftPredicateFailure -&gt; m PbftPredicateFailure
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PbftPredicateFailure -&gt; m PbftPredicateFailure
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PbftPredicateFailure -&gt; m PbftPredicateFailure
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PbftPredicateFailure -&gt; m PbftPredicateFailure
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PbftPredicateFailure -&gt; m PbftPredicateFailure
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; PbftPredicateFailure -&gt; m PbftPredicateFailure
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679238734"><span id="local-6989586621679238738"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#PBFT"><span class="hs-identifier hs-type">PBFT</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-keyword">type</span><span>
+</span><span id="line-30"></span><span>    </span><span id="Environment"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#PBFT"><span class="hs-identifier hs-type">PBFT</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-31"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Update.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span>
+</span><span id="line-32"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/bimap-0.5.0-27098ee257ef2e554baff63313c57dc699014713bec5c50671e808ed86f54646/share/doc/html/src/Data.Bimap.html#Bimap"><span class="hs-identifier hs-type">Bimap</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKeyGenesis"><span class="hs-identifier hs-type">VKeyGenesis</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span>
+</span><span id="line-33"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span>
+</span><span id="line-34"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span>
+</span><span id="line-35"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#BlockCount"><span class="hs-identifier hs-type">BlockCount</span></a></span><span> </span><span class="hs-comment">-- Chain stability parameter</span><span>
+</span><span id="line-36"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="State"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#PBFT"><span class="hs-identifier hs-type">PBFT</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Seq</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKeyGenesis"><span class="hs-identifier hs-type">VKeyGenesis</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signal"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-var">Signal</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#PBFT"><span class="hs-identifier hs-type">PBFT</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Block.html#BlockHeader"><span class="hs-identifier hs-type">BlockHeader</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="PredicateFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-var">PredicateFailure</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#PBFT"><span class="hs-identifier hs-type">PBFT</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#PbftPredicateFailure"><span class="hs-identifier hs-type">PbftPredicateFailure</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679238742"><span class="annot"><span class="annottext">initialRules :: [InitialRule PBFT]
+</span><a href="#local-6989586621679238742"><span class="hs-identifier hs-var hs-var hs-var hs-var">initialRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621679238767"><span class="annot"><span class="annottext">transitionRules :: [TransitionRule PBFT]
+</span><a href="#local-6989586621679238767"><span class="hs-identifier hs-var hs-var hs-var hs-var">transitionRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-48"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span id="local-6989586621679238770"><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679238770"><span class="hs-identifier hs-var">pps</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679238771"><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey
+</span><a href="#local-6989586621679238771"><span class="hs-identifier hs-var">ds</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679238772"><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679238772"><span class="hs-identifier hs-var">sLast</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679238773"><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679238773"><span class="hs-identifier hs-var">sNow</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679238774"><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679238774"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679238775"><span class="annot"><span class="annottext">Hash
+</span><a href="#local-6989586621679238775"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679238776"><span class="annot"><span class="annottext">Seq VKeyGenesis
+</span><a href="#local-6989586621679238776"><span class="hs-identifier hs-var">sgs</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679238777"><span class="annot"><span class="annottext">Signal PBFT
+</span><a href="#local-6989586621679238777"><span class="hs-identifier hs-var">bh</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Rule PBFT 'Transition (RuleContext 'Transition PBFT)
+F (Clause PBFT 'Transition) (TRC PBFT)
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span>
+</span><span id="line-49"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679238779"><span class="annot"><span class="annottext">vkd :: VKey
+</span><a href="#local-6989586621679238779"><span class="hs-identifier hs-var hs-var">vkd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Signal PBFT
+BlockHeader
+</span><a href="#local-6989586621679238777"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader -&gt; Getting VKey BlockHeader VKey -&gt; VKey
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting VKey BlockHeader VKey
+Lens' BlockHeader VKey
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhIssuer"><span class="hs-identifier hs-var">bhIssuer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span>
+</span><span id="line-50"></span><span>            </span><span id="local-6989586621679238781"><span class="annot"><span class="annottext">s :: Slot
+</span><a href="#local-6989586621679238781"><span class="hs-identifier hs-var hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Signal PBFT
+BlockHeader
+</span><a href="#local-6989586621679238777"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader -&gt; Getting Slot BlockHeader Slot -&gt; Slot
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Slot BlockHeader Slot
+Lens' BlockHeader Slot
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhSlot"><span class="hs-identifier hs-var">bhSlot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679238781"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Slot -&gt; Slot -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679238772"><span class="hs-identifier hs-var">sLast</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure PBFT -&gt; Rule PBFT 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">Slot -&gt; Slot -&gt; PbftPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#SlotNotAfterLastBlock"><span class="hs-identifier hs-var">SlotNotAfterLastBlock</span></a></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679238781"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679238772"><span class="hs-identifier hs-var">sLast</span></a></span><span>
+</span><span id="line-52"></span><span>        </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679238781"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Slot -&gt; Slot -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679238773"><span class="hs-identifier hs-var">sNow</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure PBFT -&gt; Rule PBFT 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">Slot -&gt; Slot -&gt; PbftPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#SlotInTheFuture"><span class="hs-identifier hs-var">SlotInTheFuture</span></a></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679238781"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Slot
+</span><a href="#local-6989586621679238773"><span class="hs-identifier hs-var">sNow</span></a></span><span>
+</span><span id="line-53"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Signal PBFT
+BlockHeader
+</span><a href="#local-6989586621679238777"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader -&gt; Getting Hash BlockHeader Hash -&gt; Hash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Hash BlockHeader Hash
+Lens' BlockHeader Hash
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhPrevHash"><span class="hs-identifier hs-var">bhPrevHash</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Hash -&gt; Hash -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Hash
+</span><a href="#local-6989586621679238775"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure PBFT -&gt; Rule PBFT 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">Hash -&gt; Hash -&gt; PbftPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#PrevHashNotMatching"><span class="hs-identifier hs-var">PrevHashNotMatching</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Signal PBFT
+BlockHeader
+</span><a href="#local-6989586621679238777"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader -&gt; Getting Hash BlockHeader Hash -&gt; Hash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Hash BlockHeader Hash
+Lens' BlockHeader Hash
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhPrevHash"><span class="hs-identifier hs-var">bhPrevHash</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Hash
+</span><a href="#local-6989586621679238775"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><span class="annottext">VKey -&gt; Hash -&gt; Sig Hash -&gt; Bool
+forall a. Eq a =&gt; VKey -&gt; a -&gt; Sig a -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#verify"><span class="hs-identifier hs-var">verify</span></a></span><span> </span><span class="annot"><span class="annottext">VKey
+</span><a href="#local-6989586621679238779"><span class="hs-identifier hs-var">vkd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlockHeader -&gt; Hash
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhToSign"><span class="hs-identifier hs-var">bhToSign</span></a></span><span> </span><span class="annot"><span class="annottext">Signal PBFT
+BlockHeader
+</span><a href="#local-6989586621679238777"><span class="hs-identifier hs-var">bh</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Signal PBFT
+BlockHeader
+</span><a href="#local-6989586621679238777"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader
+-&gt; Getting (Sig Hash) BlockHeader (Sig Hash) -&gt; Sig Hash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Sig Hash) BlockHeader (Sig Hash)
+Lens' BlockHeader (Sig Hash)
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhSig"><span class="hs-identifier hs-var">bhSig</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure PBFT -&gt; Rule PBFT 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">VKey -&gt; Sig Hash -&gt; PbftPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#InvalidHeaderSignature"><span class="hs-identifier hs-var">InvalidHeaderSignature</span></a></span><span> </span><span class="annot"><span class="annottext">VKey
+</span><a href="#local-6989586621679238779"><span class="hs-identifier hs-var">vkd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Signal PBFT
+BlockHeader
+</span><a href="#local-6989586621679238777"><span class="hs-identifier hs-var">bh</span></a></span><span> </span><span class="annot"><span class="annottext">BlockHeader
+-&gt; Getting (Sig Hash) BlockHeader (Sig Hash) -&gt; Sig Hash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Sig Hash) BlockHeader (Sig Hash)
+Lens' BlockHeader (Sig Hash)
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhSig"><span class="hs-identifier hs-var">bhSig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>        </span><span id="local-6989586621679238790"><span class="annot"><span class="annottext">Seq VKeyGenesis
+</span><a href="#local-6989586621679238790"><span class="hs-identifier hs-var">sgs'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall sub super (rtype :: RuleType).
+Embed sub super =&gt;
+RuleContext rtype sub -&gt; Rule super rtype (State sub)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#trans"><span class="hs-identifier hs-var">trans</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.SigCnt.html#SIGCNT"><span class="hs-identifier hs-type">SIGCNT</span></a></span><span> </span><span class="annot"><span class="annottext">(RuleContext 'Transition SIGCNT
+ -&gt; Rule PBFT 'Transition (State SIGCNT))
+-&gt; RuleContext 'Transition SIGCNT
+-&gt; Rule PBFT 'Transition (State SIGCNT)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Environment SIGCNT, State SIGCNT, Signal SIGCNT) -&gt; TRC SIGCNT
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams
+</span><a href="#local-6989586621679238770"><span class="hs-identifier hs-var">pps</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey
+</span><a href="#local-6989586621679238771"><span class="hs-identifier hs-var">ds</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679238774"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Seq VKeyGenesis
+State SIGCNT
+</span><a href="#local-6989586621679238776"><span class="hs-identifier hs-var">sgs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">VKey
+Signal SIGCNT
+</span><a href="#local-6989586621679238779"><span class="hs-identifier hs-var">vkd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>        </span><span class="annot"><span class="annottext">(Hash, Seq VKeyGenesis)
+-&gt; F (Clause PBFT 'Transition) (Hash, Seq VKeyGenesis)
+forall a. a -&gt; F (Clause PBFT 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">((Hash, Seq VKeyGenesis)
+ -&gt; F (Clause PBFT 'Transition) (Hash, Seq VKeyGenesis))
+-&gt; (Hash, Seq VKeyGenesis)
+-&gt; F (Clause PBFT 'Transition) (Hash, Seq VKeyGenesis)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlockHeader -&gt; Hash
+</span><a href="Byron.Spec.Chain.STS.Block.html#bhHash"><span class="hs-identifier hs-var">bhHash</span></a></span><span> </span><span class="annot"><span class="annottext">Signal PBFT
+BlockHeader
+</span><a href="#local-6989586621679238777"><span class="hs-identifier hs-var">bh</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Seq VKeyGenesis
+</span><a href="#local-6989586621679238790"><span class="hs-identifier hs-var">sgs'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679238802"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Embed"><span class="hs-identifier hs-type">Embed</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.SigCnt.html#SIGCNT"><span class="hs-identifier hs-type">SIGCNT</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#PBFT"><span class="hs-identifier hs-type">PBFT</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679238807"><span class="annot"><span class="annottext">wrapFailed :: PredicateFailure SIGCNT -&gt; PredicateFailure PBFT
+</span><a href="#local-6989586621679238807"><span class="hs-identifier hs-var hs-var hs-var hs-var">wrapFailed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure SIGCNT -&gt; PredicateFailure PBFT
+PredicateFailure SIGCNT -&gt; PbftPredicateFailure
+</span><a href="Byron.Spec.Chain.STS.Rule.Pbft.html#SigCountFailure"><span class="hs-identifier hs-var">SigCountFailure</span></a></span><span>
+</span><span id="line-61"></span></pre></body></html>

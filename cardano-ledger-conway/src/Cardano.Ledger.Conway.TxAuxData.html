@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Conway.TxAuxData</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Core.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Core</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.TxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#AlonzoTxAuxData"><span class="hs-identifier">AlonzoTxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#metadataAlonzoTxAuxDataL"><span class="hs-identifier">metadataAlonzoTxAuxDataL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#nativeScriptsAlonzoTxAuxDataL"><span class="hs-identifier">nativeScriptsAlonzoTxAuxDataL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#plutusScriptsAllegraTxAuxDataL"><span class="hs-identifier">plutusScriptsAllegraTxAuxDataL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#validateAlonzoTxAuxData"><span class="hs-identifier">validateAlonzoTxAuxData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Era.html"><span class="hs-identifier">Cardano.Ledger.Conway.Era</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Conway.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Conway.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxAuxData"><span class="hs-identifier hs-type">EraTxAuxData</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TxAuxData"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxAuxData"><span class="hs-identifier hs-var">TxAuxData</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#AlonzoTxAuxData"><span class="hs-identifier hs-type">AlonzoTxAuxData</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>  </span><span id="local-6989586621679621752"><span class="annot"><span class="annottext">mkBasicTxAuxData :: TxAuxData ConwayEra
+</span><a href="#local-6989586621679621752"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkBasicTxAuxData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Word64 Metadatum
+-&gt; StrictSeq (NativeScript ConwayEra)
+-&gt; Map Language (NonEmpty PlutusBinary)
+-&gt; AlonzoTxAuxData ConwayEra
+forall era.
+(HasCallStack, AlonzoEraScript era) =&gt;
+Map Word64 Metadatum
+-&gt; StrictSeq (NativeScript era)
+-&gt; Map Language (NonEmpty PlutusBinary)
+-&gt; AlonzoTxAuxData era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#AlonzoTxAuxData"><span class="hs-identifier hs-var">AlonzoTxAuxData</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word64 Metadatum
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (Timelock ConwayEra)
+StrictSeq (NativeScript ConwayEra)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">Map Language (NonEmpty PlutusBinary)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>  </span><span id="local-6989586621679621761"><span class="annot"><span class="annottext">metadataTxAuxDataL :: Lens' (TxAuxData ConwayEra) (Map Word64 Metadatum)
+</span><a href="#local-6989586621679621761"><span class="hs-identifier hs-var hs-var hs-var hs-var">metadataTxAuxDataL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map Word64 Metadatum -&gt; f (Map Word64 Metadatum))
+-&gt; TxAuxData ConwayEra -&gt; f (TxAuxData ConwayEra)
+(Map Word64 Metadatum -&gt; f (Map Word64 Metadatum))
+-&gt; AlonzoTxAuxData ConwayEra -&gt; f (AlonzoTxAuxData ConwayEra)
+forall era.
+(Era era, EncCBOR (NativeScript era)) =&gt;
+Lens' (AlonzoTxAuxData era) (Map Word64 Metadatum)
+Lens' (AlonzoTxAuxData ConwayEra) (Map Word64 Metadatum)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#metadataAlonzoTxAuxDataL"><span class="hs-identifier hs-var">metadataAlonzoTxAuxDataL</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>  </span><span id="local-6989586621679621765"><span class="annot"><span class="annottext">validateTxAuxData :: ProtVer -&gt; TxAuxData ConwayEra -&gt; Bool
+</span><a href="#local-6989586621679621765"><span class="hs-identifier hs-var hs-var hs-var hs-var">validateTxAuxData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; TxAuxData ConwayEra -&gt; Bool
+ProtVer -&gt; AlonzoTxAuxData ConwayEra -&gt; Bool
+forall era.
+(AlonzoEraScript era, Script era ~ AlonzoScript era) =&gt;
+ProtVer -&gt; AlonzoTxAuxData era -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#validateAlonzoTxAuxData"><span class="hs-identifier hs-var">validateAlonzoTxAuxData</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxAuxData.html#AllegraEraTxAuxData"><span class="hs-identifier hs-type">AllegraEraTxAuxData</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679621777"><span class="annot"><span class="annottext">nativeScriptsTxAuxDataL :: Lens' (TxAuxData ConwayEra) (StrictSeq (NativeScript ConwayEra))
+</span><a href="#local-6989586621679621777"><span class="hs-identifier hs-var hs-var hs-var hs-var">nativeScriptsTxAuxDataL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(StrictSeq (NativeScript ConwayEra)
+ -&gt; f (StrictSeq (NativeScript ConwayEra)))
+-&gt; TxAuxData ConwayEra -&gt; f (TxAuxData ConwayEra)
+(StrictSeq (NativeScript ConwayEra)
+ -&gt; f (StrictSeq (NativeScript ConwayEra)))
+-&gt; AlonzoTxAuxData ConwayEra -&gt; f (AlonzoTxAuxData ConwayEra)
+forall era.
+(Era era, EncCBOR (NativeScript era)) =&gt;
+Lens' (AlonzoTxAuxData era) (StrictSeq (NativeScript era))
+Lens'
+  (AlonzoTxAuxData ConwayEra) (StrictSeq (NativeScript ConwayEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#nativeScriptsAlonzoTxAuxDataL"><span class="hs-identifier hs-var">nativeScriptsAlonzoTxAuxDataL</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#AlonzoEraTxAuxData"><span class="hs-identifier hs-type">AlonzoEraTxAuxData</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>  </span><span id="local-6989586621679621789"><span class="annot"><span class="annottext">plutusScriptsTxAuxDataL :: Lens' (TxAuxData ConwayEra) (Map Language (NonEmpty PlutusBinary))
+</span><a href="#local-6989586621679621789"><span class="hs-identifier hs-var hs-var hs-var hs-var">plutusScriptsTxAuxDataL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map Language (NonEmpty PlutusBinary)
+ -&gt; f (Map Language (NonEmpty PlutusBinary)))
+-&gt; TxAuxData ConwayEra -&gt; f (TxAuxData ConwayEra)
+(Map Language (NonEmpty PlutusBinary)
+ -&gt; f (Map Language (NonEmpty PlutusBinary)))
+-&gt; AlonzoTxAuxData ConwayEra -&gt; f (AlonzoTxAuxData ConwayEra)
+forall era.
+(Era era, EncCBOR (NativeScript era)) =&gt;
+Lens' (AlonzoTxAuxData era) (Map Language (NonEmpty PlutusBinary))
+Lens'
+  (AlonzoTxAuxData ConwayEra) (Map Language (NonEmpty PlutusBinary))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxAuxData.html#plutusScriptsAllegraTxAuxDataL"><span class="hs-identifier hs-var">plutusScriptsAllegraTxAuxDataL</span></a></span><span>
+</span><span id="line-31"></span></pre></body></html>

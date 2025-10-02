@@ -1,0 +1,34 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conway.Binary.Cddl</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Binary.Cddl.html#readConwayCddlFileNames"><span class="hs-identifier">readConwayCddlFileNames</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Binary.Cddl.html#readConwayCddlFiles"><span class="hs-identifier">readConwayCddlFiles</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Paths_cardano_ledger_conway.html"><span class="hs-identifier">Paths_cardano_ledger_conway</span></a></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Binary.Cddl.html#readConwayCddlFileNames"><span class="hs-identifier hs-type">readConwayCddlFileNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span class="hs-special">]</span><span>
+</span><span id="line-10"></span><span id="readConwayCddlFileNames"><span class="annot"><span class="annottext">readConwayCddlFileNames :: IO [FilePath]
+</span><a href="Test.Cardano.Ledger.Conway.Binary.Cddl.html#readConwayCddlFileNames"><span class="hs-identifier hs-var hs-var">readConwayCddlFileNames</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-11"></span><span>  </span><span id="local-6989586621686842549"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621686842549"><span class="hs-identifier hs-var">base</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO FilePath
+</span><a href="Paths_cardano_ledger_conway.html#getDataFileName"><span class="hs-identifier hs-var">getDataFileName</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;cddl-files/conway.cddl&quot;</span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><span class="annottext">[FilePath] -&gt; IO [FilePath]
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621686842549"><span class="hs-identifier hs-var">base</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Binary.Cddl.html#readConwayCddlFiles"><span class="hs-identifier hs-type">readConwayCddlFiles</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span class="hs-special">]</span><span>
+</span><span id="line-15"></span><span id="readConwayCddlFiles"><span class="annot"><span class="annottext">readConwayCddlFiles :: IO [ByteString]
+</span><a href="Test.Cardano.Ledger.Conway.Binary.Cddl.html#readConwayCddlFiles"><span class="hs-identifier hs-var hs-var">readConwayCddlFiles</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(FilePath -&gt; IO ByteString) -&gt; [FilePath] -&gt; IO [ByteString]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><span class="hs-identifier hs-var">mapM</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO ByteString
+</span><span class="hs-identifier hs-var">BSL.readFile</span></span><span> </span><span class="annot"><span class="annottext">([FilePath] -&gt; IO [ByteString]) -&gt; IO [FilePath] -&gt; IO [ByteString]
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><span class="hs-operator hs-var">=&lt;&lt;</span></span><span> </span><span class="annot"><span class="annottext">IO [FilePath]
+</span><a href="Test.Cardano.Ledger.Conway.Binary.Cddl.html#readConwayCddlFileNames"><span class="hs-identifier hs-var">readConwayCddlFileNames</span></a></span><span>
+</span><span id="line-16"></span></pre></body></html>

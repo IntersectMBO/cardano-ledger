@@ -1,0 +1,461 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedLists #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- | Simple example of a transition system whose states contain the sum of the</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- integers seen in the signals, where 'sum' is an abstract monoidal sum given</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- in the enviroment.</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Control.State.Transition.Examples.GlobalSum</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Arrow</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">right</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Reader</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html"><span class="hs-identifier">Control.State.Transition.Extended</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">foldl'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Void</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Void</span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.html"><span class="hs-identifier">Test.Hspec</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prelude</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">sum</span></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">newtype</span><span> </span><span id="Ops"><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#Ops"><span class="hs-identifier hs-var">Ops</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Ops"><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#Ops"><span class="hs-identifier hs-var">Ops</span></a></span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="opSum"><span class="annot"><span class="annottext">Ops -&gt; [Int] -&gt; Int
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#opSum"><span class="hs-identifier hs-var hs-var">opSum</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">data</span><span> </span><span id="GSUM"><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUM"><span class="hs-identifier hs-var">GSUM</span></a></span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">newtype</span><span> </span><span id="GSUMEvent"><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUMEvent"><span class="hs-identifier hs-var">GSUMEvent</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ErrorEvent"><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#ErrorEvent"><span class="hs-identifier hs-var">ErrorEvent</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Void</span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679221282"><span id="local-6989586621679221287"><span class="annot"><span class="annottext">GSUMEvent -&gt; GSUMEvent -&gt; Bool
+(GSUMEvent -&gt; GSUMEvent -&gt; Bool)
+-&gt; (GSUMEvent -&gt; GSUMEvent -&gt; Bool) -&gt; Eq GSUMEvent
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: GSUMEvent -&gt; GSUMEvent -&gt; Bool
+== :: GSUMEvent -&gt; GSUMEvent -&gt; Bool
+$c/= :: GSUMEvent -&gt; GSUMEvent -&gt; Bool
+/= :: GSUMEvent -&gt; GSUMEvent -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679221293"><span id="local-6989586621679221299"><span id="local-6989586621679221303"><span class="annot"><span class="annottext">Int -&gt; GSUMEvent -&gt; ShowS
+[GSUMEvent] -&gt; ShowS
+GSUMEvent -&gt; Label
+(Int -&gt; GSUMEvent -&gt; ShowS)
+-&gt; (GSUMEvent -&gt; Label) -&gt; ([GSUMEvent] -&gt; ShowS) -&gt; Show GSUMEvent
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; Label) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; GSUMEvent -&gt; ShowS
+showsPrec :: Int -&gt; GSUMEvent -&gt; ShowS
+$cshow :: GSUMEvent -&gt; Label
+show :: GSUMEvent -&gt; Label
+$cshowList :: [GSUMEvent] -&gt; ShowS
+showList :: [GSUMEvent] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">data</span><span> </span><span id="NoFailure"><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#NoFailure"><span class="hs-identifier hs-var">NoFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NoFailure"><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#NoFailure"><span class="hs-identifier hs-var">NoFailure</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679221308"><span id="local-6989586621679221310"><span class="annot"><span class="annottext">NoFailure -&gt; NoFailure -&gt; Bool
+(NoFailure -&gt; NoFailure -&gt; Bool)
+-&gt; (NoFailure -&gt; NoFailure -&gt; Bool) -&gt; Eq NoFailure
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NoFailure -&gt; NoFailure -&gt; Bool
+== :: NoFailure -&gt; NoFailure -&gt; Bool
+$c/= :: NoFailure -&gt; NoFailure -&gt; Bool
+/= :: NoFailure -&gt; NoFailure -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679221313"><span id="local-6989586621679221315"><span id="local-6989586621679221318"><span class="annot"><span class="annottext">Int -&gt; NoFailure -&gt; ShowS
+[NoFailure] -&gt; ShowS
+NoFailure -&gt; Label
+(Int -&gt; NoFailure -&gt; ShowS)
+-&gt; (NoFailure -&gt; Label) -&gt; ([NoFailure] -&gt; ShowS) -&gt; Show NoFailure
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; Label) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; NoFailure -&gt; ShowS
+showsPrec :: Int -&gt; NoFailure -&gt; ShowS
+$cshow :: NoFailure -&gt; Label
+show :: NoFailure -&gt; Label
+$cshowList :: [NoFailure] -&gt; ShowS
+showList :: [NoFailure] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679221332"><span id="local-6989586621679221335"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUM"><span class="hs-identifier hs-type">GSUM</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Environment"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUM"><span class="hs-identifier hs-type">GSUM</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="State"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUM"><span class="hs-identifier hs-type">GSUM</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signal"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-var">Signal</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUM"><span class="hs-identifier hs-type">GSUM</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">]</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="BaseM"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#BaseM"><span class="hs-identifier hs-var">BaseM</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUM"><span class="hs-identifier hs-type">GSUM</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Reader</span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#Ops"><span class="hs-identifier hs-type">Ops</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="PredicateFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-var">PredicateFailure</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUM"><span class="hs-identifier hs-type">GSUM</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#NoFailure"><span class="hs-identifier hs-type">NoFailure</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Event"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Event"><span class="hs-identifier hs-var">Event</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUMEvent"><span class="hs-identifier hs-type">GSUMEvent</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679221346"><span class="annot"><span class="annottext">initialRules :: [InitialRule GSUM]
+</span><a href="#local-6989586621679221346"><span class="hs-identifier hs-var hs-var hs-var hs-var">initialRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int -&gt; Rule GSUM 'Initial Int
+forall a. a -&gt; F (Clause GSUM 'Initial) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">]</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679221368"><span class="annot"><span class="annottext">transitionRules :: [TransitionRule GSUM]
+</span><a href="#local-6989586621679221368"><span class="hs-identifier hs-var hs-var hs-var hs-var">transitionRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-46"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679221371"><span class="annot"><span class="annottext">State GSUM
+</span><a href="#local-6989586621679221371"><span class="hs-identifier hs-var">st</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679221372"><span class="annot"><span class="annottext">Signal GSUM
+</span><a href="#local-6989586621679221372"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Rule GSUM 'Transition (RuleContext 'Transition GSUM)
+F (Clause GSUM 'Transition) (TRC GSUM)
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span>
+</span><span id="line-47"></span><span>        </span><span id="local-6989586621679221374"><span class="annot"><span class="annottext">[Int] -&gt; Int
+</span><a href="#local-6989586621679221374"><span class="hs-identifier hs-var">sum</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BaseM GSUM ([Int] -&gt; Int) -&gt; Rule GSUM 'Transition ([Int] -&gt; Int)
+forall sts a (ctx :: RuleType).
+STS sts =&gt;
+BaseM sts a -&gt; Rule sts ctx a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#liftSTS"><span class="hs-identifier hs-var">liftSTS</span></a></span><span> </span><span class="annot"><span class="annottext">(BaseM GSUM ([Int] -&gt; Int) -&gt; Rule GSUM 'Transition ([Int] -&gt; Int))
+-&gt; BaseM GSUM ([Int] -&gt; Int)
+-&gt; Rule GSUM 'Transition ([Int] -&gt; Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Ops -&gt; [Int] -&gt; Int) -&gt; ReaderT Ops Identity ([Int] -&gt; Int)
+forall a. (Ops -&gt; a) -&gt; ReaderT Ops Identity a
+forall r (m :: * -&gt; *) a. MonadReader r m =&gt; (r -&gt; a) -&gt; m a
+</span><span class="hs-identifier hs-var">reader</span></span><span> </span><span class="annot"><span class="annottext">Ops -&gt; [Int] -&gt; Int
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#opSum"><span class="hs-identifier hs-var">opSum</span></a></span><span>
+</span><span id="line-48"></span><span>        </span><span class="annot"><span class="annottext">Event GSUM -&gt; Rule GSUM 'Transition ()
+forall sts (ctx :: RuleType). Event sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#tellEvent"><span class="hs-identifier hs-var">tellEvent</span></a></span><span> </span><span class="annot"><span class="annottext">(Event GSUM -&gt; Rule GSUM 'Transition ())
+-&gt; Event GSUM -&gt; Rule GSUM 'Transition ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Void -&gt; GSUMEvent
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#ErrorEvent"><span class="hs-identifier hs-var">ErrorEvent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Label -&gt; Void
+forall a. HasCallStack =&gt; Label -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot;Event has been evaluated!&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>        </span><span class="annot"><span class="annottext">NonEmpty Label
+-&gt; Rule GSUM 'Transition () -&gt; Rule GSUM 'Transition ()
+forall sts (ctx :: RuleType).
+NonEmpty Label -&gt; Rule sts ctx () -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#labeled"><span class="hs-identifier hs-var">labeled</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Label
+Item (NonEmpty Label)
+</span><span class="hs-string">&quot;testLabel&quot;</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">(Rule GSUM 'Transition () -&gt; Rule GSUM 'Transition ())
+-&gt; Rule GSUM 'Transition () -&gt; Rule GSUM 'Transition ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int] -&gt; Int
+</span><a href="#local-6989586621679221374"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+Signal GSUM
+</span><a href="#local-6989586621679221372"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">56</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure GSUM -&gt; Rule GSUM 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">PredicateFailure GSUM
+NoFailure
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#NoFailure"><span class="hs-identifier hs-var">NoFailure</span></a></span><span>
+</span><span id="line-50"></span><span>        </span><span class="annot"><span class="annottext">[Int] -&gt; Int
+</span><a href="#local-6989586621679221374"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+Signal GSUM
+</span><a href="#local-6989586621679221372"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">56</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; PredicateFailure GSUM -&gt; Rule GSUM 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">PredicateFailure GSUM
+NoFailure
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#NoFailure"><span class="hs-identifier hs-var">NoFailure</span></a></span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><span class="annottext">Int -&gt; Rule GSUM 'Transition Int
+forall a. a -&gt; F (Clause GSUM 'Transition) a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Rule GSUM 'Transition Int)
+-&gt; Int -&gt; Rule GSUM 'Transition Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="annot"><span class="annottext">Int
+State GSUM
+</span><a href="#local-6989586621679221371"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Int
+</span><a href="#local-6989586621679221374"><span class="hs-identifier hs-var">sum</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+Signal GSUM
+</span><a href="#local-6989586621679221372"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-55"></span><span id="spec"><span class="annot"><span class="annottext">spec :: Spec
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">Label -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; Label -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot;STS.Extended&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">Label -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+Label -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot;Sum&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty NoFailure) Int
+</span><a href="#local-6989586621679221387"><span class="hs-identifier hs-var">withSum</span></a></span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty NoFailure) Int
+-&gt; Either (NonEmpty NoFailure) Int -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Either (NonEmpty NoFailure) Int
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">55</span></span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">Label -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+Label -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot;Product&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty NoFailure) Int
+</span><a href="#local-6989586621679221389"><span class="hs-identifier hs-var">withProduct</span></a></span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty NoFailure) Int
+-&gt; Either (NonEmpty NoFailure) Int -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Either (NonEmpty NoFailure) Int
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3628800</span></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">Label -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+Label -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot;Sum/Lazy Events&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty NoFailure) Int
+</span><a href="#local-6989586621679221390"><span class="hs-identifier hs-var">withLazyEventsSum</span></a></span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty NoFailure) Int
+-&gt; Either (NonEmpty NoFailure) Int -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Either (NonEmpty NoFailure) Int
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">55</span></span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="annottext">Label -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; Label -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot;Sum/Validate&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">Label -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+Label -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot;Filtered&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-62"></span><span>        </span><span class="annot"><span class="annottext">ValidationPolicy -&gt; Either (NonEmpty NoFailure) Int
+</span><a href="#local-6989586621679221391"><span class="hs-identifier hs-var">withLblSum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([Label] -&gt; Bool) -&gt; ValidationPolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#ValidateSuchThat"><span class="hs-identifier hs-var">ValidateSuchThat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot;testLabel&quot;</span></span><span> </span><span class="annot"><span class="annottext">Label -&gt; [Label] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><span class="hs-operator hs-var">`notElem`</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty NoFailure) Int
+-&gt; Either (NonEmpty NoFailure) Int -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty NoFailure -&gt; Either (NonEmpty NoFailure) Int
+forall a b. a -&gt; Either a b
+</span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Item (NonEmpty NoFailure)
+NoFailure
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#NoFailure"><span class="hs-identifier hs-var">NoFailure</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-63"></span><span>      </span><span class="annot"><span class="annottext">Label -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+Label -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot;Unfiltered&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-64"></span><span>        </span><span class="annot"><span class="annottext">ValidationPolicy -&gt; Either (NonEmpty NoFailure) Int
+</span><a href="#local-6989586621679221391"><span class="hs-identifier hs-var">withLblSum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([Label] -&gt; Bool) -&gt; ValidationPolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#ValidateSuchThat"><span class="hs-identifier hs-var">ValidateSuchThat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; [Label] -&gt; Bool
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty NoFailure) Int
+-&gt; Either (NonEmpty NoFailure) Int -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty NoFailure -&gt; Either (NonEmpty NoFailure) Int
+forall a b. a -&gt; Either a b
+</span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Item (NonEmpty NoFailure)
+NoFailure
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#NoFailure"><span class="hs-identifier hs-var">NoFailure</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Item (NonEmpty NoFailure)
+NoFailure
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#NoFailure"><span class="hs-identifier hs-var">NoFailure</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="annottext">Label -&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a.
+(HasCallStack, Example a) =&gt;
+Label -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">Label
+</span><span class="hs-string">&quot;None&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Expectation -&gt; SpecM (Arg Expectation) ())
+-&gt; Expectation -&gt; SpecM (Arg Expectation) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-66"></span><span>        </span><span class="annot"><span class="annottext">ValidationPolicy -&gt; Either (NonEmpty NoFailure) Int
+</span><a href="#local-6989586621679221391"><span class="hs-identifier hs-var">withLblSum</span></a></span><span> </span><span class="annot"><span class="annottext">ValidationPolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#ValidateNone"><span class="hs-identifier hs-var">ValidateNone</span></a></span><span> </span><span class="annot"><span class="annottext">Either (NonEmpty NoFailure) Int
+-&gt; Either (NonEmpty NoFailure) Int -&gt; Expectation
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; Expectation
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Either (NonEmpty NoFailure) Int
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">56</span></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>    </span><span id="local-6989586621679221403"><span class="annot"><span class="annottext">inputs :: Signal GSUM
+</span><a href="#local-6989586621679221403"><span class="hs-identifier hs-var hs-var">inputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Item (Signal GSUM)
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Item (Signal GSUM)
+</span><span class="hs-number">10</span></span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span>    </span><span id="local-6989586621679221404"><span class="annot"><span class="annottext">ctx :: TRC GSUM
+</span><a href="#local-6989586621679221404"><span class="hs-identifier hs-var hs-var">ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Environment GSUM, State GSUM, Signal GSUM) -&gt; TRC GSUM
+forall sts. (Environment sts, State sts, Signal sts) -&gt; TRC sts
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-var">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">State GSUM
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Signal GSUM
+</span><a href="#local-6989586621679221403"><span class="hs-identifier hs-var">inputs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>    </span><span id="local-6989586621679221387"><span class="annot"><span class="annottext">withSum :: Either (NonEmpty NoFailure) Int
+</span><a href="#local-6989586621679221387"><span class="hs-identifier hs-var hs-var">withSum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Reader Ops (Either (NonEmpty NoFailure) Int)
+-&gt; Ops -&gt; Either (NonEmpty NoFailure) Int
+forall r a. Reader r a -&gt; r -&gt; a
+</span><span class="hs-identifier hs-var">runReader</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *) (rtype :: RuleType).
+(STS s, RuleTypeRep rtype, m ~ BaseM s) =&gt;
+RuleContext rtype s
+-&gt; m (Either (NonEmpty (PredicateFailure s)) (State s))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#applySTS"><span class="hs-identifier hs-var">applySTS</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUM"><span class="hs-identifier hs-type">GSUM</span></a></span><span> </span><span class="annot"><span class="annottext">RuleContext 'Transition GSUM
+TRC GSUM
+</span><a href="#local-6989586621679221404"><span class="hs-identifier hs-var">ctx</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([Int] -&gt; Int) -&gt; Ops
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#Ops"><span class="hs-identifier hs-var">Ops</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; Int) -&gt; Int -&gt; [Int] -&gt; Int
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldl'</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">(+)</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>    </span><span id="local-6989586621679221391"><span class="annot"><span class="annottext">withLblSum :: ValidationPolicy -&gt; Either (NonEmpty NoFailure) Int
+</span><a href="#local-6989586621679221391"><span class="hs-identifier hs-var hs-var">withLblSum</span></a></span></span><span> </span><span id="local-6989586621679221407"><span class="annot"><span class="annottext">ValidationPolicy
+</span><a href="#local-6989586621679221407"><span class="hs-identifier hs-var">vp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-72"></span><span>      </span><span class="annot"><span class="annottext">((Int, [GSUMEvent]) -&gt; Int)
+-&gt; Either (NonEmpty NoFailure) (Int, [GSUMEvent])
+-&gt; Either (NonEmpty NoFailure) Int
+forall b c d. (b -&gt; c) -&gt; Either d b -&gt; Either d c
+forall (a :: * -&gt; * -&gt; *) b c d.
+ArrowChoice a =&gt;
+a b c -&gt; a (Either d b) (Either d c)
+</span><span class="hs-identifier hs-var">right</span></span><span> </span><span class="annot"><span class="annottext">(Int, [GSUMEvent]) -&gt; Int
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">(Either (NonEmpty NoFailure) (Int, [GSUMEvent])
+ -&gt; Either (NonEmpty NoFailure) Int)
+-&gt; Either (NonEmpty NoFailure) (Int, [GSUMEvent])
+-&gt; Either (NonEmpty NoFailure) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-73"></span><span>        </span><span class="annot"><span class="annottext">Reader Ops (Either (NonEmpty NoFailure) (Int, [GSUMEvent]))
+-&gt; Ops -&gt; Either (NonEmpty NoFailure) (Int, [GSUMEvent])
+forall r a. Reader r a -&gt; r -&gt; a
+</span><span class="hs-identifier hs-var">runReader</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *) (rtype :: RuleType) (ep :: EventPolicy).
+(STS s, RuleTypeRep rtype, m ~ BaseM s) =&gt;
+ApplySTSOpts ep
+-&gt; RuleContext rtype s
+-&gt; m (Either
+        (NonEmpty (PredicateFailure s)) (EventReturnType ep s (State s)))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#applySTSOptsEither"><span class="hs-identifier hs-var">applySTSOptsEither</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUM"><span class="hs-identifier hs-type">GSUM</span></a></span><span> </span><span class="annot"><span class="annottext">ApplySTSOpts 'EventPolicyReturn
+</span><a href="#local-6989586621679221410"><span class="hs-identifier hs-var">lblOpts</span></a></span><span> </span><span class="annot"><span class="annottext">RuleContext 'Transition GSUM
+TRC GSUM
+</span><a href="#local-6989586621679221404"><span class="hs-identifier hs-var">ctx</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([Int] -&gt; Int) -&gt; Ops
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#Ops"><span class="hs-identifier hs-var">Ops</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; Int) -&gt; Int -&gt; [Int] -&gt; Int
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldl'</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">(+)</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>        </span><span id="local-6989586621679221410"><span class="annot"><span class="annottext">lblOpts :: ApplySTSOpts 'EventPolicyReturn
+</span><a href="#local-6989586621679221410"><span class="hs-identifier hs-var hs-var">lblOpts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>          </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#ApplySTSOpts"><span class="hs-identifier hs-type">ApplySTSOpts</span></a></span><span>
+</span><span id="line-77"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">asoAssertions :: AssertionPolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#asoAssertions"><span class="hs-identifier hs-var">asoAssertions</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AssertionPolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#AssertionsOff"><span class="hs-identifier hs-var">AssertionsOff</span></a></span><span>
+</span><span id="line-78"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">asoValidation :: ValidationPolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#asoValidation"><span class="hs-identifier hs-var">asoValidation</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ValidationPolicy
+</span><a href="#local-6989586621679221407"><span class="hs-identifier hs-var">vp</span></a></span><span>
+</span><span id="line-79"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">asoEvents :: SingEP 'EventPolicyReturn
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#asoEvents"><span class="hs-identifier hs-var">asoEvents</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SingEP 'EventPolicyReturn
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#EPReturn"><span class="hs-identifier hs-var">EPReturn</span></a></span><span>
+</span><span id="line-80"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679221389"><span class="annot"><span class="annottext">withProduct :: Either (NonEmpty NoFailure) Int
+</span><a href="#local-6989586621679221389"><span class="hs-identifier hs-var hs-var">withProduct</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Reader Ops (Either (NonEmpty NoFailure) Int)
+-&gt; Ops -&gt; Either (NonEmpty NoFailure) Int
+forall r a. Reader r a -&gt; r -&gt; a
+</span><span class="hs-identifier hs-var">runReader</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *) (rtype :: RuleType).
+(STS s, RuleTypeRep rtype, m ~ BaseM s) =&gt;
+RuleContext rtype s
+-&gt; m (Either (NonEmpty (PredicateFailure s)) (State s))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#applySTS"><span class="hs-identifier hs-var">applySTS</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUM"><span class="hs-identifier hs-type">GSUM</span></a></span><span> </span><span class="annot"><span class="annottext">RuleContext 'Transition GSUM
+TRC GSUM
+</span><a href="#local-6989586621679221404"><span class="hs-identifier hs-var">ctx</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([Int] -&gt; Int) -&gt; Ops
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#Ops"><span class="hs-identifier hs-var">Ops</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; Int) -&gt; Int -&gt; [Int] -&gt; Int
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldl'</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">(*)</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679221390"><span class="annot"><span class="annottext">withLazyEventsSum :: Either (NonEmpty NoFailure) Int
+</span><a href="#local-6989586621679221390"><span class="hs-identifier hs-var hs-var">withLazyEventsSum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>      </span><span class="annot"><span class="annottext">((Int, [GSUMEvent]) -&gt; Int)
+-&gt; Either (NonEmpty NoFailure) (Int, [GSUMEvent])
+-&gt; Either (NonEmpty NoFailure) Int
+forall b c d. (b -&gt; c) -&gt; Either d b -&gt; Either d c
+forall (a :: * -&gt; * -&gt; *) b c d.
+ArrowChoice a =&gt;
+a b c -&gt; a (Either d b) (Either d c)
+</span><span class="hs-identifier hs-var">right</span></span><span> </span><span class="annot"><span class="annottext">(Int, [GSUMEvent]) -&gt; Int
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">(Either (NonEmpty NoFailure) (Int, [GSUMEvent])
+ -&gt; Either (NonEmpty NoFailure) Int)
+-&gt; Either (NonEmpty NoFailure) (Int, [GSUMEvent])
+-&gt; Either (NonEmpty NoFailure) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">Reader Ops (Either (NonEmpty NoFailure) (Int, [GSUMEvent]))
+-&gt; Ops -&gt; Either (NonEmpty NoFailure) (Int, [GSUMEvent])
+forall r a. Reader r a -&gt; r -&gt; a
+</span><span class="hs-identifier hs-var">runReader</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *) (rtype :: RuleType) (ep :: EventPolicy).
+(STS s, RuleTypeRep rtype, m ~ BaseM s) =&gt;
+ApplySTSOpts ep
+-&gt; RuleContext rtype s
+-&gt; m (Either
+        (NonEmpty (PredicateFailure s)) (EventReturnType ep s (State s)))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#applySTSOptsEither"><span class="hs-identifier hs-var">applySTSOptsEither</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html#GSUM"><span class="hs-identifier hs-type">GSUM</span></a></span><span> </span><span class="annot"><span class="annottext">ApplySTSOpts 'EventPolicyReturn
+</span><a href="#local-6989586621679221418"><span class="hs-identifier hs-var">evtOpts</span></a></span><span> </span><span class="annot"><span class="annottext">RuleContext 'Transition GSUM
+TRC GSUM
+</span><a href="#local-6989586621679221404"><span class="hs-identifier hs-var">ctx</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([Int] -&gt; Int) -&gt; Ops
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#Ops"><span class="hs-identifier hs-var">Ops</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; Int) -&gt; Int -&gt; [Int] -&gt; Int
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">F.foldl'</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">(+)</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>        </span><span id="local-6989586621679221418"><span class="annot"><span class="annottext">evtOpts :: ApplySTSOpts 'EventPolicyReturn
+</span><a href="#local-6989586621679221418"><span class="hs-identifier hs-var hs-var">evtOpts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-88"></span><span>          </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#ApplySTSOpts"><span class="hs-identifier hs-type">ApplySTSOpts</span></a></span><span>
+</span><span id="line-89"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">asoAssertions :: AssertionPolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#asoAssertions"><span class="hs-identifier hs-var">asoAssertions</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AssertionPolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#AssertionsOff"><span class="hs-identifier hs-var">AssertionsOff</span></a></span><span>
+</span><span id="line-90"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">asoValidation :: ValidationPolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#asoValidation"><span class="hs-identifier hs-var">asoValidation</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ValidationPolicy
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#ValidateAll"><span class="hs-identifier hs-var">ValidateAll</span></a></span><span>
+</span><span id="line-91"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">asoEvents :: SingEP 'EventPolicyReturn
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#asoEvents"><span class="hs-identifier hs-var">asoEvents</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SingEP 'EventPolicyReturn
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#EPReturn"><span class="hs-identifier hs-var">EPReturn</span></a></span><span>
+</span><span id="line-92"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-93"></span></pre></body></html>

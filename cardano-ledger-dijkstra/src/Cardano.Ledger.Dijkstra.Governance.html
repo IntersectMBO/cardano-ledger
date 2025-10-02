@@ -1,0 +1,157 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Dijkstra.Governance</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#ConwayEraGov"><span class="hs-identifier">ConwayEraGov</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#ConwayGovState"><span class="hs-identifier">ConwayGovState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#EraGov"><span class="hs-identifier">EraGov</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsCommitteeL"><span class="hs-identifier">cgsCommitteeL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsConstitutionL"><span class="hs-identifier">cgsConstitutionL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsCurPParamsL"><span class="hs-identifier">cgsCurPParamsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsDRepPulsingStateL"><span class="hs-identifier">cgsDRepPulsingStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsFuturePParamsL"><span class="hs-identifier">cgsFuturePParamsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsPrevPParamsL"><span class="hs-identifier">cgsPrevPParamsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsProposalsL"><span class="hs-identifier">cgsProposalsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasDeposit"><span class="hs-identifier">gasDeposit</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsActions"><span class="hs-identifier">proposalsActions</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.html"><span class="hs-identifier">Cardano.Ledger.Conway.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#Obligations"><span class="hs-identifier">Obligations</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Era.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.PParams.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.State.Stake.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.State.Stake</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Foldable</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679359334"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#EraGov"><span class="hs-identifier hs-type">EraGov</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="GovState"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#GovState"><span class="hs-identifier hs-var">GovState</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#ConwayGovState"><span class="hs-identifier hs-type">ConwayGovState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679359390"><span class="annot"><span class="annottext">curPParamsGovStateL :: Lens' (GovState DijkstraEra) (PParams DijkstraEra)
+</span><a href="#local-6989586621679359390"><span class="hs-identifier hs-var hs-var hs-var hs-var">curPParamsGovStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParams DijkstraEra -&gt; f (PParams DijkstraEra))
+-&gt; GovState DijkstraEra -&gt; f (GovState DijkstraEra)
+(PParams DijkstraEra -&gt; f (PParams DijkstraEra))
+-&gt; ConwayGovState DijkstraEra -&gt; f (ConwayGovState DijkstraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(PParams era -&gt; f (PParams era))
+-&gt; ConwayGovState era -&gt; f (ConwayGovState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsCurPParamsL"><span class="hs-identifier hs-var">cgsCurPParamsL</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679359394"><span class="annot"><span class="annottext">prevPParamsGovStateL :: Lens' (GovState DijkstraEra) (PParams DijkstraEra)
+</span><a href="#local-6989586621679359394"><span class="hs-identifier hs-var hs-var hs-var hs-var">prevPParamsGovStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PParams DijkstraEra -&gt; f (PParams DijkstraEra))
+-&gt; GovState DijkstraEra -&gt; f (GovState DijkstraEra)
+(PParams DijkstraEra -&gt; f (PParams DijkstraEra))
+-&gt; ConwayGovState DijkstraEra -&gt; f (ConwayGovState DijkstraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(PParams era -&gt; f (PParams era))
+-&gt; ConwayGovState era -&gt; f (ConwayGovState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsPrevPParamsL"><span class="hs-identifier hs-var">cgsPrevPParamsL</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679359398"><span class="annot"><span class="annottext">futurePParamsGovStateL :: Lens' (GovState DijkstraEra) (FuturePParams DijkstraEra)
+</span><a href="#local-6989586621679359398"><span class="hs-identifier hs-var hs-var hs-var hs-var">futurePParamsGovStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(FuturePParams DijkstraEra -&gt; f (FuturePParams DijkstraEra))
+-&gt; GovState DijkstraEra -&gt; f (GovState DijkstraEra)
+(FuturePParams DijkstraEra -&gt; f (FuturePParams DijkstraEra))
+-&gt; ConwayGovState DijkstraEra -&gt; f (ConwayGovState DijkstraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(FuturePParams era -&gt; f (FuturePParams era))
+-&gt; ConwayGovState era -&gt; f (ConwayGovState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsFuturePParamsL"><span class="hs-identifier hs-var">cgsFuturePParamsL</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679359406"><span class="annot"><span class="annottext">obligationGovState :: GovState DijkstraEra -&gt; Obligations
+</span><a href="#local-6989586621679359406"><span class="hs-identifier hs-var hs-var hs-var hs-var">obligationGovState</span></a></span></span><span> </span><span id="local-6989586621679359408"><span class="annot"><span class="annottext">GovState DijkstraEra
+</span><a href="#local-6989586621679359408"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#Obligations"><span class="hs-identifier hs-type">Obligations</span></a></span><span>
+</span><span id="line-39"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">oblProposal :: Coin
+</span><a href="#local-6989586621679359410"><span class="hs-identifier hs-var">oblProposal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(GovActionState DijkstraEra -&gt; Coin)
+-&gt; StrictSeq (GovActionState DijkstraEra) -&gt; Coin
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; StrictSeq a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><span class="hs-identifier hs-var">foldMap'</span></span><span> </span><span class="annot"><span class="annottext">GovActionState DijkstraEra -&gt; Coin
+forall era. GovActionState era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasDeposit"><span class="hs-identifier hs-var">gasDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (GovActionState DijkstraEra) -&gt; Coin)
+-&gt; StrictSeq (GovActionState DijkstraEra) -&gt; Coin
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Proposals DijkstraEra -&gt; StrictSeq (GovActionState DijkstraEra)
+forall era. Proposals era -&gt; StrictSeq (GovActionState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Proposals.html#proposalsActions"><span class="hs-identifier hs-var">proposalsActions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovState DijkstraEra
+ConwayGovState DijkstraEra
+</span><a href="#local-6989586621679359408"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayGovState DijkstraEra
+-&gt; Getting
+     (Proposals DijkstraEra)
+     (ConwayGovState DijkstraEra)
+     (Proposals DijkstraEra)
+-&gt; Proposals DijkstraEra
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Proposals DijkstraEra)
+  (ConwayGovState DijkstraEra)
+  (Proposals DijkstraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Proposals era -&gt; f (Proposals era))
+-&gt; ConwayGovState era -&gt; f (ConwayGovState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsProposalsL"><span class="hs-identifier hs-var">cgsProposalsL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">oblDRep :: Coin
+</span><a href="#local-6989586621679359412"><span class="hs-identifier hs-var">oblDRep</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-41"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">oblStake :: Coin
+</span><a href="#local-6989586621679359414"><span class="hs-identifier hs-var">oblStake</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-42"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">oblPool :: Coin
+</span><a href="#local-6989586621679359415"><span class="hs-identifier hs-var">oblPool</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-43"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#ConwayEraGov"><span class="hs-identifier hs-type">ConwayEraGov</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621679359430"><span class="annot"><span class="annottext">constitutionGovStateL :: Lens' (GovState DijkstraEra) (Constitution DijkstraEra)
+</span><a href="#local-6989586621679359430"><span class="hs-identifier hs-var hs-var hs-var hs-var">constitutionGovStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Constitution DijkstraEra -&gt; f (Constitution DijkstraEra))
+-&gt; GovState DijkstraEra -&gt; f (GovState DijkstraEra)
+(Constitution DijkstraEra -&gt; f (Constitution DijkstraEra))
+-&gt; ConwayGovState DijkstraEra -&gt; f (ConwayGovState DijkstraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Constitution era -&gt; f (Constitution era))
+-&gt; ConwayGovState era -&gt; f (ConwayGovState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsConstitutionL"><span class="hs-identifier hs-var">cgsConstitutionL</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679359434"><span class="annot"><span class="annottext">proposalsGovStateL :: Lens' (GovState DijkstraEra) (Proposals DijkstraEra)
+</span><a href="#local-6989586621679359434"><span class="hs-identifier hs-var hs-var hs-var hs-var">proposalsGovStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Proposals DijkstraEra -&gt; f (Proposals DijkstraEra))
+-&gt; GovState DijkstraEra -&gt; f (GovState DijkstraEra)
+(Proposals DijkstraEra -&gt; f (Proposals DijkstraEra))
+-&gt; ConwayGovState DijkstraEra -&gt; f (ConwayGovState DijkstraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Proposals era -&gt; f (Proposals era))
+-&gt; ConwayGovState era -&gt; f (ConwayGovState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsProposalsL"><span class="hs-identifier hs-var">cgsProposalsL</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679359438"><span class="annot"><span class="annottext">drepPulsingStateGovStateL :: Lens' (GovState DijkstraEra) (DRepPulsingState DijkstraEra)
+</span><a href="#local-6989586621679359438"><span class="hs-identifier hs-var hs-var hs-var hs-var">drepPulsingStateGovStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DRepPulsingState DijkstraEra -&gt; f (DRepPulsingState DijkstraEra))
+-&gt; GovState DijkstraEra -&gt; f (GovState DijkstraEra)
+(DRepPulsingState DijkstraEra -&gt; f (DRepPulsingState DijkstraEra))
+-&gt; ConwayGovState DijkstraEra -&gt; f (ConwayGovState DijkstraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(DRepPulsingState era -&gt; f (DRepPulsingState era))
+-&gt; ConwayGovState era -&gt; f (ConwayGovState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsDRepPulsingStateL"><span class="hs-identifier hs-var">cgsDRepPulsingStateL</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679359442"><span class="annot"><span class="annottext">committeeGovStateL :: Lens' (GovState DijkstraEra) (StrictMaybe (Committee DijkstraEra))
+</span><a href="#local-6989586621679359442"><span class="hs-identifier hs-var hs-var hs-var hs-var">committeeGovStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(StrictMaybe (Committee DijkstraEra)
+ -&gt; f (StrictMaybe (Committee DijkstraEra)))
+-&gt; GovState DijkstraEra -&gt; f (GovState DijkstraEra)
+(StrictMaybe (Committee DijkstraEra)
+ -&gt; f (StrictMaybe (Committee DijkstraEra)))
+-&gt; ConwayGovState DijkstraEra -&gt; f (ConwayGovState DijkstraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(StrictMaybe (Committee era) -&gt; f (StrictMaybe (Committee era)))
+-&gt; ConwayGovState era -&gt; f (ConwayGovState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html#cgsCommitteeL"><span class="hs-identifier hs-var">cgsCommitteeL</span></a></span><span>
+</span><span id="line-50"></span></pre></body></html>

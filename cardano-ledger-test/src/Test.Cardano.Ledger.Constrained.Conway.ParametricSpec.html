@@ -1,0 +1,954 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE UndecidableSuperClasses #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# OPTIONS_GHC -O0 #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- | classes that support Era parametric Specifications.</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--   I.e they work in all eras (Shelley,Allegra,Mary,Alonzo,Babbage,Conway)</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--   In general, each class (except EraSpecTxOut, see below) navigates the differences of a single type family.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--   The class (EraSpecPParams era) (Defined in &#8216;Test.Cardano.Ledger.Constrained.Conway.SimplePParams&#8217;)</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--   and reExported here, supports specifications over the type Family (PParams era).</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--   The class EraSpecCert supports specifications over the type Family (TxCert era)</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--   The class EraSpecLedger, with methods 'govStateSpec' and 'newEpochStateSpec', support Parametric Ledger types.</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--   The class EraSpecTxOut (with method 'correctTxOut' and others) supports specifcations over the type Family TxOut.</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--   Additional support for phased out Type Families like InstantaneousRewards,</span><span>
+</span><span id="line-26"></span><span class="hs-comment">--   GenDelegs, FutureGenDelegs, StashedAVVMAddresses, and Ptrs, are handled by methods in EraSpecTxOut</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.ParametricSpec</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-keyword">module</span><span> </span><span class="annot"><span class="hs-identifier">SimplePParams</span></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#EraSpecTxOut"><span class="hs-identifier">EraSpecTxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutSpec"><span class="hs-identifier">txOutSpec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#EraSpecCert"><span class="hs-identifier">EraSpecCert</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Deleg.html#EraSpecDeleg"><span class="hs-identifier">EraSpecDeleg</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#delegatedStakeReference"><span class="hs-identifier">delegatedStakeReference</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#CertKey"><span class="hs-identifier">CertKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#testir"><span class="hs-identifier">testir</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html"><span class="hs-identifier">Cardano.Ledger.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier">Addr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.html"><span class="hs-identifier">Cardano.Ledger.Allegra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier">AllegraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.html"><span class="hs-identifier">Cardano.Ledger.Alonzo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier">AlonzoEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.html"><span class="hs-identifier">Cardano.Ledger.Babbage</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier">BabbageEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#inject"><span class="hs-identifier">inject</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#DeltaCoin"><span class="hs-identifier">DeltaCoin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.html"><span class="hs-identifier">Cardano.Ledger.Conway.State</span></a></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier">Credential</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeReference"><span class="hs-identifier">StakeReference</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.html"><span class="hs-identifier">Cardano.Ledger.Mary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier">MaryEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.html"><span class="hs-identifier">Cardano.Ledger.Shelley</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#StashedAVVMAddresses"><span class="hs-identifier">StashedAVVMAddresses</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.API.html"><span class="hs-identifier">Constrained.API</span></a></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Cert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#CertKey"><span class="hs-identifier">CertKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#EraSpecCert"><span class="hs-identifier">EraSpecCert</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Deleg.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Deleg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Deleg.html#EraSpecDeleg"><span class="hs-identifier">EraSpecDeleg</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#maryValueCoin_"><span class="hs-identifier">maryValueCoin_</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#toDelta_"><span class="hs-identifier">toDelta_</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.PParams.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Instances.PParams</span></a></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.PParams.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Instances.PParams</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SimplePParams</span></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#GenScript"><span class="hs-identifier">GenScript</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier">WitUniv</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witBootstrapAddress"><span class="hs-identifier">witBootstrapAddress</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier">witness</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-69"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- ===========================================================</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- | The class EraSpecTxOut supports Era parametric Specifications that</span><span>
+</span><span id="line-74"></span><span class="hs-comment">--   primarily navigate the differences in types parameterized type Family TxOut.</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--   Additional support for phased out Type Families like InstantaneousRewards,</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--   GenDelegs, FutureGenDelegs, StashedAVVMAddresses, and Ptrs, are also provided</span><span>
+</span><span id="line-77"></span><span class="hs-keyword">class</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#StashedAVVMAddresses"><span class="hs-identifier hs-type">StashedAVVMAddresses</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Basic.html#EraSpecPParams"><span class="hs-identifier hs-type">EraSpecPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Deleg.html#EraSpecDeleg"><span class="hs-identifier hs-type">EraSpecDeleg</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#IsNormalType"><span class="hs-identifier hs-type">IsNormalType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxOut"><span class="hs-identifier hs-type">EraTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#GenScript"><span class="hs-identifier hs-type">GenScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-86"></span><span>  </span><span id="EraSpecTxOut"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#EraSpecTxOut"><span class="hs-identifier hs-var">EraSpecTxOut</span></a></span></span><span> </span><span id="local-6989586621682703135"><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-88"></span><span>  </span><span id="irewardSpec"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#irewardSpec"><span class="hs-identifier hs-type">irewardSpec</span></a></span></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.ChainAccount.html#ChainAccountState"><span class="hs-identifier hs-type">ChainAccountState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#InstantaneousRewards"><span class="hs-identifier hs-type">InstantaneousRewards</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span id="hasPtrs"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#hasPtrs"><span class="hs-identifier hs-type">hasPtrs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621682703151"><span class="annot"><a href="#local-6989586621682703151"><span class="hs-identifier hs-type">proxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-comment">-- | Extract a Value from a TxOut</span><span>
+</span><span id="line-93"></span><span>  </span><span id="txOutValue_"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutValue_"><span class="hs-identifier hs-type">txOutValue_</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-comment">-- | Extract a Coin from a TxOut</span><span>
+</span><span id="line-96"></span><span>  </span><span id="txOutCoin_"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutCoin_"><span class="hs-identifier hs-type">txOutCoin_</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-comment">-- | Extract an Addr from a TxOut</span><span>
+</span><span id="line-99"></span><span>  </span><span id="txOutAddr_"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutAddr_"><span class="hs-identifier hs-type">txOutAddr_</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703135"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#EraSpecTxOut"><span class="hs-identifier hs-type">EraSpecTxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-102"></span><span>  </span><span id="local-6989586621682703461"><span class="annot"><span class="annottext">irewardSpec :: WitUniv ShelleyEra
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#irewardSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">irewardSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WitUniv ShelleyEra
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+forall era.
+Era era =&gt;
+WitUniv era
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#instantaneousRewardsSpec"><span class="hs-identifier hs-var">instantaneousRewardsSpec</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span id="local-6989586621682703465"><span class="annot"><span class="annottext">hasPtrs :: forall (proxy :: * -&gt; *). proxy ShelleyEra -&gt; Term Bool
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#hasPtrs"><span class="hs-identifier hs-var hs-var hs-var hs-var">hasPtrs</span></a></span></span><span> </span><span id="local-6989586621682703466"><span class="annot"><span class="annottext">proxy ShelleyEra
+</span><a href="#local-6989586621682703466"><span class="hs-identifier hs-var">_proxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Term Bool
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621682703498"><span class="annot"><span class="annottext">txOutValue_ :: Term (TxOut ShelleyEra) -&gt; Term (Value ShelleyEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutValue_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutValue_</span></a></span></span><span> </span><span id="local-6989586621682703499"><span class="annot"><span class="annottext">Term (TxOut ShelleyEra)
+</span><a href="#local-6989586621682703499"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut ShelleyEra)
+Term (ShelleyTxOut ShelleyEra)
+</span><a href="#local-6989586621682703499"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span id="local-6989586621682703525"><span class="annot"><span class="annottext">txOutCoin_ :: Term (TxOut ShelleyEra) -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutCoin_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutCoin_</span></a></span></span><span> </span><span id="local-6989586621682703526"><span class="annot"><span class="annottext">Term (TxOut ShelleyEra)
+</span><a href="#local-6989586621682703526"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut ShelleyEra)
+Term (ShelleyTxOut ShelleyEra)
+</span><a href="#local-6989586621682703526"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span id="local-6989586621682703548"><span class="annot"><span class="annottext">txOutAddr_ :: Term (TxOut ShelleyEra) -&gt; Term Addr
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutAddr_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutAddr_</span></a></span></span><span> </span><span id="local-6989586621682703549"><span class="annot"><span class="annottext">Term (TxOut ShelleyEra)
+</span><a href="#local-6989586621682703549"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut ShelleyEra)
+Term (ShelleyTxOut ShelleyEra)
+</span><a href="#local-6989586621682703549"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#EraSpecTxOut"><span class="hs-identifier hs-type">EraSpecTxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-110"></span><span>  </span><span id="local-6989586621682703587"><span class="annot"><span class="annottext">irewardSpec :: WitUniv AllegraEra
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#irewardSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">irewardSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WitUniv AllegraEra
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+forall era.
+Era era =&gt;
+WitUniv era
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#instantaneousRewardsSpec"><span class="hs-identifier hs-var">instantaneousRewardsSpec</span></a></span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621682703589"><span class="annot"><span class="annottext">hasPtrs :: forall (proxy :: * -&gt; *). proxy AllegraEra -&gt; Term Bool
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#hasPtrs"><span class="hs-identifier hs-var hs-var hs-var hs-var">hasPtrs</span></a></span></span><span> </span><span id="local-6989586621682703590"><span class="annot"><span class="annottext">proxy AllegraEra
+</span><a href="#local-6989586621682703590"><span class="hs-identifier hs-var">_proxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Term Bool
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span>  </span><span id="local-6989586621682703615"><span class="annot"><span class="annottext">txOutValue_ :: Term (TxOut AllegraEra) -&gt; Term (Value AllegraEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutValue_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutValue_</span></a></span></span><span> </span><span id="local-6989586621682703616"><span class="annot"><span class="annottext">Term (TxOut AllegraEra)
+</span><a href="#local-6989586621682703616"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut AllegraEra)
+Term (ShelleyTxOut AllegraEra)
+</span><a href="#local-6989586621682703616"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span id="local-6989586621682703641"><span class="annot"><span class="annottext">txOutCoin_ :: Term (TxOut AllegraEra) -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutCoin_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutCoin_</span></a></span></span><span> </span><span id="local-6989586621682703642"><span class="annot"><span class="annottext">Term (TxOut AllegraEra)
+</span><a href="#local-6989586621682703642"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut AllegraEra)
+Term (ShelleyTxOut AllegraEra)
+</span><a href="#local-6989586621682703642"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-115"></span><span>  </span><span id="local-6989586621682703663"><span class="annot"><span class="annottext">txOutAddr_ :: Term (TxOut AllegraEra) -&gt; Term Addr
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutAddr_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutAddr_</span></a></span></span><span> </span><span id="local-6989586621682703664"><span class="annot"><span class="annottext">Term (TxOut AllegraEra)
+</span><a href="#local-6989586621682703664"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut AllegraEra)
+Term (ShelleyTxOut AllegraEra)
+</span><a href="#local-6989586621682703664"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#EraSpecTxOut"><span class="hs-identifier hs-type">EraSpecTxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-118"></span><span>  </span><span id="local-6989586621682703703"><span class="annot"><span class="annottext">irewardSpec :: WitUniv MaryEra
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#irewardSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">irewardSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WitUniv MaryEra
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+forall era.
+Era era =&gt;
+WitUniv era
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#instantaneousRewardsSpec"><span class="hs-identifier hs-var">instantaneousRewardsSpec</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span id="local-6989586621682703705"><span class="annot"><span class="annottext">hasPtrs :: forall (proxy :: * -&gt; *). proxy MaryEra -&gt; Term Bool
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#hasPtrs"><span class="hs-identifier hs-var hs-var hs-var hs-var">hasPtrs</span></a></span></span><span> </span><span id="local-6989586621682703706"><span class="annot"><span class="annottext">proxy MaryEra
+</span><a href="#local-6989586621682703706"><span class="hs-identifier hs-var">_proxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Term Bool
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span>  </span><span id="local-6989586621682703732"><span class="annot"><span class="annottext">txOutValue_ :: Term (TxOut MaryEra) -&gt; Term (Value MaryEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutValue_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutValue_</span></a></span></span><span> </span><span id="local-6989586621682703733"><span class="annot"><span class="annottext">Term (TxOut MaryEra)
+</span><a href="#local-6989586621682703733"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut MaryEra)
+Term (ShelleyTxOut MaryEra)
+</span><a href="#local-6989586621682703733"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span id="local-6989586621682703758"><span class="annot"><span class="annottext">txOutCoin_ :: Term (TxOut MaryEra) -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutCoin_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutCoin_</span></a></span></span><span> </span><span id="local-6989586621682703759"><span class="annot"><span class="annottext">Term (TxOut MaryEra)
+</span><a href="#local-6989586621682703759"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Term MaryValue -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#maryValueCoin_"><span class="hs-identifier hs-var">maryValueCoin_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut MaryEra)
+Term (ShelleyTxOut MaryEra)
+</span><a href="#local-6989586621682703759"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>  </span><span id="local-6989586621682703780"><span class="annot"><span class="annottext">txOutAddr_ :: Term (TxOut MaryEra) -&gt; Term Addr
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutAddr_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutAddr_</span></a></span></span><span> </span><span id="local-6989586621682703781"><span class="annot"><span class="annottext">Term (TxOut MaryEra)
+</span><a href="#local-6989586621682703781"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut MaryEra)
+Term (ShelleyTxOut MaryEra)
+</span><a href="#local-6989586621682703781"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#EraSpecTxOut"><span class="hs-identifier hs-type">EraSpecTxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621682703820"><span class="annot"><span class="annottext">irewardSpec :: WitUniv AlonzoEra
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#irewardSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">irewardSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WitUniv AlonzoEra
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+forall era.
+Era era =&gt;
+WitUniv era
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#instantaneousRewardsSpec"><span class="hs-identifier hs-var">instantaneousRewardsSpec</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621682703822"><span class="annot"><span class="annottext">hasPtrs :: forall (proxy :: * -&gt; *). proxy AlonzoEra -&gt; Term Bool
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#hasPtrs"><span class="hs-identifier hs-var hs-var hs-var hs-var">hasPtrs</span></a></span></span><span> </span><span id="local-6989586621682703823"><span class="annot"><span class="annottext">proxy AlonzoEra
+</span><a href="#local-6989586621682703823"><span class="hs-identifier hs-var">_proxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Term Bool
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621682703864"><span class="annot"><span class="annottext">txOutValue_ :: Term (TxOut AlonzoEra) -&gt; Term (Value AlonzoEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutValue_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutValue_</span></a></span></span><span> </span><span id="local-6989586621682703865"><span class="annot"><span class="annottext">Term (TxOut AlonzoEra)
+</span><a href="#local-6989586621682703865"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut AlonzoEra)
+Term (AlonzoTxOut AlonzoEra)
+</span><a href="#local-6989586621682703865"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span id="local-6989586621682703903"><span class="annot"><span class="annottext">txOutCoin_ :: Term (TxOut AlonzoEra) -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutCoin_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutCoin_</span></a></span></span><span> </span><span id="local-6989586621682703904"><span class="annot"><span class="annottext">Term (TxOut AlonzoEra)
+</span><a href="#local-6989586621682703904"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Term MaryValue -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#maryValueCoin_"><span class="hs-identifier hs-var">maryValueCoin_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut AlonzoEra)
+Term (AlonzoTxOut AlonzoEra)
+</span><a href="#local-6989586621682703904"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621682703937"><span class="annot"><span class="annottext">txOutAddr_ :: Term (TxOut AlonzoEra) -&gt; Term Addr
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutAddr_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutAddr_</span></a></span></span><span> </span><span id="local-6989586621682703938"><span class="annot"><span class="annottext">Term (TxOut AlonzoEra)
+</span><a href="#local-6989586621682703938"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut AlonzoEra)
+Term (AlonzoTxOut AlonzoEra)
+</span><a href="#local-6989586621682703938"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#EraSpecTxOut"><span class="hs-identifier hs-type">EraSpecTxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621682703998"><span class="annot"><span class="annottext">irewardSpec :: WitUniv BabbageEra
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#irewardSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">irewardSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WitUniv BabbageEra
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+forall era.
+Era era =&gt;
+WitUniv era
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#instantaneousRewardsSpec"><span class="hs-identifier hs-var">instantaneousRewardsSpec</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span id="local-6989586621682704000"><span class="annot"><span class="annottext">hasPtrs :: forall (proxy :: * -&gt; *). proxy BabbageEra -&gt; Term Bool
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#hasPtrs"><span class="hs-identifier hs-var hs-var hs-var hs-var">hasPtrs</span></a></span></span><span> </span><span id="local-6989586621682704001"><span class="annot"><span class="annottext">proxy BabbageEra
+</span><a href="#local-6989586621682704001"><span class="hs-identifier hs-var">_proxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Term Bool
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621682704054"><span class="annot"><span class="annottext">txOutValue_ :: Term (TxOut BabbageEra) -&gt; Term (Value BabbageEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutValue_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutValue_</span></a></span></span><span> </span><span id="local-6989586621682704055"><span class="annot"><span class="annottext">Term (TxOut BabbageEra)
+</span><a href="#local-6989586621682704055"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut BabbageEra)
+Term (BabbageTxOut BabbageEra)
+</span><a href="#local-6989586621682704055"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span id="local-6989586621682704106"><span class="annot"><span class="annottext">txOutCoin_ :: Term (TxOut BabbageEra) -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutCoin_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutCoin_</span></a></span></span><span> </span><span id="local-6989586621682704107"><span class="annot"><span class="annottext">Term (TxOut BabbageEra)
+</span><a href="#local-6989586621682704107"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Term MaryValue -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#maryValueCoin_"><span class="hs-identifier hs-var">maryValueCoin_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut BabbageEra)
+Term (BabbageTxOut BabbageEra)
+</span><a href="#local-6989586621682704107"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>  </span><span id="local-6989586621682704153"><span class="annot"><span class="annottext">txOutAddr_ :: Term (TxOut BabbageEra) -&gt; Term Addr
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutAddr_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutAddr_</span></a></span></span><span> </span><span id="local-6989586621682704154"><span class="annot"><span class="annottext">Term (TxOut BabbageEra)
+</span><a href="#local-6989586621682704154"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut BabbageEra)
+Term (BabbageTxOut BabbageEra)
+</span><a href="#local-6989586621682704154"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#EraSpecTxOut"><span class="hs-identifier hs-type">EraSpecTxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-142"></span><span>  </span><span id="local-6989586621682704268"><span class="annot"><span class="annottext">irewardSpec :: WitUniv ConwayEra
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#irewardSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">irewardSpec</span></a></span></span><span> </span><span class="annot"><span class="annottext">WitUniv ConwayEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Term ChainAccountState
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term InstantaneousRewards -&gt; PredD Deps)
+-&gt; Specification InstantaneousRewards
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term InstantaneousRewards -&gt; PredD Deps)
+ -&gt; Specification InstantaneousRewards)
+-&gt; (Term InstantaneousRewards -&gt; PredD Deps)
+-&gt; Specification InstantaneousRewards
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term InstantaneousRewards
+</span><span class="">[var|irewards|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-143"></span><span>    </span><span class="annot"><span class="annottext">Term InstantaneousRewards
+-&gt; FunTy
+     (MapList Term (ProductAsList InstantaneousRewards)) [Term Bool]
+-&gt; PredD Deps
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term InstantaneousRewards
+</span><a href="#local-6989586621682704270"><span class="hs-identifier hs-var">irewards</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (ProductAsList InstantaneousRewards)) [Term Bool]
+ -&gt; PredD Deps)
+-&gt; FunTy
+     (MapList Term (ProductAsList InstantaneousRewards)) [Term Bool]
+-&gt; PredD Deps
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><span class="">[var|reserves|]</span></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><span class="">[var|treasury|]</span></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><span class="">[var|deltaRes|]</span></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><span class="">[var|deltaTreas|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-144"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><a href="#local-6989586621682704273"><span class="hs-identifier hs-var">reserves</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+-&gt; Term (Map (Credential 'Staking) Coin) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) Coin
+-&gt; Term (Map (Credential 'Staking) Coin)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) Coin
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span>
+</span><span id="line-145"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><a href="#local-6989586621682704274"><span class="hs-identifier hs-var">treasury</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+-&gt; Term (Map (Credential 'Staking) Coin) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) Coin
+-&gt; Term (Map (Credential 'Staking) Coin)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) Coin
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span>
+</span><span id="line-146"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><a href="#local-6989586621682704275"><span class="hs-identifier hs-var">deltaRes</span></a></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin -&gt; Term DeltaCoin -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">DeltaCoin -&gt; Term DeltaCoin
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; DeltaCoin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#DeltaCoin"><span class="hs-identifier hs-var">DeltaCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><a href="#local-6989586621682704276"><span class="hs-identifier hs-var">deltaTreas</span></a></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin -&gt; Term DeltaCoin -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">DeltaCoin -&gt; Term DeltaCoin
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; DeltaCoin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#DeltaCoin"><span class="hs-identifier hs-var">DeltaCoin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-149"></span><span>  </span><span id="local-6989586621682704281"><span class="annot"><span class="annottext">hasPtrs :: forall (proxy :: * -&gt; *). proxy ConwayEra -&gt; Term Bool
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#hasPtrs"><span class="hs-identifier hs-var hs-var hs-var hs-var">hasPtrs</span></a></span></span><span> </span><span id="local-6989586621682704282"><span class="annot"><span class="annottext">proxy ConwayEra
+</span><a href="#local-6989586621682704282"><span class="hs-identifier hs-var">_proxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Term Bool
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span>  </span><span id="local-6989586621682704333"><span class="annot"><span class="annottext">txOutValue_ :: Term (TxOut ConwayEra) -&gt; Term (Value ConwayEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutValue_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutValue_</span></a></span></span><span> </span><span id="local-6989586621682704334"><span class="annot"><span class="annottext">Term (TxOut ConwayEra)
+</span><a href="#local-6989586621682704334"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut ConwayEra)
+Term (BabbageTxOut ConwayEra)
+</span><a href="#local-6989586621682704334"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-152"></span><span>  </span><span id="local-6989586621682704385"><span class="annot"><span class="annottext">txOutCoin_ :: Term (TxOut ConwayEra) -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutCoin_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutCoin_</span></a></span></span><span> </span><span id="local-6989586621682704386"><span class="annot"><span class="annottext">Term (TxOut ConwayEra)
+</span><a href="#local-6989586621682704386"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Term MaryValue -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#maryValueCoin_"><span class="hs-identifier hs-var">maryValueCoin_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut ConwayEra)
+Term (BabbageTxOut ConwayEra)
+</span><a href="#local-6989586621682704386"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>  </span><span id="local-6989586621682704432"><span class="annot"><span class="annottext">txOutAddr_ :: Term (TxOut ConwayEra) -&gt; Term Addr
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutAddr_"><span class="hs-identifier hs-var hs-var hs-var hs-var">txOutAddr_</span></a></span></span><span> </span><span id="local-6989586621682704433"><span class="annot"><span class="annottext">Term (TxOut ConwayEra)
+</span><a href="#local-6989586621682704433"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Natural) a (c :: Symbol) (as :: [*]).
+(SimpleRep a ~ ProdOver as, TheSop a ~ '[c ::: as],
+ TypeSpec a ~ TypeSpec (ProdOver as), Select n as, HasSpec a,
+ HasSpec (ProdOver as), HasSimpleRep a, GenericRequires a) =&gt;
+Term a -&gt; Term (At n as)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#sel"><span class="hs-identifier hs-var">sel</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term (TxOut ConwayEra)
+Term (BabbageTxOut ConwayEra)
+</span><a href="#local-6989586621682704433"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- ===========================================================================</span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="annot"><span class="hs-comment">-- | An Era polymorhic Specification for type family TxOut</span></span><span>
+</span><span id="line-158"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutSpec"><span class="hs-identifier hs-type">txOutSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682703243"><span class="annot"><a href="#local-6989586621682703243"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-160"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#EraSpecTxOut"><span class="hs-identifier hs-type">EraSpecTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703243"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703243"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-162"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-type">StakePool</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-163"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703243"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-164"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Pred"><span class="hs-identifier hs-type">Pred</span></a></span><span>
+</span><span id="line-165"></span><span id="txOutSpec"><span class="annot"><span class="annottext">txOutSpec :: forall era.
+EraSpecTxOut era =&gt;
+WitUniv era
+-&gt; Term (Map (Credential 'Staking) (KeyHash 'StakePool))
+-&gt; Term (TxOut era)
+-&gt; PredD Deps
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutSpec"><span class="hs-identifier hs-var hs-var">txOutSpec</span></a></span></span><span> </span><span id="local-6989586621682704507"><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682704507"><span class="hs-identifier hs-var">univ</span></a></span></span><span> </span><span id="local-6989586621682704508"><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) (KeyHash 'StakePool))
+</span><a href="#local-6989586621682704508"><span class="hs-identifier hs-var">delegs</span></a></span></span><span> </span><span id="local-6989586621682704509"><span class="annot"><span class="annottext">Term (TxOut era)
+</span><a href="#local-6989586621682704509"><span class="hs-identifier hs-var">txOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-166"></span><span>  </span><span class="annot"><span class="annottext">[PredD Deps] -&gt; PredD Deps
+forall m. Monoid m =&gt; [m] -&gt; m
+forall (t :: * -&gt; *) m. (Foldable t, Monoid m) =&gt; t m -&gt; m
+</span><span class="hs-identifier hs-var">fold</span></span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; PredD Deps
+forall p. IsPred p =&gt; p -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; PredD Deps) -&gt; Term Bool -&gt; PredD Deps
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term Coin -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. EraSpecTxOut era =&gt; Term (TxOut era) -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutCoin_"><span class="hs-identifier hs-var">txOutCoin_</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621682703243"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Term (TxOut era)
+</span><a href="#local-6989586621682704509"><span class="hs-identifier hs-var">txOut</span></a></span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; PredD Deps
+forall p. IsPred p =&gt; p -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; PredD Deps) -&gt; Term Bool -&gt; PredD Deps
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall era. EraSpecTxOut era =&gt; Term (TxOut era) -&gt; Term Coin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutCoin_"><span class="hs-identifier hs-var">txOutCoin_</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621682703243"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Term (TxOut era)
+</span><a href="#local-6989586621682704509"><span class="hs-identifier hs-var">txOut</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term Coin -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Term Coin
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term Addr
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep Addr)))
+     (PredD Deps)
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a)))
+     (PredD Deps)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. EraSpecTxOut era =&gt; Term (TxOut era) -&gt; Term Addr
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#txOutAddr_"><span class="hs-identifier hs-var">txOutAddr_</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621682703243"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Term (TxOut era)
+</span><a href="#local-6989586621682704509"><span class="hs-identifier hs-var">txOut</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>        </span><span class="hs-comment">-- Network -&gt; Credential -&gt; StakeRefernce -&gt; Addr</span><span>
+</span><span id="line-171"></span><span>        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; FunTy
+     (MapList
+        Term
+        (Args (Prod Network (Prod (Credential 'Payment) StakeReference))))
+     [PredD Deps]
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod Network (Prod (Credential 'Payment) StakeReference))
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term
+      (Args (Prod Network (Prod (Credential 'Payment) StakeReference))))
+   [PredD Deps]
+ -&gt; Weighted
+      (BinderD Deps)
+      (Prod Network (Prod (Credential 'Payment) StakeReference)))
+-&gt; FunTy
+     (MapList
+        Term
+        (Args (Prod Network (Prod (Credential 'Payment) StakeReference))))
+     [PredD Deps]
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod Network (Prod (Credential 'Payment) StakeReference))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term Network
+</span><span class="">[var|network|]</span></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'Payment)
+</span><span class="">[var|payCred|]</span></span><span> </span><span class="annot"><span class="annottext">Term StakeReference
+</span><span class="">[var|stakeref|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-172"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Credential 'Payment) -&gt; PredD Deps
+forall era t.
+Witnessed era t =&gt;
+WitUniv era -&gt; Term t -&gt; PredD Deps
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682704507"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'Payment)
+</span><a href="#local-6989586621682704518"><span class="hs-identifier hs-var">payCred</span></a></span><span> </span><span class="hs-comment">-- satisfies payCred (payCredSpec univ)</span><span>
+</span><span id="line-173"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; PredD Deps
+forall p. IsPred p =&gt; p -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; PredD Deps) -&gt; Term Bool -&gt; PredD Deps
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Network
+</span><a href="#local-6989586621682704517"><span class="hs-identifier hs-var">network</span></a></span><span> </span><span class="annot"><span class="annottext">Term Network -&gt; Term Network -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Network -&gt; Term Network
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span>
+</span><span id="line-174"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term StakeReference -&gt; Specification StakeReference -&gt; PredD Deps
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term StakeReference
+</span><a href="#local-6989586621682704519"><span class="hs-identifier hs-var">stakeref</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) (KeyHash 'StakePool))
+-&gt; Specification StakeReference
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#delegatedStakeReference"><span class="hs-identifier hs-var">delegatedStakeReference</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) (KeyHash 'StakePool))
+</span><a href="#local-6989586621682704508"><span class="hs-identifier hs-var">delegs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-175"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-176"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>        </span><span class="hs-comment">-- BootstrapAddress -&gt; Addr</span><span>
+</span><span id="line-178"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+-&gt; FunTy (MapList Term (Args BootstrapAddress)) (PredD Deps)
+-&gt; Weighted (BinderD Deps) BootstrapAddress
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args BootstrapAddress)) (PredD Deps)
+ -&gt; Weighted (BinderD Deps) BootstrapAddress)
+-&gt; FunTy (MapList Term (Args BootstrapAddress)) (PredD Deps)
+-&gt; Weighted (BinderD Deps) BootstrapAddress
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682704522"><span class="annot"><span class="annottext">Term BootstrapAddress
+</span><a href="#local-6989586621682704522"><span class="hs-identifier hs-var">bootstrapAddr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term BootstrapAddress
+-&gt; Specification BootstrapAddress -&gt; PredD Deps
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term BootstrapAddress
+</span><a href="#local-6989586621682704522"><span class="hs-identifier hs-var">bootstrapAddr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">WitUniv era -&gt; Specification BootstrapAddress
+forall era. WitUniv era -&gt; Specification BootstrapAddress
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witBootstrapAddress"><span class="hs-identifier hs-var">witBootstrapAddress</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682704507"><span class="hs-identifier hs-var">univ</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span class="annot"><span class="hs-comment">-- | Generate random Stake references that have a high probability of being delegated.</span></span><span>
+</span><span id="line-182"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#delegatedStakeReference"><span class="hs-identifier hs-type">delegatedStakeReference</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-183"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-type">StakePool</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-184"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeReference"><span class="hs-identifier hs-type">StakeReference</span></a></span><span>
+</span><span id="line-185"></span><span id="delegatedStakeReference"><span class="annot"><span class="annottext">delegatedStakeReference :: Term (Map (Credential 'Staking) (KeyHash 'StakePool))
+-&gt; Specification StakeReference
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#delegatedStakeReference"><span class="hs-identifier hs-var hs-var">delegatedStakeReference</span></a></span></span><span> </span><span id="local-6989586621682704523"><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) (KeyHash 'StakePool))
+</span><a href="#local-6989586621682704523"><span class="hs-identifier hs-var">delegs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-186"></span><span>  </span><span class="annot"><span class="annottext">(Term StakeReference -&gt; PredD Deps) -&gt; Specification StakeReference
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term StakeReference -&gt; PredD Deps)
+ -&gt; Specification StakeReference)
+-&gt; (Term StakeReference -&gt; PredD Deps)
+-&gt; Specification StakeReference
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term StakeReference
+</span><span class="">[var|ref|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-187"></span><span>    </span><span class="annot"><span class="annottext">Term StakeReference
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps)) (Cases (SimpleRep StakeReference)))
+     (PredD Deps)
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a)))
+     (PredD Deps)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span>
+</span><span id="line-188"></span><span>      </span><span class="annot"><span class="annottext">Term StakeReference
+</span><a href="#local-6989586621682704524"><span class="hs-identifier hs-var">ref</span></a></span><span>
+</span><span id="line-189"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+-&gt; FunTy (MapList Term (Args (Credential 'Staking))) (Term Bool)
+-&gt; Weighted (BinderD Deps) (Credential 'Staking)
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">9</span></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args (Credential 'Staking))) (Term Bool)
+ -&gt; Weighted (BinderD Deps) (Credential 'Staking))
+-&gt; FunTy (MapList Term (Args (Credential 'Staking))) (Term Bool)
+-&gt; Weighted (BinderD Deps) (Credential 'Staking)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Credential 'Staking)
+</span><span class="">[var|base|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term (Credential 'Staking)
+-&gt; Term (Map (Credential 'Staking) (KeyHash 'StakePool))
+-&gt; Term Bool
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term k -&gt; Term (Map k v) -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#mapMember_"><span class="hs-identifier hs-var">mapMember_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'Staking)
+</span><a href="#local-6989586621682704525"><span class="hs-identifier hs-var">base</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) (KeyHash 'StakePool))
+</span><a href="#local-6989586621682704523"><span class="hs-identifier hs-var">delegs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-190"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+-&gt; FunTy (MapList Term (Args Ptr)) Bool
+-&gt; Weighted (BinderD Deps) Ptr
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args Ptr)) Bool
+ -&gt; Weighted (BinderD Deps) Ptr)
+-&gt; FunTy (MapList Term (Args Ptr)) Bool
+-&gt; Weighted (BinderD Deps) Ptr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682704527"><span class="annot"><span class="annottext">TermD Deps Ptr
+</span><a href="#local-6989586621682704527"><span class="hs-identifier hs-var">_ptr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>
+</span><span id="line-191"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+-&gt; FunTy (MapList Term (Args ())) Bool
+-&gt; Weighted (BinderD Deps) ()
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args ())) Bool -&gt; Weighted (BinderD Deps) ())
+-&gt; FunTy (MapList Term (Args ())) Bool
+-&gt; Weighted (BinderD Deps) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682704528"><span class="annot"><span class="annottext">TermD Deps ()
+</span><a href="#local-6989586621682704528"><span class="hs-identifier hs-var">_null</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- just an occaisional NullRef</span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#instantaneousRewardsSpec"><span class="hs-identifier hs-type">instantaneousRewardsSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-194"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682703157"><span class="annot"><a href="#local-6989586621682703157"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-195"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703157"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-196"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703157"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-197"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.ChainAccount.html#ChainAccountState"><span class="hs-identifier hs-type">ChainAccountState</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-198"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#InstantaneousRewards"><span class="hs-identifier hs-type">InstantaneousRewards</span></a></span><span>
+</span><span id="line-199"></span><span id="instantaneousRewardsSpec"><span class="annot"><span class="annottext">instantaneousRewardsSpec :: forall era.
+Era era =&gt;
+WitUniv era
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#instantaneousRewardsSpec"><span class="hs-identifier hs-var hs-var">instantaneousRewardsSpec</span></a></span></span><span> </span><span id="local-6989586621682704668"><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682704668"><span class="hs-identifier hs-var">univ</span></a></span></span><span> </span><span id="local-6989586621682704669"><span class="annot"><span class="annottext">Term ChainAccountState
+</span><a href="#local-6989586621682704669"><span class="hs-identifier hs-var">acct</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term InstantaneousRewards -&gt; PredD Deps)
+-&gt; Specification InstantaneousRewards
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term InstantaneousRewards -&gt; PredD Deps)
+ -&gt; Specification InstantaneousRewards)
+-&gt; (Term InstantaneousRewards -&gt; PredD Deps)
+-&gt; Specification InstantaneousRewards
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term InstantaneousRewards
+</span><span class="">[var| irewards |]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-200"></span><span>  </span><span class="annot"><span class="annottext">Term ChainAccountState
+-&gt; FunTy
+     (MapList Term (ProductAsList ChainAccountState)) (PredD Deps)
+-&gt; PredD Deps
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term ChainAccountState
+</span><a href="#local-6989586621682704669"><span class="hs-identifier hs-var">acct</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (ProductAsList ChainAccountState)) (PredD Deps)
+ -&gt; PredD Deps)
+-&gt; FunTy
+     (MapList Term (ProductAsList ChainAccountState)) (PredD Deps)
+-&gt; PredD Deps
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><span class="">[var| acctRes |]</span></span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><span class="">[var| acctTreas |]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-201"></span><span>    </span><span class="annot"><span class="annottext">Term InstantaneousRewards
+-&gt; FunTy
+     (MapList Term (ProductAsList InstantaneousRewards)) [PredD Deps]
+-&gt; PredD Deps
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term InstantaneousRewards
+</span><a href="#local-6989586621682704670"><span class="hs-identifier hs-var">irewards</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (ProductAsList InstantaneousRewards)) [PredD Deps]
+ -&gt; PredD Deps)
+-&gt; FunTy
+     (MapList Term (ProductAsList InstantaneousRewards)) [PredD Deps]
+-&gt; PredD Deps
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><span class="">[var| reserves |]</span></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><span class="">[var| treasury |]</span></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><span class="">[var| deltaRes |]</span></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><span class="">[var| deltaTreas |]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-202"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term (Map (Credential 'Staking) Coin) -&gt; PredD Deps
+forall a b.
+(HasSpec a, HasSpec b) =&gt;
+Term a -&gt; Term b -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#dependsOn"><span class="hs-identifier hs-var">dependsOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682704671"><span class="hs-identifier hs-var">acctRes</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><a href="#local-6989586621682704673"><span class="hs-identifier hs-var">reserves</span></a></span><span>
+</span><span id="line-203"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term DeltaCoin -&gt; PredD Deps
+forall a b.
+(HasSpec a, HasSpec b) =&gt;
+Term a -&gt; Term b -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#dependsOn"><span class="hs-identifier hs-var">dependsOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682704671"><span class="hs-identifier hs-var">acctRes</span></a></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><a href="#local-6989586621682704675"><span class="hs-identifier hs-var">deltaRes</span></a></span><span>
+</span><span id="line-204"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term (Map (Credential 'Staking) Coin) -&gt; PredD Deps
+forall a b.
+(HasSpec a, HasSpec b) =&gt;
+Term a -&gt; Term b -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#dependsOn"><span class="hs-identifier hs-var">dependsOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682704672"><span class="hs-identifier hs-var">acctTreas</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><a href="#local-6989586621682704674"><span class="hs-identifier hs-var">treasury</span></a></span><span>
+</span><span id="line-205"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term DeltaCoin -&gt; PredD Deps
+forall a b.
+(HasSpec a, HasSpec b) =&gt;
+Term a -&gt; Term b -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#dependsOn"><span class="hs-identifier hs-var">dependsOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682704672"><span class="hs-identifier hs-var">acctTreas</span></a></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><a href="#local-6989586621682704676"><span class="hs-identifier hs-var">deltaTreas</span></a></span><span>
+</span><span id="line-206"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Set (Credential 'Staking)) -&gt; PredD Deps
+forall era t.
+Witnessed era t =&gt;
+WitUniv era -&gt; Term t -&gt; PredD Deps
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682704668"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+-&gt; Term (Set (Credential 'Staking))
+forall k v.
+(HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k,
+ IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term (Set k)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><a href="#local-6989586621682704673"><span class="hs-identifier hs-var">reserves</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Set (Credential 'Staking)) -&gt; PredD Deps
+forall era t.
+Witnessed era t =&gt;
+WitUniv era -&gt; Term t -&gt; PredD Deps
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682704668"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+-&gt; Term (Set (Credential 'Staking))
+forall k v.
+(HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k,
+ IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term (Set k)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><a href="#local-6989586621682704674"><span class="hs-identifier hs-var">treasury</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-208"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; Term Bool -&gt; PredD Deps
+forall p. IsPred p =&gt; [String] -&gt; p -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assertExplain"><span class="hs-identifier hs-var">assertExplain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; [String]
+forall a. a -&gt; [a]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;deltaTreausry and deltaReserves sum to 0&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; PredD Deps) -&gt; Term Bool -&gt; PredD Deps
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin -&gt; Term DeltaCoin
+forall a. Num a =&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">negate</span></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><a href="#local-6989586621682704675"><span class="hs-identifier hs-var">deltaRes</span></a></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin -&gt; Term DeltaCoin -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><a href="#local-6989586621682704676"><span class="hs-identifier hs-var">deltaTreas</span></a></span><span>
+</span><span id="line-209"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term [Coin] -&gt; (Term Coin -&gt; Term Bool) -&gt; PredD Deps
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin) -&gt; Term [Coin]
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term [v]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><a href="#local-6989586621682704673"><span class="hs-identifier hs-var">reserves</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><span class="">[var| x |]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682704682"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term Coin -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3E%3D."><span class="hs-operator hs-var">&gt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Term Coin
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-210"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term [Coin] -&gt; (Term Coin -&gt; Term Bool) -&gt; PredD Deps
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin) -&gt; Term [Coin]
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term [v]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><a href="#local-6989586621682704674"><span class="hs-identifier hs-var">treasury</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><span class="">[var| y |]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682704685"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term Coin -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3E%3D."><span class="hs-operator hs-var">&gt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Term Coin
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-211"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; PredD Deps
+forall p. IsPred p =&gt; p -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; PredD Deps) -&gt; Term Bool -&gt; PredD Deps
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term DeltaCoin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#toDelta_"><span class="hs-identifier hs-var">toDelta_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Term Coin -&gt; Term Coin) -&gt; Term [Coin] -&gt; Term Coin
+forall a b.
+(Foldy b, HasSpec a) =&gt;
+(Term a -&gt; Term b) -&gt; Term [a] -&gt; Term b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.List.html#foldMap_"><span class="hs-identifier hs-var">foldMap_</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term Coin
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin) -&gt; Term [Coin]
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term [v]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><a href="#local-6989586621682704673"><span class="hs-identifier hs-var">reserves</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin -&gt; Term DeltaCoin -&gt; Term DeltaCoin
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><a href="#local-6989586621682704675"><span class="hs-identifier hs-var">deltaRes</span></a></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin -&gt; Term DeltaCoin -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term DeltaCoin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#toDelta_"><span class="hs-identifier hs-var">toDelta_</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682704671"><span class="hs-identifier hs-var">acctRes</span></a></span><span>
+</span><span id="line-212"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; PredD Deps
+forall p. IsPred p =&gt; p -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; PredD Deps) -&gt; Term Bool -&gt; PredD Deps
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term DeltaCoin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#toDelta_"><span class="hs-identifier hs-var">toDelta_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Term Coin -&gt; Term Coin) -&gt; Term [Coin] -&gt; Term Coin
+forall a b.
+(Foldy b, HasSpec a) =&gt;
+(Term a -&gt; Term b) -&gt; Term [a] -&gt; Term b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.List.html#foldMap_"><span class="hs-identifier hs-var">foldMap_</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term Coin
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin) -&gt; Term [Coin]
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term [v]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'Staking) Coin)
+</span><a href="#local-6989586621682704674"><span class="hs-identifier hs-var">treasury</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin -&gt; Term DeltaCoin -&gt; Term DeltaCoin
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin
+</span><a href="#local-6989586621682704676"><span class="hs-identifier hs-var">deltaTreas</span></a></span><span> </span><span class="annot"><span class="annottext">Term DeltaCoin -&gt; Term DeltaCoin -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term DeltaCoin
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#toDelta_"><span class="hs-identifier hs-var">toDelta_</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682704672"><span class="hs-identifier hs-var">acctTreas</span></a></span><span>
+</span><span id="line-213"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-214"></span><span>
+</span><span id="line-215"></span><span id="local-6989586621682703298"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#testir"><span class="hs-identifier hs-type">testir</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703298"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682703298"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#InstantaneousRewards"><span class="hs-identifier hs-type">InstantaneousRewards</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.ChainAccount.html#ChainAccountState"><span class="hs-identifier hs-type">ChainAccountState</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-216"></span><span id="testir"><span class="annot"><span class="annottext">testir :: forall era.
+Era era =&gt;
+WitUniv era
+-&gt; Specification (InstantaneousRewards, ChainAccountState)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#testir"><span class="hs-identifier hs-var hs-var">testir</span></a></span></span><span> </span><span id="local-6989586621682704724"><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682704724"><span class="hs-identifier hs-var">univ</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FunTy
+  (MapList
+     Term (Args (SimpleRep (InstantaneousRewards, ChainAccountState))))
+  (PredD Deps)
+-&gt; Specification (InstantaneousRewards, ChainAccountState)
+forall a p.
+(Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec (SimpleRep a),
+ HasSimpleRep a, All HasSpec (Args (SimpleRep a)),
+ IsProd (SimpleRep a), HasSpec a, IsProductType a, IsPred p,
+ GenericRequires a, ProdAsListComputes a) =&gt;
+FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#constrained%27"><span class="hs-identifier hs-var">constrained'</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term (Args (SimpleRep (InstantaneousRewards, ChainAccountState))))
+   (PredD Deps)
+ -&gt; Specification (InstantaneousRewards, ChainAccountState))
+-&gt; FunTy
+     (MapList
+        Term (Args (SimpleRep (InstantaneousRewards, ChainAccountState))))
+     (PredD Deps)
+-&gt; Specification (InstantaneousRewards, ChainAccountState)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682704726"><span class="annot"><span class="annottext">Term InstantaneousRewards
+</span><a href="#local-6989586621682704726"><span class="hs-identifier hs-var">ir</span></a></span></span><span> </span><span id="local-6989586621682704727"><span class="annot"><span class="annottext">Term ChainAccountState
+</span><a href="#local-6989586621682704727"><span class="hs-identifier hs-var">chainAcct</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term InstantaneousRewards
+-&gt; Specification InstantaneousRewards -&gt; PredD Deps
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; PredD Deps
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term InstantaneousRewards
+</span><a href="#local-6989586621682704726"><span class="hs-identifier hs-var">ir</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">WitUniv era
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+forall era.
+Era era =&gt;
+WitUniv era
+-&gt; Term ChainAccountState -&gt; Specification InstantaneousRewards
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.ParametricSpec.html#instantaneousRewardsSpec"><span class="hs-identifier hs-var">instantaneousRewardsSpec</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682704724"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term ChainAccountState
+</span><a href="#local-6989586621682704727"><span class="hs-identifier hs-var">chainAcct</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-217"></span></pre></body></html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Certs</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html"><span class="hs-identifier">Cardano.Ledger.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#RewardAccount"><span class="hs-identifier">RewardAccount</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.html"><span class="hs-identifier">Cardano.Ledger.Conway.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#CanSetAccounts"><span class="hs-identifier">CanSetAccounts</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#EraAccounts"><span class="hs-identifier">EraAccounts</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier">EraCertState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Foldable</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%25~"><span class="hs-operator">(%~)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator">(.~)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Foreign.API.html"><span class="hs-identifier">MAlonzo.Code.Ledger.Foreign.API</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Agda</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecSpecRule"><span class="hs-identifier">ExecSpecRule</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier">SpecTranslate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#runFromAgdaFunction"><span class="hs-identifier">runFromAgdaFunction</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#runSpecTransM"><span class="hs-identifier">runSpecTransM</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert.html#ConwayCertExecContext"><span class="hs-identifier">ConwayCertExecContext</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679519073"><span id="local-6989586621679519080"><span id="local-6989586621679519097"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecSpecRule"><span class="hs-identifier hs-type">ExecSpecRule</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;CERTS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ExecContext"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecContext"><span class="hs-identifier hs-var">ExecContext</span></a></span></span><span> </span><span class="annot"><span class="hs-string">&quot;CERTS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert.html#ConwayCertExecContext"><span class="hs-identifier hs-type">ConwayCertExecContext</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679519335"><span class="annot"><span class="annottext">runAgdaRule :: HasCallStack =&gt;
+SpecTRC &quot;CERTS&quot; ConwayEra
+-&gt; Either Text (SpecState &quot;CERTS&quot; ConwayEra)
+</span><a href="#local-6989586621679519335"><span class="hs-identifier hs-var hs-var hs-var hs-var">runAgdaRule</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(SpecEnvironment &quot;CERTS&quot; ConwayEra
+ -&gt; SpecState &quot;CERTS&quot; ConwayEra
+ -&gt; SpecSignal &quot;CERTS&quot; ConwayEra
+ -&gt; ComputationResult Text (SpecState &quot;CERTS&quot; ConwayEra))
+-&gt; SpecTRC &quot;CERTS&quot; ConwayEra
+-&gt; Either Text (SpecState &quot;CERTS&quot; ConwayEra)
+forall (rule :: Symbol) era.
+(SpecEnvironment rule era
+ -&gt; SpecState rule era
+ -&gt; SpecSignal rule era
+ -&gt; ComputationResult Text (SpecState rule era))
+-&gt; SpecTRC rule era -&gt; Either Text (SpecState rule era)
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#runFromAgdaFunction"><span class="hs-identifier hs-var">runFromAgdaFunction</span></a></span><span> </span><span class="annot"><span class="annottext">CertEnv
+-&gt; CertState -&gt; [DCert] -&gt; T_ComputationResult_44 Text CertState
+SpecEnvironment &quot;CERTS&quot; ConwayEra
+-&gt; SpecState &quot;CERTS&quot; ConwayEra
+-&gt; SpecSignal &quot;CERTS&quot; ConwayEra
+-&gt; ComputationResult Text (SpecState &quot;CERTS&quot; ConwayEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Cert.html#certsStep"><span class="hs-identifier hs-var">Agda.certsStep</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679519353"><span class="annot"><span class="annottext">translateOutput :: ExecContext &quot;CERTS&quot; ConwayEra
+-&gt; TRC (EraRule &quot;CERTS&quot; ConwayEra)
+-&gt; State (EraRule &quot;CERTS&quot; ConwayEra)
+-&gt; Either Text (SpecState &quot;CERTS&quot; ConwayEra)
+</span><a href="#local-6989586621679519353"><span class="hs-identifier hs-var hs-var hs-var hs-var">translateOutput</span></a></span></span><span> </span><span id="local-6989586621679519355"><span class="annot"><span class="annottext">ctx :: ExecContext &quot;CERTS&quot; ConwayEra
+</span><a href="#local-6989586621679519355"><span class="hs-identifier hs-var">ctx</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert.html#ConwayCertExecContext"><span class="hs-identifier hs-type">ConwayCertExecContext</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679519357"><span id="local-6989586621679519358"><span class="annot"><span class="annottext">Map RewardAccount Coin
+VotingProcedures ConwayEra
+ccecWithdrawals :: Map RewardAccount Coin
+ccecVotes :: VotingProcedures ConwayEra
+ccecWithdrawals :: forall era. ConwayCertExecContext era -&gt; Map RewardAccount Coin
+ccecVotes :: forall era. ConwayCertExecContext era -&gt; VotingProcedures era
+</span><a href="#local-6989586621679519357"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span class="annot"><span class="annottext">TRC (EraRule &quot;CERTS&quot; ConwayEra)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConwayCertExecContext ConwayEra
+-&gt; SpecTransM (ConwayCertExecContext ConwayEra) CertState
+-&gt; Either Text CertState
+forall ctx a. ctx -&gt; SpecTransM ctx a -&gt; Either Text a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#runSpecTransM"><span class="hs-identifier hs-var">runSpecTransM</span></a></span><span> </span><span class="annot"><span class="annottext">ExecContext &quot;CERTS&quot; ConwayEra
+ConwayCertExecContext ConwayEra
+</span><a href="#local-6989586621679519355"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">(SpecTransM (ConwayCertExecContext ConwayEra) CertState
+ -&gt; Either Text CertState)
+-&gt; (CertState ConwayEra
+    -&gt; SpecTransM (ConwayCertExecContext ConwayEra) CertState)
+-&gt; CertState ConwayEra
+-&gt; Either Text CertState
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">CertState ConwayEra
+-&gt; SpecTransM (ConwayCertExecContext ConwayEra) CertState
+CertState ConwayEra
+-&gt; SpecTransM
+     (ConwayCertExecContext ConwayEra) (SpecRep (CertState ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">(CertState ConwayEra
+ -&gt; SpecTransM (ConwayCertExecContext ConwayEra) CertState)
+-&gt; (CertState ConwayEra -&gt; CertState ConwayEra)
+-&gt; CertState ConwayEra
+-&gt; SpecTransM (ConwayCertExecContext ConwayEra) CertState
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">CertState ConwayEra -&gt; CertState ConwayEra
+</span><a href="#local-6989586621679519363"><span class="hs-identifier hs-var">fixRewards</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>      </span><span class="hs-comment">-- This is necessary because the implementation zeroes out the rewards</span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-comment">-- in the CERTS rule, but the spec does it in a different rule</span><span>
+</span><span id="line-39"></span><span>      </span><span id="local-6989586621679519363"><span class="annot"><span class="annottext">fixRewards :: CertState ConwayEra -&gt; CertState ConwayEra
+</span><a href="#local-6989586621679519363"><span class="hs-identifier hs-var hs-var">fixRewards</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>        </span><span class="annot"><span class="annottext">(DState ConwayEra -&gt; Identity (DState ConwayEra))
+-&gt; CertState ConwayEra -&gt; Identity (CertState ConwayEra)
+forall era. EraCertState era =&gt; Lens' (CertState era) (DState era)
+Lens' (CertState ConwayEra) (DState ConwayEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#certDStateL"><span class="hs-identifier hs-var">certDStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((DState ConwayEra -&gt; Identity (DState ConwayEra))
+ -&gt; CertState ConwayEra -&gt; Identity (CertState ConwayEra))
+-&gt; ((Map (Credential 'Staking) (AccountState ConwayEra)
+     -&gt; Identity (Map (Credential 'Staking) (AccountState ConwayEra)))
+    -&gt; DState ConwayEra -&gt; Identity (DState ConwayEra))
+-&gt; (Map (Credential 'Staking) (AccountState ConwayEra)
+    -&gt; Identity (Map (Credential 'Staking) (AccountState ConwayEra)))
+-&gt; CertState ConwayEra
+-&gt; Identity (CertState ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Accounts ConwayEra -&gt; Identity (Accounts ConwayEra))
+-&gt; DState ConwayEra -&gt; Identity (DState ConwayEra)
+forall era. Lens' (DState era) (Accounts era)
+forall (t :: * -&gt; *) era.
+CanSetAccounts t =&gt;
+Lens' (t era) (Accounts era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#accountsL"><span class="hs-identifier hs-var">accountsL</span></a></span><span> </span><span class="annot"><span class="annottext">((Accounts ConwayEra -&gt; Identity (Accounts ConwayEra))
+ -&gt; DState ConwayEra -&gt; Identity (DState ConwayEra))
+-&gt; ((Map (Credential 'Staking) (AccountState ConwayEra)
+     -&gt; Identity (Map (Credential 'Staking) (AccountState ConwayEra)))
+    -&gt; Accounts ConwayEra -&gt; Identity (Accounts ConwayEra))
+-&gt; (Map (Credential 'Staking) (AccountState ConwayEra)
+    -&gt; Identity (Map (Credential 'Staking) (AccountState ConwayEra)))
+-&gt; DState ConwayEra
+-&gt; Identity (DState ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'Staking) (AccountState ConwayEra)
+ -&gt; Identity (Map (Credential 'Staking) (AccountState ConwayEra)))
+-&gt; Accounts ConwayEra -&gt; Identity (Accounts ConwayEra)
+forall era.
+EraAccounts era =&gt;
+Lens' (Accounts era) (Map (Credential 'Staking) (AccountState era))
+Lens'
+  (Accounts ConwayEra)
+  (Map (Credential 'Staking) (AccountState ConwayEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#accountsMapL"><span class="hs-identifier hs-var">accountsMapL</span></a></span><span>
+</span><span id="line-41"></span><span>          </span><span class="annot"><span class="annottext">((Map (Credential 'Staking) (AccountState ConwayEra)
+  -&gt; Identity (Map (Credential 'Staking) (AccountState ConwayEra)))
+ -&gt; CertState ConwayEra -&gt; Identity (CertState ConwayEra))
+-&gt; (Map (Credential 'Staking) (AccountState ConwayEra)
+    -&gt; Map (Credential 'Staking) (AccountState ConwayEra))
+-&gt; CertState ConwayEra
+-&gt; CertState ConwayEra
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%25~"><span class="hs-operator hs-var">%~</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679519367"><span class="annot"><span class="annottext">Map (Credential 'Staking) (AccountState ConwayEra)
+</span><a href="#local-6989586621679519367"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Credential 'Staking
+ -&gt; Map (Credential 'Staking) (AccountState ConwayEra)
+ -&gt; Map (Credential 'Staking) (AccountState ConwayEra))
+-&gt; Map (Credential 'Staking) (AccountState ConwayEra)
+-&gt; Set (Credential 'Staking)
+-&gt; Map (Credential 'Staking) (AccountState ConwayEra)
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Set a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldr'</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+-&gt; Map (Credential 'Staking) (AccountState ConwayEra)
+-&gt; Map (Credential 'Staking) (AccountState ConwayEra)
+</span><a href="#local-6989586621679519369"><span class="hs-identifier hs-var">zeroRewards</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) (AccountState ConwayEra)
+</span><a href="#local-6989586621679519367"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">(Set (Credential 'Staking)
+ -&gt; Map (Credential 'Staking) (AccountState ConwayEra))
+-&gt; (Set RewardAccount -&gt; Set (Credential 'Staking))
+-&gt; Set RewardAccount
+-&gt; Map (Credential 'Staking) (AccountState ConwayEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(RewardAccount -&gt; Credential 'Staking)
+-&gt; Set RewardAccount -&gt; Set (Credential 'Staking)
+forall b a. Ord b =&gt; (a -&gt; b) -&gt; Set a -&gt; Set b
+</span><span class="hs-identifier hs-var">Set.map</span></span><span> </span><span class="annot"><span class="annottext">RewardAccount -&gt; Credential 'Staking
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#raCredential"><span class="hs-identifier hs-var">raCredential</span></a></span><span> </span><span class="annot"><span class="annottext">(Set RewardAccount
+ -&gt; Map (Credential 'Staking) (AccountState ConwayEra))
+-&gt; Set RewardAccount
+-&gt; Map (Credential 'Staking) (AccountState ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map RewardAccount Coin -&gt; Set RewardAccount
+forall k a. Map k a -&gt; Set k
+</span><span class="hs-identifier hs-var">Map.keysSet</span></span><span> </span><span class="annot"><span class="annottext">Map RewardAccount Coin
+</span><a href="#local-6989586621679519357"><span class="hs-identifier hs-var">ccecWithdrawals</span></a></span><span>
+</span><span id="line-42"></span><span>      </span><span id="local-6989586621679519369"><span class="annot"><span class="annottext">zeroRewards :: Credential 'Staking
+-&gt; Map (Credential 'Staking) (AccountState ConwayEra)
+-&gt; Map (Credential 'Staking) (AccountState ConwayEra)
+</span><a href="#local-6989586621679519369"><span class="hs-identifier hs-var hs-var">zeroRewards</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AccountState ConwayEra -&gt; AccountState ConwayEra)
+-&gt; Credential 'Staking
+-&gt; Map (Credential 'Staking) (AccountState ConwayEra)
+-&gt; Map (Credential 'Staking) (AccountState ConwayEra)
+forall k a. Ord k =&gt; (a -&gt; a) -&gt; k -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.adjust</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(CompactForm Coin -&gt; Identity (CompactForm Coin))
+-&gt; AccountState ConwayEra -&gt; Identity (AccountState ConwayEra)
+forall era.
+EraAccounts era =&gt;
+Lens' (AccountState era) (CompactForm Coin)
+Lens' (AccountState ConwayEra) (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#balanceAccountStateL"><span class="hs-identifier hs-var">balanceAccountStateL</span></a></span><span> </span><span class="annot"><span class="annottext">((CompactForm Coin -&gt; Identity (CompactForm Coin))
+ -&gt; AccountState ConwayEra -&gt; Identity (AccountState ConwayEra))
+-&gt; CompactForm Coin
+-&gt; AccountState ConwayEra
+-&gt; AccountState ConwayEra
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span></pre></body></html>

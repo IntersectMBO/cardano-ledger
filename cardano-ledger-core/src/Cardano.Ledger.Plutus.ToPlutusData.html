@@ -1,0 +1,617 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Plutus.ToPlutusData</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#BoundedRational"><span class="hs-identifier">BoundedRational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#boundRational"><span class="hs-identifier">boundRational</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier">unboundRational</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier">EpochInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier">HasZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#NonNegativeInterval"><span class="hs-identifier">NonNegativeInterval</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier">NonZero</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier">Nonce</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#PositiveInterval"><span class="hs-identifier">PositiveInterval</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier">ProtVer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#UnitInterval"><span class="hs-identifier">UnitInterval</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZero"><span class="hs-identifier">nonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#%25."><span class="hs-operator">(%.)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html"><span class="hs-identifier">Cardano.Ledger.Binary.Version</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier">Version</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#getVersion"><span class="hs-identifier">getVersion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#mkVersion"><span class="hs-identifier">mkVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Compactible.html"><span class="hs-identifier">Cardano.Ledger.Compactible</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Compactible.html#Compactible"><span class="hs-identifier">Compactible</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.CostModels.html"><span class="hs-identifier">Cardano.Ledger.Plutus.CostModels</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.CostModels.html#CostModels"><span class="hs-identifier">CostModels</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.CostModels.html#flattenCostModels"><span class="hs-identifier">flattenCostModels</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.CostModels.html#mkCostModelsLenient"><span class="hs-identifier">mkCostModelsLenient</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ExUnits.html"><span class="hs-identifier">Cardano.Ledger.Plutus.ExUnits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier">ExUnits</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ExUnits.html#Prices"><span class="hs-identifier">Prices</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Real</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Ratio</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(:%)</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Numeric.Natural</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-ledger-api-1.54.0.0-cc90923e1d4848db7788cc174c20b16ae21e66915548bbaadb7b5dd5e94d4ab2/share/doc/html/src/PlutusLedgerApi.Common.html"><span class="hs-identifier">PlutusLedgerApi.Common</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- ===============================================================</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- ToPlutusData class, and instances for parameterized data types List, Map.</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">class</span><span> </span><span id="ToPlutusData"><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-var">ToPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453651"><span class="annot"><a href="#local-6989586621679453651"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>  </span><span id="toPlutusData"><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-type">toPlutusData</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679453651"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span id="fromPlutusData"><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-type">fromPlutusData</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679453651"><span class="hs-identifier hs-type">x</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span id="local-6989586621679453740"><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe x
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679453655"><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679453655"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679453655"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679453747"><span class="annot"><span class="annottext">toPlutusData :: [a] -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453748"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679453748"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Data] -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#List"><span class="hs-identifier hs-var">List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a -&gt; Data) -&gt; [a] -&gt; [Data]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679453748"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679453755"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe [a]
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#List"><span class="hs-identifier hs-type">List</span></a></span><span> </span><span id="local-6989586621679453756"><span class="annot"><span class="annottext">[Data]
+</span><a href="#local-6989586621679453756"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Data -&gt; Maybe a) -&gt; [Data] -&gt; Maybe [a]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><span class="hs-identifier hs-var">mapM</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe a
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">[Data]
+</span><a href="#local-6989586621679453756"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe [a]
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679453665"><span id="local-6989586621679453666"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679453665"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679453665"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679453666"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679453665"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679453666"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679453766"><span class="annot"><span class="annottext">toPlutusData :: Map a b -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453767"><span class="annot"><span class="annottext">Map a b
+</span><a href="#local-6989586621679453767"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Data, Data)] -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#Map"><span class="hs-identifier hs-var">Map</span></a></span><span> </span><span class="annot"><span class="annottext">([(Data, Data)] -&gt; Data) -&gt; [(Data, Data)] -&gt; Data
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">((a, b) -&gt; (Data, Data)) -&gt; [(a, b)] -&gt; [(Data, Data)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679453769"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679453769"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679453770"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679453770"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679453769"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">b -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679453770"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map a b -&gt; [(a, b)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">Map.toAscList</span></span><span> </span><span class="annot"><span class="annottext">Map a b
+</span><a href="#local-6989586621679453767"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679453782"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe (Map a b)
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span id="local-6989586621679453783"><span class="annot"><span class="annottext">[(Data, Data)]
+</span><a href="#local-6989586621679453783"><span class="hs-identifier hs-var">pairs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="annottext">[(a, b)] -&gt; Map a b
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">([(a, b)] -&gt; Map a b) -&gt; Maybe [(a, b)] -&gt; Maybe (Map a b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">((Data, Data) -&gt; Maybe (a, b)) -&gt; [(Data, Data)] -&gt; Maybe [(a, b)]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><span class="hs-identifier hs-var">mapM</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679453786"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453786"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679453787"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453787"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; (a, b)) -&gt; Maybe a -&gt; Maybe (b -&gt; (a, b))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe a
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453786"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (b -&gt; (a, b)) -&gt; Maybe b -&gt; Maybe (a, b)
+forall a b. Maybe (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe b
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453787"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Data, Data)]
+</span><a href="#local-6989586621679453783"><span class="hs-identifier hs-var">pairs</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Map a b)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- ==========================================================</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- ToPlutusData instances for concrete types needed for PParamUpdates</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679453793"><span class="annot"><span class="annottext">toPlutusData :: Version -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453794"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679453794"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall i. Integral i =&gt; Version -&gt; i
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#getVersion"><span class="hs-identifier hs-var">getVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679453794"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621679453799"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe Version
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span id="local-6989586621679453800"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453800"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall i (m :: * -&gt; *). (Integral i, MonadFail m) =&gt; i -&gt; m Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#mkVersion"><span class="hs-identifier hs-var">mkVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453800"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Version
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier hs-type">ProtVer</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679453807"><span class="annot"><span class="annottext">toPlutusData :: ProtVer -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453808"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679453808"><span class="hs-identifier hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Data] -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#List"><span class="hs-identifier hs-var">List</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Version -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtVer -&gt; Version
+</span><a href="Cardano.Ledger.BaseTypes.html#pvMajor"><span class="hs-identifier hs-var">pvMajor</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679453808"><span class="hs-identifier hs-var">pv</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtVer -&gt; Natural
+</span><a href="Cardano.Ledger.BaseTypes.html#pvMinor"><span class="hs-identifier hs-var">pvMinor</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679453808"><span class="hs-identifier hs-var">pv</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679453815"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe ProtVer
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#List"><span class="hs-identifier hs-type">List</span></a></span><span> </span><span class="hs-special">[</span><span id="local-6989586621679453816"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453816"><span class="hs-identifier hs-var">major</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679453817"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453817"><span class="hs-identifier hs-var">minor</span></a></span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Natural -&gt; ProtVer
+</span><a href="Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier hs-var">ProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">(Version -&gt; Natural -&gt; ProtVer)
+-&gt; Maybe Version -&gt; Maybe (Natural -&gt; ProtVer)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe Version
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453816"><span class="hs-identifier hs-var">major</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Natural -&gt; ProtVer) -&gt; Maybe Natural -&gt; Maybe ProtVer
+forall a b. Maybe (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe Natural
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453817"><span class="hs-identifier hs-var">minor</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe ProtVer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Rational</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679453822"><span class="annot"><span class="annottext">toPlutusData :: Rational -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679453823"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453823"><span class="hs-identifier hs-var">num</span></a></span></span><span> </span><span class="annot"><span class="hs-operator hs-type">:%</span></span><span> </span><span id="local-6989586621679453824"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453824"><span class="hs-identifier hs-var">denom</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Data] -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#List"><span class="hs-identifier hs-var">List</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Integer -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453823"><span class="hs-identifier hs-var">num</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453824"><span class="hs-identifier hs-var">denom</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679453829"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe Rational
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#List"><span class="hs-identifier hs-type">List</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span id="local-6989586621679453830"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453830"><span class="hs-identifier hs-var">num</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span id="local-6989586621679453831"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453831"><span class="hs-identifier hs-var">denom</span></a></span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453830"><span class="hs-identifier hs-var">num</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; NonZero Integer -&gt; Rational
+forall a. Integral a =&gt; a -&gt; NonZero a -&gt; Ratio a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#%25."><span class="hs-operator hs-var">%.</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(NonZero Integer -&gt; Rational)
+-&gt; Maybe (NonZero Integer) -&gt; Maybe Rational
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Maybe (NonZero Integer)
+forall a. HasZero a =&gt; a -&gt; Maybe (NonZero a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZero"><span class="hs-identifier hs-var">nonZero</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453831"><span class="hs-identifier hs-var">denom</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Rational
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#UnitInterval"><span class="hs-identifier hs-type">UnitInterval</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679453838"><span class="annot"><span class="annottext">toPlutusData :: UnitInterval -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Data)
+-&gt; (UnitInterval -&gt; Rational) -&gt; UnitInterval -&gt; Data
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">UnitInterval -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679453843"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe UnitInterval
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453844"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453844"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Maybe UnitInterval
+forall r. BoundedRational r =&gt; Rational -&gt; Maybe r
+</span><a href="Cardano.Ledger.BaseTypes.html#boundRational"><span class="hs-identifier hs-var">boundRational</span></a></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Maybe UnitInterval)
+-&gt; Maybe Rational -&gt; Maybe UnitInterval
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><span class="hs-operator hs-var">=&lt;&lt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe Rational
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453844"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#NonNegativeInterval"><span class="hs-identifier hs-type">NonNegativeInterval</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621679453852"><span class="annot"><span class="annottext">toPlutusData :: NonNegativeInterval -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Data)
+-&gt; (NonNegativeInterval -&gt; Rational) -&gt; NonNegativeInterval -&gt; Data
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">NonNegativeInterval -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621679453856"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe NonNegativeInterval
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453857"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453857"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Maybe NonNegativeInterval
+forall r. BoundedRational r =&gt; Rational -&gt; Maybe r
+</span><a href="Cardano.Ledger.BaseTypes.html#boundRational"><span class="hs-identifier hs-var">boundRational</span></a></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Maybe NonNegativeInterval)
+-&gt; Maybe Rational -&gt; Maybe NonNegativeInterval
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><span class="hs-operator hs-var">=&lt;&lt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe Rational
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453857"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#PositiveInterval"><span class="hs-identifier hs-type">PositiveInterval</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679453864"><span class="annot"><span class="annottext">toPlutusData :: PositiveInterval -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Data)
+-&gt; (PositiveInterval -&gt; Rational) -&gt; PositiveInterval -&gt; Data
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PositiveInterval -&gt; Rational
+forall r. BoundedRational r =&gt; r -&gt; Rational
+</span><a href="Cardano.Ledger.BaseTypes.html#unboundRational"><span class="hs-identifier hs-var">unboundRational</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621679453868"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe PositiveInterval
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453869"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453869"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Maybe PositiveInterval
+forall r. BoundedRational r =&gt; Rational -&gt; Maybe r
+</span><a href="Cardano.Ledger.BaseTypes.html#boundRational"><span class="hs-identifier hs-var">boundRational</span></a></span><span> </span><span class="annot"><span class="annottext">(Rational -&gt; Maybe PositiveInterval)
+-&gt; Maybe Rational -&gt; Maybe PositiveInterval
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><span class="hs-operator hs-var">=&lt;&lt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe Rational
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453869"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.CostModels.html#CostModels"><span class="hs-identifier hs-type">CostModels</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>  </span><span id="local-6989586621679453887"><span class="annot"><span class="annottext">toPlutusData :: CostModels -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453888"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679453888"><span class="hs-identifier hs-var">costModels</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Word8 [Integer] -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Word8 [Integer] -&gt; Data) -&gt; Map Word8 [Integer] -&gt; Data
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Int64 -&gt; Integer) -&gt; [Int64] -&gt; [Integer]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="annot"><span class="annottext">([Int64] -&gt; [Integer]) -&gt; Map Word8 [Int64] -&gt; Map Word8 [Integer]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; Map Word8 [Int64]
+</span><a href="Cardano.Ledger.Plutus.CostModels.html#flattenCostModels"><span class="hs-identifier hs-var">flattenCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679453888"><span class="hs-identifier hs-var">costModels</span></a></span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679453898"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe CostModels
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453899"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453899"><span class="hs-identifier hs-var">costModelsData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621679453900"><span class="annot"><span class="annottext">Map Word8 [Integer]
+</span><a href="#local-6989586621679453900"><span class="hs-identifier hs-var">costModels</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe (Map Word8 [Integer])
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453899"><span class="hs-identifier hs-var">costModelsData</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; Maybe CostModels
+forall (m :: * -&gt; *).
+MonadFail m =&gt;
+Map Word8 [Int64] -&gt; m CostModels
+</span><a href="Cardano.Ledger.Plutus.CostModels.html#mkCostModelsLenient"><span class="hs-identifier hs-var">mkCostModelsLenient</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">([Integer] -&gt; [Int64]) -&gt; Map Word8 [Integer] -&gt; Map Word8 [Int64]
+forall a b k. (a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><span class="hs-identifier hs-var">Map.map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Integer -&gt; Int64) -&gt; [Integer] -&gt; [Int64]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Int64
+forall a. Num a =&gt; Integer -&gt; a
+</span><span class="hs-identifier hs-var">fromInteger</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map Word8 [Integer]
+</span><a href="#local-6989586621679453900"><span class="hs-identifier hs-var">costModels</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">ExUnits</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679453907"><span class="annot"><span class="annottext">toPlutusData :: ExUnits -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">ExUnits</span></a></span><span> </span><span id="local-6989586621679453909"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679453909"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679453910"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679453910"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Data] -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#List"><span class="hs-identifier hs-var">List</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Natural -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679453909"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679453910"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679453915"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe ExUnits
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#List"><span class="hs-identifier hs-type">List</span></a></span><span> </span><span class="hs-special">[</span><span id="local-6989586621679453916"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453916"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679453917"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453917"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; ExUnits
+</span><a href="Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-var">ExUnits</span></a></span><span> </span><span class="annot"><span class="annottext">(Natural -&gt; Natural -&gt; ExUnits)
+-&gt; Maybe Natural -&gt; Maybe (Natural -&gt; ExUnits)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe Natural
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453916"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Natural -&gt; ExUnits) -&gt; Maybe Natural -&gt; Maybe ExUnits
+forall a b. Maybe (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe Natural
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453917"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe ExUnits
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ExUnits.html#Prices"><span class="hs-identifier hs-type">Prices</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-102"></span><span>  </span><span id="local-6989586621679453923"><span class="annot"><span class="annottext">toPlutusData :: Prices -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453924"><span class="annot"><span class="annottext">Prices
+</span><a href="#local-6989586621679453924"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Data] -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#List"><span class="hs-identifier hs-var">List</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">NonNegativeInterval -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Prices -&gt; NonNegativeInterval
+</span><a href="Cardano.Ledger.Plutus.ExUnits.html#prMem"><span class="hs-identifier hs-var">prMem</span></a></span><span> </span><span class="annot"><span class="annottext">Prices
+</span><a href="#local-6989586621679453924"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">NonNegativeInterval -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Prices -&gt; NonNegativeInterval
+</span><a href="Cardano.Ledger.Plutus.ExUnits.html#prSteps"><span class="hs-identifier hs-var">prSteps</span></a></span><span> </span><span class="annot"><span class="annottext">Prices
+</span><a href="#local-6989586621679453924"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span>  </span><span id="local-6989586621679453931"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe Prices
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#List"><span class="hs-identifier hs-type">List</span></a></span><span> </span><span class="hs-special">[</span><span id="local-6989586621679453932"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453932"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679453933"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453933"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonNegativeInterval -&gt; NonNegativeInterval -&gt; Prices
+</span><a href="Cardano.Ledger.Plutus.ExUnits.html#Prices"><span class="hs-identifier hs-var">Prices</span></a></span><span> </span><span class="annot"><span class="annottext">(NonNegativeInterval -&gt; NonNegativeInterval -&gt; Prices)
+-&gt; Maybe NonNegativeInterval
+-&gt; Maybe (NonNegativeInterval -&gt; Prices)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe NonNegativeInterval
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453932"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (NonNegativeInterval -&gt; Prices)
+-&gt; Maybe NonNegativeInterval -&gt; Maybe Prices
+forall a b. Maybe (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe NonNegativeInterval
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679453933"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Prices
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span id="local-6989586621679453936"><span id="local-6989586621679453940"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span></span></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier hs-type">CompactForm</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-109"></span><span>  </span><span id="local-6989586621679453950"><span class="annot"><span class="annottext">toPlutusData :: CompactForm Coin -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">(Coin -&gt; Data)
+-&gt; (CompactForm Coin -&gt; Coin) -&gt; CompactForm Coin -&gt; Data
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin -&gt; Coin
+forall a. Compactible a =&gt; CompactForm a -&gt; a
+</span><a href="Cardano.Ledger.Compactible.html#fromCompact"><span class="hs-identifier hs-var">fromCompact</span></a></span><span>
+</span><span id="line-110"></span><span>  </span><span id="local-6989586621679453953"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe (CompactForm Coin)
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span id="local-6989586621679453954"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453954"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Maybe (CompactForm Coin)
+forall a. Compactible a =&gt; a -&gt; Maybe (CompactForm a)
+</span><a href="Cardano.Ledger.Compactible.html#toCompact"><span class="hs-identifier hs-var">toCompact</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453954"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (CompactForm Coin)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-114"></span><span>  </span><span id="local-6989586621679453962"><span class="annot"><span class="annottext">toPlutusData :: Word32 -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453963"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679453963"><span class="hs-identifier hs-var">w32</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679453963"><span class="hs-identifier hs-var">w32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>  </span><span id="local-6989586621679453974"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe Word32
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span id="local-6989586621679453975"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453975"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453975"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453975"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-117"></span><span>        </span><span class="annot"><span class="annottext">Word32 -&gt; Maybe Word32
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; Maybe Word32) -&gt; Word32 -&gt; Maybe Word32
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; Integer -&gt; a
+</span><span class="hs-identifier hs-var">fromInteger</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453975"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Word32
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-121"></span><span>  </span><span id="local-6989586621679453984"><span class="annot"><span class="annottext">toPlutusData :: Word16 -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679453985"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679453985"><span class="hs-identifier hs-var">w16</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679453985"><span class="hs-identifier hs-var">w16</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>  </span><span id="local-6989586621679453994"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe Word16
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span id="local-6989586621679453995"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453995"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453995"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453995"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Maybe Word16
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(Word16 -&gt; Maybe Word16) -&gt; Word16 -&gt; Maybe Word16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; Integer -&gt; a
+</span><span class="hs-identifier hs-var">fromInteger</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679453995"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-123"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Word16
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621679454000"><span class="annot"><span class="annottext">toPlutusData :: Word8 -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679454001"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679454001"><span class="hs-identifier hs-var">w8</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679454001"><span class="hs-identifier hs-var">w8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679454010"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe Word8
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span id="local-6989586621679454011"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454011"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454011"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454011"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Maybe Word8
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Maybe Word8) -&gt; Word8 -&gt; Maybe Word8
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; Integer -&gt; a
+</span><span class="hs-identifier hs-var">fromInteger</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454011"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Word8
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span id="local-6989586621679454013"><span id="local-6989586621679454017"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier hs-type">EpochInterval</span></a></span></span></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-133"></span><span>  </span><span id="local-6989586621679454025"><span class="annot"><span class="annottext">toPlutusData :: Natural -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679454026"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679454026"><span class="hs-identifier hs-var">nat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679454026"><span class="hs-identifier hs-var">nat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621679454031"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe Natural
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span id="local-6989586621679454032"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454032"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454032"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Maybe Natural
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(Natural -&gt; Maybe Natural) -&gt; Natural -&gt; Maybe Natural
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; Integer -&gt; a
+</span><span class="hs-identifier hs-var">fromInteger</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454032"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Natural
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-138"></span><span>  </span><span id="local-6989586621679454035"><span class="annot"><span class="annottext">toPlutusData :: Integer -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679454036"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454036"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454036"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-139"></span><span>  </span><span id="local-6989586621679454037"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe Integer
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span id="local-6989586621679454038"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454038"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Maybe Integer
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454038"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Integer
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-143"></span><span>  </span><span id="local-6989586621679454044"><span class="annot"><span class="annottext">toPlutusData :: Word -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span id="local-6989586621679454045"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679454045"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Data
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679454045"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>  </span><span id="local-6989586621679454054"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe Word
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/plutus-core-1.54.0.0-bf04dafee476ebec1e2a6ecdd6a97e38d49d10272f2132c9a6c1ec03c719ef10/share/doc/html/src/PlutusCore.Data.html#I"><span class="hs-identifier hs-type">I</span></a></span><span> </span><span id="local-6989586621679454055"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454055"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454055"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454055"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Maybe Word
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(Word -&gt; Maybe Word) -&gt; Word -&gt; Maybe Word
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; Integer -&gt; a
+</span><span class="hs-identifier hs-var">fromInteger</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679454055"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Word
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679453723"><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679453723"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679453723"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679453723"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-148"></span><span>  </span><span id="local-6989586621679454062"><span class="annot"><span class="annottext">toPlutusData :: NonZero a -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Data
+forall x. ToPlutusData x =&gt; x -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var">toPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Data) -&gt; (NonZero a -&gt; a) -&gt; NonZero a -&gt; Data
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">NonZero a -&gt; a
+forall a. NonZero a -&gt; a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#unNonZero"><span class="hs-identifier hs-var">unNonZero</span></a></span><span>
+</span><span id="line-149"></span><span>  </span><span id="local-6989586621679454067"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe (NonZero a)
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span id="local-6989586621679454068"><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679454068"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe (NonZero a)
+forall a. HasZero a =&gt; a -&gt; Maybe (NonZero a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZero"><span class="hs-identifier hs-var">nonZero</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Maybe (NonZero a)) -&gt; Maybe a -&gt; Maybe (NonZero a)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><span class="hs-operator hs-var">=&lt;&lt;</span></span><span> </span><span class="annot"><span class="annottext">Data -&gt; Maybe a
+forall x. ToPlutusData x =&gt; Data -&gt; Maybe x
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var">fromPlutusData</span></a></span><span> </span><span class="annot"><span class="annottext">Data
+</span><a href="#local-6989586621679454068"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Plutus.ToPlutusData.html#ToPlutusData"><span class="hs-identifier hs-type">ToPlutusData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#Nonce"><span class="hs-identifier hs-type">Nonce</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-152"></span><span>  </span><span id="local-6989586621679454074"><span class="annot"><span class="annottext">toPlutusData :: Nonce -&gt; Data
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#toPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">toPlutusData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Nonce -&gt; Data
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;unsupported&quot;</span></span><span>
+</span><span id="line-153"></span><span>  </span><span id="local-6989586621679454078"><span class="annot"><span class="annottext">fromPlutusData :: Data -&gt; Maybe Nonce
+</span><a href="Cardano.Ledger.Plutus.ToPlutusData.html#fromPlutusData"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromPlutusData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Data -&gt; Maybe Nonce
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;unsupported&quot;</span></span><span>
+</span><span id="line-154"></span></pre></body></html>

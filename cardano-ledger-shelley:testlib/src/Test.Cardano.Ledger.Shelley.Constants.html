@@ -1,0 +1,292 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Constants</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier">Constants</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Constants.html#defaultConstants"><span class="hs-identifier">defaultConstants</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">data</span><span> </span><span id="Constants"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-var">Constants</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Constants"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-var">Constants</span></a></span></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="minNumGenInputs"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minNumGenInputs"><span class="hs-identifier hs-var hs-var">minNumGenInputs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ minimal number of transaction inputs to select</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxNumGenInputs"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxNumGenInputs"><span class="hs-identifier hs-var hs-var">maxNumGenInputs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ maximal number of transaction inputs to select</span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyRegCert"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyRegCert"><span class="hs-identifier hs-var hs-var">frequencyRegCert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Relative frequency of generated credential registration certificates</span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyRegPoolCert"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyRegPoolCert"><span class="hs-identifier hs-var hs-var">frequencyRegPoolCert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Relative frequency of generated pool registration certificates</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyDelegCert"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyDelegCert"><span class="hs-identifier hs-var hs-var">frequencyDelegCert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Relative frequency of generated delegation certificates</span></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyGenesisDelegationCert"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyGenesisDelegationCert"><span class="hs-identifier hs-var hs-var">frequencyGenesisDelegationCert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Relative frequency of generated genesis delegation certificates</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyDeRegKeyCert"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyDeRegKeyCert"><span class="hs-identifier hs-var hs-var">frequencyDeRegKeyCert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Relative frequency of generated credential de-registration certificates</span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyRetirePoolCert"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyRetirePoolCert"><span class="hs-identifier hs-var hs-var">frequencyRetirePoolCert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Relative frequency of generated pool retirement certificates</span></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyMIRCert"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyMIRCert"><span class="hs-identifier hs-var hs-var">frequencyMIRCert</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Relative frequency of generated MIR certificates</span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyScriptCredReg"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyScriptCredReg"><span class="hs-identifier hs-var hs-var">frequencyScriptCredReg</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-comment">-- ^ Relative frequency of script credentials in credential registration</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-comment">-- certificates</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyKeyCredReg"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyKeyCredReg"><span class="hs-identifier hs-var hs-var">frequencyKeyCredReg</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-comment">-- ^ Relative frequency of key credentials in credential registration</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-comment">-- certificates</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyScriptCredDeReg"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyScriptCredDeReg"><span class="hs-identifier hs-var hs-var">frequencyScriptCredDeReg</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-comment">-- ^ Relative frequency of script credentials in credential de-registration</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-comment">-- certificates</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyKeyCredDeReg"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyKeyCredDeReg"><span class="hs-identifier hs-var hs-var">frequencyKeyCredDeReg</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-comment">-- ^ Relative frequency of key credentials in credential de-registration</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-comment">-- certificates</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyScriptCredDelegation"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyScriptCredDelegation"><span class="hs-identifier hs-var hs-var">frequencyScriptCredDelegation</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-comment">-- ^ Relative frequency of script credentials in credential delegation</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-comment">-- certificates</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyKeyCredDelegation"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyKeyCredDelegation"><span class="hs-identifier hs-var hs-var">frequencyKeyCredDelegation</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-comment">-- ^ Relative frequency of key credentials in credential delegation</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-comment">-- certificates</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyTxUpdates"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyTxUpdates"><span class="hs-identifier hs-var hs-var">frequencyTxUpdates</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Relative frequency of Prototol/Application Updates in a transaction</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyTxWithMetadata"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyTxWithMetadata"><span class="hs-identifier hs-var hs-var">frequencyTxWithMetadata</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Relative frequency of Metadata in a transaction</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="minGenesisUTxOouts"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minGenesisUTxOouts"><span class="hs-identifier hs-var hs-var">minGenesisUTxOouts</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ minimal number of genesis UTxO outputs</span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxGenesisUTxOouts"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxGenesisUTxOouts"><span class="hs-identifier hs-var hs-var">maxGenesisUTxOouts</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ maximal number of genesis UTxO outputs</span></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="minGenesisOutputVal"><span class="annot"><span class="annottext">Constants -&gt; Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minGenesisOutputVal"><span class="hs-identifier hs-var hs-var">minGenesisOutputVal</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ minimal coin value for generated genesis outputs</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxGenesisOutputVal"><span class="annot"><span class="annottext">Constants -&gt; Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxGenesisOutputVal"><span class="hs-identifier hs-var hs-var">maxGenesisOutputVal</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ maximal coin value for generated genesis outputs</span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxCertsPerTx"><span class="annot"><span class="annottext">Constants -&gt; Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxCertsPerTx"><span class="hs-identifier hs-var hs-var">maxCertsPerTx</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ maximal number of certificates per transaction</span></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxTxsPerBlock"><span class="annot"><span class="annottext">Constants -&gt; Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxTxsPerBlock"><span class="hs-identifier hs-var hs-var">maxTxsPerBlock</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ maximal number of Txs per block</span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="numKeyPairs"><span class="annot"><span class="annottext">Constants -&gt; Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#numKeyPairs"><span class="hs-identifier hs-var hs-var">numKeyPairs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Number of generated keypairs</span></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="numBaseScripts"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#numBaseScripts"><span class="hs-identifier hs-var hs-var">numBaseScripts</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Number of base scripts from which multi sig scripts are built.</span></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="numSimpleScripts"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#numSimpleScripts"><span class="hs-identifier hs-var hs-var">numSimpleScripts</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Number of simple scripts which appear in the choices, the remainder are compound (MofN, All, Any, etc.) scripts</span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyNoWithdrawals"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyNoWithdrawals"><span class="hs-identifier hs-var hs-var">frequencyNoWithdrawals</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Relative frequency that a transaction does not include any reward withdrawals</span></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyAFewWithdrawals"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyAFewWithdrawals"><span class="hs-identifier hs-var hs-var">frequencyAFewWithdrawals</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-comment">-- ^ Relative frequency that a transaction includes a small number of</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-comment">-- reward withdrawals, bounded by 'maxAFewWithdrawals'.</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxAFewWithdrawals"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxAFewWithdrawals"><span class="hs-identifier hs-var hs-var">maxAFewWithdrawals</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Maximum number of reward withdrawals that counts as a small number.</span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyPotentiallyManyWithdrawals"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyPotentiallyManyWithdrawals"><span class="hs-identifier hs-var hs-var">frequencyPotentiallyManyWithdrawals</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-comment">-- ^ Relative frequency that a transaction includes any positive number of</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-comment">-- reward withdrawals</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="minSlotTrace"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minSlotTrace"><span class="hs-identifier hs-var hs-var">minSlotTrace</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Minimal slot for CHAIN trace generation.</span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxSlotTrace"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxSlotTrace"><span class="hs-identifier hs-var hs-var">maxSlotTrace</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Maximal slot for CHAIN trace generation.</span></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="frequencyLowMaxEpoch"><span class="annot"><span class="annottext">Constants -&gt; Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyLowMaxEpoch"><span class="hs-identifier hs-var hs-var">frequencyLowMaxEpoch</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Lower bound of the MaxEpoch protocol parameter</span></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxMinFeeA"><span class="annot"><span class="annottext">Constants -&gt; Coin
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxMinFeeA"><span class="hs-identifier hs-var hs-var">maxMinFeeA</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxMinFeeB"><span class="annot"><span class="annottext">Constants -&gt; Coin
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxMinFeeB"><span class="hs-identifier hs-var hs-var">maxMinFeeB</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="numCoreNodes"><span class="annot"><span class="annottext">Constants -&gt; Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#numCoreNodes"><span class="hs-identifier hs-var hs-var">numCoreNodes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="minTreasury"><span class="annot"><span class="annottext">Constants -&gt; Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minTreasury"><span class="hs-identifier hs-var hs-var">minTreasury</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxTreasury"><span class="annot"><span class="annottext">Constants -&gt; Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxTreasury"><span class="hs-identifier hs-var hs-var">maxTreasury</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="minReserves"><span class="annot"><span class="annottext">Constants -&gt; Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minReserves"><span class="hs-identifier hs-var hs-var">minReserves</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxReserves"><span class="annot"><span class="annottext">Constants -&gt; Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxReserves"><span class="hs-identifier hs-var hs-var">maxReserves</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="genTxStableUtxoSize"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#genTxStableUtxoSize"><span class="hs-identifier hs-var hs-var">genTxStableUtxoSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-comment">-- ^ When generating Tx, we want the UTxO size to fluctuate around this point. If</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-comment">--   it gets too small, we can't balance the fee, too large it gets too complicated.</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="genTxUtxoIncrement"><span class="annot"><span class="annottext">Constants -&gt; Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#genTxUtxoIncrement"><span class="hs-identifier hs-var hs-var">genTxUtxoIncrement</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ If we need to grow the Utxo when generating a Tx, how much should it grow by.</span></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679706843"><span id="local-6989586621679706893"><span id="local-6989586621679706897"><span class="annot"><span class="annottext">Int -&gt; Constants -&gt; ShowS
+[Constants] -&gt; ShowS
+Constants -&gt; String
+(Int -&gt; Constants -&gt; ShowS)
+-&gt; (Constants -&gt; String)
+-&gt; ([Constants] -&gt; ShowS)
+-&gt; Show Constants
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Constants -&gt; ShowS
+showsPrec :: Int -&gt; Constants -&gt; ShowS
+$cshow :: Constants -&gt; String
+show :: Constants -&gt; String
+$cshowList :: [Constants] -&gt; ShowS
+showList :: [Constants] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Constants.html#defaultConstants"><span class="hs-identifier hs-type">defaultConstants</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span>
+</span><span id="line-103"></span><span id="defaultConstants"><span class="annot"><span class="annottext">defaultConstants :: Constants
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#defaultConstants"><span class="hs-identifier hs-var hs-var">defaultConstants</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">minNumGenInputs :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minNumGenInputs"><span class="hs-identifier hs-var">minNumGenInputs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxNumGenInputs :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxNumGenInputs"><span class="hs-identifier hs-var">maxNumGenInputs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyRegCert :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyRegCert"><span class="hs-identifier hs-var">frequencyRegCert</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyRegPoolCert :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyRegPoolCert"><span class="hs-identifier hs-var">frequencyRegPoolCert</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyDelegCert :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyDelegCert"><span class="hs-identifier hs-var">frequencyDelegCert</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyGenesisDelegationCert :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyGenesisDelegationCert"><span class="hs-identifier hs-var">frequencyGenesisDelegationCert</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyDeRegKeyCert :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyDeRegKeyCert"><span class="hs-identifier hs-var">frequencyDeRegKeyCert</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyRetirePoolCert :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyRetirePoolCert"><span class="hs-identifier hs-var">frequencyRetirePoolCert</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyMIRCert :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyMIRCert"><span class="hs-identifier hs-var">frequencyMIRCert</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyScriptCredReg :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyScriptCredReg"><span class="hs-identifier hs-var">frequencyScriptCredReg</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyKeyCredReg :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyKeyCredReg"><span class="hs-identifier hs-var">frequencyKeyCredReg</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyScriptCredDeReg :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyScriptCredDeReg"><span class="hs-identifier hs-var">frequencyScriptCredDeReg</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyKeyCredDeReg :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyKeyCredDeReg"><span class="hs-identifier hs-var">frequencyKeyCredDeReg</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyScriptCredDelegation :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyScriptCredDelegation"><span class="hs-identifier hs-var">frequencyScriptCredDelegation</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyKeyCredDelegation :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyKeyCredDelegation"><span class="hs-identifier hs-var">frequencyKeyCredDelegation</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-120"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyTxUpdates :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyTxUpdates"><span class="hs-identifier hs-var">frequencyTxUpdates</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyTxWithMetadata :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyTxWithMetadata"><span class="hs-identifier hs-var">frequencyTxWithMetadata</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">minGenesisUTxOouts :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minGenesisUTxOouts"><span class="hs-identifier hs-var">minGenesisUTxOouts</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">100</span></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxGenesisUTxOouts :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxGenesisUTxOouts"><span class="hs-identifier hs-var">maxGenesisUTxOouts</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">150</span></span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">minGenesisOutputVal :: Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minGenesisOutputVal"><span class="hs-identifier hs-var">minGenesisOutputVal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1000000</span></span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxGenesisOutputVal :: Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxGenesisOutputVal"><span class="hs-identifier hs-var">maxGenesisOutputVal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">100000000</span></span><span>
+</span><span id="line-126"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxCertsPerTx :: Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxCertsPerTx"><span class="hs-identifier hs-var">maxCertsPerTx</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxTxsPerBlock :: Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxTxsPerBlock"><span class="hs-identifier hs-var">maxTxsPerBlock</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">numKeyPairs :: Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#numKeyPairs"><span class="hs-identifier hs-var">numKeyPairs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">200</span></span><span> </span><span class="hs-comment">-- Must be &gt;= maxGenesisUTxOouts</span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">numBaseScripts :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#numBaseScripts"><span class="hs-identifier hs-var">numBaseScripts</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-130"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">numSimpleScripts :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#numSimpleScripts"><span class="hs-identifier hs-var">numSimpleScripts</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">20</span></span><span>
+</span><span id="line-131"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyNoWithdrawals :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyNoWithdrawals"><span class="hs-identifier hs-var">frequencyNoWithdrawals</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">75</span></span><span>
+</span><span id="line-132"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyAFewWithdrawals :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyAFewWithdrawals"><span class="hs-identifier hs-var">frequencyAFewWithdrawals</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">20</span></span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxAFewWithdrawals :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxAFewWithdrawals"><span class="hs-identifier hs-var">maxAFewWithdrawals</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyPotentiallyManyWithdrawals :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyPotentiallyManyWithdrawals"><span class="hs-identifier hs-var">frequencyPotentiallyManyWithdrawals</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">minSlotTrace :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minSlotTrace"><span class="hs-identifier hs-var">minSlotTrace</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxSlotTrace :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxSlotTrace"><span class="hs-identifier hs-var">maxSlotTrace</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5000</span></span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">frequencyLowMaxEpoch :: Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#frequencyLowMaxEpoch"><span class="hs-identifier hs-var">frequencyLowMaxEpoch</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">200</span></span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxMinFeeA :: Coin
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxMinFeeA"><span class="hs-identifier hs-var">maxMinFeeA</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">100</span></span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxMinFeeB :: Coin
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxMinFeeB"><span class="hs-identifier hs-var">maxMinFeeB</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">numCoreNodes :: Word64
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#numCoreNodes"><span class="hs-identifier hs-var">numCoreNodes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">7</span></span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">minTreasury :: Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minTreasury"><span class="hs-identifier hs-var">minTreasury</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1000000</span></span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxTreasury :: Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxTreasury"><span class="hs-identifier hs-var">maxTreasury</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">10000000</span></span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">minReserves :: Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#minReserves"><span class="hs-identifier hs-var">minReserves</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1000000</span></span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxReserves :: Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#maxReserves"><span class="hs-identifier hs-var">maxReserves</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">10000000</span></span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">genTxStableUtxoSize :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#genTxStableUtxoSize"><span class="hs-identifier hs-var">genTxStableUtxoSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">125</span></span><span> </span><span class="hs-comment">-- Needs to be between minGenesisUTxOouts and maxGenesisUTxOouts</span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">genTxUtxoIncrement :: Int
+</span><a href="Test.Cardano.Ledger.Shelley.Constants.html#genTxUtxoIncrement"><span class="hs-identifier hs-var">genTxUtxoIncrement</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-148"></span></pre></body></html>

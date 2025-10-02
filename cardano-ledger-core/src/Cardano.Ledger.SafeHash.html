@@ -1,0 +1,41 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-redundant-constraints #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.SafeHash</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">&quot;Use `Cardano.Ledger.Hashes` instead&quot;</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><span class="hs-comment">-- * SafeHash and SafeToHash</span></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><span class="hs-comment">-- $SAFE</span></span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#SafeHash"><span class="hs-identifier">SafeHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#SafeToHash"><span class="hs-identifier">SafeToHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Creating SafeHash</span></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><span class="hs-comment">-- $MAKE</span></span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#HashAnnotated"><span class="hs-identifier">HashAnnotated</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#hashAnnotated"><span class="hs-identifier">hashAnnotated</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#unsafeMakeSafeHash"><span class="hs-identifier">unsafeMakeSafeHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Other operations</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><span class="hs-comment">-- $OTHER</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#castSafeHash"><span class="hs-identifier">castSafeHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#extractHash"><span class="hs-identifier">extractHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.SafeHash.html#indexProxy"><span class="hs-identifier">indexProxy</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Cardano.Ledger.SafeHash.html#indexProxy"><span class="hs-identifier hs-type">indexProxy</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679456503"><span class="annot"><a href="#local-6989586621679456503"><span class="hs-identifier hs-type">x</span></a></span></span><span> </span><span id="local-6989586621679456504"><span class="annot"><a href="#local-6989586621679456504"><span class="hs-identifier hs-type">i</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#HashAnnotated"><span class="hs-identifier hs-type">HashAnnotated</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679456503"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679456504"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679456503"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679456504"><span class="hs-identifier hs-type">i</span></a></span><span>
+</span><span id="line-35"></span><span id="indexProxy"><span class="annot"><span class="annottext">indexProxy :: forall x i. HashAnnotated x i =&gt; x -&gt; Proxy i
+</span><a href="Cardano.Ledger.SafeHash.html#indexProxy"><span class="hs-identifier hs-var hs-var">indexProxy</span></a></span></span><span> </span><span class="annot"><span class="annottext">x
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679456504"><span class="hs-identifier hs-type">i</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">indexProxy</span><span> </span><span class="hs-pragma">&quot;As useless and unused&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-37"></span></pre></body></html>

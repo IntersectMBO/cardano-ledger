@@ -1,0 +1,205 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE BinaryLiterals #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ImportQualifiedPost #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.PlutusSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.PlutusSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier">EpochInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#NonNegativeInterval"><span class="hs-identifier">NonNegativeInterval</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier">ProtVer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#UnitInterval"><span class="hs-identifier">UnitInterval</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html"><span class="hs-identifier">Cardano.Ledger.Binary.Version</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier">Version</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier">CompactForm</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.html"><span class="hs-identifier">Cardano.Ledger.Plutus</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Numeric.Natural</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Core.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ExUnits.html"><span class="hs-identifier">Test.Cardano.Ledger.Plutus.ExUnits</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">ExUnits</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html"><span class="hs-identifier">Test.Cardano.Ledger.Plutus.ToPlutusData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier">roundTripPlutusDataSpec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><a href="Test.Cardano.Ledger.PlutusSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-31"></span><span id="spec"><span class="annot"><span class="annottext">spec :: Spec
+</span><a href="Test.Cardano.Ledger.PlutusSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><span class="annottext">Spec
+</span><a href="Test.Cardano.Ledger.PlutusSpec.html#costModelsSpec"><span class="hs-identifier hs-var">costModelsSpec</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;RoundTrip ToPlutusData&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span class="hs-special">]</span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">]</span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier hs-type">CompactForm</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">ExUnits</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.ExUnits.html#Prices"><span class="hs-identifier hs-type">Prices</span></a></span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#UnitInterval"><span class="hs-identifier hs-type">UnitInterval</span></a></span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier hs-type">EpochInterval</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#NonNegativeInterval"><span class="hs-identifier hs-type">NonNegativeInterval</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier hs-type">ProtVer</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#CostModels"><span class="hs-identifier hs-type">CostModels</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">forall x.
+(HasCallStack, Typeable x, Show x, Eq x, Arbitrary x,
+ ToPlutusData x) =&gt;
+Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ToPlutusData.html#roundTripPlutusDataSpec"><span class="hs-identifier hs-var">roundTripPlutusDataSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ExUnits&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">Spec
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Plutus.ExUnits.html#spec"><span class="hs-identifier hs-var">ExUnits.spec</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Test.Cardano.Ledger.PlutusSpec.html#costModelsSpec"><span class="hs-identifier hs-type">costModelsSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-57"></span><span id="costModelsSpec"><span class="annot"><span class="annottext">costModelsSpec :: Spec
+</span><a href="Test.Cardano.Ledger.PlutusSpec.html#costModelsSpec"><span class="hs-identifier hs-var hs-var">costModelsSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CostModels&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; (CostModels -&gt; Map Word8 [Int64] -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;flattenCostModels . mkCostModelsLenient&quot;</span></span><span> </span><span class="annot"><span class="annottext">((CostModels -&gt; Map Word8 [Int64] -&gt; IO ()) -&gt; Spec)
+-&gt; (CostModels -&gt; Map Word8 [Int64] -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679161662"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679161662"><span class="hs-identifier hs-var">valid</span></a></span></span><span> </span><span id="local-6989586621679161663"><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="#local-6989586621679161663"><span class="hs-identifier hs-var">unknown</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-60"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679161664"><span class="annot"><span class="annottext">cms1Flat :: Map Word8 [Int64]
+</span><a href="#local-6989586621679161664"><span class="hs-identifier hs-var hs-var">cms1Flat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; Map Word8 [Int64]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#flattenCostModels"><span class="hs-identifier hs-var">flattenCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679161662"><span class="hs-identifier hs-var">valid</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; Map Word8 [Int64] -&gt; Map Word8 [Int64]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="#local-6989586621679161663"><span class="hs-identifier hs-var">unknown</span></a></span><span>
+</span><span id="line-61"></span><span>          </span><span id="local-6989586621679161666"><span class="annot"><span class="annottext">cms2Flat :: Map Word8 [Int64]
+</span><a href="#local-6989586621679161666"><span class="hs-identifier hs-var hs-var">cms2Flat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="#local-6989586621679161663"><span class="hs-identifier hs-var">unknown</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; Map Word8 [Int64] -&gt; Map Word8 [Int64]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; Map Word8 [Int64]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#flattenCostModels"><span class="hs-identifier hs-var">flattenCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679161662"><span class="hs-identifier hs-var">valid</span></a></span><span>
+</span><span id="line-62"></span><span>      </span><span id="local-6989586621679161667"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679161667"><span class="hs-identifier hs-var">cms1</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; IO CostModels
+forall (m :: * -&gt; *).
+MonadFail m =&gt;
+Map Word8 [Int64] -&gt; m CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#mkCostModelsLenient"><span class="hs-identifier hs-var">mkCostModelsLenient</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="#local-6989586621679161664"><span class="hs-identifier hs-var">cms1Flat</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span id="local-6989586621679161669"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679161669"><span class="hs-identifier hs-var">cms2</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; IO CostModels
+forall (m :: * -&gt; *).
+MonadFail m =&gt;
+Map Word8 [Int64] -&gt; m CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#mkCostModelsLenient"><span class="hs-identifier hs-var">mkCostModelsLenient</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="#local-6989586621679161666"><span class="hs-identifier hs-var">cms2Flat</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">CostModels -&gt; Map Word8 [Int64]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#flattenCostModels"><span class="hs-identifier hs-var">flattenCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679161667"><span class="hs-identifier hs-var">cms1</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; Map Word8 [Int64] -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="#local-6989586621679161664"><span class="hs-identifier hs-var">cms1Flat</span></a></span><span>
+</span><span id="line-65"></span><span>      </span><span class="annot"><span class="annottext">CostModels -&gt; Map Word8 [Int64]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#flattenCostModels"><span class="hs-identifier hs-var">flattenCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679161669"><span class="hs-identifier hs-var">cms2</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; Map Word8 [Int64] -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="#local-6989586621679161666"><span class="hs-identifier hs-var">cms2Flat</span></a></span><span>
+</span><span id="line-66"></span></pre></body></html>

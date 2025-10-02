@@ -1,0 +1,228 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Mary.Rules.Bbody</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Mary.Era.html"><span class="hs-identifier">Cardano.Ledger.Mary.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier">MaryEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Mary.Rules.Ledgers.html"><span class="hs-identifier">Cardano.Ledger.Mary.Rules.Ledgers</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Rules</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#ShelleyBbodyPredFailure"><span class="hs-identifier">ShelleyBbodyPredFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Deleg.html#ShelleyDelegPredFailure"><span class="hs-identifier">ShelleyDelegPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Delegs.html#ShelleyDelegsPredFailure"><span class="hs-identifier">ShelleyDelegsPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Delpl.html#ShelleyDelplPredFailure"><span class="hs-identifier">ShelleyDelplPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledger.html#ShelleyLedgerPredFailure"><span class="hs-identifier">ShelleyLedgerPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#ShelleyLedgersPredFailure"><span class="hs-identifier">ShelleyLedgersPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Pool.html#ShelleyPoolPredFailure"><span class="hs-identifier">ShelleyPoolPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier">ShelleyPpupPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#ShelleyUtxoPredFailure"><span class="hs-identifier">ShelleyUtxoPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxow.html#ShelleyUtxowPredFailure"><span class="hs-identifier">ShelleyUtxowPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="EraRuleFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#EraRuleFailure"><span class="hs-identifier hs-var">EraRuleFailure</span></a></span></span><span> </span><span class="annot"><span class="hs-string">&quot;BBODY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#ShelleyBbodyPredFailure"><span class="hs-identifier hs-type">ShelleyBbodyPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679281188"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;BBODY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#ShelleyBbodyPredFailure"><span class="hs-identifier hs-type">ShelleyBbodyPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;BBODY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#ShelleyLedgersPredFailure"><span class="hs-identifier hs-type">ShelleyLedgersPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679281199"><span class="annot"><span class="annottext">injectFailure :: ShelleyLedgersPredFailure MaryEra -&gt; EraRuleFailure &quot;BBODY&quot; MaryEra
+</span><a href="#local-6989586621679281199"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGERS&quot; MaryEra)
+-&gt; ShelleyBbodyPredFailure MaryEra
+ShelleyLedgersPredFailure MaryEra -&gt; EraRuleFailure &quot;BBODY&quot; MaryEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGERS&quot; era)
+-&gt; ShelleyBbodyPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#LedgersFailure"><span class="hs-identifier hs-var">LedgersFailure</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;BBODY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledger.html#ShelleyLedgerPredFailure"><span class="hs-identifier hs-type">ShelleyLedgerPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679281209"><span class="annot"><span class="annottext">injectFailure :: ShelleyLedgerPredFailure MaryEra -&gt; EraRuleFailure &quot;BBODY&quot; MaryEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGERS&quot; MaryEra)
+-&gt; ShelleyBbodyPredFailure MaryEra
+ShelleyLedgersPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGERS&quot; era)
+-&gt; ShelleyBbodyPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#LedgersFailure"><span class="hs-identifier hs-var">LedgersFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyLedgersPredFailure MaryEra
+ -&gt; ShelleyBbodyPredFailure MaryEra)
+-&gt; (ShelleyLedgerPredFailure MaryEra
+    -&gt; ShelleyLedgersPredFailure MaryEra)
+-&gt; ShelleyLedgerPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyLedgerPredFailure MaryEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; MaryEra
+ShelleyLedgerPredFailure MaryEra
+-&gt; ShelleyLedgersPredFailure MaryEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;BBODY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxow.html#ShelleyUtxowPredFailure"><span class="hs-identifier hs-type">ShelleyUtxowPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679281218"><span class="annot"><span class="annottext">injectFailure :: ShelleyUtxowPredFailure MaryEra -&gt; EraRuleFailure &quot;BBODY&quot; MaryEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGERS&quot; MaryEra)
+-&gt; ShelleyBbodyPredFailure MaryEra
+ShelleyLedgersPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGERS&quot; era)
+-&gt; ShelleyBbodyPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#LedgersFailure"><span class="hs-identifier hs-var">LedgersFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyLedgersPredFailure MaryEra
+ -&gt; ShelleyBbodyPredFailure MaryEra)
+-&gt; (ShelleyUtxowPredFailure MaryEra
+    -&gt; ShelleyLedgersPredFailure MaryEra)
+-&gt; ShelleyUtxowPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyUtxowPredFailure MaryEra -&gt; EraRuleFailure &quot;LEDGERS&quot; MaryEra
+ShelleyUtxowPredFailure MaryEra
+-&gt; ShelleyLedgersPredFailure MaryEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;BBODY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#ShelleyUtxoPredFailure"><span class="hs-identifier hs-type">ShelleyUtxoPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679281226"><span class="annot"><span class="annottext">injectFailure :: ShelleyUtxoPredFailure MaryEra -&gt; EraRuleFailure &quot;BBODY&quot; MaryEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGERS&quot; MaryEra)
+-&gt; ShelleyBbodyPredFailure MaryEra
+ShelleyLedgersPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGERS&quot; era)
+-&gt; ShelleyBbodyPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#LedgersFailure"><span class="hs-identifier hs-var">LedgersFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyLedgersPredFailure MaryEra
+ -&gt; ShelleyBbodyPredFailure MaryEra)
+-&gt; (ShelleyUtxoPredFailure MaryEra
+    -&gt; ShelleyLedgersPredFailure MaryEra)
+-&gt; ShelleyUtxoPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyUtxoPredFailure MaryEra -&gt; EraRuleFailure &quot;LEDGERS&quot; MaryEra
+ShelleyUtxoPredFailure MaryEra -&gt; ShelleyLedgersPredFailure MaryEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;BBODY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier hs-type">ShelleyPpupPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679281234"><span class="annot"><span class="annottext">injectFailure :: ShelleyPpupPredFailure MaryEra -&gt; EraRuleFailure &quot;BBODY&quot; MaryEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGERS&quot; MaryEra)
+-&gt; ShelleyBbodyPredFailure MaryEra
+ShelleyLedgersPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGERS&quot; era)
+-&gt; ShelleyBbodyPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#LedgersFailure"><span class="hs-identifier hs-var">LedgersFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyLedgersPredFailure MaryEra
+ -&gt; ShelleyBbodyPredFailure MaryEra)
+-&gt; (ShelleyPpupPredFailure MaryEra
+    -&gt; ShelleyLedgersPredFailure MaryEra)
+-&gt; ShelleyPpupPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyPpupPredFailure MaryEra -&gt; EraRuleFailure &quot;LEDGERS&quot; MaryEra
+ShelleyPpupPredFailure MaryEra -&gt; ShelleyLedgersPredFailure MaryEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;BBODY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Delegs.html#ShelleyDelegsPredFailure"><span class="hs-identifier hs-type">ShelleyDelegsPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679281242"><span class="annot"><span class="annottext">injectFailure :: ShelleyDelegsPredFailure MaryEra -&gt; EraRuleFailure &quot;BBODY&quot; MaryEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGERS&quot; MaryEra)
+-&gt; ShelleyBbodyPredFailure MaryEra
+ShelleyLedgersPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGERS&quot; era)
+-&gt; ShelleyBbodyPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#LedgersFailure"><span class="hs-identifier hs-var">LedgersFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyLedgersPredFailure MaryEra
+ -&gt; ShelleyBbodyPredFailure MaryEra)
+-&gt; (ShelleyDelegsPredFailure MaryEra
+    -&gt; ShelleyLedgersPredFailure MaryEra)
+-&gt; ShelleyDelegsPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyDelegsPredFailure MaryEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; MaryEra
+ShelleyDelegsPredFailure MaryEra
+-&gt; ShelleyLedgersPredFailure MaryEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;BBODY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Delpl.html#ShelleyDelplPredFailure"><span class="hs-identifier hs-type">ShelleyDelplPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679281250"><span class="annot"><span class="annottext">injectFailure :: ShelleyDelplPredFailure MaryEra -&gt; EraRuleFailure &quot;BBODY&quot; MaryEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGERS&quot; MaryEra)
+-&gt; ShelleyBbodyPredFailure MaryEra
+ShelleyLedgersPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGERS&quot; era)
+-&gt; ShelleyBbodyPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#LedgersFailure"><span class="hs-identifier hs-var">LedgersFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyLedgersPredFailure MaryEra
+ -&gt; ShelleyBbodyPredFailure MaryEra)
+-&gt; (ShelleyDelplPredFailure MaryEra
+    -&gt; ShelleyLedgersPredFailure MaryEra)
+-&gt; ShelleyDelplPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyDelplPredFailure MaryEra -&gt; EraRuleFailure &quot;LEDGERS&quot; MaryEra
+ShelleyDelplPredFailure MaryEra
+-&gt; ShelleyLedgersPredFailure MaryEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;BBODY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Pool.html#ShelleyPoolPredFailure"><span class="hs-identifier hs-type">ShelleyPoolPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679281258"><span class="annot"><span class="annottext">injectFailure :: ShelleyPoolPredFailure MaryEra -&gt; EraRuleFailure &quot;BBODY&quot; MaryEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGERS&quot; MaryEra)
+-&gt; ShelleyBbodyPredFailure MaryEra
+ShelleyLedgersPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGERS&quot; era)
+-&gt; ShelleyBbodyPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#LedgersFailure"><span class="hs-identifier hs-var">LedgersFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyLedgersPredFailure MaryEra
+ -&gt; ShelleyBbodyPredFailure MaryEra)
+-&gt; (ShelleyPoolPredFailure MaryEra
+    -&gt; ShelleyLedgersPredFailure MaryEra)
+-&gt; ShelleyPoolPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyPoolPredFailure MaryEra -&gt; EraRuleFailure &quot;LEDGERS&quot; MaryEra
+ShelleyPoolPredFailure MaryEra -&gt; ShelleyLedgersPredFailure MaryEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;BBODY&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Deleg.html#ShelleyDelegPredFailure"><span class="hs-identifier hs-type">ShelleyDelegPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679281266"><span class="annot"><span class="annottext">injectFailure :: ShelleyDelegPredFailure MaryEra -&gt; EraRuleFailure &quot;BBODY&quot; MaryEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGERS&quot; MaryEra)
+-&gt; ShelleyBbodyPredFailure MaryEra
+ShelleyLedgersPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGERS&quot; era)
+-&gt; ShelleyBbodyPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Bbody.html#LedgersFailure"><span class="hs-identifier hs-var">LedgersFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyLedgersPredFailure MaryEra
+ -&gt; ShelleyBbodyPredFailure MaryEra)
+-&gt; (ShelleyDelegPredFailure MaryEra
+    -&gt; ShelleyLedgersPredFailure MaryEra)
+-&gt; ShelleyDelegPredFailure MaryEra
+-&gt; ShelleyBbodyPredFailure MaryEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyDelegPredFailure MaryEra -&gt; EraRuleFailure &quot;LEDGERS&quot; MaryEra
+ShelleyDelegPredFailure MaryEra
+-&gt; ShelleyLedgersPredFailure MaryEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-54"></span></pre></body></html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | This module is used for defining initial configuration for all. It is also used in</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-- testing and benchmarking to initilize a chain in a particular era without going through</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- the trouble of generating all the history for preceeding eras.</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Api.Transition</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#EraTransition"><span class="hs-identifier">EraTransition</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier">TransitionConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Api.Transition.html#mkLatestTransitionConfig"><span class="hs-identifier">mkLatestTransitionConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#mkTransitionConfig"><span class="hs-identifier">mkTransitionConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#mkShelleyTransitionConfig"><span class="hs-identifier">mkShelleyTransitionConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#tcShelleyGenesisL"><span class="hs-identifier">tcShelleyGenesisL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#tcPreviousEraConfigL"><span class="hs-identifier">tcPreviousEraConfigL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#tcTranslationContextL"><span class="hs-identifier">tcTranslationContextL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Genesis</span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#EraGenesis"><span class="hs-identifier">EraGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier">NoGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier">ShelleyGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier">AlonzoGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier">ConwayGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier">DijkstraGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Functions for Testing</span></span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#tcInitialPParamsG"><span class="hs-identifier">tcInitialPParamsG</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#tcInitialFundsL"><span class="hs-identifier">tcInitialFundsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#tcInitialStakingL"><span class="hs-identifier">tcInitialStakingL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#createInitialState"><span class="hs-identifier">createInitialState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#injectIntoTestState"><span class="hs-identifier">injectIntoTestState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier">AlonzoGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Api.Era.html"><span class="hs-identifier">Cardano.Ledger.Api.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Api.Era.html#LatestKnownEra"><span class="hs-identifier">LatestKnownEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Conway.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier">ConwayGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier">DijkstraGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#EraGenesis"><span class="hs-identifier">EraGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier">NoGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier">ShelleyGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Transition</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#EraTransition"><span class="hs-identifier">EraTransition</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier">TransitionConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#createInitialState"><span class="hs-identifier">createInitialState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#mkShelleyTransitionConfig"><span class="hs-identifier">mkShelleyTransitionConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#tcInitialFundsL"><span class="hs-identifier">tcInitialFundsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#tcInitialStakingL"><span class="hs-identifier">tcInitialStakingL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Function</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(&amp;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Cardano.Ledger.Api.Transition.html#mkLatestTransitionConfig"><span class="hs-identifier hs-type">mkLatestTransitionConfig</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier hs-type">ShelleyGenesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Genesis.html#ConwayGenesis"><span class="hs-identifier hs-type">ConwayGenesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-type">DijkstraGenesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Api.Era.html#LatestKnownEra"><span class="hs-identifier hs-type">LatestKnownEra</span></a></span><span>
+</span><span id="line-52"></span><span id="mkLatestTransitionConfig"><span class="annot"><span class="annottext">mkLatestTransitionConfig :: ShelleyGenesis
+-&gt; AlonzoGenesis
+-&gt; ConwayGenesis
+-&gt; DijkstraGenesis
+-&gt; TransitionConfig LatestKnownEra
+</span><a href="Cardano.Ledger.Api.Transition.html#mkLatestTransitionConfig"><span class="hs-identifier hs-var hs-var">mkLatestTransitionConfig</span></a></span></span><span> </span><span id="local-6989586621679317488"><span class="annot"><span class="annottext">ShelleyGenesis
+</span><a href="#local-6989586621679317488"><span class="hs-identifier hs-var">shelleyGenesis</span></a></span></span><span> </span><span id="local-6989586621679317489"><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621679317489"><span class="hs-identifier hs-var">alonzoGenesis</span></a></span></span><span> </span><span id="local-6989586621679317490"><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621679317490"><span class="hs-identifier hs-var">conwayGenesis</span></a></span></span><span> </span><span id="local-6989586621679317491"><span class="annot"><span class="annottext">DijkstraGenesis
+</span><a href="#local-6989586621679317491"><span class="hs-identifier hs-var">dijkstraGenesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><span class="annottext">ShelleyGenesis -&gt; TransitionConfig ShelleyEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#mkShelleyTransitionConfig"><span class="hs-identifier hs-var">mkShelleyTransitionConfig</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyGenesis
+</span><a href="#local-6989586621679317488"><span class="hs-identifier hs-var">shelleyGenesis</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">TransitionConfig ShelleyEra
+-&gt; (TransitionConfig ShelleyEra -&gt; TransitionConfig AllegraEra)
+-&gt; TransitionConfig AllegraEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">TranslationContext AllegraEra
+-&gt; TransitionConfig (PreviousEra AllegraEra)
+-&gt; TransitionConfig AllegraEra
+forall era.
+EraTransition era =&gt;
+TranslationContext era
+-&gt; TransitionConfig (PreviousEra era) -&gt; TransitionConfig era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#mkTransitionConfig"><span class="hs-identifier hs-var">mkTransitionConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TranslationContext AllegraEra
+NoGenesis AllegraEra
+forall era. NoGenesis era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">TransitionConfig AllegraEra
+-&gt; (TransitionConfig AllegraEra -&gt; TransitionConfig MaryEra)
+-&gt; TransitionConfig MaryEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">TranslationContext MaryEra
+-&gt; TransitionConfig (PreviousEra MaryEra)
+-&gt; TransitionConfig MaryEra
+forall era.
+EraTransition era =&gt;
+TranslationContext era
+-&gt; TransitionConfig (PreviousEra era) -&gt; TransitionConfig era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#mkTransitionConfig"><span class="hs-identifier hs-var">mkTransitionConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TranslationContext MaryEra
+NoGenesis MaryEra
+forall era. NoGenesis era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="annottext">TransitionConfig MaryEra
+-&gt; (TransitionConfig MaryEra -&gt; TransitionConfig AlonzoEra)
+-&gt; TransitionConfig AlonzoEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">TranslationContext AlonzoEra
+-&gt; TransitionConfig (PreviousEra AlonzoEra)
+-&gt; TransitionConfig AlonzoEra
+forall era.
+EraTransition era =&gt;
+TranslationContext era
+-&gt; TransitionConfig (PreviousEra era) -&gt; TransitionConfig era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#mkTransitionConfig"><span class="hs-identifier hs-var">mkTransitionConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TranslationContext AlonzoEra
+AlonzoGenesis
+</span><a href="#local-6989586621679317489"><span class="hs-identifier hs-var">alonzoGenesis</span></a></span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">TransitionConfig AlonzoEra
+-&gt; (TransitionConfig AlonzoEra -&gt; TransitionConfig BabbageEra)
+-&gt; TransitionConfig BabbageEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">TranslationContext BabbageEra
+-&gt; TransitionConfig (PreviousEra BabbageEra)
+-&gt; TransitionConfig BabbageEra
+forall era.
+EraTransition era =&gt;
+TranslationContext era
+-&gt; TransitionConfig (PreviousEra era) -&gt; TransitionConfig era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#mkTransitionConfig"><span class="hs-identifier hs-var">mkTransitionConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TranslationContext BabbageEra
+NoGenesis BabbageEra
+forall era. NoGenesis era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#NoGenesis"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">TransitionConfig BabbageEra
+-&gt; (TransitionConfig BabbageEra -&gt; TransitionConfig ConwayEra)
+-&gt; TransitionConfig ConwayEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">TranslationContext ConwayEra
+-&gt; TransitionConfig (PreviousEra ConwayEra)
+-&gt; TransitionConfig ConwayEra
+forall era.
+EraTransition era =&gt;
+TranslationContext era
+-&gt; TransitionConfig (PreviousEra era) -&gt; TransitionConfig era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#mkTransitionConfig"><span class="hs-identifier hs-var">mkTransitionConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TranslationContext ConwayEra
+ConwayGenesis
+</span><a href="#local-6989586621679317490"><span class="hs-identifier hs-var">conwayGenesis</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">TransitionConfig ConwayEra
+-&gt; (TransitionConfig ConwayEra -&gt; TransitionConfig LatestKnownEra)
+-&gt; TransitionConfig LatestKnownEra
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">TranslationContext LatestKnownEra
+-&gt; TransitionConfig (PreviousEra LatestKnownEra)
+-&gt; TransitionConfig LatestKnownEra
+forall era.
+EraTransition era =&gt;
+TranslationContext era
+-&gt; TransitionConfig (PreviousEra era) -&gt; TransitionConfig era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#mkTransitionConfig"><span class="hs-identifier hs-var">mkTransitionConfig</span></a></span><span> </span><span class="annot"><span class="annottext">TranslationContext LatestKnownEra
+DijkstraGenesis
+</span><a href="#local-6989586621679317491"><span class="hs-identifier hs-var">dijkstraGenesis</span></a></span><span>
+</span><span id="line-60"></span></pre></body></html>

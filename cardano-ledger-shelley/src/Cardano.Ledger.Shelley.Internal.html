@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_HADDOCK hide, not-home #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Provide Tools for debugging</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--   Feel free to add new things as they are developed.</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Shelley.Internal</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><span class="hs-identifier">trace</span></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.AdaPots.html#totalAdaPotsES"><span class="hs-identifier">totalAdaPotsES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Internal.html#compareAdaPots"><span class="hs-identifier">compareAdaPots</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.AdaPots.html#producedTxBody"><span class="hs-identifier">producedTxBody</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.AdaPots.html#consumedTxBody"><span class="hs-identifier">consumedTxBody</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showCred"><span class="hs-identifier">showCred</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showIR"><span class="hs-identifier">showIR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showKeyHash"><span class="hs-identifier">showKeyHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showListy"><span class="hs-identifier">showListy</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showMap"><span class="hs-identifier">showMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showWithdrawal"><span class="hs-identifier">showWithdrawal</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showSafeHash"><span class="hs-identifier">showSafeHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#synopsisCoinMap"><span class="hs-identifier">synopsisCoinMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showTxCerts"><span class="hs-identifier">showTxCerts</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.AdaPots.html"><span class="hs-identifier">Cardano.Ledger.Shelley.AdaPots</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.AdaPots.html#AdaPots"><span class="hs-identifier">AdaPots</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.AdaPots.html#consumedTxBody"><span class="hs-identifier">consumedTxBody</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.AdaPots.html#producedTxBody"><span class="hs-identifier">producedTxBody</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.AdaPots.html#totalAdaPotsES"><span class="hs-identifier">totalAdaPotsES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Rules.Reports</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showCred"><span class="hs-identifier">showCred</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showIR"><span class="hs-identifier">showIR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showKeyHash"><span class="hs-identifier">showKeyHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showListy"><span class="hs-identifier">showListy</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showMap"><span class="hs-identifier">showMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showSafeHash"><span class="hs-identifier">showSafeHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showTxCerts"><span class="hs-identifier">showTxCerts</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#showWithdrawal"><span class="hs-identifier">showWithdrawal</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Reports.html#synopsisCoinMap"><span class="hs-identifier">synopsisCoinMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.html"><span class="hs-identifier">Cardano.Ledger.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#Obligations"><span class="hs-identifier">Obligations</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html"><span class="hs-identifier">Cardano.Ledger.Val</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#%3C-%3E"><span class="hs-operator">(&lt;-&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Debug.Trace</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">trace</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- ==============================================</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- Compare two AdaPots, item by item</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Cardano.Ledger.Shelley.Internal.html#pad"><span class="hs-identifier hs-type">pad</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-47"></span><span id="pad"><span class="annot"><span class="annottext">pad :: Int -&gt; String -&gt; String
+</span><a href="Cardano.Ledger.Shelley.Internal.html#pad"><span class="hs-identifier hs-var hs-var">pad</span></a></span></span><span> </span><span id="local-6989586621679520692"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679520692"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679520693"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679520693"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679520693"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Char -&gt; String
+forall a. Int -&gt; a -&gt; [a]
+</span><span class="hs-identifier hs-var">replicate</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679520692"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679520693"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">' '</span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Cardano.Ledger.Shelley.Internal.html#compareAdaPots"><span class="hs-identifier hs-type">compareAdaPots</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.AdaPots.html#AdaPots"><span class="hs-identifier hs-type">AdaPots</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.AdaPots.html#AdaPots"><span class="hs-identifier hs-type">AdaPots</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-50"></span><span id="compareAdaPots"><span class="annot"><span class="annottext">compareAdaPots :: String -&gt; AdaPots -&gt; String -&gt; AdaPots -&gt; String
+</span><a href="Cardano.Ledger.Shelley.Internal.html#compareAdaPots"><span class="hs-identifier hs-var hs-var">compareAdaPots</span></a></span></span><span> </span><span id="local-6989586621679520696"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679520696"><span class="hs-identifier hs-var">xlabel</span></a></span></span><span> </span><span id="local-6989586621679520697"><span class="annot"><span class="annottext">AdaPots
+</span><a href="#local-6989586621679520697"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679520698"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679520698"><span class="hs-identifier hs-var">ylabel</span></a></span></span><span> </span><span id="local-6989586621679520699"><span class="annot"><span class="annottext">AdaPots
+</span><a href="#local-6989586621679520699"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><span class="hs-identifier hs-var">unlines</span></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+</span><a href="Cardano.Ledger.Shelley.Internal.html#pad"><span class="hs-identifier hs-var">pad</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679520701"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;field&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+</span><a href="Cardano.Ledger.Shelley.Internal.html#pad"><span class="hs-identifier hs-var">pad</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679520701"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679520696"><span class="hs-identifier hs-var">xlabel</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+</span><a href="Cardano.Ledger.Shelley.Internal.html#pad"><span class="hs-identifier hs-var">pad</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679520701"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679520698"><span class="hs-identifier hs-var">ylabel</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+</span><a href="Cardano.Ledger.Shelley.Internal.html#pad"><span class="hs-identifier hs-var">pad</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679520701"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;difference&quot;</span></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (AdaPots -&gt; Coin) -&gt; String
+forall {a}. Val a =&gt; String -&gt; (AdaPots -&gt; a) -&gt; String
+</span><a href="#local-6989586621679520702"><span class="hs-identifier hs-var">oneline</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;treasuryAdaPot&quot;</span></span><span> </span><span class="annot"><span class="annottext">AdaPots -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.AdaPots.html#treasuryAdaPot"><span class="hs-identifier hs-var">treasuryAdaPot</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (AdaPots -&gt; Coin) -&gt; String
+forall {a}. Val a =&gt; String -&gt; (AdaPots -&gt; a) -&gt; String
+</span><a href="#local-6989586621679520702"><span class="hs-identifier hs-var">oneline</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;reservesAdaPot&quot;</span></span><span> </span><span class="annot"><span class="annottext">AdaPots -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.AdaPots.html#reservesAdaPot"><span class="hs-identifier hs-var">reservesAdaPot</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (AdaPots -&gt; Coin) -&gt; String
+forall {a}. Val a =&gt; String -&gt; (AdaPots -&gt; a) -&gt; String
+</span><a href="#local-6989586621679520702"><span class="hs-identifier hs-var">oneline</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;rewardsAdaPot&quot;</span></span><span> </span><span class="annot"><span class="annottext">AdaPots -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.AdaPots.html#rewardsAdaPot"><span class="hs-identifier hs-var">rewardsAdaPot</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (AdaPots -&gt; Coin) -&gt; String
+forall {a}. Val a =&gt; String -&gt; (AdaPots -&gt; a) -&gt; String
+</span><a href="#local-6989586621679520702"><span class="hs-identifier hs-var">oneline</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;utxoAdaPot&quot;</span></span><span> </span><span class="annot"><span class="annottext">AdaPots -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.AdaPots.html#utxoAdaPot"><span class="hs-identifier hs-var">utxoAdaPot</span></a></span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (AdaPots -&gt; Coin) -&gt; String
+forall {a}. Val a =&gt; String -&gt; (AdaPots -&gt; a) -&gt; String
+</span><a href="#local-6989586621679520702"><span class="hs-identifier hs-var">oneline</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;feesAdaPot&quot;</span></span><span> </span><span class="annot"><span class="annottext">AdaPots -&gt; Coin
+</span><a href="Cardano.Ledger.Shelley.AdaPots.html#feesAdaPot"><span class="hs-identifier hs-var">feesAdaPot</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (AdaPots -&gt; Coin) -&gt; String
+forall {a}. Val a =&gt; String -&gt; (AdaPots -&gt; a) -&gt; String
+</span><a href="#local-6989586621679520702"><span class="hs-identifier hs-var">oneline</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;oblStakePot&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Obligations -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#oblStake"><span class="hs-identifier hs-var">oblStake</span></a></span><span> </span><span class="annot"><span class="annottext">(Obligations -&gt; Coin)
+-&gt; (AdaPots -&gt; Obligations) -&gt; AdaPots -&gt; Coin
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">AdaPots -&gt; Obligations
+</span><a href="Cardano.Ledger.Shelley.AdaPots.html#obligationsPot"><span class="hs-identifier hs-var">obligationsPot</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (AdaPots -&gt; Coin) -&gt; String
+forall {a}. Val a =&gt; String -&gt; (AdaPots -&gt; a) -&gt; String
+</span><a href="#local-6989586621679520702"><span class="hs-identifier hs-var">oneline</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;oblPoolPot&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Obligations -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#oblPool"><span class="hs-identifier hs-var">oblPool</span></a></span><span> </span><span class="annot"><span class="annottext">(Obligations -&gt; Coin)
+-&gt; (AdaPots -&gt; Obligations) -&gt; AdaPots -&gt; Coin
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">AdaPots -&gt; Obligations
+</span><a href="Cardano.Ledger.Shelley.AdaPots.html#obligationsPot"><span class="hs-identifier hs-var">obligationsPot</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (AdaPots -&gt; Coin) -&gt; String
+forall {a}. Val a =&gt; String -&gt; (AdaPots -&gt; a) -&gt; String
+</span><a href="#local-6989586621679520702"><span class="hs-identifier hs-var">oneline</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;oblDRepPot&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Obligations -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#oblDRep"><span class="hs-identifier hs-var">oblDRep</span></a></span><span> </span><span class="annot"><span class="annottext">(Obligations -&gt; Coin)
+-&gt; (AdaPots -&gt; Obligations) -&gt; AdaPots -&gt; Coin
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">AdaPots -&gt; Obligations
+</span><a href="Cardano.Ledger.Shelley.AdaPots.html#obligationsPot"><span class="hs-identifier hs-var">obligationsPot</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; (AdaPots -&gt; Coin) -&gt; String
+forall {a}. Val a =&gt; String -&gt; (AdaPots -&gt; a) -&gt; String
+</span><a href="#local-6989586621679520702"><span class="hs-identifier hs-var">oneline</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;oblProposalPot&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Obligations -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#oblProposal"><span class="hs-identifier hs-var">oblProposal</span></a></span><span> </span><span class="annot"><span class="annottext">(Obligations -&gt; Coin)
+-&gt; (AdaPots -&gt; Obligations) -&gt; AdaPots -&gt; Coin
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">AdaPots -&gt; Obligations
+</span><a href="Cardano.Ledger.Shelley.AdaPots.html#obligationsPot"><span class="hs-identifier hs-var">obligationsPot</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-64"></span><span>    </span><span id="local-6989586621679520701"><span class="annot"><span class="annottext">n :: Int
+</span><a href="#local-6989586621679520701"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">25</span></span><span>
+</span><span id="line-65"></span><span>    </span><span id="local-6989586621679520702"><span class="annot"><span class="annottext">oneline :: String -&gt; (AdaPots -&gt; a) -&gt; String
+</span><a href="#local-6989586621679520702"><span class="hs-identifier hs-var hs-var">oneline</span></a></span></span><span> </span><span id="local-6989586621679520784"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679520784"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679520785"><span class="annot"><span class="annottext">AdaPots -&gt; a
+</span><a href="#local-6989586621679520785"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+</span><a href="Cardano.Ledger.Shelley.Internal.html#pad"><span class="hs-identifier hs-var">pad</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679520701"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679520784"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+</span><a href="Cardano.Ledger.Shelley.Internal.html#pad"><span class="hs-identifier hs-var">pad</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679520701"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AdaPots -&gt; a
+</span><a href="#local-6989586621679520785"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">AdaPots
+</span><a href="#local-6989586621679520697"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+</span><a href="Cardano.Ledger.Shelley.Internal.html#pad"><span class="hs-identifier hs-var">pad</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679520701"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AdaPots -&gt; a
+</span><a href="#local-6989586621679520785"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">AdaPots
+</span><a href="#local-6989586621679520699"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String -&gt; String
+</span><a href="Cardano.Ledger.Shelley.Internal.html#pad"><span class="hs-identifier hs-var">pad</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679520701"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AdaPots -&gt; a
+</span><a href="#local-6989586621679520785"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">AdaPots
+</span><a href="#local-6989586621679520699"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall t. Val t =&gt; t -&gt; t -&gt; t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Val.html#%3C-%3E"><span class="hs-operator hs-var">&lt;-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">AdaPots -&gt; a
+</span><a href="#local-6989586621679520785"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">AdaPots
+</span><a href="#local-6989586621679520697"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span></pre></body></html>

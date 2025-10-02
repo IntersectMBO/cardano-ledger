@@ -1,0 +1,1053 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MagicHash #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE UnboxedTuples #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- | Sometimes we need to write our own version of functions over `Map.Map` that</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- do not appear in the &quot;containers&quot; library. This module is for such functions.</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- For example:</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- 1. Version of `Map.withoutKeys` where both arguments are `Map.Map`</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- 2. Comparing that two maps have exactly the same set of keys</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- 3. The intersection of two maps guarded by a predicate.</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--    &gt; ((dom stkcred) &#9665; deleg) &#9655; (dom stpool)) ==&gt;</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--    &gt; intersectDomP (\ k v -&gt; Map.member v stpool) stkcred deleg</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.MapExtras</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier">StrictTriple</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#extract"><span class="hs-identifier">extract</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#noKeys"><span class="hs-identifier">noKeys</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#keysEqual"><span class="hs-identifier">keysEqual</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#splitMemberMap"><span class="hs-identifier">splitMemberMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#splitMemberSet"><span class="hs-identifier">splitMemberSet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#intersectDomP"><span class="hs-identifier">intersectDomP</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#intersectDomPLeft"><span class="hs-identifier">intersectDomPLeft</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#intersectMapSetFold"><span class="hs-identifier">intersectMapSetFold</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#disjointMapSetFold"><span class="hs-identifier">disjointMapSetFold</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#extractKeys"><span class="hs-identifier">extractKeys</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#extractKeysSmallSet"><span class="hs-identifier">extractKeysSmallSet</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#fromKeys"><span class="hs-identifier">fromKeys</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Data.MapExtras.html#fromElems"><span class="hs-identifier">fromElems</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Internal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">balanceL</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">balanceR</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">glue</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">link</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">link2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set.Internal</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Exts</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">isTrue#</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">reallyUnsafePtrEquality#</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(==#)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">data</span><span> </span><span id="StrictTriple"><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-var">StrictTriple</span></a></span></span><span> </span><span id="local-6989586621679216183"><span class="annot"><a href="#local-6989586621679216183"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621679216184"><span class="annot"><a href="#local-6989586621679216184"><span class="hs-identifier hs-type">b</span></a></span></span><span> </span><span id="local-6989586621679216185"><span class="annot"><a href="#local-6989586621679216185"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="StrictTriple"><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-var">StrictTriple</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679216183"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679216184"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679216185"><span class="hs-identifier hs-type">c</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679216289"><span id="local-6989586621679216296"><span id="local-6989586621679216300"><span class="annot"><span class="annottext">Int -&gt; StrictTriple a b c -&gt; ShowS
+[StrictTriple a b c] -&gt; ShowS
+StrictTriple a b c -&gt; String
+(Int -&gt; StrictTriple a b c -&gt; ShowS)
+-&gt; (StrictTriple a b c -&gt; String)
+-&gt; ([StrictTriple a b c] -&gt; ShowS)
+-&gt; Show (StrictTriple a b c)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall a b c.
+(Show a, Show b, Show c) =&gt;
+Int -&gt; StrictTriple a b c -&gt; ShowS
+forall a b c.
+(Show a, Show b, Show c) =&gt;
+[StrictTriple a b c] -&gt; ShowS
+forall a b c.
+(Show a, Show b, Show c) =&gt;
+StrictTriple a b c -&gt; String
+$cshowsPrec :: forall a b c.
+(Show a, Show b, Show c) =&gt;
+Int -&gt; StrictTriple a b c -&gt; ShowS
+showsPrec :: Int -&gt; StrictTriple a b c -&gt; ShowS
+$cshow :: forall a b c.
+(Show a, Show b, Show c) =&gt;
+StrictTriple a b c -&gt; String
+show :: StrictTriple a b c -&gt; String
+$cshowList :: forall a b c.
+(Show a, Show b, Show c) =&gt;
+[StrictTriple a b c] -&gt; ShowS
+showList :: [StrictTriple a b c] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216307"><span id="local-6989586621679216312"><span class="annot"><span class="annottext">StrictTriple a b c -&gt; StrictTriple a b c -&gt; Bool
+(StrictTriple a b c -&gt; StrictTriple a b c -&gt; Bool)
+-&gt; (StrictTriple a b c -&gt; StrictTriple a b c -&gt; Bool)
+-&gt; Eq (StrictTriple a b c)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall a b c.
+(Eq a, Eq b, Eq c) =&gt;
+StrictTriple a b c -&gt; StrictTriple a b c -&gt; Bool
+$c== :: forall a b c.
+(Eq a, Eq b, Eq c) =&gt;
+StrictTriple a b c -&gt; StrictTriple a b c -&gt; Bool
+== :: StrictTriple a b c -&gt; StrictTriple a b c -&gt; Bool
+$c/= :: forall a b c.
+(Eq a, Eq b, Eq c) =&gt;
+StrictTriple a b c -&gt; StrictTriple a b c -&gt; Bool
+/= :: StrictTriple a b c -&gt; StrictTriple a b c -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span id="local-6989586621679216151"><span id="local-6989586621679216152"><span id="local-6989586621679216154"><span class="annot"><a href="Data.MapExtras.html#noKeys"><span class="hs-identifier hs-type">noKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216151"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216151"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216152"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216151"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216154"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216151"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216152"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-45"></span><span id="noKeys"><span class="annot"><span class="annottext">noKeys :: forall k a b. Ord k =&gt; Map k a -&gt; Map k b -&gt; Map k a
+</span><a href="Data.MapExtras.html#noKeys"><span class="hs-identifier hs-var hs-var">noKeys</span></a></span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="annot"><span class="annottext">Map k b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Data.MapExtras.html#noKeys"><span class="hs-identifier hs-var">noKeys</span></a></span><span> </span><span id="local-6989586621679216321"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216321"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="annot"><span class="annottext">Map k b
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216321"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Data.MapExtras.html#noKeys"><span class="hs-identifier hs-var">noKeys</span></a></span><span> </span><span id="local-6989586621679216322"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216322"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216324"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216324"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216325"><span class="annot"><span class="annottext">Map k b
+</span><a href="#local-6989586621679216325"><span class="hs-identifier hs-var">ls</span></a></span></span><span> </span><span id="local-6989586621679216326"><span class="annot"><span class="annottext">Map k b
+</span><a href="#local-6989586621679216326"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k a -&gt; (Map k a, Map k a)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; (Map k a, Map k a)
+</span><span class="hs-identifier hs-var">Map.split</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216324"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216322"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679216328"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216328"><span class="hs-identifier hs-var">lm</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216329"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216329"><span class="hs-identifier hs-var">rm</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k a -&gt; Map k a
+forall k a. Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">link2</span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216330"><span class="hs-identifier hs-var">lm'</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216331"><span class="hs-identifier hs-var">rm'</span></a></span><span> </span><span class="hs-comment">-- We know `k` is not in either `lm` or `rm`</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>      </span><span class="hs-glyph">!</span><span id="local-6989586621679216330"><span class="annot"><span class="annottext">lm' :: Map k a
+</span><a href="#local-6989586621679216330"><span class="hs-identifier hs-var hs-var">lm'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k b -&gt; Map k a
+forall k a b. Ord k =&gt; Map k a -&gt; Map k b -&gt; Map k a
+</span><a href="Data.MapExtras.html#noKeys"><span class="hs-identifier hs-var">noKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216328"><span class="hs-identifier hs-var">lm</span></a></span><span> </span><span class="annot"><span class="annottext">Map k b
+</span><a href="#local-6989586621679216325"><span class="hs-identifier hs-var">ls</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-glyph">!</span><span id="local-6989586621679216331"><span class="annot"><span class="annottext">rm' :: Map k a
+</span><a href="#local-6989586621679216331"><span class="hs-identifier hs-var hs-var">rm'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k b -&gt; Map k a
+forall k a b. Ord k =&gt; Map k a -&gt; Map k b -&gt; Map k a
+</span><a href="Data.MapExtras.html#noKeys"><span class="hs-identifier hs-var">noKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216329"><span class="hs-identifier hs-var">rm</span></a></span><span> </span><span class="annot"><span class="annottext">Map k b
+</span><a href="#local-6989586621679216326"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-52"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#noKeys"><span class="hs-pragma hs-type">noKeys</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | Checks if two pointers are equal. Yes means yes;</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- no means maybe. The values should be forced to at least</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- WHNF before comparison to get moderately reliable results.</span><span>
+</span><span id="line-57"></span><span id="local-6989586621679216165"><span class="annot"><a href="Data.MapExtras.html#ptrEq"><span class="hs-identifier hs-type">ptrEq</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679216165"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216165"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-58"></span><span id="ptrEq"><span class="annot"><span class="annottext">ptrEq :: forall a. a -&gt; a -&gt; Bool
+</span><a href="Data.MapExtras.html#ptrEq"><span class="hs-identifier hs-var hs-var">ptrEq</span></a></span></span><span> </span><span id="local-6989586621679216337"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216337"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679216338"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216338"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Bool
+</span><span class="hs-identifier hs-var">isTrue#</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; a -&gt; Int#
+forall a b. a -&gt; b -&gt; Int#
+</span><span class="hs-identifier hs-var">reallyUnsafePtrEquality#</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216337"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216338"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Int# -&gt; Int# -&gt; Int#
+</span><span class="hs-operator hs-var">==#</span></span><span> </span><span class="annot"><span class="annottext">Int#
+</span><span class="hs-number">1#</span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#ptrEq"><span class="hs-pragma hs-type">ptrEq</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span id="local-6989586621679216171"><span id="local-6989586621679216172"><span id="local-6989586621679216173"><span class="annot"><a href="Data.MapExtras.html#keysEqual"><span class="hs-identifier hs-type">keysEqual</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216171"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216171"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216172"><span class="hs-identifier hs-type">v1</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216171"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216173"><span class="hs-identifier hs-type">v2</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span></span></span><span>
+</span><span id="line-62"></span><span id="keysEqual"><span class="annot"><span class="annottext">keysEqual :: forall k v1 v2. Ord k =&gt; Map k v1 -&gt; Map k v2 -&gt; Bool
+</span><a href="Data.MapExtras.html#keysEqual"><span class="hs-identifier hs-var hs-var">keysEqual</span></a></span></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Data.MapExtras.html#keysEqual"><span class="hs-identifier hs-var">keysEqual</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">v2
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Data.MapExtras.html#keysEqual"><span class="hs-identifier hs-var">keysEqual</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">v1
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Data.MapExtras.html#keysEqual"><span class="hs-identifier hs-var">keysEqual</span></a></span><span> </span><span id="local-6989586621679216343"><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216343"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216344"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216344"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="annot"><span class="annottext">v2
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216345"><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216345"><span class="hs-identifier hs-var">ls</span></a></span></span><span> </span><span id="local-6989586621679216346"><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216346"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k v1 -&gt; StrictTriple (Map k v1) Bool (Map k v1)
+forall k a.
+Ord k =&gt;
+k -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+</span><a href="Data.MapExtras.html#splitMemberMap"><span class="hs-identifier hs-var">splitMemberMap</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216344"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216343"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-type">StrictTriple</span></a></span><span> </span><span id="local-6989586621679216347"><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216347"><span class="hs-identifier hs-var">lm</span></a></span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span id="local-6989586621679216348"><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216348"><span class="hs-identifier hs-var">rm</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Map k v2 -&gt; Map k v1 -&gt; Bool
+forall k v1 v2. Ord k =&gt; Map k v1 -&gt; Map k v2 -&gt; Bool
+</span><a href="Data.MapExtras.html#keysEqual"><span class="hs-identifier hs-var">keysEqual</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216345"><span class="hs-identifier hs-var">ls</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216347"><span class="hs-identifier hs-var">lm</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Map k v2 -&gt; Map k v1 -&gt; Bool
+forall k v1 v2. Ord k =&gt; Map k v1 -&gt; Map k v2 -&gt; Bool
+</span><a href="Data.MapExtras.html#keysEqual"><span class="hs-identifier hs-var">keysEqual</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216346"><span class="hs-identifier hs-var">rs</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216348"><span class="hs-identifier hs-var">rm</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">StrictTriple (Map k v1) Bool (Map k v1)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-69"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#keysEqual"><span class="hs-pragma hs-type">keysEqual</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- | A variant of 'splitLookup' that indicates only whether the</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- key was present, rather than producing its value. This is used to</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- implement 'keysEqual' to avoid allocating unnecessary 'Just'</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- constructors.</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- /Note/ - this is a copy pasted internal function from &quot;containers&quot; package</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- adjusted to return `StrictTriple`</span><span>
+</span><span id="line-78"></span><span id="local-6989586621679216177"><span id="local-6989586621679216178"><span class="annot"><a href="Data.MapExtras.html#splitMemberMap"><span class="hs-identifier hs-type">splitMemberMap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216177"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216177"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216177"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216178"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-type">StrictTriple</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216177"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216178"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216177"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216178"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-79"></span><span id="splitMemberMap"><span class="annot"><span class="annottext">splitMemberMap :: forall k a.
+Ord k =&gt;
+k -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+</span><a href="Data.MapExtras.html#splitMemberMap"><span class="hs-identifier hs-var hs-var">splitMemberMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+forall k a.
+Ord k =&gt;
+k -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+</span><a href="#local-6989586621679216352"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>    </span><span id="local-6989586621679216353"><span id="local-6989586621679216354"><span class="annot"><a href="#local-6989586621679216352"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216353"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216353"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216353"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216354"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-type">StrictTriple</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216353"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216354"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216353"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216354"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-82"></span><span>    </span><span id="local-6989586621679216352"><span class="annot"><span class="annottext">go :: forall k a.
+Ord k =&gt;
+k -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+</span><a href="#local-6989586621679216352"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216358"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216358"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679216359"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216359"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-83"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216359"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><span class="annottext">Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Bool -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+forall a b c. a -&gt; b -&gt; c -&gt; StrictTriple a b c
+</span><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-var">StrictTriple</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216360"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216360"><span class="hs-identifier hs-var">kx</span></a></span></span><span> </span><span id="local-6989586621679216361"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216361"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679216362"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216362"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679216363"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216363"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">k -&gt; k -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-identifier hs-var">compare</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216358"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216360"><span class="hs-identifier hs-var">kx</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-86"></span><span>          </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">LT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-87"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-type">StrictTriple</span></a></span><span> </span><span id="local-6989586621679216367"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216367"><span class="hs-identifier hs-var">lt</span></a></span></span><span> </span><span id="local-6989586621679216368"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216368"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span id="local-6989586621679216369"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216369"><span class="hs-identifier hs-var">gt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+forall k a.
+Ord k =&gt;
+k -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+</span><a href="#local-6989586621679216352"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216358"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216362"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-88"></span><span>                </span><span class="hs-glyph">!</span><span id="local-6989586621679216370"><span class="annot"><span class="annottext">gt' :: Map k a
+</span><a href="#local-6989586621679216370"><span class="hs-identifier hs-var hs-var">gt'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+forall k a. k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">link</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216360"><span class="hs-identifier hs-var">kx</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216361"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216369"><span class="hs-identifier hs-var">gt</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216363"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-89"></span><span>             </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Bool -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+forall a b c. a -&gt; b -&gt; c -&gt; StrictTriple a b c
+</span><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-var">StrictTriple</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216367"><span class="hs-identifier hs-var">lt</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216368"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216370"><span class="hs-identifier hs-var">gt'</span></a></span><span>
+</span><span id="line-90"></span><span>          </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-type">StrictTriple</span></a></span><span> </span><span id="local-6989586621679216373"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216373"><span class="hs-identifier hs-var">lt</span></a></span></span><span> </span><span id="local-6989586621679216374"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216374"><span class="hs-identifier hs-var">z</span></a></span></span><span> </span><span id="local-6989586621679216375"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216375"><span class="hs-identifier hs-var">gt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+forall k a.
+Ord k =&gt;
+k -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+</span><a href="#local-6989586621679216352"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216358"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216363"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-92"></span><span>                </span><span class="hs-glyph">!</span><span id="local-6989586621679216376"><span class="annot"><span class="annottext">lt' :: Map k a
+</span><a href="#local-6989586621679216376"><span class="hs-identifier hs-var hs-var">lt'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+forall k a. k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">link</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216360"><span class="hs-identifier hs-var">kx</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216361"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216362"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216373"><span class="hs-identifier hs-var">lt</span></a></span><span>
+</span><span id="line-93"></span><span>             </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Bool -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+forall a b c. a -&gt; b -&gt; c -&gt; StrictTriple a b c
+</span><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-var">StrictTriple</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216376"><span class="hs-identifier hs-var">lt'</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216374"><span class="hs-identifier hs-var">z</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216375"><span class="hs-identifier hs-var">gt</span></a></span><span>
+</span><span id="line-94"></span><span>          </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Bool -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+forall a b c. a -&gt; b -&gt; c -&gt; StrictTriple a b c
+</span><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-var">StrictTriple</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216362"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216363"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-95"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#splitMemberMap"><span class="hs-pragma hs-type">splitMemberMap</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- | /O(log n)/. Performs a 'split' but also returns whether the pivot</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- element was found in the original set.</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- This is a modified version of `Set.splitMember`, where `StrictTriple` is used</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- instead of a lazy one for minor performance gain.</span><span>
+</span><span id="line-102"></span><span id="local-6989586621679216188"><span class="annot"><a href="Data.MapExtras.html#splitMemberSet"><span class="hs-identifier hs-type">splitMemberSet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216188"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216188"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679216188"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-type">StrictTriple</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679216188"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679216188"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-103"></span><span id="splitMemberSet"><span class="annot"><span class="annottext">splitMemberSet :: forall a. Ord a =&gt; a -&gt; Set a -&gt; StrictTriple (Set a) Bool (Set a)
+</span><a href="Data.MapExtras.html#splitMemberSet"><span class="hs-identifier hs-var hs-var">splitMemberSet</span></a></span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><span class="hs-identifier hs-var">Set.Tip</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set a -&gt; Bool -&gt; Set a -&gt; StrictTriple (Set a) Bool (Set a)
+forall a b c. a -&gt; b -&gt; c -&gt; StrictTriple a b c
+</span><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-var">StrictTriple</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+forall a. Set a
+</span><span class="hs-identifier hs-var">Set.Tip</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="annot"><span class="annottext">Set a
+forall a. Set a
+</span><span class="hs-identifier hs-var">Set.Tip</span></span><span>
+</span><span id="line-104"></span><span class="annot"><a href="Data.MapExtras.html#splitMemberSet"><span class="hs-identifier hs-var">splitMemberSet</span></a></span><span> </span><span id="local-6989586621679216382"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216382"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set.Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216384"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216384"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span id="local-6989586621679216385"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216385"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679216386"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216386"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-identifier hs-var">compare</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216382"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216384"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">LT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-type">StrictTriple</span></a></span><span> </span><span id="local-6989586621679216389"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216389"><span class="hs-identifier hs-var">lt</span></a></span></span><span> </span><span id="local-6989586621679216390"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216390"><span class="hs-identifier hs-var">found</span></a></span></span><span> </span><span id="local-6989586621679216391"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216391"><span class="hs-identifier hs-var">gt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; StrictTriple (Set a) Bool (Set a)
+forall a. Ord a =&gt; a -&gt; Set a -&gt; StrictTriple (Set a) Bool (Set a)
+</span><a href="Data.MapExtras.html#splitMemberSet"><span class="hs-identifier hs-var">splitMemberSet</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216382"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216385"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-108"></span><span>          </span><span class="hs-glyph">!</span><span id="local-6989586621679216392"><span class="annot"><span class="annottext">gt' :: Set a
+</span><a href="#local-6989586621679216392"><span class="hs-identifier hs-var hs-var">gt'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Set a -&gt; Set a
+forall a. a -&gt; Set a -&gt; Set a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.link</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216384"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216391"><span class="hs-identifier hs-var">gt</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216386"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-109"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Set a -&gt; Bool -&gt; Set a -&gt; StrictTriple (Set a) Bool (Set a)
+forall a b c. a -&gt; b -&gt; c -&gt; StrictTriple a b c
+</span><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-var">StrictTriple</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216389"><span class="hs-identifier hs-var">lt</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216390"><span class="hs-identifier hs-var">found</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216392"><span class="hs-identifier hs-var">gt'</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-111"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-type">StrictTriple</span></a></span><span> </span><span id="local-6989586621679216396"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216396"><span class="hs-identifier hs-var">lt</span></a></span></span><span> </span><span id="local-6989586621679216397"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216397"><span class="hs-identifier hs-var">found</span></a></span></span><span> </span><span id="local-6989586621679216398"><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216398"><span class="hs-identifier hs-var">gt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; StrictTriple (Set a) Bool (Set a)
+forall a. Ord a =&gt; a -&gt; Set a -&gt; StrictTriple (Set a) Bool (Set a)
+</span><a href="Data.MapExtras.html#splitMemberSet"><span class="hs-identifier hs-var">splitMemberSet</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216382"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216386"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-112"></span><span>          </span><span class="hs-glyph">!</span><span id="local-6989586621679216399"><span class="annot"><span class="annottext">lt' :: Set a
+</span><a href="#local-6989586621679216399"><span class="hs-identifier hs-var hs-var">lt'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Set a -&gt; Set a -&gt; Set a
+forall a. a -&gt; Set a -&gt; Set a -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.link</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216384"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216385"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216396"><span class="hs-identifier hs-var">lt</span></a></span><span>
+</span><span id="line-113"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Set a -&gt; Bool -&gt; Set a -&gt; StrictTriple (Set a) Bool (Set a)
+forall a b c. a -&gt; b -&gt; c -&gt; StrictTriple a b c
+</span><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-var">StrictTriple</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216399"><span class="hs-identifier hs-var">lt'</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216397"><span class="hs-identifier hs-var">found</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216398"><span class="hs-identifier hs-var">gt</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Set a -&gt; Bool -&gt; Set a -&gt; StrictTriple (Set a) Bool (Set a)
+forall a b c. a -&gt; b -&gt; c -&gt; StrictTriple a b c
+</span><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-var">StrictTriple</span></a></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216385"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="annot"><span class="annottext">Set a
+</span><a href="#local-6989586621679216386"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-115"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#splitMemberSet"><span class="hs-pragma hs-type">splitMemberSet</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><span class="hs-comment">-- | intersetDomP p m1 m2 == Keep the key and value from m2, iff (the key is in the dom of m1) &amp;&amp; ((p key value) is true)</span></span><span>
+</span><span id="line-118"></span><span id="local-6989586621679216193"><span id="local-6989586621679216194"><span id="local-6989586621679216195"><span class="annot"><a href="Data.MapExtras.html#intersectDomP"><span class="hs-identifier hs-type">intersectDomP</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216193"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679216193"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216194"><span class="hs-identifier hs-type">v2</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216193"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216195"><span class="hs-identifier hs-type">v1</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216193"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216194"><span class="hs-identifier hs-type">v2</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216193"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216194"><span class="hs-identifier hs-type">v2</span></a></span></span></span></span><span>
+</span><span id="line-119"></span><span id="intersectDomP"><span class="annot"><span class="annottext">intersectDomP :: forall k v2 v1.
+Ord k =&gt;
+(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v2
+</span><a href="Data.MapExtras.html#intersectDomP"><span class="hs-identifier hs-var hs-var">intersectDomP</span></a></span></span><span> </span><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k v2
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Data.MapExtras.html#intersectDomP"><span class="hs-identifier hs-var">intersectDomP</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k v2
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Data.MapExtras.html#intersectDomP"><span class="hs-identifier hs-var">intersectDomP</span></a></span><span> </span><span id="local-6989586621679216402"><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><a href="#local-6989586621679216402"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679216403"><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216403"><span class="hs-identifier hs-var">t1</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216404"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216404"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679216405"><span class="annot"><span class="annottext">v2
+</span><a href="#local-6989586621679216405"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679216406"><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216406"><span class="hs-identifier hs-var">l2</span></a></span></span><span> </span><span id="local-6989586621679216407"><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216407"><span class="hs-identifier hs-var">r2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216408"><span class="hs-identifier hs-var">mb</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><a href="#local-6989586621679216402"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216404"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">v2
+</span><a href="#local-6989586621679216405"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Map k v2 -&gt; Map k v2 -&gt; Map k v2
+forall k a. k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">link</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216404"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">v2
+</span><a href="#local-6989586621679216405"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216409"><span class="hs-identifier hs-var">l1l2</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216410"><span class="hs-identifier hs-var">r1r2</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Map k v2 -&gt; Map k v2 -&gt; Map k v2
+forall k a. Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">link2</span></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216409"><span class="hs-identifier hs-var">l1l2</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216410"><span class="hs-identifier hs-var">r1r2</span></a></span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-126"></span><span>    </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-type">StrictTriple</span></a></span><span> </span><span id="local-6989586621679216413"><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216413"><span class="hs-identifier hs-var">l1</span></a></span></span><span> </span><span id="local-6989586621679216408"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216408"><span class="hs-identifier hs-var">mb</span></a></span></span><span> </span><span id="local-6989586621679216414"><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216414"><span class="hs-identifier hs-var">r1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k v1 -&gt; StrictTriple (Map k v1) Bool (Map k v1)
+forall k a.
+Ord k =&gt;
+k -&gt; Map k a -&gt; StrictTriple (Map k a) Bool (Map k a)
+</span><a href="Data.MapExtras.html#splitMemberMap"><span class="hs-identifier hs-var">splitMemberMap</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216404"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216403"><span class="hs-identifier hs-var">t1</span></a></span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-glyph">!</span><span id="local-6989586621679216409"><span class="annot"><span class="annottext">l1l2 :: Map k v2
+</span><a href="#local-6989586621679216409"><span class="hs-identifier hs-var hs-var">l1l2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v2
+forall k v2 v1.
+Ord k =&gt;
+(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v2
+</span><a href="Data.MapExtras.html#intersectDomP"><span class="hs-identifier hs-var">intersectDomP</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><a href="#local-6989586621679216402"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216413"><span class="hs-identifier hs-var">l1</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216406"><span class="hs-identifier hs-var">l2</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-glyph">!</span><span id="local-6989586621679216410"><span class="annot"><span class="annottext">r1r2 :: Map k v2
+</span><a href="#local-6989586621679216410"><span class="hs-identifier hs-var hs-var">r1r2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v2
+forall k v2 v1.
+Ord k =&gt;
+(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v2
+</span><a href="Data.MapExtras.html#intersectDomP"><span class="hs-identifier hs-var">intersectDomP</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><a href="#local-6989586621679216402"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216414"><span class="hs-identifier hs-var">r1</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216407"><span class="hs-identifier hs-var">r2</span></a></span><span>
+</span><span id="line-129"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#intersectDomP"><span class="hs-pragma hs-type">intersectDomP</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><span class="hs-comment">-- | - Similar to intersectDomP, except the Map returned has the same key as the first input map, rather than the second input map.</span></span><span>
+</span><span id="line-132"></span><span id="local-6989586621679216199"><span id="local-6989586621679216200"><span id="local-6989586621679216201"><span class="annot"><a href="Data.MapExtras.html#intersectDomPLeft"><span class="hs-identifier hs-type">intersectDomPLeft</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216199"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679216199"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216200"><span class="hs-identifier hs-type">v2</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216199"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216201"><span class="hs-identifier hs-type">v1</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216199"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216200"><span class="hs-identifier hs-type">v2</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216199"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216201"><span class="hs-identifier hs-type">v1</span></a></span></span></span></span><span>
+</span><span id="line-133"></span><span id="intersectDomPLeft"><span class="annot"><span class="annottext">intersectDomPLeft :: forall k v2 v1.
+Ord k =&gt;
+(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v1
+</span><a href="Data.MapExtras.html#intersectDomPLeft"><span class="hs-identifier hs-var hs-var">intersectDomPLeft</span></a></span></span><span> </span><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k v1
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Data.MapExtras.html#intersectDomPLeft"><span class="hs-identifier hs-var">intersectDomPLeft</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k v1
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span>
+</span><span id="line-135"></span><span class="annot"><a href="Data.MapExtras.html#intersectDomPLeft"><span class="hs-identifier hs-var">intersectDomPLeft</span></a></span><span> </span><span id="local-6989586621679216421"><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><a href="#local-6989586621679216421"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216422"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216422"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679216423"><span class="annot"><span class="annottext">v1
+</span><a href="#local-6989586621679216423"><span class="hs-identifier hs-var">v1</span></a></span></span><span> </span><span id="local-6989586621679216424"><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216424"><span class="hs-identifier hs-var">l1</span></a></span></span><span> </span><span id="local-6989586621679216425"><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216425"><span class="hs-identifier hs-var">r1</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679216426"><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216426"><span class="hs-identifier hs-var">t2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe v2
+</span><a href="#local-6989586621679216427"><span class="hs-identifier hs-var">mb</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679216428"><span class="annot"><span class="annottext">v2
+</span><a href="#local-6989586621679216428"><span class="hs-identifier hs-var">v2</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><a href="#local-6989586621679216421"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216422"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">v2
+</span><a href="#local-6989586621679216428"><span class="hs-identifier hs-var">v2</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">k -&gt; v1 -&gt; Map k v1 -&gt; Map k v1 -&gt; Map k v1
+forall k a. k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">link</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216422"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">v1
+</span><a href="#local-6989586621679216423"><span class="hs-identifier hs-var">v1</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216429"><span class="hs-identifier hs-var">l1l2</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216430"><span class="hs-identifier hs-var">r1r2</span></a></span><span>
+</span><span id="line-138"></span><span>    </span><span id="local-6989586621679216431"><span class="annot"><span class="annottext">Maybe v2
+</span><a href="#local-6989586621679216431"><span class="hs-identifier hs-var">_other</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Map k v1 -&gt; Map k v1 -&gt; Map k v1
+forall k a. Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">link2</span></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216429"><span class="hs-identifier hs-var">l1l2</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216430"><span class="hs-identifier hs-var">r1r2</span></a></span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span id="local-6989586621679216434"><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216434"><span class="hs-identifier hs-var">l2</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216427"><span class="annot"><span class="annottext">Maybe v2
+</span><a href="#local-6989586621679216427"><span class="hs-identifier hs-var">mb</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216435"><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216435"><span class="hs-identifier hs-var">r2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k v2 -&gt; (Map k v2, Maybe v2, Map k v2)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; (Map k a, Maybe a, Map k a)
+</span><span class="hs-identifier hs-var">Map.splitLookup</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216422"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216426"><span class="hs-identifier hs-var">t2</span></a></span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-glyph">!</span><span id="local-6989586621679216429"><span class="annot"><span class="annottext">l1l2 :: Map k v1
+</span><a href="#local-6989586621679216429"><span class="hs-identifier hs-var hs-var">l1l2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v1
+forall k v2 v1.
+Ord k =&gt;
+(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v1
+</span><a href="Data.MapExtras.html#intersectDomPLeft"><span class="hs-identifier hs-var">intersectDomPLeft</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><a href="#local-6989586621679216421"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216424"><span class="hs-identifier hs-var">l1</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216434"><span class="hs-identifier hs-var">l2</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-glyph">!</span><span id="local-6989586621679216430"><span class="annot"><span class="annottext">r1r2 :: Map k v1
+</span><a href="#local-6989586621679216430"><span class="hs-identifier hs-var hs-var">r1r2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v1
+forall k v2 v1.
+Ord k =&gt;
+(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v1
+</span><a href="Data.MapExtras.html#intersectDomPLeft"><span class="hs-identifier hs-var">intersectDomPLeft</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; v2 -&gt; Bool
+</span><a href="#local-6989586621679216421"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v1
+</span><a href="#local-6989586621679216425"><span class="hs-identifier hs-var">r1</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v2
+</span><a href="#local-6989586621679216435"><span class="hs-identifier hs-var">r2</span></a></span><span>
+</span><span id="line-143"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#intersectDomPLeft"><span class="hs-pragma hs-type">intersectDomPLeft</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="annot"><span class="hs-comment">-- | - fold over the intersection of a Map and a Set</span></span><span>
+</span><span id="line-146"></span><span id="local-6989586621679216207"><span id="local-6989586621679216208"><span id="local-6989586621679216209"><span class="annot"><a href="Data.MapExtras.html#intersectMapSetFold"><span class="hs-identifier hs-type">intersectMapSetFold</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216207"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679216207"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216208"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216209"><span class="hs-identifier hs-type">ans</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216209"><span class="hs-identifier hs-type">ans</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216207"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216208"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679216207"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216209"><span class="hs-identifier hs-type">ans</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216209"><span class="hs-identifier hs-type">ans</span></a></span></span></span></span><span>
+</span><span id="line-147"></span><span id="intersectMapSetFold"><span class="annot"><span class="annottext">intersectMapSetFold :: forall k v ans.
+Ord k =&gt;
+(k -&gt; v -&gt; ans -&gt; ans) -&gt; Map k v -&gt; Set k -&gt; ans -&gt; ans
+</span><a href="Data.MapExtras.html#intersectMapSetFold"><span class="hs-identifier hs-var hs-var">intersectMapSetFold</span></a></span></span><span> </span><span id="local-6989586621679216445"><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216445"><span class="hs-identifier hs-var">_accum</span></a></span></span><span> </span><span class="annot"><span class="annottext">Map k v
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216446"><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216446"><span class="hs-identifier hs-var">ans</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216446"><span class="hs-identifier hs-var">ans</span></a></span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Data.MapExtras.html#intersectMapSetFold"><span class="hs-identifier hs-var">intersectMapSetFold</span></a></span><span> </span><span id="local-6989586621679216447"><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216447"><span class="hs-identifier hs-var">_accum</span></a></span></span><span> </span><span class="annot"><span class="annottext">Map k v
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216448"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216448"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216449"><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216449"><span class="hs-identifier hs-var">ans</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Set k -&gt; Bool
+forall a. Set a -&gt; Bool
+</span><span class="hs-identifier hs-var">Set.null</span></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216448"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216449"><span class="hs-identifier hs-var">ans</span></a></span><span>
+</span><span id="line-149"></span><span class="annot"><a href="Data.MapExtras.html#intersectMapSetFold"><span class="hs-identifier hs-var">intersectMapSetFold</span></a></span><span> </span><span id="local-6989586621679216451"><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216451"><span class="hs-identifier hs-var">accum</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216452"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216452"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679216453"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679216453"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679216454"><span class="annot"><span class="annottext">Map k v
+</span><a href="#local-6989586621679216454"><span class="hs-identifier hs-var">l1</span></a></span></span><span> </span><span id="local-6989586621679216455"><span class="annot"><span class="annottext">Map k v
+</span><a href="#local-6989586621679216455"><span class="hs-identifier hs-var">l2</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679216456"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216456"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216457"><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216457"><span class="hs-identifier hs-var">ans</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><span class="annottext">(k -&gt; v -&gt; ans -&gt; ans) -&gt; Map k v -&gt; Set k -&gt; ans -&gt; ans
+forall k v ans.
+Ord k =&gt;
+(k -&gt; v -&gt; ans -&gt; ans) -&gt; Map k v -&gt; Set k -&gt; ans -&gt; ans
+</span><a href="Data.MapExtras.html#intersectMapSetFold"><span class="hs-identifier hs-var">intersectMapSetFold</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216451"><span class="hs-identifier hs-var">accum</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v
+</span><a href="#local-6989586621679216454"><span class="hs-identifier hs-var">l1</span></a></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216458"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216459"><span class="hs-identifier hs-var">addKV</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216452"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679216453"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(k -&gt; v -&gt; ans -&gt; ans) -&gt; Map k v -&gt; Set k -&gt; ans -&gt; ans
+forall k v ans.
+Ord k =&gt;
+(k -&gt; v -&gt; ans -&gt; ans) -&gt; Map k v -&gt; Set k -&gt; ans -&gt; ans
+</span><a href="Data.MapExtras.html#intersectMapSetFold"><span class="hs-identifier hs-var">intersectMapSetFold</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216451"><span class="hs-identifier hs-var">accum</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v
+</span><a href="#local-6989586621679216455"><span class="hs-identifier hs-var">l2</span></a></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216460"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216457"><span class="hs-identifier hs-var">ans</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679216458"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216458"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216463"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216463"><span class="hs-identifier hs-var">found</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216460"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216460"><span class="hs-identifier hs-var">s2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; Set k -&gt; (Set k, Bool, Set k)
+forall a. Ord a =&gt; a -&gt; Set a -&gt; (Set a, Bool, Set a)
+</span><span class="hs-identifier hs-var">Set.splitMember</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216452"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216456"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-153"></span><span>    </span><span id="local-6989586621679216459"><span class="annot"><span class="annottext">addKV :: k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216459"><span class="hs-identifier hs-var hs-var">addKV</span></a></span></span><span> </span><span id="local-6989586621679216464"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216464"><span class="hs-identifier hs-var">k1</span></a></span></span><span> </span><span id="local-6989586621679216465"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679216465"><span class="hs-identifier hs-var">v1</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216466"><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216466"><span class="hs-identifier hs-var">ans1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216463"><span class="hs-identifier hs-var">found</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216451"><span class="hs-identifier hs-var">accum</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216464"><span class="hs-identifier hs-var">k1</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679216465"><span class="hs-identifier hs-var">v1</span></a></span><span> </span><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216466"><span class="hs-identifier hs-var">ans1</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216466"><span class="hs-identifier hs-var">ans1</span></a></span><span>
+</span><span id="line-154"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#intersectMapSetFold"><span class="hs-pragma hs-type">intersectMapSetFold</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="annot"><span class="hs-comment">-- | Fold with 'accum' all those pairs in the map, not appearing in the set.</span></span><span>
+</span><span id="line-157"></span><span id="local-6989586621679216467"><span id="local-6989586621679216468"><span id="local-6989586621679216469"><span class="annot"><a href="Data.MapExtras.html#disjointMapSetFold"><span class="hs-identifier hs-type">disjointMapSetFold</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216467"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679216467"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216468"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216469"><span class="hs-identifier hs-type">ans</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216469"><span class="hs-identifier hs-type">ans</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216467"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216468"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679216467"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216469"><span class="hs-identifier hs-type">ans</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216469"><span class="hs-identifier hs-type">ans</span></a></span></span></span></span><span>
+</span><span id="line-158"></span><span id="disjointMapSetFold"><span class="annot"><span class="annottext">disjointMapSetFold :: forall k v ans.
+Ord k =&gt;
+(k -&gt; v -&gt; ans -&gt; ans) -&gt; Map k v -&gt; Set k -&gt; ans -&gt; ans
+</span><a href="Data.MapExtras.html#disjointMapSetFold"><span class="hs-identifier hs-var hs-var">disjointMapSetFold</span></a></span></span><span> </span><span id="local-6989586621679216474"><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216474"><span class="hs-identifier hs-var">_accum</span></a></span></span><span> </span><span class="annot"><span class="annottext">Map k v
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216475"><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216475"><span class="hs-identifier hs-var">ans</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216475"><span class="hs-identifier hs-var">ans</span></a></span><span>
+</span><span id="line-159"></span><span class="annot"><a href="Data.MapExtras.html#disjointMapSetFold"><span class="hs-identifier hs-var">disjointMapSetFold</span></a></span><span> </span><span id="local-6989586621679216476"><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216476"><span class="hs-identifier hs-var">accum</span></a></span></span><span> </span><span id="local-6989586621679216477"><span class="annot"><span class="annottext">Map k v
+</span><a href="#local-6989586621679216477"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679216478"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216478"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216479"><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216479"><span class="hs-identifier hs-var">ans</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Set k -&gt; Bool
+forall a. Set a -&gt; Bool
+</span><span class="hs-identifier hs-var">Set.null</span></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216478"><span class="hs-identifier hs-var">set</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(k -&gt; v -&gt; ans -&gt; ans) -&gt; ans -&gt; Map k v -&gt; ans
+forall k a b. (k -&gt; a -&gt; b -&gt; b) -&gt; b -&gt; Map k a -&gt; b
+</span><span class="hs-identifier hs-var">Map.foldrWithKey'</span></span><span> </span><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216476"><span class="hs-identifier hs-var">accum</span></a></span><span> </span><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216479"><span class="hs-identifier hs-var">ans</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v
+</span><a href="#local-6989586621679216477"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-160"></span><span class="annot"><a href="Data.MapExtras.html#disjointMapSetFold"><span class="hs-identifier hs-var">disjointMapSetFold</span></a></span><span> </span><span id="local-6989586621679216481"><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216481"><span class="hs-identifier hs-var">accum</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216482"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216482"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679216483"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679216483"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679216484"><span class="annot"><span class="annottext">Map k v
+</span><a href="#local-6989586621679216484"><span class="hs-identifier hs-var">l1</span></a></span></span><span> </span><span id="local-6989586621679216485"><span class="annot"><span class="annottext">Map k v
+</span><a href="#local-6989586621679216485"><span class="hs-identifier hs-var">l2</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679216486"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216486"><span class="hs-identifier hs-var">set</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216487"><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216487"><span class="hs-identifier hs-var">ans</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><span class="annottext">(k -&gt; v -&gt; ans -&gt; ans) -&gt; Map k v -&gt; Set k -&gt; ans -&gt; ans
+forall k v ans.
+Ord k =&gt;
+(k -&gt; v -&gt; ans -&gt; ans) -&gt; Map k v -&gt; Set k -&gt; ans -&gt; ans
+</span><a href="Data.MapExtras.html#disjointMapSetFold"><span class="hs-identifier hs-var">disjointMapSetFold</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216481"><span class="hs-identifier hs-var">accum</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v
+</span><a href="#local-6989586621679216484"><span class="hs-identifier hs-var">l1</span></a></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216488"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216489"><span class="hs-identifier hs-var">addKV</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216482"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679216483"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(k -&gt; v -&gt; ans -&gt; ans) -&gt; Map k v -&gt; Set k -&gt; ans -&gt; ans
+forall k v ans.
+Ord k =&gt;
+(k -&gt; v -&gt; ans -&gt; ans) -&gt; Map k v -&gt; Set k -&gt; ans -&gt; ans
+</span><a href="Data.MapExtras.html#disjointMapSetFold"><span class="hs-identifier hs-var">disjointMapSetFold</span></a></span><span> </span><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216481"><span class="hs-identifier hs-var">accum</span></a></span><span> </span><span class="annot"><span class="annottext">Map k v
+</span><a href="#local-6989586621679216485"><span class="hs-identifier hs-var">l2</span></a></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216490"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216487"><span class="hs-identifier hs-var">ans</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679216488"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216488"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216493"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216493"><span class="hs-identifier hs-var">found</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216490"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216490"><span class="hs-identifier hs-var">s2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; Set k -&gt; (Set k, Bool, Set k)
+forall a. Ord a =&gt; a -&gt; Set a -&gt; (Set a, Bool, Set a)
+</span><span class="hs-identifier hs-var">Set.splitMember</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216482"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216486"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-164"></span><span>    </span><span id="local-6989586621679216489"><span class="annot"><span class="annottext">addKV :: k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216489"><span class="hs-identifier hs-var hs-var">addKV</span></a></span></span><span> </span><span id="local-6989586621679216494"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216494"><span class="hs-identifier hs-var">k1</span></a></span></span><span> </span><span id="local-6989586621679216495"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679216495"><span class="hs-identifier hs-var">v1</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216496"><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216496"><span class="hs-identifier hs-var">ans1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216493"><span class="hs-identifier hs-var">found</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">k -&gt; v -&gt; ans -&gt; ans
+</span><a href="#local-6989586621679216481"><span class="hs-identifier hs-var">accum</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216494"><span class="hs-identifier hs-var">k1</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679216495"><span class="hs-identifier hs-var">v1</span></a></span><span> </span><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216496"><span class="hs-identifier hs-var">ans1</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">ans
+</span><a href="#local-6989586621679216496"><span class="hs-identifier hs-var">ans1</span></a></span><span>
+</span><span id="line-165"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#disjointMapSetFold"><span class="hs-pragma hs-type">disjointMapSetFold</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- =================================</span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- This is a slightly adjusted version of `delete` from &quot;containers&quot;</span><span>
+</span><span id="line-170"></span><span id="local-6989586621679216221"><span id="local-6989586621679216222"><span class="annot"><a href="Data.MapExtras.html#extract%23"><span class="hs-identifier hs-type">extract#</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216221"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216221"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216221"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216222"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679216222"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216221"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216222"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">#)</span></span></span><span>
+</span><span id="line-171"></span><span id="extract%23"><span class="annot"><span class="annottext">extract# :: forall k a. Ord k =&gt; k -&gt; Map k a -&gt; (# Maybe a, Map k a #)
+</span><a href="Data.MapExtras.html#extract%23"><span class="hs-identifier hs-var hs-var">extract#</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216501"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216501"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; (# Maybe a, Map k a #)
+forall {a}. Map k a -&gt; (# Maybe a, Map k a #)
+</span><a href="#local-6989586621679216502"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-173"></span><span>    </span><span id="local-6989586621679216502"><span class="annot"><span class="annottext">go :: Map k a -&gt; (# Maybe a, Map k a #)
+</span><a href="#local-6989586621679216502"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-174"></span><span>    </span><span class="annot"><a href="#local-6989586621679216502"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span id="local-6989586621679216505"><span class="annot"><span class="annottext">t :: Map k a
+</span><a href="#local-6989586621679216505"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216506"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216506"><span class="hs-identifier hs-var">kx</span></a></span></span><span> </span><span id="local-6989586621679216507"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216507"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679216508"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216508"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679216509"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216509"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-175"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">k -&gt; k -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-identifier hs-var">compare</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216501"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216506"><span class="hs-identifier hs-var">kx</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-176"></span><span>        </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">LT</span></span><span>
+</span><span id="line-177"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216510"><span class="hs-identifier hs-var">l'</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k a -&gt; Bool
+forall a. a -&gt; a -&gt; Bool
+</span><a href="Data.MapExtras.html#ptrEq"><span class="hs-operator hs-var">`ptrEq`</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216508"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679216511"><span class="hs-identifier hs-var">mVal</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216505"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-178"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216512"><span class="annot"><span class="annottext">m :: Map k a
+</span><a href="#local-6989586621679216512"><span class="hs-identifier hs-var hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+forall k a. k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">balanceR</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216506"><span class="hs-identifier hs-var">kx</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216507"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216510"><span class="hs-identifier hs-var">l'</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216509"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679216511"><span class="hs-identifier hs-var">mVal</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216512"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-179"></span><span>          </span><span class="hs-keyword">where</span><span>
+</span><span id="line-180"></span><span>            </span><span class="hs-glyph">!</span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679216511"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679216511"><span class="hs-identifier hs-var">mVal</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216510"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216510"><span class="hs-identifier hs-var">l'</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; (# Maybe a, Map k a #)
+</span><a href="#local-6989586621679216502"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216508"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-181"></span><span>        </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span>
+</span><span id="line-182"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216513"><span class="hs-identifier hs-var">r'</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k a -&gt; Bool
+forall a. a -&gt; a -&gt; Bool
+</span><a href="Data.MapExtras.html#ptrEq"><span class="hs-operator hs-var">`ptrEq`</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216509"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679216514"><span class="hs-identifier hs-var">mVal</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216505"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-183"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216515"><span class="annot"><span class="annottext">m :: Map k a
+</span><a href="#local-6989586621679216515"><span class="hs-identifier hs-var hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+forall k a. k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">balanceL</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216506"><span class="hs-identifier hs-var">kx</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216507"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216508"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216513"><span class="hs-identifier hs-var">r'</span></a></span><span> </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679216514"><span class="hs-identifier hs-var">mVal</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216515"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-184"></span><span>          </span><span class="hs-keyword">where</span><span>
+</span><span id="line-185"></span><span>            </span><span class="hs-glyph">!</span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679216514"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679216514"><span class="hs-identifier hs-var">mVal</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216513"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216513"><span class="hs-identifier hs-var">r'</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; (# Maybe a, Map k a #)
+</span><a href="#local-6989586621679216502"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216509"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-186"></span><span>        </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216516"><span class="annot"><span class="annottext">m :: Map k a
+</span><a href="#local-6989586621679216516"><span class="hs-identifier hs-var hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k a -&gt; Map k a
+forall k a. Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">glue</span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216508"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216509"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216507"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216516"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-187"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#extract%23"><span class="hs-pragma hs-type">extract#</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span class="hs-comment">-- | Just like `Map.delete`, but also returns the value if it was indeed deleted</span><span>
+</span><span id="line-190"></span><span class="hs-comment">-- from the map.</span><span>
+</span><span id="line-191"></span><span id="local-6989586621679216226"><span id="local-6989586621679216227"><span class="annot"><a href="Data.MapExtras.html#extract"><span class="hs-identifier hs-type">extract</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216226"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216226"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216226"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216227"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="#local-6989586621679216227"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216226"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216227"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-192"></span><span id="extract"><span class="annot"><span class="annottext">extract :: forall k b. Ord k =&gt; k -&gt; Map k b -&gt; (Maybe b, Map k b)
+</span><a href="Data.MapExtras.html#extract"><span class="hs-identifier hs-var hs-var">extract</span></a></span></span><span> </span><span id="local-6989586621679216520"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216520"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679216521"><span class="annot"><span class="annottext">Map k b
+</span><a href="#local-6989586621679216521"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-193"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k b -&gt; (# Maybe b, Map k b #)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; (# Maybe a, Map k a #)
+</span><a href="Data.MapExtras.html#extract%23"><span class="hs-identifier hs-var">extract#</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216520"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map k b
+</span><a href="#local-6989586621679216521"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679216522"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679216522"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216523"><span class="annot"><span class="annottext">Map k b
+</span><a href="#local-6989586621679216523"><span class="hs-identifier hs-var">m'</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b -&gt; Maybe b
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679216522"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k b
+</span><a href="#local-6989586621679216523"><span class="hs-identifier hs-var">m'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span>    </span><span class="annot"><span class="annottext">(# Maybe b, Map k b #)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe b
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k b
+</span><a href="#local-6989586621679216521"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#extract"><span class="hs-pragma hs-type">extract</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span><span class="hs-comment">-- | Partition the `Map` according to keys in the `Set`. This is equivalent to:</span><span>
+</span><span id="line-199"></span><span class="hs-comment">--</span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- &gt; extractKeys m s === (withoutKeys m s, restrictKeys m s)</span><span>
+</span><span id="line-201"></span><span id="local-6989586621679216230"><span id="local-6989586621679216231"><span class="annot"><a href="Data.MapExtras.html#extractKeys"><span class="hs-identifier hs-type">extractKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216230"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216230"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216231"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679216230"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216230"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216231"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216230"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216231"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-202"></span><span id="extractKeys"><span class="annot"><span class="annottext">extractKeys :: forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; (Map k a, Map k a)
+</span><a href="Data.MapExtras.html#extractKeys"><span class="hs-identifier hs-var hs-var">extractKeys</span></a></span></span><span> </span><span id="local-6989586621679216530"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216530"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679216531"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216531"><span class="hs-identifier hs-var">s</span></a></span></span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Set k -&gt; Int
+forall a. Set a -&gt; Int
+</span><span class="hs-identifier hs-var">Set.size</span></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216531"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Set k -&gt; (Map k a, Map k a)
+forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; (Map k a, Map k a)
+</span><a href="Data.MapExtras.html#extractKeysSmallSet"><span class="hs-identifier hs-var">extractKeysSmallSet</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216530"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216531"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-comment">-- See haddock for value 6</span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-205"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Set k -&gt; (# Map k a, Map k a #)
+forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; (# Map k a, Map k a #)
+</span><a href="Data.MapExtras.html#extractKeys%23"><span class="hs-identifier hs-var">extractKeys#</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216530"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216531"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-206"></span><span>        </span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679216535"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216535"><span class="hs-identifier hs-var">w</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216536"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216536"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216535"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216536"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#extractKeys"><span class="hs-pragma hs-type">extractKeys</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-208"></span><span>
+</span><span id="line-209"></span><span class="hs-comment">-- | It has been discovered expirementally through benchmarks that for small Set</span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- size of under around 6 elements this function performs faster than</span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- `extractKeys#`</span><span>
+</span><span id="line-212"></span><span id="local-6989586621679216537"><span id="local-6989586621679216538"><span class="annot"><a href="Data.MapExtras.html#extractKeysSmallSet"><span class="hs-identifier hs-type">extractKeysSmallSet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216537"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216537"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216538"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679216537"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216537"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216538"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216537"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216538"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-213"></span><span id="extractKeysSmallSet"><span class="annot"><span class="annottext">extractKeysSmallSet :: forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; (Map k a, Map k a)
+</span><a href="Data.MapExtras.html#extractKeysSmallSet"><span class="hs-identifier hs-var hs-var">extractKeysSmallSet</span></a></span></span><span> </span><span id="local-6989586621679216541"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216541"><span class="hs-identifier hs-var">sm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Map k a, Map k a) -&gt; k -&gt; (Map k a, Map k a))
+-&gt; (Map k a, Map k a) -&gt; Set k -&gt; (Map k a, Map k a)
+forall a b. (a -&gt; b -&gt; a) -&gt; a -&gt; Set b -&gt; a
+</span><span class="hs-identifier hs-var">Set.foldl'</span></span><span> </span><span class="annot"><span class="annottext">(Map k a, Map k a) -&gt; k -&gt; (Map k a, Map k a)
+forall {k} {a}.
+Ord k =&gt;
+(Map k a, Map k a) -&gt; k -&gt; (Map k a, Map k a)
+</span><a href="#local-6989586621679216543"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216541"><span class="hs-identifier hs-var">sm</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-214"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-215"></span><span>    </span><span id="local-6989586621679216543"><span class="annot"><span class="annottext">f :: (Map k a, Map k a) -&gt; k -&gt; (Map k a, Map k a)
+</span><a href="#local-6989586621679216543"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679216549"><span class="annot"><span class="annottext">acc :: (Map k a, Map k a)
+</span><a href="#local-6989586621679216549"><span class="hs-identifier hs-var">acc</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679216550"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216550"><span class="hs-identifier hs-var">without</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216551"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216551"><span class="hs-identifier hs-var">restrict</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679216552"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216552"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-216"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">k -&gt; Map k a -&gt; (# Maybe a, Map k a #)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; (# Maybe a, Map k a #)
+</span><a href="Data.MapExtras.html#extract%23"><span class="hs-identifier hs-var">extract#</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216552"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216550"><span class="hs-identifier hs-var">without</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-217"></span><span>        </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679216553"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216553"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216554"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216554"><span class="hs-identifier hs-var">without'</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-218"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679216557"><span class="annot"><span class="annottext">restrict' :: Map k a
+</span><a href="#local-6989586621679216557"><span class="hs-identifier hs-var hs-var">restrict'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; a -&gt; Map k a -&gt; Map k a
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.insert</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216552"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216553"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216551"><span class="hs-identifier hs-var">restrict</span></a></span><span>
+</span><span id="line-219"></span><span>           </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216554"><span class="hs-identifier hs-var">without'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216557"><span class="hs-identifier hs-var">restrict'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-220"></span><span>        </span><span class="annot"><span class="annottext">(# Maybe a, Map k a #)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Map k a, Map k a)
+</span><a href="#local-6989586621679216549"><span class="hs-identifier hs-var">acc</span></a></span><span>
+</span><span id="line-221"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#extractKeysSmallSet"><span class="hs-pragma hs-type">extractKeysSmallSet</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-222"></span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- | This function will produce exactly the same results as</span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- `extractKeysSmallSet` for all inputs, but it performs better whenever the set</span><span>
+</span><span id="line-225"></span><span class="hs-comment">-- is big.</span><span>
+</span><span id="line-226"></span><span id="local-6989586621679216235"><span id="local-6989586621679216236"><span class="annot"><a href="Data.MapExtras.html#extractKeys%23"><span class="hs-identifier hs-type">extractKeys#</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216235"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216235"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216236"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="#local-6989586621679216235"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216235"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216236"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216235"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216236"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">#)</span></span></span><span>
+</span><span id="line-227"></span><span id="extractKeys%23"><span class="annot"><span class="annottext">extractKeys# :: forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; (# Map k a, Map k a #)
+</span><a href="Data.MapExtras.html#extractKeys%23"><span class="hs-identifier hs-var hs-var">extractKeys#</span></a></span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-228"></span><span class="annot"><a href="Data.MapExtras.html#extractKeys%23"><span class="hs-identifier hs-var">extractKeys#</span></a></span><span> </span><span id="local-6989586621679216561"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216561"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><span class="hs-identifier hs-var">Set.Tip</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216561"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Tip</span></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-229"></span><span class="annot"><a href="Data.MapExtras.html#extractKeys%23"><span class="hs-identifier hs-var">extractKeys#</span></a></span><span> </span><span id="local-6989586621679216562"><span class="annot"><span class="annottext">m :: Map k a
+</span><a href="#local-6989586621679216562"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Bin</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679216563"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216563"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679216564"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216564"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679216565"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216565"><span class="hs-identifier hs-var">lm</span></a></span></span><span> </span><span id="local-6989586621679216566"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216566"><span class="hs-identifier hs-var">rm</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679216567"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216567"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(#</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216568"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216569"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="hs-special">#)</span><span>
+</span><span id="line-230"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-231"></span><span>    </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Data.MapExtras.html#StrictTriple"><span class="hs-identifier hs-type">StrictTriple</span></a></span><span> </span><span id="local-6989586621679216572"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216572"><span class="hs-identifier hs-var">ls</span></a></span></span><span> </span><span id="local-6989586621679216573"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216573"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679216574"><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216574"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">k -&gt; Set k -&gt; StrictTriple (Set k) Bool (Set k)
+forall a. Ord a =&gt; a -&gt; Set a -&gt; StrictTriple (Set a) Bool (Set a)
+</span><a href="Data.MapExtras.html#splitMemberSet"><span class="hs-identifier hs-var">splitMemberSet</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216563"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216567"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-232"></span><span>    </span><span class="hs-glyph">!</span><span id="local-6989586621679216568"><span class="annot"><span class="annottext">w :: Map k a
+</span><a href="#local-6989586621679216568"><span class="hs-identifier hs-var hs-var">w</span></a></span></span><span>
+</span><span id="line-233"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216573"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-234"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216575"><span class="hs-identifier hs-var">lmw</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k a -&gt; Bool
+forall a. a -&gt; a -&gt; Bool
+</span><a href="Data.MapExtras.html#ptrEq"><span class="hs-operator hs-var">`ptrEq`</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216565"><span class="hs-identifier hs-var">lm</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216576"><span class="hs-identifier hs-var">rmw</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k a -&gt; Bool
+forall a. a -&gt; a -&gt; Bool
+</span><a href="Data.MapExtras.html#ptrEq"><span class="hs-operator hs-var">`ptrEq`</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216566"><span class="hs-identifier hs-var">rm</span></a></span><span>
+</span><span id="line-235"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216562"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-236"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+forall k a. k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">link</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216563"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216564"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216575"><span class="hs-identifier hs-var">lmw</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216576"><span class="hs-identifier hs-var">rmw</span></a></span><span>
+</span><span id="line-237"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k a -&gt; Map k a
+forall k a. Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">link2</span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216575"><span class="hs-identifier hs-var">lmw</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216576"><span class="hs-identifier hs-var">rmw</span></a></span><span>
+</span><span id="line-238"></span><span>    </span><span class="hs-glyph">!</span><span id="local-6989586621679216569"><span class="annot"><span class="annottext">r :: Map k a
+</span><a href="#local-6989586621679216569"><span class="hs-identifier hs-var hs-var">r</span></a></span></span><span>
+</span><span id="line-239"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679216573"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-240"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216577"><span class="hs-identifier hs-var">lmr</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k a -&gt; Bool
+forall a. a -&gt; a -&gt; Bool
+</span><a href="Data.MapExtras.html#ptrEq"><span class="hs-operator hs-var">`ptrEq`</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216565"><span class="hs-identifier hs-var">lm</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216578"><span class="hs-identifier hs-var">rmr</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k a -&gt; Bool
+forall a. a -&gt; a -&gt; Bool
+</span><a href="Data.MapExtras.html#ptrEq"><span class="hs-operator hs-var">`ptrEq`</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216566"><span class="hs-identifier hs-var">rm</span></a></span><span>
+</span><span id="line-241"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216562"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-242"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+forall k a. k -&gt; a -&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">link</span></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216563"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679216564"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216577"><span class="hs-identifier hs-var">lmr</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216578"><span class="hs-identifier hs-var">rmr</span></a></span><span>
+</span><span id="line-243"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Map k a -&gt; Map k a
+forall k a. Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">link2</span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216577"><span class="hs-identifier hs-var">lmr</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216578"><span class="hs-identifier hs-var">rmr</span></a></span><span>
+</span><span id="line-244"></span><span>    </span><span class="hs-glyph">!</span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679216575"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216575"><span class="hs-identifier hs-var">lmw</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216577"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216577"><span class="hs-identifier hs-var">lmr</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Set k -&gt; (# Map k a, Map k a #)
+forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; (# Map k a, Map k a #)
+</span><a href="Data.MapExtras.html#extractKeys%23"><span class="hs-identifier hs-var">extractKeys#</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216565"><span class="hs-identifier hs-var">lm</span></a></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216572"><span class="hs-identifier hs-var">ls</span></a></span><span>
+</span><span id="line-245"></span><span>    </span><span class="hs-glyph">!</span><span class="hs-special">(#</span><span> </span><span id="local-6989586621679216576"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216576"><span class="hs-identifier hs-var">rmw</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679216578"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216578"><span class="hs-identifier hs-var">rmr</span></a></span></span><span> </span><span class="hs-special">#)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Set k -&gt; (# Map k a, Map k a #)
+forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; (# Map k a, Map k a #)
+</span><a href="Data.MapExtras.html#extractKeys%23"><span class="hs-identifier hs-var">extractKeys#</span></a></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679216566"><span class="hs-identifier hs-var">rm</span></a></span><span> </span><span class="annot"><span class="annottext">Set k
+</span><a href="#local-6989586621679216574"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-246"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#extractKeys%23"><span class="hs-pragma hs-type">extractKeys#</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span class="hs-comment">-- | Convert any foldable data structure with keys to a Map. Implemented in terms of</span><span>
+</span><span id="line-249"></span><span class="hs-comment">-- `Map.fromList`, therefore last duplicate key wins.</span><span>
+</span><span id="line-250"></span><span id="local-6989586621679216247"><span id="local-6989586621679216248"><span id="local-6989586621679216249"><span class="annot"><a href="Data.MapExtras.html#fromKeys"><span class="hs-identifier hs-type">fromKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Foldable</span></span><span> </span><span class="annot"><a href="#local-6989586621679216247"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216248"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679216248"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216249"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216247"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216248"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216248"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216249"><span class="hs-identifier hs-type">v</span></a></span></span></span></span><span>
+</span><span id="line-251"></span><span id="fromKeys"><span class="annot"><span class="annottext">fromKeys :: forall (f :: * -&gt; *) k v.
+(Foldable f, Ord k) =&gt;
+(k -&gt; v) -&gt; f k -&gt; Map k v
+</span><a href="Data.MapExtras.html#fromKeys"><span class="hs-identifier hs-var hs-var">fromKeys</span></a></span></span><span> </span><span id="local-6989586621679216588"><span class="annot"><span class="annottext">k -&gt; v
+</span><a href="#local-6989586621679216588"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679216589"><span class="annot"><span class="annottext">f k
+</span><a href="#local-6989586621679216589"><span class="hs-identifier hs-var">ks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-252"></span><span>  </span><span class="hs-comment">-- Conversion implemented in terms of list instead of an Map.insert because fromList has</span><span>
+</span><span id="line-253"></span><span>  </span><span class="hs-comment">-- a nice optimization for already sorted keys and with list fusion there should be no overhead</span><span>
+</span><span id="line-254"></span><span>  </span><span class="annot"><span class="annottext">[(k, v)] -&gt; Map k v
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216590"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">k -&gt; v
+</span><a href="#local-6989586621679216588"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216590"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679216590"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679216590"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">f k -&gt; [k]
+forall a. f a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="annot"><span class="annottext">f k
+</span><a href="#local-6989586621679216589"><span class="hs-identifier hs-var">ks</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-255"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="hs-pragma">[</span><span class="hs-pragma">2</span><span class="hs-pragma">]</span><span> </span><span class="annot"><a href="Data.MapExtras.html#fromKeys"><span class="hs-pragma hs-type">fromKeys</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-256"></span><span>
+</span><span id="line-257"></span><span class="hs-pragma">{-# RULES</span><span> </span><span class="annot"><span class="hs-pragma">&quot;fromKeys/fromSet&quot;</span></span><span> </span><span class="hs-pragma">[</span><span class="hs-pragma">~</span><span class="hs-pragma">2</span><span class="hs-pragma">]</span><span> </span><span class="annot"><a href="Data.MapExtras.html#fromKeys"><span class="hs-pragma hs-type">fromKeys</span></a></span><span> </span><span class="hs-pragma">=</span><span> </span><span class="annot"><span class="hs-pragma hs-type">Map.fromSet</span></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-258"></span><span>
+</span><span id="line-259"></span><span class="hs-comment">-- | Convert any foldable data structure with values to a Map. Implemented in terms of</span><span>
+</span><span id="line-260"></span><span class="hs-comment">-- `Map.fromList`, therefore last duplicate key wins.</span><span>
+</span><span id="line-261"></span><span id="local-6989586621679216257"><span id="local-6989586621679216258"><span id="local-6989586621679216259"><span class="annot"><a href="Data.MapExtras.html#fromElems"><span class="hs-identifier hs-type">fromElems</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-262"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Foldable</span></span><span> </span><span class="annot"><a href="#local-6989586621679216257"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679216258"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-263"></span><span>  </span><span class="hs-comment">-- | Function that will create a key from a value. Most common case is a hashing</span><span>
+</span><span id="line-264"></span><span>  </span><span class="hs-comment">-- function.</span><span>
+</span><span id="line-265"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679216259"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679216258"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-266"></span><span>  </span><span class="annot"><a href="#local-6989586621679216257"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216259"><span class="hs-identifier hs-type">v</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-267"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="#local-6989586621679216258"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679216259"><span class="hs-identifier hs-type">v</span></a></span></span></span></span><span>
+</span><span id="line-268"></span><span id="fromElems"><span class="annot"><span class="annottext">fromElems :: forall (f :: * -&gt; *) k v.
+(Foldable f, Ord k) =&gt;
+(v -&gt; k) -&gt; f v -&gt; Map k v
+</span><a href="Data.MapExtras.html#fromElems"><span class="hs-identifier hs-var hs-var">fromElems</span></a></span></span><span> </span><span id="local-6989586621679216596"><span class="annot"><span class="annottext">v -&gt; k
+</span><a href="#local-6989586621679216596"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679216597"><span class="annot"><span class="annottext">f v
+</span><a href="#local-6989586621679216597"><span class="hs-identifier hs-var">vs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-269"></span><span>  </span><span class="hs-comment">-- Conversion implemented in terms of list instead of an Map.insert because fromList has</span><span>
+</span><span id="line-270"></span><span>  </span><span class="hs-comment">-- a nice optimization for already sorted keys and with list fusion there should be no overhead</span><span>
+</span><span id="line-271"></span><span>  </span><span class="annot"><span class="annottext">[(k, v)] -&gt; Map k v
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">v -&gt; k
+</span><a href="#local-6989586621679216596"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679216598"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679216598"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679216598"><span class="annot"><span class="annottext">v
+</span><a href="#local-6989586621679216598"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">f v -&gt; [v]
+forall a. f a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="annot"><span class="annottext">f v
+</span><a href="#local-6989586621679216597"><span class="hs-identifier hs-var">vs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-272"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.MapExtras.html#fromElems"><span class="hs-pragma hs-type">fromElems</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-273"></span></pre></body></html>

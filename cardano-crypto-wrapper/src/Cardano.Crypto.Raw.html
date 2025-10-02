@@ -1,0 +1,155 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Crypto.Raw</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Raw.html#Raw"><span class="hs-identifier">Raw</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prelude</span></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- | A wrapper over 'ByteString' for signalling that a bytestring should be</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--   processed as a sequence of bytes, not as a separate entity. It's used in</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--   crypto and binary code.</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">newtype</span><span> </span><span id="Raw"><span class="annot"><a href="Cardano.Crypto.Raw.html#Raw"><span class="hs-identifier hs-var">Raw</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Raw"><span class="annot"><a href="Cardano.Crypto.Raw.html#Raw"><span class="hs-identifier hs-var">Raw</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679277328"><span id="local-6989586621679277333"><span class="annot"><span class="annottext">Raw -&gt; Raw -&gt; Bool
+(Raw -&gt; Raw -&gt; Bool) -&gt; (Raw -&gt; Raw -&gt; Bool) -&gt; Eq Raw
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Raw -&gt; Raw -&gt; Bool
+== :: Raw -&gt; Raw -&gt; Bool
+$c/= :: Raw -&gt; Raw -&gt; Bool
+/= :: Raw -&gt; Raw -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679277341"><span id="local-6989586621679277346"><span id="local-6989586621679277350"><span id="local-6989586621679277354"><span id="local-6989586621679277358"><span id="local-6989586621679277362"><span id="local-6989586621679277366"><span class="annot"><span class="annottext">Eq Raw
+Eq Raw =&gt;
+(Raw -&gt; Raw -&gt; Ordering)
+-&gt; (Raw -&gt; Raw -&gt; Bool)
+-&gt; (Raw -&gt; Raw -&gt; Bool)
+-&gt; (Raw -&gt; Raw -&gt; Bool)
+-&gt; (Raw -&gt; Raw -&gt; Bool)
+-&gt; (Raw -&gt; Raw -&gt; Raw)
+-&gt; (Raw -&gt; Raw -&gt; Raw)
+-&gt; Ord Raw
+Raw -&gt; Raw -&gt; Bool
+Raw -&gt; Raw -&gt; Ordering
+Raw -&gt; Raw -&gt; Raw
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Raw -&gt; Raw -&gt; Ordering
+compare :: Raw -&gt; Raw -&gt; Ordering
+$c&lt; :: Raw -&gt; Raw -&gt; Bool
+&lt; :: Raw -&gt; Raw -&gt; Bool
+$c&lt;= :: Raw -&gt; Raw -&gt; Bool
+&lt;= :: Raw -&gt; Raw -&gt; Bool
+$c&gt; :: Raw -&gt; Raw -&gt; Bool
+&gt; :: Raw -&gt; Raw -&gt; Bool
+$c&gt;= :: Raw -&gt; Raw -&gt; Bool
+&gt;= :: Raw -&gt; Raw -&gt; Bool
+$cmax :: Raw -&gt; Raw -&gt; Raw
+max :: Raw -&gt; Raw -&gt; Raw
+$cmin :: Raw -&gt; Raw -&gt; Raw
+min :: Raw -&gt; Raw -&gt; Raw
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679277372"><span id="local-6989586621679277378"><span id="local-6989586621679277382"><span class="annot"><span class="annottext">Int -&gt; Raw -&gt; ShowS
+[Raw] -&gt; ShowS
+Raw -&gt; String
+(Int -&gt; Raw -&gt; ShowS)
+-&gt; (Raw -&gt; String) -&gt; ([Raw] -&gt; ShowS) -&gt; Show Raw
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Raw -&gt; ShowS
+showsPrec :: Int -&gt; Raw -&gt; ShowS
+$cshow :: Raw -&gt; String
+show :: Raw -&gt; String
+$cshowList :: [Raw] -&gt; ShowS
+showList :: [Raw] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679277386"><span class="annot"><span class="annottext">Raw -&gt; ()
+(Raw -&gt; ()) -&gt; NFData Raw
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: Raw -&gt; ()
+rnf :: Raw -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679277395"><span id="local-6989586621679277400"><span id="local-6989586621679277404"><span class="annot"><span class="annottext">Typeable Raw
+Typeable Raw =&gt;
+(forall s. Decoder s Raw)
+-&gt; (forall s. Proxy Raw -&gt; Decoder s ())
+-&gt; (Proxy Raw -&gt; Text)
+-&gt; DecCBOR Raw
+Proxy Raw -&gt; Text
+forall s. Decoder s Raw
+forall a.
+Typeable a =&gt;
+(forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy Raw -&gt; Decoder s ()
+$cdecCBOR :: forall s. Decoder s Raw
+decCBOR :: forall s. Decoder s Raw
+$cdropCBOR :: forall s. Proxy Raw -&gt; Decoder s ()
+dropCBOR :: forall s. Proxy Raw -&gt; Decoder s ()
+$clabel :: Proxy Raw -&gt; Text
+label :: Proxy Raw -&gt; Text
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679277412"><span id="local-6989586621679277419"><span id="local-6989586621679277425"><span class="annot"><span class="annottext">Typeable Raw
+Typeable Raw =&gt;
+(Raw -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Raw -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [Raw] -&gt; Size)
+-&gt; EncCBOR Raw
+Raw -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Raw] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Raw -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+$cencCBOR :: Raw -&gt; Encoding
+encCBOR :: Raw -&gt; Encoding
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Raw -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Raw -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Raw] -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Raw] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679277433"><span id="local-6989586621679277438"><span class="annot"><span class="annottext">Typeable Raw
+Typeable Raw =&gt;
+(forall s. Decoder s Raw) -&gt; (Proxy Raw -&gt; Text) -&gt; FromCBOR Raw
+Proxy Raw -&gt; Text
+forall s. Decoder s Raw
+forall a.
+Typeable a =&gt;
+(forall s. Decoder s a) -&gt; (Proxy a -&gt; Text) -&gt; FromCBOR a
+$cfromCBOR :: forall s. Decoder s Raw
+fromCBOR :: forall s. Decoder s Raw
+$clabel :: Proxy Raw -&gt; Text
+label :: Proxy Raw -&gt; Text
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromCBOR</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679277446"><span id="local-6989586621679277453"><span id="local-6989586621679277459"><span class="annot"><span class="annottext">Typeable Raw
+Typeable Raw =&gt;
+(Raw -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Raw -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Raw] -&gt; Size)
+-&gt; ToCBOR Raw
+Raw -&gt; Encoding
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Raw] -&gt; Size
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Raw -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; ToCBOR a
+$ctoCBOR :: Raw -&gt; Encoding
+toCBOR :: Raw -&gt; Encoding
+$cencodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Raw -&gt; Size
+encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy Raw -&gt; Size
+$cencodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Raw] -&gt; Size
+encodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [Raw] -&gt; Size
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToCBOR</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span></pre></body></html>

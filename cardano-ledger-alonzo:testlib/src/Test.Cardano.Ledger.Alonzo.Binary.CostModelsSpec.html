@@ -1,0 +1,720 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Core.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Core</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html"><span class="hs-identifier">Cardano.Ledger.Binary.Decoding</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html"><span class="hs-identifier">Cardano.Ledger.Binary.Encoding</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html"><span class="hs-identifier">Cardano.Ledger.Plutus.CostModels</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Text</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Arbitrary.html#genEraLanguage"><span class="hs-identifier">genEraLanguage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680184774"><span class="annot"><a href="#local-6989586621680184774"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#AlonzoEraPParams"><span class="hs-identifier hs-type">AlonzoEraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680184774"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AlonzoEraScript"><span class="hs-identifier hs-type">AlonzoEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680184774"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-25"></span><span id="spec"><span class="annot"><span class="annottext">spec :: forall era. (AlonzoEraPParams era, AlonzoEraScript era) =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CBOR deserialization&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">forall era. (AlonzoEraPParams era, AlonzoEraScript era) =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#validCostModelProp"><span class="hs-identifier hs-var">validCostModelProp</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680184774"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">forall era. AlonzoEraPParams era =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#underspecifiedCostModelProp"><span class="hs-identifier hs-var">underspecifiedCostModelProp</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680184774"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="annottext">forall era. AlonzoEraPParams era =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#unknownCostModelProp"><span class="hs-identifier hs-var">unknownCostModelProp</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680184774"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><span class="annottext">String
+-&gt; (CostModels
+    -&gt; CostModels -&gt; Map Word8 [Int64] -&gt; Map Word8 [Int64] -&gt; IO ())
+-&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;applyPPUpdates&quot;</span></span><span> </span><span class="annot"><span class="annottext">((CostModels
+  -&gt; CostModels -&gt; Map Word8 [Int64] -&gt; Map Word8 [Int64] -&gt; IO ())
+ -&gt; Spec)
+-&gt; (CostModels
+    -&gt; CostModels -&gt; Map Word8 [Int64] -&gt; Map Word8 [Int64] -&gt; IO ())
+-&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680185064"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185064"><span class="hs-identifier hs-var">valid</span></a></span></span><span> </span><span id="local-6989586621680185065"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185065"><span class="hs-identifier hs-var">validUpdate</span></a></span></span><span> </span><span id="local-6989586621680185066"><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="#local-6989586621680185066"><span class="hs-identifier hs-var">unknown</span></a></span></span><span> </span><span id="local-6989586621680185067"><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="#local-6989586621680185067"><span class="hs-identifier hs-var">unknownUpdate</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-31"></span><span>    </span><span id="local-6989586621680185068"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185068"><span class="hs-identifier hs-var">original</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; IO CostModels
+forall (m :: * -&gt; *).
+MonadFail m =&gt;
+Map Word8 [Int64] -&gt; m CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#mkCostModelsLenient"><span class="hs-identifier hs-var">mkCostModelsLenient</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModels -&gt; Map Word8 [Int64]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#flattenCostModels"><span class="hs-identifier hs-var">flattenCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185064"><span class="hs-identifier hs-var">valid</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; Map Word8 [Int64] -&gt; Map Word8 [Int64]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="#local-6989586621680185066"><span class="hs-identifier hs-var">unknown</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>    </span><span id="local-6989586621680185071"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185071"><span class="hs-identifier hs-var">originalUpdate</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; IO CostModels
+forall (m :: * -&gt; *).
+MonadFail m =&gt;
+Map Word8 [Int64] -&gt; m CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#mkCostModelsLenient"><span class="hs-identifier hs-var">mkCostModelsLenient</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModels -&gt; Map Word8 [Int64]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#flattenCostModels"><span class="hs-identifier hs-var">flattenCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185065"><span class="hs-identifier hs-var">validUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; Map Word8 [Int64] -&gt; Map Word8 [Int64]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64]
+</span><a href="#local-6989586621680185067"><span class="hs-identifier hs-var">unknownUpdate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-keyword">let</span><span>
+</span><span id="line-34"></span><span>      </span><span id="local-6989586621680185126"><span class="annot"><span class="annottext">pp :: PParams era
+</span><a href="#local-6989586621680185126"><span class="hs-identifier hs-var hs-var">pp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams era
+forall era. EraPParams era =&gt; PParams era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#emptyPParams"><span class="hs-identifier hs-var">emptyPParams</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; (PParams era -&gt; PParams era) -&gt; PParams era
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(CostModels -&gt; Identity CostModels)
+-&gt; PParams era -&gt; Identity (PParams era)
+forall era. AlonzoEraPParams era =&gt; Lens' (PParams era) CostModels
+Lens' (PParams era) CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#ppCostModelsL"><span class="hs-identifier hs-var">ppCostModelsL</span></a></span><span> </span><span class="annot"><span class="annottext">((CostModels -&gt; Identity CostModels)
+ -&gt; PParams era -&gt; Identity (PParams era))
+-&gt; CostModels -&gt; PParams era -&gt; PParams era
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185068"><span class="hs-identifier hs-var">original</span></a></span><span>
+</span><span id="line-35"></span><span>      </span><span id="local-6989586621680185185"><span class="annot"><span class="annottext">ppu :: PParamsUpdate era
+</span><a href="#local-6989586621680185185"><span class="hs-identifier hs-var hs-var">ppu</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era
+forall era. EraPParams era =&gt; PParamsUpdate era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#emptyPParamsUpdate"><span class="hs-identifier hs-var">emptyPParamsUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era
+-&gt; (PParamsUpdate era -&gt; PParamsUpdate era) -&gt; PParamsUpdate era
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe CostModels -&gt; Identity (StrictMaybe CostModels))
+-&gt; PParamsUpdate era -&gt; Identity (PParamsUpdate era)
+forall era.
+AlonzoEraPParams era =&gt;
+Lens' (PParamsUpdate era) (StrictMaybe CostModels)
+Lens' (PParamsUpdate era) (StrictMaybe CostModels)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#ppuCostModelsL"><span class="hs-identifier hs-var">ppuCostModelsL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictMaybe CostModels -&gt; Identity (StrictMaybe CostModels))
+ -&gt; PParamsUpdate era -&gt; Identity (PParamsUpdate era))
+-&gt; StrictMaybe CostModels -&gt; PParamsUpdate era -&gt; PParamsUpdate era
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; StrictMaybe CostModels
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185071"><span class="hs-identifier hs-var">originalUpdate</span></a></span><span>
+</span><span id="line-36"></span><span>      </span><span id="local-6989586621680185214"><span class="annot"><span class="annottext">updated :: PParams era
+</span><a href="#local-6989586621680185214"><span class="hs-identifier hs-var hs-var">updated</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era.
+EraPParams era =&gt;
+PParams era -&gt; PParamsUpdate era -&gt; PParams era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#applyPPUpdates"><span class="hs-identifier hs-var">applyPPUpdates</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680184774"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621680185126"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621680185185"><span class="hs-identifier hs-var">ppu</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-comment">-- Starting with Conway we update CostModel on per-language basis, while before</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-comment">-- that CostModels where overwritten completely</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerLow"><span class="hs-identifier hs-var">eraProtVerLow</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680184774"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Version -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">9</span></span><span>
+</span><span id="line-40"></span><span>      </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-41"></span><span>        </span><span id="local-6989586621680185218"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185218"><span class="hs-identifier hs-var">expected</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; IO CostModels
+forall (m :: * -&gt; *).
+MonadFail m =&gt;
+Map Word8 [Int64] -&gt; m CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#mkCostModelsLenient"><span class="hs-identifier hs-var">mkCostModelsLenient</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModels -&gt; Map Word8 [Int64]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#flattenCostModels"><span class="hs-identifier hs-var">flattenCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185071"><span class="hs-identifier hs-var">originalUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; Map Word8 [Int64] -&gt; Map Word8 [Int64]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; Map Word8 [Int64]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#flattenCostModels"><span class="hs-identifier hs-var">flattenCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185068"><span class="hs-identifier hs-var">original</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>        </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621680185214"><span class="hs-identifier hs-var">updated</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; PParams era -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621680185126"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; (PParams era -&gt; PParams era) -&gt; PParams era
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(CostModels -&gt; Identity CostModels)
+-&gt; PParams era -&gt; Identity (PParams era)
+forall era. AlonzoEraPParams era =&gt; Lens' (PParams era) CostModels
+Lens' (PParams era) CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#ppCostModelsL"><span class="hs-identifier hs-var">ppCostModelsL</span></a></span><span> </span><span class="annot"><span class="annottext">((CostModels -&gt; Identity CostModels)
+ -&gt; PParams era -&gt; Identity (PParams era))
+-&gt; CostModels -&gt; PParams era -&gt; PParams era
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185218"><span class="hs-identifier hs-var">expected</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621680185214"><span class="hs-identifier hs-var">updated</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; PParams era -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621680185126"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; (PParams era -&gt; PParams era) -&gt; PParams era
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">(CostModels -&gt; Identity CostModels)
+-&gt; PParams era -&gt; Identity (PParams era)
+forall era. AlonzoEraPParams era =&gt; Lens' (PParams era) CostModels
+Lens' (PParams era) CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#ppCostModelsL"><span class="hs-identifier hs-var">ppCostModelsL</span></a></span><span> </span><span class="annot"><span class="annottext">((CostModels -&gt; Identity CostModels)
+ -&gt; PParams era -&gt; Identity (PParams era))
+-&gt; CostModels -&gt; PParams era -&gt; PParams era
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185071"><span class="hs-identifier hs-var">originalUpdate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#validCostModelProp"><span class="hs-identifier hs-type">validCostModelProp</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680185220"><span class="annot"><a href="#local-6989586621680185220"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#AlonzoEraPParams"><span class="hs-identifier hs-type">AlonzoEraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185220"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AlonzoEraScript"><span class="hs-identifier hs-type">AlonzoEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185220"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-49"></span><span id="validCostModelProp"><span class="annot"><span class="annottext">validCostModelProp :: forall era. (AlonzoEraPParams era, AlonzoEraScript era) =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#validCostModelProp"><span class="hs-identifier hs-var hs-var">validCostModelProp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;valid CostModels deserialize correctly, both independently and within PParamsUpdate&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Spec) -&gt; Property -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">Gen Language -&gt; (Language -&gt; Property) -&gt; Property
+forall a prop.
+(Show a, Testable prop) =&gt;
+Gen a -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. AlonzoEraScript era =&gt; Gen Language
+</span><a href="Test.Cardano.Ledger.Alonzo.Arbitrary.html#genEraLanguage"><span class="hs-identifier hs-var">genEraLanguage</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185220"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Language -&gt; Property) -&gt; Property)
+-&gt; (Language -&gt; Property) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621680185264"><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621680185264"><span class="hs-identifier hs-var">lang</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier hs-type">Language</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">Gen Encoding
+-&gt; (Encoding -&gt; String) -&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall prop a.
+Testable prop =&gt;
+Gen a -&gt; (a -&gt; String) -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAllShow"><span class="hs-identifier hs-var">forAllShow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Language -&gt; Gen Encoding
+</span><a href="#local-6989586621680185266"><span class="hs-identifier hs-var">genValidCostModelEnc</span></a></span><span> </span><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621680185264"><span class="hs-identifier hs-var">lang</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Encoding -&gt; String
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#showEnc"><span class="hs-identifier hs-var">showEnc</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185220"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Encoding -&gt; IO ()) -&gt; Property)
+-&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-53"></span><span>        </span><span class="hs-glyph">\</span><span id="local-6989586621680185268"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185268"><span class="hs-identifier hs-var">validCmEnc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-54"></span><span>          </span><span class="annot"><span class="annottext">forall era.
+AlonzoEraPParams era =&gt;
+Encoding
+-&gt; (Either DecoderError CostModels
+    -&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ())
+-&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#encodeAndCheckDecoded"><span class="hs-identifier hs-var">encodeAndCheckDecoded</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185220"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185268"><span class="hs-identifier hs-var">validCmEnc</span></a></span><span> </span><span class="annot"><span class="annottext">((Either DecoderError CostModels
+  -&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ())
+ -&gt; IO ())
+-&gt; (Either DecoderError CostModels
+    -&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ())
+-&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-55"></span><span>            </span><span class="hs-glyph">\</span><span id="local-6989586621680185270"><span class="annot"><span class="annottext">Either DecoderError CostModels
+</span><a href="#local-6989586621680185270"><span class="hs-identifier hs-var">cmDecoded</span></a></span></span><span> </span><span id="local-6989586621680185271"><span class="annot"><span class="annottext">Either DecoderError (PParamsUpdate era)
+</span><a href="#local-6989586621680185271"><span class="hs-identifier hs-var">ppuDecoded</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>              </span><span class="annot"><span class="annottext">Either DecoderError CostModels -&gt; IO CostModels
+forall a b. (HasCallStack, Show a) =&gt; Either a b -&gt; IO b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Expectations.html#expectRight"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError CostModels
+</span><a href="#local-6989586621680185270"><span class="hs-identifier hs-var">cmDecoded</span></a></span><span> </span><span class="annot"><span class="annottext">IO CostModels -&gt; (CostModels -&gt; IO ()) -&gt; IO ()
+forall a b. IO a -&gt; (a -&gt; IO b) -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModels -&gt; (CostModels -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; Bool
+</span><a href="#local-6989586621680185274"><span class="hs-identifier hs-var">validCm</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>              </span><span id="local-6989586621680185275"><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621680185275"><span class="hs-identifier hs-var">ppuRes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Either DecoderError (PParamsUpdate era) -&gt; IO (PParamsUpdate era)
+forall a b. (HasCallStack, Show a) =&gt; Either a b -&gt; IO b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Expectations.html#expectRight"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError (PParamsUpdate era)
+</span><a href="#local-6989586621680185271"><span class="hs-identifier hs-var">ppuDecoded</span></a></span><span>
+</span><span id="line-58"></span><span>              </span><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621680185275"><span class="hs-identifier hs-var">ppuRes</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era -&gt; (PParamsUpdate era -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680185276"><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621680185276"><span class="hs-identifier hs-var">ppu</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModels -&gt; Bool
+</span><a href="#local-6989586621680185274"><span class="hs-identifier hs-var">validCm</span></a></span><span> </span><span class="annot"><span class="annottext">(CostModels -&gt; Bool) -&gt; StrictMaybe CostModels -&gt; StrictMaybe Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621680185276"><span class="hs-identifier hs-var">ppu</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era
+-&gt; Getting
+     (StrictMaybe CostModels)
+     (PParamsUpdate era)
+     (StrictMaybe CostModels)
+-&gt; StrictMaybe CostModels
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictMaybe CostModels)
+  (PParamsUpdate era)
+  (StrictMaybe CostModels)
+forall era.
+AlonzoEraPParams era =&gt;
+Lens' (PParamsUpdate era) (StrictMaybe CostModels)
+Lens' (PParamsUpdate era) (StrictMaybe CostModels)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#ppuCostModelsL"><span class="hs-identifier hs-var">ppuCostModelsL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictMaybe Bool -&gt; StrictMaybe Bool -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; StrictMaybe Bool
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>    </span><span id="local-6989586621680185266"><span class="annot"><span class="annottext">genValidCostModelEnc :: Language -&gt; Gen Encoding
+</span><a href="#local-6989586621680185266"><span class="hs-identifier hs-var hs-var">genValidCostModelEnc</span></a></span></span><span> </span><span id="local-6989586621680185279"><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621680185279"><span class="hs-identifier hs-var">lang</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Language -&gt; Int -&gt; Gen Encoding
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#genCostModelEncForLanguage"><span class="hs-identifier hs-var">genCostModelEncForLanguage</span></a></span><span> </span><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621680185279"><span class="hs-identifier hs-var">lang</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Language -&gt; Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#costModelInitParamCount"><span class="hs-identifier hs-var">costModelInitParamCount</span></a></span><span> </span><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621680185279"><span class="hs-identifier hs-var">lang</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621680185274"><span class="annot"><span class="annottext">validCm :: CostModels -&gt; Bool
+</span><a href="#local-6989586621680185274"><span class="hs-identifier hs-var hs-var">validCm</span></a></span></span><span> </span><span id="local-6989586621680185285"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185285"><span class="hs-identifier hs-var">cms</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Language CostModel -&gt; Bool
+forall a. Map Language a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModels -&gt; Map Language CostModel
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#costModelsValid"><span class="hs-identifier hs-var">costModelsValid</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185285"><span class="hs-identifier hs-var">cms</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; Bool
+forall a. Map Word8 a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModels -&gt; Map Word8 [Int64]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#costModelsUnknown"><span class="hs-identifier hs-var">costModelsUnknown</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185285"><span class="hs-identifier hs-var">cms</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><span class="hs-comment">-- | Underspecified is a CostModel that has less than the normal number of parameters</span></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#underspecifiedCostModelProp"><span class="hs-identifier hs-type">underspecifiedCostModelProp</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680184823"><span class="annot"><a href="#local-6989586621680184823"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#AlonzoEraPParams"><span class="hs-identifier hs-type">AlonzoEraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680184823"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-69"></span><span id="underspecifiedCostModelProp"><span class="annot"><span class="annottext">underspecifiedCostModelProp :: forall era. AlonzoEraPParams era =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#underspecifiedCostModelProp"><span class="hs-identifier hs-var hs-var">underspecifiedCostModelProp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; (Language -&gt; Property) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CostModels with less than expected parameters within PParamsUpdate&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Language -&gt; Property) -&gt; Spec) -&gt; (Language -&gt; Property) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621680185328"><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621680185328"><span class="hs-identifier hs-var">lang</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier hs-type">Language</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-72"></span><span>      </span><span class="annot"><span class="annottext">Gen Encoding
+-&gt; (Encoding -&gt; String) -&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall prop a.
+Testable prop =&gt;
+Gen a -&gt; (a -&gt; String) -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAllShow"><span class="hs-identifier hs-var">forAllShow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Language -&gt; Gen Encoding
+</span><a href="#local-6989586621680185329"><span class="hs-identifier hs-var">genUnderspecifiedCostModelEnc</span></a></span><span> </span><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621680185328"><span class="hs-identifier hs-var">lang</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Encoding -&gt; String
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#showEnc"><span class="hs-identifier hs-var">showEnc</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680184823"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Encoding -&gt; IO ()) -&gt; Property)
+-&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-73"></span><span>        </span><span class="hs-glyph">\</span><span id="local-6989586621680185330"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185330"><span class="hs-identifier hs-var">shortCmEnc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>          </span><span class="annot"><span class="annottext">forall era.
+AlonzoEraPParams era =&gt;
+Encoding
+-&gt; (Either DecoderError CostModels
+    -&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ())
+-&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#encodeAndCheckDecoded"><span class="hs-identifier hs-var">encodeAndCheckDecoded</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680184823"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185330"><span class="hs-identifier hs-var">shortCmEnc</span></a></span><span> </span><span class="annot"><span class="annottext">((Either DecoderError CostModels
+  -&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ())
+ -&gt; IO ())
+-&gt; (Either DecoderError CostModels
+    -&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ())
+-&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-75"></span><span>            </span><span class="hs-glyph">\</span><span id="local-6989586621680185331"><span class="annot"><span class="annottext">Either DecoderError CostModels
+</span><a href="#local-6989586621680185331"><span class="hs-identifier hs-var">cmDecoded</span></a></span></span><span> </span><span id="local-6989586621680185332"><span class="annot"><span class="annottext">Either DecoderError (PParamsUpdate era)
+</span><a href="#local-6989586621680185332"><span class="hs-identifier hs-var">ppuDecoded</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-76"></span><span>              </span><span class="hs-comment">-- pre-Conway we are failing when deserializing underspecified costmodels</span><span>
+</span><span id="line-77"></span><span>              </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680184823"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Version -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">9</span></span><span>
+</span><span id="line-78"></span><span>                </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-79"></span><span>                  </span><span class="annot"><span class="annottext">Either DecoderError CostModels -&gt; Maybe Text -&gt; IO ()
+forall t.
+(HasCallStack, Show t) =&gt;
+Either DecoderError t -&gt; Maybe Text -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#expectDeserialiseFailure"><span class="hs-identifier hs-var">expectDeserialiseFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError CostModels
+</span><a href="#local-6989586621680185331"><span class="hs-identifier hs-var">cmDecoded</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;CostModels&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>                  </span><span class="annot"><span class="annottext">Either DecoderError (PParamsUpdate era) -&gt; Maybe Text -&gt; IO ()
+forall t.
+(HasCallStack, Show t) =&gt;
+Either DecoderError t -&gt; Maybe Text -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#expectDeserialiseFailure"><span class="hs-identifier hs-var">expectDeserialiseFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError (PParamsUpdate era)
+</span><a href="#local-6989586621680185332"><span class="hs-identifier hs-var">ppuDecoded</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-81"></span><span>                </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-82"></span><span>                  </span><span class="hs-comment">-- post-Conway, we are retaining CostModels that specified less parameters than expected</span><span>
+</span><span id="line-83"></span><span>                  </span><span id="local-6989586621680185336"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185336"><span class="hs-identifier hs-var">cmRes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Either DecoderError CostModels -&gt; IO CostModels
+forall a b. (HasCallStack, Show a) =&gt; Either a b -&gt; IO b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Expectations.html#expectRight"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError CostModels
+</span><a href="#local-6989586621680185331"><span class="hs-identifier hs-var">cmDecoded</span></a></span><span>
+</span><span id="line-84"></span><span>                  </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185336"><span class="hs-identifier hs-var">cmRes</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; (CostModels -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (CostModels -&gt; Bool) -&gt; CostModels -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Map Language CostModel -&gt; Bool
+forall a. Map Language a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">(Map Language CostModel -&gt; Bool)
+-&gt; (CostModels -&gt; Map Language CostModel) -&gt; CostModels -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; Map Language CostModel
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#costModelsValid"><span class="hs-identifier hs-var">costModelsValid</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>    </span><span id="local-6989586621680185329"><span class="annot"><span class="annottext">genUnderspecifiedCostModelEnc :: Language -&gt; Gen Encoding
+</span><a href="#local-6989586621680185329"><span class="hs-identifier hs-var hs-var">genUnderspecifiedCostModelEnc</span></a></span></span><span> </span><span id="local-6989586621680185345"><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621680185345"><span class="hs-identifier hs-var">lang</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-87"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680185346"><span class="annot"><span class="annottext">validCount :: Int
+</span><a href="#local-6989586621680185346"><span class="hs-identifier hs-var hs-var">validCount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Language -&gt; Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#costModelInitParamCount"><span class="hs-identifier hs-var">costModelInitParamCount</span></a></span><span> </span><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621680185345"><span class="hs-identifier hs-var">lang</span></a></span><span>
+</span><span id="line-88"></span><span>      </span><span id="local-6989586621680185347"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680185347"><span class="hs-identifier hs-var">count</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Int, Int) -&gt; Gen Int
+forall a. Random a =&gt; (a, a) -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#choose"><span class="hs-identifier hs-var">choose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680185346"><span class="hs-identifier hs-var">validCount</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><span class="annottext">Language -&gt; Int -&gt; Gen Encoding
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#genCostModelEncForLanguage"><span class="hs-identifier hs-var">genCostModelEncForLanguage</span></a></span><span> </span><span class="annot"><span class="annottext">Language
+</span><a href="#local-6989586621680185345"><span class="hs-identifier hs-var">lang</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680185347"><span class="hs-identifier hs-var">count</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#unknownCostModelProp"><span class="hs-identifier hs-type">unknownCostModelProp</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680185349"><span class="annot"><a href="#local-6989586621680185349"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#AlonzoEraPParams"><span class="hs-identifier hs-type">AlonzoEraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680185349"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-95"></span><span id="unknownCostModelProp"><span class="annot"><span class="annottext">unknownCostModelProp :: forall era. AlonzoEraPParams era =&gt; Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#unknownCostModelProp"><span class="hs-identifier hs-var hs-var">unknownCostModelProp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Property -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;unknown CostModels deserialize correctly within PParamsUpdate starting with Conway&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Spec) -&gt; Property -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><span class="annottext">Gen Encoding
+-&gt; (Encoding -&gt; String) -&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall prop a.
+Testable prop =&gt;
+Gen a -&gt; (a -&gt; String) -&gt; (a -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#forAllShow"><span class="hs-identifier hs-var">forAllShow</span></a></span><span> </span><span class="annot"><span class="annottext">Gen Encoding
+</span><a href="#local-6989586621680185394"><span class="hs-identifier hs-var">genUnknownCostModelEnc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Encoding -&gt; String
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#showEnc"><span class="hs-identifier hs-var">showEnc</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185349"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Encoding -&gt; IO ()) -&gt; Property)
+-&gt; (Encoding -&gt; IO ()) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-98"></span><span>      </span><span class="hs-glyph">\</span><span id="local-6989586621680185395"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185395"><span class="hs-identifier hs-var">unknownCmEnc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-99"></span><span>        </span><span class="annot"><span class="annottext">forall era.
+AlonzoEraPParams era =&gt;
+Encoding
+-&gt; (Either DecoderError CostModels
+    -&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ())
+-&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#encodeAndCheckDecoded"><span class="hs-identifier hs-var">encodeAndCheckDecoded</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185349"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185395"><span class="hs-identifier hs-var">unknownCmEnc</span></a></span><span> </span><span class="annot"><span class="annottext">((Either DecoderError CostModels
+  -&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ())
+ -&gt; IO ())
+-&gt; (Either DecoderError CostModels
+    -&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ())
+-&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-100"></span><span>          </span><span class="hs-glyph">\</span><span id="local-6989586621680185396"><span class="annot"><span class="annottext">Either DecoderError CostModels
+</span><a href="#local-6989586621680185396"><span class="hs-identifier hs-var">cmDecoded</span></a></span></span><span> </span><span id="local-6989586621680185397"><span class="annot"><span class="annottext">Either DecoderError (PParamsUpdate era)
+</span><a href="#local-6989586621680185397"><span class="hs-identifier hs-var">ppuDecoded</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-101"></span><span>            </span><span class="hs-comment">-- pre-Conway we are failing when deserializing unknown costmodels</span><span>
+</span><span id="line-102"></span><span>            </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680185349"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Version -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">9</span></span><span>
+</span><span id="line-103"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-104"></span><span>                </span><span class="annot"><span class="annottext">Either DecoderError CostModels -&gt; Maybe Text -&gt; IO ()
+forall t.
+(HasCallStack, Show t) =&gt;
+Either DecoderError t -&gt; Maybe Text -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#expectDeserialiseFailure"><span class="hs-identifier hs-var">expectDeserialiseFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError CostModels
+</span><a href="#local-6989586621680185396"><span class="hs-identifier hs-var">cmDecoded</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Maybe Text
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;CostModels&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>                </span><span class="annot"><span class="annottext">Either DecoderError (PParamsUpdate era) -&gt; Maybe Text -&gt; IO ()
+forall t.
+(HasCallStack, Show t) =&gt;
+Either DecoderError t -&gt; Maybe Text -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#expectDeserialiseFailure"><span class="hs-identifier hs-var">expectDeserialiseFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError (PParamsUpdate era)
+</span><a href="#local-6989586621680185397"><span class="hs-identifier hs-var">ppuDecoded</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Text
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-106"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-107"></span><span>                </span><span class="hs-comment">-- post-Conway, we are collecting unknown CostModels</span><span>
+</span><span id="line-108"></span><span>                </span><span id="local-6989586621680185398"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185398"><span class="hs-identifier hs-var">cmRes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Either DecoderError CostModels -&gt; IO CostModels
+forall a b. (HasCallStack, Show a) =&gt; Either a b -&gt; IO b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Expectations.html#expectRight"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError CostModels
+</span><a href="#local-6989586621680185396"><span class="hs-identifier hs-var">cmDecoded</span></a></span><span>
+</span><span id="line-109"></span><span>                </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185398"><span class="hs-identifier hs-var">cmRes</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; (CostModels -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; Bool
+</span><a href="#local-6989586621680185399"><span class="hs-identifier hs-var">unknownCm</span></a></span><span>
+</span><span id="line-110"></span><span>                </span><span id="local-6989586621680185400"><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621680185400"><span class="hs-identifier hs-var">ppuRes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Either DecoderError (PParamsUpdate era) -&gt; IO (PParamsUpdate era)
+forall a b. (HasCallStack, Show a) =&gt; Either a b -&gt; IO b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Expectations.html#expectRight"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError (PParamsUpdate era)
+</span><a href="#local-6989586621680185397"><span class="hs-identifier hs-var">ppuDecoded</span></a></span><span>
+</span><span id="line-111"></span><span>                </span><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621680185400"><span class="hs-identifier hs-var">ppuRes</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era -&gt; (PParamsUpdate era -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680185401"><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621680185401"><span class="hs-identifier hs-var">ppu</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModels -&gt; Bool
+</span><a href="#local-6989586621680185399"><span class="hs-identifier hs-var">unknownCm</span></a></span><span> </span><span class="annot"><span class="annottext">(CostModels -&gt; Bool) -&gt; StrictMaybe CostModels -&gt; StrictMaybe Bool
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621680185401"><span class="hs-identifier hs-var">ppu</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era
+-&gt; Getting
+     (StrictMaybe CostModels)
+     (PParamsUpdate era)
+     (StrictMaybe CostModels)
+-&gt; StrictMaybe CostModels
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictMaybe CostModels)
+  (PParamsUpdate era)
+  (StrictMaybe CostModels)
+forall era.
+AlonzoEraPParams era =&gt;
+Lens' (PParamsUpdate era) (StrictMaybe CostModels)
+Lens' (PParamsUpdate era) (StrictMaybe CostModels)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#ppuCostModelsL"><span class="hs-identifier hs-var">ppuCostModelsL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictMaybe Bool -&gt; StrictMaybe Bool -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; StrictMaybe Bool
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>    </span><span id="local-6989586621680185394"><span class="annot"><span class="annottext">genUnknownCostModelEnc :: Gen Encoding
+</span><a href="#local-6989586621680185394"><span class="hs-identifier hs-var hs-var">genUnknownCostModelEnc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-114"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680185421"><span class="annot"><span class="annottext">firstUnknownLang :: Int
+</span><a href="#local-6989586621680185421"><span class="hs-identifier hs-var hs-var">firstUnknownLang</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Language -&gt; Int
+forall a. Enum a =&gt; a -&gt; Int
+</span><span class="hs-identifier hs-var">fromEnum</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier hs-type">Language</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-115"></span><span>      </span><span id="local-6989586621680185425"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621680185425"><span class="hs-identifier hs-var">lang</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Word8, Word8) -&gt; Gen Word8
+forall a. Random a =&gt; (a, a) -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#choose"><span class="hs-identifier hs-var">choose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680185421"><span class="hs-identifier hs-var">firstUnknownLang</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Modifiers.html#NonNegative"><span class="hs-identifier hs-type">NonNegative</span></a></span><span> </span><span id="local-6989586621680185427"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680185427"><span class="hs-identifier hs-var">count</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (NonNegative Int)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-117"></span><span>      </span><span class="annot"><span class="annottext">Word8 -&gt; Int -&gt; Gen Encoding
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#genCostModelsEnc"><span class="hs-identifier hs-var">genCostModelsEnc</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621680185425"><span class="hs-identifier hs-var">lang</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680185427"><span class="hs-identifier hs-var">count</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621680185399"><span class="annot"><span class="annottext">unknownCm :: CostModels -&gt; Bool
+</span><a href="#local-6989586621680185399"><span class="hs-identifier hs-var hs-var">unknownCm</span></a></span></span><span> </span><span id="local-6989586621680185432"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185432"><span class="hs-identifier hs-var">cms</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">Map Language CostModel -&gt; Bool
+forall a. Map Language a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModels -&gt; Map Language CostModel
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#costModelsValid"><span class="hs-identifier hs-var">costModelsValid</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185432"><span class="hs-identifier hs-var">cms</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Word8 [Int64] -&gt; Bool
+forall a. Map Word8 a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModels -&gt; Map Word8 [Int64]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#costModelsUnknown"><span class="hs-identifier hs-var">costModelsUnknown</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621680185432"><span class="hs-identifier hs-var">cms</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#encodeAndCheckDecoded"><span class="hs-identifier hs-type">encodeAndCheckDecoded</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680184859"><span class="annot"><a href="#local-6989586621680184859"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-123"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#AlonzoEraPParams"><span class="hs-identifier hs-type">AlonzoEraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680184859"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#CostModels"><span class="hs-identifier hs-type">CostModels</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParamsUpdate"><span class="hs-identifier hs-type">PParamsUpdate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680184859"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span id="encodeAndCheckDecoded"><span class="annot"><span class="annottext">encodeAndCheckDecoded :: forall era.
+AlonzoEraPParams era =&gt;
+Encoding
+-&gt; (Either DecoderError CostModels
+    -&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ())
+-&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#encodeAndCheckDecoded"><span class="hs-identifier hs-var hs-var">encodeAndCheckDecoded</span></a></span></span><span> </span><span id="local-6989586621680185453"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185453"><span class="hs-identifier hs-var">cmEnc</span></a></span></span><span> </span><span id="local-6989586621680185454"><span class="annot"><span class="annottext">Either DecoderError CostModels
+-&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ()
+</span><a href="#local-6989586621680185454"><span class="hs-identifier hs-var">check</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680185467"><span class="annot"><span class="annottext">ver :: Version
+</span><a href="#local-6989586621680185467"><span class="hs-identifier hs-var hs-var">ver</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680184859"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-129"></span><span>      </span><span id="local-6989586621680185473"><span class="annot"><span class="annottext">ppuEnc :: Encoding
+</span><a href="#local-6989586621680185473"><span class="hs-identifier hs-var hs-var">ppuEnc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Int Encoding -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Encoding -&gt; Map Int Encoding
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">18</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185453"><span class="hs-identifier hs-var">cmEnc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>      </span><span id="local-6989586621680185477"><span class="annot"><span class="annottext">cmBytes :: ByteString
+</span><a href="#local-6989586621680185477"><span class="hs-identifier hs-var hs-var">cmBytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621680185467"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185453"><span class="hs-identifier hs-var">cmEnc</span></a></span><span>
+</span><span id="line-131"></span><span>      </span><span id="local-6989586621680185480"><span class="annot"><span class="annottext">ppuBytes :: ByteString
+</span><a href="#local-6989586621680185480"><span class="hs-identifier hs-var hs-var">ppuBytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621680185467"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185473"><span class="hs-identifier hs-var">ppuEnc</span></a></span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><span class="annottext">Either DecoderError CostModels
+-&gt; Either DecoderError (PParamsUpdate era) -&gt; IO ()
+</span><a href="#local-6989586621680185454"><span class="hs-identifier hs-var">check</span></a></span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a.
+DecCBOR a =&gt;
+Version -&gt; ByteString -&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull"><span class="hs-identifier hs-var">decodeFull</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#CostModels"><span class="hs-identifier hs-type">CostModels</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621680185467"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680185477"><span class="hs-identifier hs-var">cmBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a.
+DecCBOR a =&gt;
+Version -&gt; ByteString -&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull"><span class="hs-identifier hs-var">decodeFull</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParamsUpdate"><span class="hs-identifier hs-type">PParamsUpdate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680184859"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621680185467"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621680185480"><span class="hs-identifier hs-var">ppuBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#genCostModelsEnc"><span class="hs-identifier hs-type">genCostModelsEnc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span>
+</span><span id="line-137"></span><span id="genCostModelsEnc"><span class="annot"><span class="annottext">genCostModelsEnc :: Word8 -&gt; Int -&gt; Gen Encoding
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#genCostModelsEnc"><span class="hs-identifier hs-var hs-var">genCostModelsEnc</span></a></span></span><span> </span><span id="local-6989586621680185482"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621680185482"><span class="hs-identifier hs-var">lang</span></a></span></span><span> </span><span id="local-6989586621680185483"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680185483"><span class="hs-identifier hs-var">count</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-138"></span><span>  </span><span id="local-6989586621680185484"><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621680185484"><span class="hs-identifier hs-var">values</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Gen Int -&gt; Gen [Int]
+forall a. Int -&gt; Gen a -&gt; Gen [a]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#vectorOf"><span class="hs-identifier hs-var">vectorOf</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621680185483"><span class="hs-identifier hs-var">count</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Gen Int
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>  </span><span class="annot"><span class="annottext">Encoding -&gt; Gen Encoding
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; Gen Encoding) -&gt; Encoding -&gt; Gen Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map Word8 [Int] -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Word8 [Int] -&gt; Encoding) -&gt; Map Word8 [Int] -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; [Int] -&gt; Map Word8 [Int]
+forall k a. k -&gt; a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.singleton</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621680185482"><span class="hs-identifier hs-var">lang</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621680185484"><span class="hs-identifier hs-var">values</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#genCostModelEncForLanguage"><span class="hs-identifier hs-type">genCostModelEncForLanguage</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier hs-type">Language</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span>
+</span><span id="line-142"></span><span id="genCostModelEncForLanguage"><span class="annot"><span class="annottext">genCostModelEncForLanguage :: Language -&gt; Int -&gt; Gen Encoding
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#genCostModelEncForLanguage"><span class="hs-identifier hs-var hs-var">genCostModelEncForLanguage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Int -&gt; Gen Encoding
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#genCostModelsEnc"><span class="hs-identifier hs-var">genCostModelsEnc</span></a></span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Int -&gt; Gen Encoding)
+-&gt; (Language -&gt; Word8) -&gt; Language -&gt; Int -&gt; Gen Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word8) -&gt; (Language -&gt; Int) -&gt; Language -&gt; Word8
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Language -&gt; Int
+forall a. Enum a =&gt; a -&gt; Int
+</span><span class="hs-identifier hs-var">fromEnum</span></span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span id="local-6989586621680184879"><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#expectDeserialiseFailure"><span class="hs-identifier hs-type">expectDeserialiseFailure</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621680184879"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680184879"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-145"></span><span id="expectDeserialiseFailure"><span class="annot"><span class="annottext">expectDeserialiseFailure :: forall t.
+(HasCallStack, Show t) =&gt;
+Either DecoderError t -&gt; Maybe Text -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#expectDeserialiseFailure"><span class="hs-identifier hs-var hs-var">expectDeserialiseFailure</span></a></span></span><span> </span><span id="local-6989586621680185497"><span class="annot"><span class="annottext">Either DecoderError t
+</span><a href="#local-6989586621680185497"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span id="local-6989586621680185498"><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621680185498"><span class="hs-identifier hs-var">expectedTxt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-146"></span><span>  </span><span id="local-6989586621680185499"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621680185499"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Either DecoderError t -&gt; IO DecoderError
+forall b a. (HasCallStack, Show b) =&gt; Either a b -&gt; IO a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/ImpSpec-0.1.0.0-6ea58913ddd2445c6ef0a09c850f2b8e9ef4a818708b4f2c102bd4532b2effb1/share/doc/html/src/Test.ImpSpec.Expectations.html#expectLeft"><span class="hs-identifier hs-var">expectLeft</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError t
+</span><a href="#local-6989586621680185497"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-147"></span><span>  </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621680185499"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; (DecoderError -&gt; Bool) -&gt; IO ()
+forall a. (HasCallStack, Show a) =&gt; a -&gt; (a -&gt; Bool) -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldSatisfy"><span class="hs-operator hs-var">`shouldSatisfy`</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-148"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderErrorDeserialiseFailure"><span class="hs-identifier hs-type">DecoderErrorDeserialiseFailure</span></a></span><span> </span><span id="local-6989586621680185502"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680185502"><span class="hs-identifier hs-var">txt</span></a></span></span><span> </span><span class="annot"><span class="annottext">DeserialiseFailure
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; (Text -&gt; Bool) -&gt; Maybe Text -&gt; Bool
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><span class="hs-identifier hs-var">maybe</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621680185502"><span class="hs-identifier hs-var">txt</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Text
+</span><a href="#local-6989586621680185498"><span class="hs-identifier hs-var">expectedTxt</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span class="annot"><span class="annottext">DecoderError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#showEnc"><span class="hs-identifier hs-type">showEnc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680184858"><span class="annot"><a href="#local-6989586621680184858"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680184858"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-152"></span><span id="showEnc"><span class="annot"><span class="annottext">showEnc :: forall era. Era era =&gt; Encoding -&gt; String
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec.html#showEnc"><span class="hs-identifier hs-var hs-var">showEnc</span></a></span></span><span> </span><span id="local-6989586621680185508"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185508"><span class="hs-identifier hs-var">enc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; String) -&gt; Encoding -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#toPlainEncoding"><span class="hs-identifier hs-var">toPlainEncoding</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621680184858"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621680185508"><span class="hs-identifier hs-var">enc</span></a></span><span>
+</span><span id="line-153"></span></pre></body></html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Allegra.UTxO</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Allegra.Core.html"><span class="hs-identifier">Cardano.Ledger.Allegra.Core</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Allegra.Era.html"><span class="hs-identifier">Cardano.Ledger.Allegra.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier">AllegraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Allegra.State.html"><span class="hs-identifier">Cardano.Ledger.Allegra.State</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html"><span class="hs-identifier">Cardano.Ledger.Shelley.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#ShelleyScriptsNeeded"><span class="hs-identifier">ShelleyScriptsNeeded</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#getConsumedCoin"><span class="hs-identifier">getConsumedCoin</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#getShelleyMinFeeTxUtxo"><span class="hs-identifier">getShelleyMinFeeTxUtxo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#getShelleyScriptsNeeded"><span class="hs-identifier">getShelleyScriptsNeeded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#getShelleyWitsVKeyNeeded"><span class="hs-identifier">getShelleyWitsVKeyNeeded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#shelleyConsumed"><span class="hs-identifier">shelleyConsumed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#shelleyProducedValue"><span class="hs-identifier">shelleyProducedValue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.html"><span class="hs-identifier">Cardano.Ledger.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#EraUTxO"><span class="hs-identifier">EraUTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#ScriptsProvided"><span class="hs-identifier">ScriptsProvided</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#EraUTxO"><span class="hs-identifier hs-type">EraUTxO</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ScriptsNeeded"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#ScriptsNeeded"><span class="hs-identifier hs-var">ScriptsNeeded</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#ShelleyScriptsNeeded"><span class="hs-identifier hs-type">ShelleyScriptsNeeded</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679300741"><span class="annot"><span class="annottext">consumed :: PParams AllegraEra
+-&gt; CertState AllegraEra
+-&gt; UTxO AllegraEra
+-&gt; TxBody AllegraEra
+-&gt; Value AllegraEra
+</span><a href="#local-6989586621679300741"><span class="hs-identifier hs-var hs-var hs-var hs-var">consumed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams AllegraEra
+-&gt; CertState AllegraEra
+-&gt; UTxO AllegraEra
+-&gt; TxBody AllegraEra
+-&gt; Value AllegraEra
+forall era.
+(EraUTxO era, EraCertState era) =&gt;
+PParams era -&gt; CertState era -&gt; UTxO era -&gt; TxBody era -&gt; Value era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#shelleyConsumed"><span class="hs-identifier hs-var">shelleyConsumed</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679300745"><span class="annot"><span class="annottext">getConsumedValue :: PParams AllegraEra
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; (Credential 'DRepRole -&gt; Maybe Coin)
+-&gt; UTxO AllegraEra
+-&gt; TxBody AllegraEra
+-&gt; Value AllegraEra
+</span><a href="#local-6989586621679300745"><span class="hs-identifier hs-var hs-var hs-var hs-var">getConsumedValue</span></a></span></span><span> </span><span id="local-6989586621679300747"><span class="annot"><span class="annottext">PParams AllegraEra
+</span><a href="#local-6989586621679300747"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679300748"><span class="annot"><span class="annottext">Credential 'Staking -&gt; Maybe Coin
+</span><a href="#local-6989586621679300748"><span class="hs-identifier hs-var">lookupKeyDeposit</span></a></span></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole -&gt; Maybe Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams AllegraEra
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; UTxO AllegraEra
+-&gt; TxBody AllegraEra
+-&gt; Coin
+forall era.
+EraTxBody era =&gt;
+PParams era
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; UTxO era
+-&gt; TxBody era
+-&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#getConsumedCoin"><span class="hs-identifier hs-var">getConsumedCoin</span></a></span><span> </span><span class="annot"><span class="annottext">PParams AllegraEra
+</span><a href="#local-6989586621679300747"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; Maybe Coin
+</span><a href="#local-6989586621679300748"><span class="hs-identifier hs-var">lookupKeyDeposit</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679300750"><span class="annot"><span class="annottext">getProducedValue :: PParams AllegraEra
+-&gt; (KeyHash 'StakePool -&gt; Bool)
+-&gt; TxBody AllegraEra
+-&gt; Value AllegraEra
+</span><a href="#local-6989586621679300750"><span class="hs-identifier hs-var hs-var hs-var hs-var">getProducedValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams AllegraEra
+-&gt; (KeyHash 'StakePool -&gt; Bool)
+-&gt; TxBody AllegraEra
+-&gt; Value AllegraEra
+forall era.
+EraTxBody era =&gt;
+PParams era
+-&gt; (KeyHash 'StakePool -&gt; Bool) -&gt; TxBody era -&gt; Value era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#shelleyProducedValue"><span class="hs-identifier hs-var">shelleyProducedValue</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679300758"><span class="annot"><span class="annottext">getScriptsProvided :: UTxO AllegraEra -&gt; Tx AllegraEra -&gt; ScriptsProvided AllegraEra
+</span><a href="#local-6989586621679300758"><span class="hs-identifier hs-var hs-var hs-var hs-var">getScriptsProvided</span></a></span></span><span> </span><span class="annot"><span class="annottext">UTxO AllegraEra
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679300760"><span class="annot"><span class="annottext">Tx AllegraEra
+</span><a href="#local-6989586621679300760"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script AllegraEra) -&gt; ScriptsProvided AllegraEra
+forall era. Map ScriptHash (Script era) -&gt; ScriptsProvided era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#ScriptsProvided"><span class="hs-identifier hs-var">ScriptsProvided</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx AllegraEra
+</span><a href="#local-6989586621679300760"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx AllegraEra
+-&gt; Getting
+     (Map ScriptHash (Timelock AllegraEra))
+     (Tx AllegraEra)
+     (Map ScriptHash (Timelock AllegraEra))
+-&gt; Map ScriptHash (Timelock AllegraEra)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(TxWits AllegraEra
+ -&gt; Const
+      (Map ScriptHash (Timelock AllegraEra)) (TxWits AllegraEra))
+-&gt; Tx AllegraEra
+-&gt; Const (Map ScriptHash (Timelock AllegraEra)) (Tx AllegraEra)
+(ShelleyTxWits AllegraEra
+ -&gt; Const
+      (Map ScriptHash (Timelock AllegraEra)) (ShelleyTxWits AllegraEra))
+-&gt; Tx AllegraEra
+-&gt; Const (Map ScriptHash (Timelock AllegraEra)) (Tx AllegraEra)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxWits era)
+Lens' (Tx AllegraEra) (TxWits AllegraEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-var">witsTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((ShelleyTxWits AllegraEra
+  -&gt; Const
+       (Map ScriptHash (Timelock AllegraEra)) (ShelleyTxWits AllegraEra))
+ -&gt; Tx AllegraEra
+ -&gt; Const (Map ScriptHash (Timelock AllegraEra)) (Tx AllegraEra))
+-&gt; ((Map ScriptHash (Timelock AllegraEra)
+     -&gt; Const
+          (Map ScriptHash (Timelock AllegraEra))
+          (Map ScriptHash (Timelock AllegraEra)))
+    -&gt; ShelleyTxWits AllegraEra
+    -&gt; Const
+         (Map ScriptHash (Timelock AllegraEra)) (ShelleyTxWits AllegraEra))
+-&gt; Getting
+     (Map ScriptHash (Timelock AllegraEra))
+     (Tx AllegraEra)
+     (Map ScriptHash (Timelock AllegraEra))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Map ScriptHash (Script AllegraEra)
+ -&gt; Const
+      (Map ScriptHash (Timelock AllegraEra))
+      (Map ScriptHash (Script AllegraEra)))
+-&gt; TxWits AllegraEra
+-&gt; Const (Map ScriptHash (Timelock AllegraEra)) (TxWits AllegraEra)
+(Map ScriptHash (Timelock AllegraEra)
+ -&gt; Const
+      (Map ScriptHash (Timelock AllegraEra))
+      (Map ScriptHash (Timelock AllegraEra)))
+-&gt; ShelleyTxWits AllegraEra
+-&gt; Const
+     (Map ScriptHash (Timelock AllegraEra)) (ShelleyTxWits AllegraEra)
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Map ScriptHash (Script era))
+Lens' (TxWits AllegraEra) (Map ScriptHash (Script AllegraEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#scriptTxWitsL"><span class="hs-identifier hs-var">scriptTxWitsL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679300767"><span class="annot"><span class="annottext">getScriptsNeeded :: UTxO AllegraEra -&gt; TxBody AllegraEra -&gt; ScriptsNeeded AllegraEra
+</span><a href="#local-6989586621679300767"><span class="hs-identifier hs-var hs-var hs-var hs-var">getScriptsNeeded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO AllegraEra -&gt; TxBody AllegraEra -&gt; ScriptsNeeded AllegraEra
+UTxO AllegraEra
+-&gt; TxBody AllegraEra -&gt; ShelleyScriptsNeeded AllegraEra
+forall era.
+EraTxBody era =&gt;
+UTxO era -&gt; TxBody era -&gt; ShelleyScriptsNeeded era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#getShelleyScriptsNeeded"><span class="hs-identifier hs-var">getShelleyScriptsNeeded</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679300769"><span class="annot"><span class="annottext">getScriptsHashesNeeded :: ScriptsNeeded AllegraEra -&gt; Set ScriptHash
+</span><a href="#local-6989586621679300769"><span class="hs-identifier hs-var hs-var hs-var hs-var">getScriptsHashesNeeded</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#ShelleyScriptsNeeded"><span class="hs-identifier hs-type">ShelleyScriptsNeeded</span></a></span><span> </span><span id="local-6989586621679300772"><span class="annot"><span class="annottext">Set ScriptHash
+</span><a href="#local-6989586621679300772"><span class="hs-identifier hs-var">scriptHashes</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set ScriptHash
+</span><a href="#local-6989586621679300772"><span class="hs-identifier hs-var">scriptHashes</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621679300777"><span class="annot"><span class="annottext">getWitsVKeyNeeded :: CertState AllegraEra
+-&gt; UTxO AllegraEra -&gt; TxBody AllegraEra -&gt; Set (KeyHash 'Witness)
+</span><a href="#local-6989586621679300777"><span class="hs-identifier hs-var hs-var hs-var hs-var">getWitsVKeyNeeded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CertState AllegraEra
+-&gt; UTxO AllegraEra -&gt; TxBody AllegraEra -&gt; Set (KeyHash 'Witness)
+forall era.
+(EraTx era, ShelleyEraTxBody era, EraCertState era) =&gt;
+CertState era -&gt; UTxO era -&gt; TxBody era -&gt; Set (KeyHash 'Witness)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#getShelleyWitsVKeyNeeded"><span class="hs-identifier hs-var">getShelleyWitsVKeyNeeded</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679300780"><span class="annot"><span class="annottext">getMinFeeTxUtxo :: PParams AllegraEra -&gt; Tx AllegraEra -&gt; UTxO AllegraEra -&gt; Coin
+</span><a href="#local-6989586621679300780"><span class="hs-identifier hs-var hs-var hs-var hs-var">getMinFeeTxUtxo</span></a></span></span><span> </span><span id="local-6989586621679300782"><span class="annot"><span class="annottext">PParams AllegraEra
+</span><a href="#local-6989586621679300782"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679300783"><span class="annot"><span class="annottext">Tx AllegraEra
+</span><a href="#local-6989586621679300783"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="annot"><span class="annottext">UTxO AllegraEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams AllegraEra -&gt; Tx AllegraEra -&gt; Coin
+forall era. EraTx era =&gt; PParams era -&gt; Tx era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#getShelleyMinFeeTxUtxo"><span class="hs-identifier hs-var">getShelleyMinFeeTxUtxo</span></a></span><span> </span><span class="annot"><span class="annottext">PParams AllegraEra
+</span><a href="#local-6989586621679300782"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">Tx AllegraEra
+</span><a href="#local-6989586621679300783"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-42"></span></pre></body></html>

@@ -1,0 +1,799 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE QuantifiedConstraints #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Dijkstra.Arbitrary</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Allegra.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Scripts.html#RequireTimeExpire"><span class="hs-identifier">RequireTimeExpire</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Scripts.html#RequireTimeStart"><span class="hs-identifier">RequireTimeStart</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier">StrictMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Core.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Core</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier">DijkstraGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.PParams.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.PParams.html#DijkstraPParams"><span class="hs-identifier">DijkstraPParams</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.PParams.html#UpgradeDijkstraPParams"><span class="hs-identifier">UpgradeDijkstraPParams</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Scripts</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Transition.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Transition</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier">TransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Tx.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier">Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.TxBody.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier">TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.TxCert.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.TxCert</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireSignature"><span class="hs-identifier">RequireSignature</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Identity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Identity</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.html"><span class="hs-identifier">Generic.Random</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.Internal.Generic.html#genericArbitraryU"><span class="hs-identifier">genericArbitraryU</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/l/testlib/doc/html/cardano-ledger-allegra/src/Test.Cardano.Ledger.Allegra.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Allegra.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/l/testlib/doc/html/cardano-ledger-allegra/src/Test.Cardano.Ledger.Allegra.Arbitrary.html#maxTimelockDepth"><span class="hs-identifier">maxTimelockDepth</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/l/testlib/doc/html/cardano-ledger-conway/src/Test.Cardano.Ledger.Conway.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Arbitrary.html#sizedNativeScriptGens"><span class="hs-identifier">sizedNativeScriptGens</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679636704"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.PParams.html#DijkstraPParams"><span class="hs-identifier hs-type">DijkstraPParams</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679637129"><span class="annot"><span class="annottext">arbitrary :: Gen (DijkstraPParams Identity DijkstraEra)
+</span><a href="#local-6989586621679637129"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen (DijkstraPParams Identity DijkstraEra)
+forall a. (GArbitrary UnsizedOpts a, GUniformWeight a) =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.Internal.Generic.html#genericArbitraryU"><span class="hs-identifier hs-var">genericArbitraryU</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679637133"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.PParams.html#DijkstraPParams"><span class="hs-identifier hs-type">DijkstraPParams</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">StrictMaybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679637544"><span class="annot"><span class="annottext">arbitrary :: Gen (DijkstraPParams StrictMaybe DijkstraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen (DijkstraPParams StrictMaybe DijkstraEra)
+forall a. (GArbitrary UnsizedOpts a, GUniformWeight a) =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.Internal.Generic.html#genericArbitraryU"><span class="hs-identifier hs-var">genericArbitraryU</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679637547"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679637660"><span class="annot"><span class="annottext">arbitrary :: Gen (TxBody DijkstraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">Set TxIn
+-&gt; Set TxIn
+-&gt; Set TxIn
+-&gt; StrictSeq (Sized (TxOut DijkstraEra))
+-&gt; StrictMaybe (Sized (TxOut DijkstraEra))
+-&gt; StrictMaybe Coin
+-&gt; OSet (TxCert DijkstraEra)
+-&gt; Withdrawals
+-&gt; Coin
+-&gt; ValidityInterval
+-&gt; OSet (Credential 'Guard)
+-&gt; MultiAsset
+-&gt; StrictMaybe ScriptIntegrityHash
+-&gt; StrictMaybe TxAuxDataHash
+-&gt; StrictMaybe Network
+-&gt; VotingProcedures DijkstraEra
+-&gt; OSet (ProposalProcedure DijkstraEra)
+-&gt; StrictMaybe Coin
+-&gt; Coin
+-&gt; TxBody DijkstraEra
+Set TxIn
+-&gt; Set TxIn
+-&gt; Set TxIn
+-&gt; StrictSeq (Sized (BabbageTxOut DijkstraEra))
+-&gt; StrictMaybe (Sized (BabbageTxOut DijkstraEra))
+-&gt; StrictMaybe Coin
+-&gt; OSet (DijkstraTxCert DijkstraEra)
+-&gt; Withdrawals
+-&gt; Coin
+-&gt; ValidityInterval
+-&gt; OSet (Credential 'Guard)
+-&gt; MultiAsset
+-&gt; StrictMaybe ScriptIntegrityHash
+-&gt; StrictMaybe TxAuxDataHash
+-&gt; StrictMaybe Network
+-&gt; VotingProcedures DijkstraEra
+-&gt; OSet (ProposalProcedure DijkstraEra)
+-&gt; StrictMaybe Coin
+-&gt; Coin
+-&gt; TxBody DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.TxBody.html#DijkstraTxBody"><span class="hs-identifier hs-var">DijkstraTxBody</span></a></span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">(Set TxIn
+ -&gt; Set TxIn
+ -&gt; Set TxIn
+ -&gt; StrictSeq (Sized (BabbageTxOut DijkstraEra))
+ -&gt; StrictMaybe (Sized (BabbageTxOut DijkstraEra))
+ -&gt; StrictMaybe Coin
+ -&gt; OSet (DijkstraTxCert DijkstraEra)
+ -&gt; Withdrawals
+ -&gt; Coin
+ -&gt; ValidityInterval
+ -&gt; OSet (Credential 'Guard)
+ -&gt; MultiAsset
+ -&gt; StrictMaybe ScriptIntegrityHash
+ -&gt; StrictMaybe TxAuxDataHash
+ -&gt; StrictMaybe Network
+ -&gt; VotingProcedures DijkstraEra
+ -&gt; OSet (ProposalProcedure DijkstraEra)
+ -&gt; StrictMaybe Coin
+ -&gt; Coin
+ -&gt; TxBody DijkstraEra)
+-&gt; Gen (Set TxIn)
+-&gt; Gen
+     (Set TxIn
+      -&gt; Set TxIn
+      -&gt; StrictSeq (Sized (BabbageTxOut DijkstraEra))
+      -&gt; StrictMaybe (Sized (BabbageTxOut DijkstraEra))
+      -&gt; StrictMaybe Coin
+      -&gt; OSet (DijkstraTxCert DijkstraEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; OSet (Credential 'Guard)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Set TxIn)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Set TxIn
+   -&gt; Set TxIn
+   -&gt; StrictSeq (Sized (BabbageTxOut DijkstraEra))
+   -&gt; StrictMaybe (Sized (BabbageTxOut DijkstraEra))
+   -&gt; StrictMaybe Coin
+   -&gt; OSet (DijkstraTxCert DijkstraEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; OSet (Credential 'Guard)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen (Set TxIn)
+-&gt; Gen
+     (Set TxIn
+      -&gt; StrictSeq (Sized (BabbageTxOut DijkstraEra))
+      -&gt; StrictMaybe (Sized (BabbageTxOut DijkstraEra))
+      -&gt; StrictMaybe Coin
+      -&gt; OSet (DijkstraTxCert DijkstraEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; OSet (Credential 'Guard)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Set TxIn)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-48"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Set TxIn
+   -&gt; StrictSeq (Sized (BabbageTxOut DijkstraEra))
+   -&gt; StrictMaybe (Sized (BabbageTxOut DijkstraEra))
+   -&gt; StrictMaybe Coin
+   -&gt; OSet (DijkstraTxCert DijkstraEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; OSet (Credential 'Guard)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen (Set TxIn)
+-&gt; Gen
+     (StrictSeq (Sized (BabbageTxOut DijkstraEra))
+      -&gt; StrictMaybe (Sized (BabbageTxOut DijkstraEra))
+      -&gt; StrictMaybe Coin
+      -&gt; OSet (DijkstraTxCert DijkstraEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; OSet (Credential 'Guard)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Set TxIn)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictSeq (Sized (BabbageTxOut DijkstraEra))
+   -&gt; StrictMaybe (Sized (BabbageTxOut DijkstraEra))
+   -&gt; StrictMaybe Coin
+   -&gt; OSet (DijkstraTxCert DijkstraEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; OSet (Credential 'Guard)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen (StrictSeq (Sized (BabbageTxOut DijkstraEra)))
+-&gt; Gen
+     (StrictMaybe (Sized (BabbageTxOut DijkstraEra))
+      -&gt; StrictMaybe Coin
+      -&gt; OSet (DijkstraTxCert DijkstraEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; OSet (Credential 'Guard)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictSeq (Sized (BabbageTxOut DijkstraEra)))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe (Sized (BabbageTxOut DijkstraEra))
+   -&gt; StrictMaybe Coin
+   -&gt; OSet (DijkstraTxCert DijkstraEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; OSet (Credential 'Guard)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen (StrictMaybe (Sized (BabbageTxOut DijkstraEra)))
+-&gt; Gen
+     (StrictMaybe Coin
+      -&gt; OSet (DijkstraTxCert DijkstraEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; OSet (Credential 'Guard)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe (Sized (BabbageTxOut DijkstraEra)))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Coin
+   -&gt; OSet (DijkstraTxCert DijkstraEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; OSet (Credential 'Guard)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen (StrictMaybe Coin)
+-&gt; Gen
+     (OSet (DijkstraTxCert DijkstraEra)
+      -&gt; Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; OSet (Credential 'Guard)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (OSet (DijkstraTxCert DijkstraEra)
+   -&gt; Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; OSet (Credential 'Guard)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen (OSet (DijkstraTxCert DijkstraEra))
+-&gt; Gen
+     (Withdrawals
+      -&gt; Coin
+      -&gt; ValidityInterval
+      -&gt; OSet (Credential 'Guard)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (OSet (DijkstraTxCert DijkstraEra))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Withdrawals
+   -&gt; Coin
+   -&gt; ValidityInterval
+   -&gt; OSet (Credential 'Guard)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen Withdrawals
+-&gt; Gen
+     (Coin
+      -&gt; ValidityInterval
+      -&gt; OSet (Credential 'Guard)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Withdrawals
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-54"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (Coin
+   -&gt; ValidityInterval
+   -&gt; OSet (Credential 'Guard)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen Coin
+-&gt; Gen
+     (ValidityInterval
+      -&gt; OSet (Credential 'Guard)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Coin
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-55"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (ValidityInterval
+   -&gt; OSet (Credential 'Guard)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen ValidityInterval
+-&gt; Gen
+     (OSet (Credential 'Guard)
+      -&gt; MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; Gen ValidityInterval -&gt; Gen ValidityInterval
+forall a. (Int -&gt; Int) -&gt; Gen a -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#scale"><span class="hs-identifier hs-var">scale</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">15</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Gen ValidityInterval
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (OSet (Credential 'Guard)
+   -&gt; MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen (OSet (Credential 'Guard))
+-&gt; Gen
+     (MultiAsset
+      -&gt; StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (OSet (Credential 'Guard))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (MultiAsset
+   -&gt; StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen MultiAsset
+-&gt; Gen
+     (StrictMaybe ScriptIntegrityHash
+      -&gt; StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; Gen MultiAsset -&gt; Gen MultiAsset
+forall a. (Int -&gt; Int) -&gt; Gen a -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#scale"><span class="hs-identifier hs-var">scale</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">15</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Gen MultiAsset
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe ScriptIntegrityHash
+   -&gt; StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen (StrictMaybe ScriptIntegrityHash)
+-&gt; Gen
+     (StrictMaybe TxAuxDataHash
+      -&gt; StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe ScriptIntegrityHash)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe TxAuxDataHash
+   -&gt; StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen (StrictMaybe TxAuxDataHash)
+-&gt; Gen
+     (StrictMaybe Network
+      -&gt; VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe TxAuxDataHash)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (StrictMaybe Network
+   -&gt; VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen (StrictMaybe Network)
+-&gt; Gen
+     (VotingProcedures DijkstraEra
+      -&gt; OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin
+      -&gt; Coin
+      -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Network)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (VotingProcedures DijkstraEra
+   -&gt; OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin
+   -&gt; Coin
+   -&gt; TxBody DijkstraEra)
+-&gt; Gen (VotingProcedures DijkstraEra)
+-&gt; Gen
+     (OSet (ProposalProcedure DijkstraEra)
+      -&gt; StrictMaybe Coin -&gt; Coin -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (VotingProcedures DijkstraEra)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-62"></span><span>      </span><span class="annot"><span class="annottext">Gen
+  (OSet (ProposalProcedure DijkstraEra)
+   -&gt; StrictMaybe Coin -&gt; Coin -&gt; TxBody DijkstraEra)
+-&gt; Gen (OSet (ProposalProcedure DijkstraEra))
+-&gt; Gen (StrictMaybe Coin -&gt; Coin -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (OSet (ProposalProcedure DijkstraEra))
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin -&gt; Coin -&gt; TxBody DijkstraEra)
+-&gt; Gen (StrictMaybe Coin) -&gt; Gen (Coin -&gt; TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (StrictMaybe Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">Gen (Coin -&gt; TxBody DijkstraEra)
+-&gt; Gen Coin -&gt; Gen (TxBody DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Coin
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679637667"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.PParams.html#UpgradeDijkstraPParams"><span class="hs-identifier hs-type">UpgradeDijkstraPParams</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679637722"><span class="annot"><span class="annottext">arbitrary :: Gen (UpgradeDijkstraPParams Identity DijkstraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen (UpgradeDijkstraPParams Identity DijkstraEra)
+forall a. (GArbitrary UnsizedOpts a, GUniformWeight a) =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.Internal.Generic.html#genericArbitraryU"><span class="hs-identifier hs-var">genericArbitraryU</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679637725"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Genesis.html#DijkstraGenesis"><span class="hs-identifier hs-type">DijkstraGenesis</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679637750"><span class="annot"><span class="annottext">arbitrary :: Gen DijkstraGenesis
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen DijkstraGenesis
+forall a. (GArbitrary UnsizedOpts a, GUniformWeight a) =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.Internal.Generic.html#genericArbitraryU"><span class="hs-identifier hs-var">genericArbitraryU</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679637753"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621679637761"><span class="annot"><span class="annottext">arbitrary :: Gen (TransitionConfig DijkstraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DijkstraGenesis
+-&gt; TransitionConfig ConwayEra -&gt; TransitionConfig DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Transition.html#DijkstraTransitionConfig"><span class="hs-identifier hs-var">DijkstraTransitionConfig</span></a></span><span> </span><span class="annot"><span class="annottext">(DijkstraGenesis
+ -&gt; TransitionConfig ConwayEra -&gt; TransitionConfig DijkstraEra)
+-&gt; Gen DijkstraGenesis
+-&gt; Gen (TransitionConfig ConwayEra -&gt; TransitionConfig DijkstraEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen DijkstraGenesis
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen (TransitionConfig ConwayEra -&gt; TransitionConfig DijkstraEra)
+-&gt; Gen (TransitionConfig ConwayEra)
+-&gt; Gen (TransitionConfig DijkstraEra)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (TransitionConfig ConwayEra)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679636632"><span id="local-6989586621679637766"><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679636630"><span class="annot"><a href="#local-6989586621679636630"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span id="local-6989586621679636631"><span class="annot"><a href="#local-6989586621679636631"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636630"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636631"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679636632"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636630"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636631"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Scripts.html#DijkstraPlutusPurpose"><span class="hs-identifier hs-type">DijkstraPlutusPurpose</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636632"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679637896"><span class="annot"><span class="annottext">arbitrary :: Gen (DijkstraPlutusPurpose f DijkstraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen (DijkstraPlutusPurpose f DijkstraEra)
+forall a. (GArbitrary UnsizedOpts a, GUniformWeight a) =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/generic-random-1.5.0.1-096a648a6595f58fda741782bb6b080eb48b4d8b150bf7c4af680deac59a875c/share/doc/html/src/Generic.Random.Internal.Generic.html#genericArbitraryU"><span class="hs-identifier hs-var">genericArbitraryU</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679637899"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Scripts.html#DijkstraNativeScript"><span class="hs-identifier hs-type">DijkstraNativeScript</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679637903"><span class="annot"><span class="annottext">arbitrary :: Gen (DijkstraNativeScript DijkstraEra)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Gen (NativeScript DijkstraEra)
+forall era. DijkstraEraScript era =&gt; Int -&gt; Gen (NativeScript era)
+</span><a href="Test.Cardano.Ledger.Dijkstra.Arbitrary.html#sizedDijkstraNativeScript"><span class="hs-identifier hs-var">sizedDijkstraNativeScript</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/l/testlib/doc/html/cardano-ledger-allegra/src/Test.Cardano.Ledger.Allegra.Arbitrary.html#maxTimelockDepth"><span class="hs-identifier hs-var">maxTimelockDepth</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span id="local-6989586621679636653"><span class="annot"><a href="Test.Cardano.Ledger.Dijkstra.Arbitrary.html#sizedDijkstraNativeScript"><span class="hs-identifier hs-type">sizedDijkstraNativeScript</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Scripts.html#DijkstraEraScript"><span class="hs-identifier hs-type">DijkstraEraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636653"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#NativeScript"><span class="hs-identifier hs-type">NativeScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636653"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-88"></span><span id="sizedDijkstraNativeScript"><span class="annot"><span class="annottext">sizedDijkstraNativeScript :: forall era. DijkstraEraScript era =&gt; Int -&gt; Gen (NativeScript era)
+</span><a href="Test.Cardano.Ledger.Dijkstra.Arbitrary.html#sizedDijkstraNativeScript"><span class="hs-identifier hs-var hs-var">sizedDijkstraNativeScript</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KeyHash 'Witness -&gt; NativeScript era
+forall era.
+ShelleyEraScript era =&gt;
+KeyHash 'Witness -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Scripts.html#RequireSignature"><span class="hs-identifier hs-var">RequireSignature</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyHash 'Witness -&gt; NativeScript era)
+-&gt; Gen (KeyHash 'Witness) -&gt; Gen (NativeScript era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (KeyHash 'Witness)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-89"></span><span class="annot"><a href="Test.Cardano.Ledger.Dijkstra.Arbitrary.html#sizedDijkstraNativeScript"><span class="hs-identifier hs-var">sizedDijkstraNativeScript</span></a></span><span> </span><span id="local-6989586621679637936"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679637936"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><span class="annottext">[Gen (NativeScript era)] -&gt; Gen (NativeScript era)
+forall a. HasCallStack =&gt; [Gen a] -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#oneof"><span class="hs-identifier hs-var">oneof</span></a></span><span> </span><span class="annot"><span class="annottext">([Gen (NativeScript era)] -&gt; Gen (NativeScript era))
+-&gt; [Gen (NativeScript era)] -&gt; Gen (NativeScript era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; [Gen (NativeScript era)]
+forall era. ShelleyEraScript era =&gt; Int -&gt; [Gen (NativeScript era)]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Arbitrary.html#sizedNativeScriptGens"><span class="hs-identifier hs-var">sizedNativeScriptGens</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679637936"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-92"></span><span>      </span><span class="annot"><span class="annottext">[Gen (NativeScript era)]
+-&gt; [Gen (NativeScript era)] -&gt; [Gen (NativeScript era)]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; NativeScript era
+forall era. AllegraEraScript era =&gt; SlotNo -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Scripts.html#RequireTimeStart"><span class="hs-identifier hs-var">RequireTimeStart</span></a></span><span> </span><span class="annot"><span class="annottext">(SlotNo -&gt; NativeScript era)
+-&gt; Gen SlotNo -&gt; Gen (NativeScript era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen SlotNo
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-93"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; NativeScript era
+forall era. AllegraEraScript era =&gt; SlotNo -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Scripts.html#RequireTimeExpire"><span class="hs-identifier hs-var">RequireTimeExpire</span></a></span><span> </span><span class="annot"><span class="annottext">(SlotNo -&gt; NativeScript era)
+-&gt; Gen SlotNo -&gt; Gen (NativeScript era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen SlotNo
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-94"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Credential 'Guard -&gt; NativeScript era
+forall era.
+DijkstraEraScript era =&gt;
+Credential 'Guard -&gt; NativeScript era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.Scripts.html#RequireGuard"><span class="hs-identifier hs-var">RequireGuard</span></a></span><span> </span><span class="annot"><span class="annottext">(Credential 'Guard -&gt; NativeScript era)
+-&gt; Gen (Credential 'Guard) -&gt; Gen (NativeScript era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Credential 'Guard)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-95"></span><span>         </span><span class="hs-special">]</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span id="local-6989586621679637940"><span id="local-6989586621679637948"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679636611"><span id="local-6989586621679637991"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636611"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.TxCert.html#DijkstraTxCert"><span class="hs-identifier hs-type">DijkstraTxCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636611"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-100"></span><span>  </span><span id="local-6989586621679638004"><span class="annot"><span class="annottext">arbitrary :: Gen (DijkstraTxCert era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="annottext">[Gen (DijkstraTxCert era)] -&gt; Gen (DijkstraTxCert era)
+forall a. HasCallStack =&gt; [Gen a] -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#oneof"><span class="hs-identifier hs-var">oneof</span></a></span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">DijkstraDelegCert -&gt; DijkstraTxCert era
+forall era. DijkstraDelegCert -&gt; DijkstraTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.TxCert.html#DijkstraTxCertDeleg"><span class="hs-identifier hs-var">DijkstraTxCertDeleg</span></a></span><span> </span><span class="annot"><span class="annottext">(DijkstraDelegCert -&gt; DijkstraTxCert era)
+-&gt; Gen DijkstraDelegCert -&gt; Gen (DijkstraTxCert era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen DijkstraDelegCert
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-103"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PoolCert -&gt; DijkstraTxCert era
+forall era. PoolCert -&gt; DijkstraTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.TxCert.html#DijkstraTxCertPool"><span class="hs-identifier hs-var">DijkstraTxCertPool</span></a></span><span> </span><span class="annot"><span class="annottext">(PoolCert -&gt; DijkstraTxCert era)
+-&gt; Gen PoolCert -&gt; Gen (DijkstraTxCert era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen PoolCert
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-104"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ConwayGovCert -&gt; DijkstraTxCert era
+forall era. ConwayGovCert -&gt; DijkstraTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.TxCert.html#DijkstraTxCertGov"><span class="hs-identifier hs-var">DijkstraTxCertGov</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayGovCert -&gt; DijkstraTxCert era)
+-&gt; Gen ConwayGovCert -&gt; Gen (DijkstraTxCert era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen ConwayGovCert
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-105"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679638010"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.TxCert.html#DijkstraDelegCert"><span class="hs-identifier hs-type">DijkstraDelegCert</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621679638019"><span class="annot"><span class="annottext">arbitrary :: Gen DijkstraDelegCert
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StakeCredential -&gt; Delegatee -&gt; Coin -&gt; DijkstraDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/doc/html/cardano-ledger-dijkstra/src/Cardano.Ledger.Dijkstra.TxCert.html#DijkstraRegDelegCert"><span class="hs-identifier hs-var">DijkstraRegDelegCert</span></a></span><span> </span><span class="annot"><span class="annottext">(StakeCredential -&gt; Delegatee -&gt; Coin -&gt; DijkstraDelegCert)
+-&gt; Gen StakeCredential
+-&gt; Gen (Delegatee -&gt; Coin -&gt; DijkstraDelegCert)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen StakeCredential
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen (Delegatee -&gt; Coin -&gt; DijkstraDelegCert)
+-&gt; Gen Delegatee -&gt; Gen (Coin -&gt; DijkstraDelegCert)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Delegatee
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen (Coin -&gt; DijkstraDelegCert)
+-&gt; Gen Coin -&gt; Gen DijkstraDelegCert
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen Coin
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-109"></span></pre></body></html>

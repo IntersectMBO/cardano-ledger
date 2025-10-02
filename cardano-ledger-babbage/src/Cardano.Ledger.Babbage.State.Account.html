@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Babbage.State.Account</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.Era.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Era</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.html"><span class="hs-identifier">Cardano.Ledger.Shelley.State</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#EraAccounts"><span class="hs-identifier hs-type">EraAccounts</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="AccountState"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#AccountState"><span class="hs-identifier hs-var">AccountState</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#ShelleyAccountState"><span class="hs-identifier hs-type">ShelleyAccountState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Accounts"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Account.html#Accounts"><span class="hs-identifier hs-var">Accounts</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#ShelleyAccounts"><span class="hs-identifier hs-type">ShelleyAccounts</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span>  </span><span id="local-6989586621679378428"><span class="annot"><span class="annottext">addAccountState :: Credential 'Staking
+-&gt; AccountState BabbageEra
+-&gt; Accounts BabbageEra
+-&gt; Accounts BabbageEra
+</span><a href="#local-6989586621679378428"><span class="hs-identifier hs-var hs-var hs-var hs-var">addAccountState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+-&gt; AccountState BabbageEra
+-&gt; Accounts BabbageEra
+-&gt; Accounts BabbageEra
+forall era.
+ShelleyEraAccounts era =&gt;
+Credential 'Staking
+-&gt; AccountState era -&gt; Accounts era -&gt; Accounts era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#shelleyAddAccountState"><span class="hs-identifier hs-var">shelleyAddAccountState</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>  </span><span id="local-6989586621679378433"><span class="annot"><span class="annottext">accountsMapL :: Lens'
+  (Accounts BabbageEra)
+  (Map (Credential 'Staking) (AccountState BabbageEra))
+</span><a href="#local-6989586621679378433"><span class="hs-identifier hs-var hs-var hs-var hs-var">accountsMapL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Accounts BabbageEra
+ -&gt; Map (Credential 'Staking) (AccountState BabbageEra))
+-&gt; (Accounts BabbageEra
+    -&gt; Map (Credential 'Staking) (AccountState BabbageEra)
+    -&gt; Accounts BabbageEra)
+-&gt; Lens'
+     (Accounts BabbageEra)
+     (Map (Credential 'Staking) (AccountState BabbageEra))
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">Accounts BabbageEra
+-&gt; Map (Credential 'Staking) (AccountState BabbageEra)
+ShelleyAccounts BabbageEra
+-&gt; Map (Credential 'Staking) (ShelleyAccountState BabbageEra)
+forall era.
+ShelleyAccounts era
+-&gt; Map (Credential 'Staking) (ShelleyAccountState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#saStates"><span class="hs-identifier hs-var">saStates</span></a></span><span> </span><span class="annot"><span class="annottext">((Accounts BabbageEra
+  -&gt; Map (Credential 'Staking) (AccountState BabbageEra)
+  -&gt; Accounts BabbageEra)
+ -&gt; Lens'
+      (Accounts BabbageEra)
+      (Map (Credential 'Staking) (AccountState BabbageEra)))
+-&gt; (Accounts BabbageEra
+    -&gt; Map (Credential 'Staking) (AccountState BabbageEra)
+    -&gt; Accounts BabbageEra)
+-&gt; Lens'
+     (Accounts BabbageEra)
+     (Map (Credential 'Staking) (AccountState BabbageEra))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679378437"><span class="annot"><span class="annottext">Accounts BabbageEra
+</span><a href="#local-6989586621679378437"><span class="hs-identifier hs-var">sas</span></a></span></span><span> </span><span id="local-6989586621679378438"><span class="annot"><span class="annottext">Map (Credential 'Staking) (AccountState BabbageEra)
+</span><a href="#local-6989586621679378438"><span class="hs-identifier hs-var">asMap</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Accounts BabbageEra
+</span><a href="#local-6989586621679378437"><span class="hs-identifier hs-var">sas</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#saStates"><span class="hs-identifier hs-var">saStates</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679378438"><span class="hs-identifier hs-type">asMap</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>  </span><span id="local-6989586621679378441"><span class="annot"><span class="annottext">balanceAccountStateL :: Lens' (AccountState BabbageEra) (CompactForm Coin)
+</span><a href="#local-6989586621679378441"><span class="hs-identifier hs-var hs-var hs-var hs-var">balanceAccountStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AccountState BabbageEra -&gt; CompactForm Coin)
+-&gt; (AccountState BabbageEra
+    -&gt; CompactForm Coin -&gt; AccountState BabbageEra)
+-&gt; Lens' (AccountState BabbageEra) (CompactForm Coin)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">AccountState BabbageEra -&gt; CompactForm Coin
+ShelleyAccountState BabbageEra -&gt; CompactForm Coin
+forall era. ShelleyAccountState era -&gt; CompactForm Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#sasBalance"><span class="hs-identifier hs-var">sasBalance</span></a></span><span> </span><span class="annot"><span class="annottext">((AccountState BabbageEra
+  -&gt; CompactForm Coin -&gt; AccountState BabbageEra)
+ -&gt; Lens' (AccountState BabbageEra) (CompactForm Coin))
+-&gt; (AccountState BabbageEra
+    -&gt; CompactForm Coin -&gt; AccountState BabbageEra)
+-&gt; Lens' (AccountState BabbageEra) (CompactForm Coin)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679378444"><span class="annot"><span class="annottext">AccountState BabbageEra
+</span><a href="#local-6989586621679378444"><span class="hs-identifier hs-var">sas</span></a></span></span><span> </span><span id="local-6989586621679378445"><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679378445"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AccountState BabbageEra
+</span><a href="#local-6989586621679378444"><span class="hs-identifier hs-var">sas</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#sasBalance"><span class="hs-identifier hs-var">sasBalance</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679378445"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>  </span><span id="local-6989586621679378448"><span class="annot"><span class="annottext">depositAccountStateL :: Lens' (AccountState BabbageEra) (CompactForm Coin)
+</span><a href="#local-6989586621679378448"><span class="hs-identifier hs-var hs-var hs-var hs-var">depositAccountStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(AccountState BabbageEra -&gt; CompactForm Coin)
+-&gt; (AccountState BabbageEra
+    -&gt; CompactForm Coin -&gt; AccountState BabbageEra)
+-&gt; Lens' (AccountState BabbageEra) (CompactForm Coin)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">AccountState BabbageEra -&gt; CompactForm Coin
+ShelleyAccountState BabbageEra -&gt; CompactForm Coin
+forall era. ShelleyAccountState era -&gt; CompactForm Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#sasDeposit"><span class="hs-identifier hs-var">sasDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">((AccountState BabbageEra
+  -&gt; CompactForm Coin -&gt; AccountState BabbageEra)
+ -&gt; Lens' (AccountState BabbageEra) (CompactForm Coin))
+-&gt; (AccountState BabbageEra
+    -&gt; CompactForm Coin -&gt; AccountState BabbageEra)
+-&gt; Lens' (AccountState BabbageEra) (CompactForm Coin)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679378451"><span class="annot"><span class="annottext">AccountState BabbageEra
+</span><a href="#local-6989586621679378451"><span class="hs-identifier hs-var">sas</span></a></span></span><span> </span><span id="local-6989586621679378452"><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679378452"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AccountState BabbageEra
+</span><a href="#local-6989586621679378451"><span class="hs-identifier hs-var">sas</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#sasDeposit"><span class="hs-identifier hs-var">sasDeposit</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679378452"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>  </span><span id="local-6989586621679378455"><span class="annot"><span class="annottext">stakePoolDelegationAccountStateL :: Lens' (AccountState BabbageEra) (Maybe (KeyHash 'StakePool))
+</span><a href="#local-6989586621679378455"><span class="hs-identifier hs-var hs-var hs-var hs-var">stakePoolDelegationAccountStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="annottext">(AccountState BabbageEra -&gt; Maybe (KeyHash 'StakePool))
+-&gt; (AccountState BabbageEra
+    -&gt; Maybe (KeyHash 'StakePool) -&gt; AccountState BabbageEra)
+-&gt; Lens' (AccountState BabbageEra) (Maybe (KeyHash 'StakePool))
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StrictMaybe (KeyHash 'StakePool) -&gt; Maybe (KeyHash 'StakePool)
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">strictMaybeToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe (KeyHash 'StakePool) -&gt; Maybe (KeyHash 'StakePool))
+-&gt; (ShelleyAccountState BabbageEra
+    -&gt; StrictMaybe (KeyHash 'StakePool))
+-&gt; ShelleyAccountState BabbageEra
+-&gt; Maybe (KeyHash 'StakePool)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyAccountState BabbageEra -&gt; StrictMaybe (KeyHash 'StakePool)
+forall era.
+ShelleyAccountState era -&gt; StrictMaybe (KeyHash 'StakePool)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#sasStakePoolDelegation"><span class="hs-identifier hs-var">sasStakePoolDelegation</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((AccountState BabbageEra
+  -&gt; Maybe (KeyHash 'StakePool) -&gt; AccountState BabbageEra)
+ -&gt; Lens' (AccountState BabbageEra) (Maybe (KeyHash 'StakePool)))
+-&gt; (AccountState BabbageEra
+    -&gt; Maybe (KeyHash 'StakePool) -&gt; AccountState BabbageEra)
+-&gt; Lens' (AccountState BabbageEra) (Maybe (KeyHash 'StakePool))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679378460"><span class="annot"><span class="annottext">AccountState BabbageEra
+</span><a href="#local-6989586621679378460"><span class="hs-identifier hs-var">sas</span></a></span></span><span> </span><span id="local-6989586621679378461"><span class="annot"><span class="annottext">Maybe (KeyHash 'StakePool)
+</span><a href="#local-6989586621679378461"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-25"></span><span>      </span><span class="annot"><span class="annottext">AccountState BabbageEra
+</span><a href="#local-6989586621679378460"><span class="hs-identifier hs-var">sas</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#sasStakePoolDelegation"><span class="hs-identifier hs-var">sasStakePoolDelegation</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier hs-type">maybeToStrictMaybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679378461"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679378464"><span class="annot"><span class="annottext">unregisterAccount :: Credential 'Staking
+-&gt; Accounts BabbageEra
+-&gt; (Maybe (AccountState BabbageEra), Accounts BabbageEra)
+</span><a href="#local-6989586621679378464"><span class="hs-identifier hs-var hs-var hs-var hs-var">unregisterAccount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+-&gt; Accounts BabbageEra
+-&gt; (Maybe (AccountState BabbageEra), Accounts BabbageEra)
+forall era.
+ShelleyEraAccounts era =&gt;
+Credential 'Staking
+-&gt; Accounts era -&gt; (Maybe (AccountState era), Accounts era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#unregisterShelleyAccount"><span class="hs-identifier hs-var">unregisterShelleyAccount</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679378470"><span id="local-6989586621679378475"><span id="local-6989586621679378482"><span id="local-6989586621679378485"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Account.html#ShelleyEraAccounts"><span class="hs-identifier hs-type">ShelleyEraAccounts</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span></span></span></span></span><span>
+</span><span id="line-30"></span></pre></body></html>

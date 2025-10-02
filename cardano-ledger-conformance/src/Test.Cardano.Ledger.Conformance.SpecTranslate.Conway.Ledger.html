@@ -1,0 +1,1193 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledger</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier">Inject</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Core.html"><span class="hs-identifier">Cardano.Ledger.Conway.Core</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxBody.html#AllegraEraTxBody"><span class="hs-identifier">AllegraEraTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#AlonzoEraTx"><span class="hs-identifier">AlonzoEraTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxBody.html#AlonzoEraTxBody"><span class="hs-identifier">AlonzoEraTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.TxBody.html#BabbageEraTxBody"><span class="hs-identifier">BabbageEraTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxBody.html#ConwayEraTxBody"><span class="hs-identifier">ConwayEraTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#EraPParams"><span class="hs-identifier">EraPParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier">EraTx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxBody"><span class="hs-identifier">EraTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier">ScriptHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#txIdTx"><span class="hs-identifier">txIdTx</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.html"><span class="hs-identifier">Cardano.Ledger.Conway.Rules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#EnactState"><span class="hs-identifier">EnactState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Rules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledger.html#LedgerEnv"><span class="hs-identifier">LedgerEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.html"><span class="hs-identifier">Cardano.Ledger.Shelley.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.ChainAccount.html#ChainAccountState"><span class="hs-identifier">ChainAccountState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html"><span class="hs-identifier">Cardano.Ledger.TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier">TxId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Identity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Identity</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html"><span class="hs-identifier">Data.Maybe.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier">StrictMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Foreign.API.html"><span class="hs-identifier">MAlonzo.Code.Ledger.Foreign.API</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Agda</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#askCtx"><span class="hs-identifier">askCtx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#withCtx"><span class="hs-identifier">withCtx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier">SpecTranslate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679509366"><span id="local-6989586621679509367"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#EraPParams"><span class="hs-identifier hs-type">EraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509366"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier hs-type">SpecTranslate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509367"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-type">PParamsHKD</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="annot"><a href="#local-6989586621679509366"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecRep"><span class="hs-identifier hs-type">SpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-type">PParamsHKD</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="annot"><a href="#local-6989586621679509366"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.PParams.html#PParams"><span class="hs-identifier hs-type">Agda.PParams</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509367"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">StrictMaybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509367"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#EnactState"><span class="hs-identifier hs-type">EnactState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509366"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier hs-type">SpecTranslate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509367"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledger.html#LedgerEnv"><span class="hs-identifier hs-type">LedgerEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509366"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="SpecRep"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecRep"><span class="hs-identifier hs-var">SpecRep</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledger.html#LedgerEnv"><span class="hs-identifier hs-type">LedgerEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509366"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Ledger.html#LEnv"><span class="hs-identifier hs-type">Agda.LEnv</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679509576"><span class="annot"><span class="annottext">toSpecRep :: LedgerEnv era -&gt; SpecTransM ctx (SpecRep (LedgerEnv era))
+</span><a href="#local-6989586621679509576"><span class="hs-identifier hs-var hs-var hs-var hs-var">toSpecRep</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledger.html#LedgerEnv"><span class="hs-identifier hs-type">LedgerEnv</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679509579"><span id="local-6989586621679509580"><span id="local-6989586621679509581"><span id="local-6989586621679509582"><span id="local-6989586621679509583"><span class="annot"><span class="annottext">Maybe EpochNo
+PParams era
+ChainAccountState
+TxIx
+SlotNo
+ledgerSlotNo :: SlotNo
+ledgerEpochNo :: Maybe EpochNo
+ledgerIx :: TxIx
+ledgerPp :: PParams era
+ledgerAccount :: ChainAccountState
+ledgerSlotNo :: forall era. LedgerEnv era -&gt; SlotNo
+ledgerEpochNo :: forall era. LedgerEnv era -&gt; Maybe EpochNo
+ledgerIx :: forall era. LedgerEnv era -&gt; TxIx
+ledgerPp :: forall era. LedgerEnv era -&gt; PParams era
+ledgerAccount :: forall era. LedgerEnv era -&gt; ChainAccountState
+</span><a href="#local-6989586621679509579"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>    </span><span id="local-6989586621679509589"><span class="annot"><span class="annottext">StrictMaybe ScriptHash
+</span><a href="#local-6989586621679509589"><span class="hs-identifier hs-var">policyHash</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall b ctx. Inject ctx b =&gt; SpecTransM ctx b
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#askCtx"><span class="hs-identifier hs-var">askCtx</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">StrictMaybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>    </span><span id="local-6989586621679509590"><span class="annot"><span class="annottext">EnactState era
+</span><a href="#local-6989586621679509590"><span class="hs-identifier hs-var">enactState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall b ctx. Inject ctx b =&gt; SpecTransM ctx b
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#askCtx"><span class="hs-identifier hs-var">askCtx</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Internal.html#EnactState"><span class="hs-identifier hs-type">EnactState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509366"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">Integer
+-&gt; Maybe Integer -&gt; PParams -&gt; EnactState -&gt; Integer -&gt; LEnv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Ledger.html#MkLEnv"><span class="hs-identifier hs-var">Agda.MkLEnv</span></a></span><span>
+</span><span id="line-59"></span><span>      </span><span class="annot"><span class="annottext">(Integer
+ -&gt; Maybe Integer -&gt; PParams -&gt; EnactState -&gt; Integer -&gt; LEnv)
+-&gt; SpecTransM ctx Integer
+-&gt; SpecTransM
+     ctx (Maybe Integer -&gt; PParams -&gt; EnactState -&gt; Integer -&gt; LEnv)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; SpecTransM ctx (SpecRep SlotNo)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679509579"><span class="hs-identifier hs-var">ledgerSlotNo</span></a></span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx (Maybe Integer -&gt; PParams -&gt; EnactState -&gt; Integer -&gt; LEnv)
+-&gt; SpecTransM ctx (Maybe Integer)
+-&gt; SpecTransM ctx (PParams -&gt; EnactState -&gt; Integer -&gt; LEnv)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe ScriptHash
+-&gt; SpecTransM ctx (SpecRep (StrictMaybe ScriptHash))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe ScriptHash
+</span><a href="#local-6989586621679509589"><span class="hs-identifier hs-var">policyHash</span></a></span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM ctx (PParams -&gt; EnactState -&gt; Integer -&gt; LEnv)
+-&gt; SpecTransM ctx PParams
+-&gt; SpecTransM ctx (EnactState -&gt; Integer -&gt; LEnv)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; SpecTransM ctx (SpecRep (PParams era))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679509582"><span class="hs-identifier hs-var">ledgerPp</span></a></span><span>
+</span><span id="line-62"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM ctx (EnactState -&gt; Integer -&gt; LEnv)
+-&gt; SpecTransM ctx EnactState -&gt; SpecTransM ctx (Integer -&gt; LEnv)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">EnactState era -&gt; SpecTransM ctx (SpecRep (EnactState era))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">EnactState era
+</span><a href="#local-6989586621679509590"><span class="hs-identifier hs-var">enactState</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM ctx (Integer -&gt; LEnv)
+-&gt; SpecTransM ctx Integer -&gt; SpecTransM ctx LEnv
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; SpecTransM ctx (SpecRep Coin)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChainAccountState -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.ChainAccount.html#casTreasury"><span class="hs-identifier hs-var">casTreasury</span></a></span><span> </span><span class="annot"><span class="annottext">ChainAccountState
+</span><a href="#local-6989586621679509583"><span class="hs-identifier hs-var">ledgerAccount</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621679509408"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Inject"><span class="hs-identifier hs-type">Inject</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509408"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier hs-type">SpecTranslate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509408"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="SpecRep"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecRep"><span class="hs-identifier hs-var">SpecRep</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Transaction.html#TxBody"><span class="hs-identifier hs-type">Agda.TxBody</span></a></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621679509731"><span class="annot"><span class="annottext">toSpecRep :: TxBody ConwayEra -&gt; SpecTransM ctx (SpecRep (TxBody ConwayEra))
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var hs-var hs-var hs-var">toSpecRep</span></a></span></span><span> </span><span id="local-6989586621679509732"><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621679509733"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679509733"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall b ctx. Inject ctx b =&gt; SpecTransM ctx b
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#askCtx"><span class="hs-identifier hs-var">askCtx</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">HSSet (Integer, Integer)
+-&gt; HSSet (Integer, Integer)
+-&gt; HSSet (Integer, Integer)
+-&gt; HSMap
+     Integer
+     (Either BaseAddr BootstrapAddr,
+      (Integer,
+       (Maybe (Either Integer Integer),
+        Maybe (Either HSTimelock HSPlutusScript))))
+-&gt; Integer
+-&gt; [DCert]
+-&gt; Integer
+-&gt; HSMap RwdAddr Integer
+-&gt; (Maybe Integer, Maybe Integer)
+-&gt; Maybe Integer
+-&gt; Integer
+-&gt; [GovVote]
+-&gt; [GovProposal]
+-&gt; Maybe Integer
+-&gt; Maybe Integer
+-&gt; Integer
+-&gt; HSSet Integer
+-&gt; Maybe Integer
+-&gt; TxBody
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Transaction.html#MkTxBody"><span class="hs-identifier hs-var">Agda.MkTxBody</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span class="annot"><span class="annottext">(HSSet (Integer, Integer)
+ -&gt; HSSet (Integer, Integer)
+ -&gt; HSSet (Integer, Integer)
+ -&gt; HSMap
+      Integer
+      (Either BaseAddr BootstrapAddr,
+       (Integer,
+        (Maybe (Either Integer Integer),
+         Maybe (Either HSTimelock HSPlutusScript))))
+ -&gt; Integer
+ -&gt; [DCert]
+ -&gt; Integer
+ -&gt; HSMap RwdAddr Integer
+ -&gt; (Maybe Integer, Maybe Integer)
+ -&gt; Maybe Integer
+ -&gt; Integer
+ -&gt; [GovVote]
+ -&gt; [GovProposal]
+ -&gt; Maybe Integer
+ -&gt; Maybe Integer
+ -&gt; Integer
+ -&gt; HSSet Integer
+ -&gt; Maybe Integer
+ -&gt; TxBody)
+-&gt; SpecTransM ctx (HSSet (Integer, Integer))
+-&gt; SpecTransM
+     ctx
+     (HSSet (Integer, Integer)
+      -&gt; HSSet (Integer, Integer)
+      -&gt; HSMap
+           Integer
+           (Either BaseAddr BootstrapAddr,
+            (Integer,
+             (Maybe (Either Integer Integer),
+              Maybe (Either HSTimelock HSPlutusScript))))
+      -&gt; Integer
+      -&gt; [DCert]
+      -&gt; Integer
+      -&gt; HSMap RwdAddr Integer
+      -&gt; (Maybe Integer, Maybe Integer)
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; [GovVote]
+      -&gt; [GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set TxIn -&gt; SpecTransM ctx (SpecRep (Set TxIn))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting (Set TxIn) (TxBody ConwayEra) (Set TxIn) -&gt; Set TxIn
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Set TxIn) (TxBody ConwayEra) (Set TxIn)
+forall era. EraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody ConwayEra) (Set TxIn)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#inputsTxBodyL"><span class="hs-identifier hs-var">inputsTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  (HSSet (Integer, Integer)
+   -&gt; HSSet (Integer, Integer)
+   -&gt; HSMap
+        Integer
+        (Either BaseAddr BootstrapAddr,
+         (Integer,
+          (Maybe (Either Integer Integer),
+           Maybe (Either HSTimelock HSPlutusScript))))
+   -&gt; Integer
+   -&gt; [DCert]
+   -&gt; Integer
+   -&gt; HSMap RwdAddr Integer
+   -&gt; (Maybe Integer, Maybe Integer)
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; [GovVote]
+   -&gt; [GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx (HSSet (Integer, Integer))
+-&gt; SpecTransM
+     ctx
+     (HSSet (Integer, Integer)
+      -&gt; HSMap
+           Integer
+           (Either BaseAddr BootstrapAddr,
+            (Integer,
+             (Maybe (Either Integer Integer),
+              Maybe (Either HSTimelock HSPlutusScript))))
+      -&gt; Integer
+      -&gt; [DCert]
+      -&gt; Integer
+      -&gt; HSMap RwdAddr Integer
+      -&gt; (Maybe Integer, Maybe Integer)
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; [GovVote]
+      -&gt; [GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set TxIn -&gt; SpecTransM ctx (SpecRep (Set TxIn))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting (Set TxIn) (TxBody ConwayEra) (Set TxIn) -&gt; Set TxIn
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Set TxIn) (TxBody ConwayEra) (Set TxIn)
+forall era. BabbageEraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody ConwayEra) (Set TxIn)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.TxBody.html#referenceInputsTxBodyL"><span class="hs-identifier hs-var">referenceInputsTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  (HSSet (Integer, Integer)
+   -&gt; HSMap
+        Integer
+        (Either BaseAddr BootstrapAddr,
+         (Integer,
+          (Maybe (Either Integer Integer),
+           Maybe (Either HSTimelock HSPlutusScript))))
+   -&gt; Integer
+   -&gt; [DCert]
+   -&gt; Integer
+   -&gt; HSMap RwdAddr Integer
+   -&gt; (Maybe Integer, Maybe Integer)
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; [GovVote]
+   -&gt; [GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx (HSSet (Integer, Integer))
+-&gt; SpecTransM
+     ctx
+     (HSMap
+        Integer
+        (Either BaseAddr BootstrapAddr,
+         (Integer,
+          (Maybe (Either Integer Integer),
+           Maybe (Either HSTimelock HSPlutusScript))))
+      -&gt; Integer
+      -&gt; [DCert]
+      -&gt; Integer
+      -&gt; HSMap RwdAddr Integer
+      -&gt; (Maybe Integer, Maybe Integer)
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; [GovVote]
+      -&gt; [GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set TxIn -&gt; SpecTransM ctx (SpecRep (Set TxIn))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting (Set TxIn) (TxBody ConwayEra) (Set TxIn) -&gt; Set TxIn
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Set TxIn) (TxBody ConwayEra) (Set TxIn)
+forall era. AlonzoEraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody ConwayEra) (Set TxIn)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxBody.html#collateralInputsTxBodyL"><span class="hs-identifier hs-var">collateralInputsTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  (HSMap
+     Integer
+     (Either BaseAddr BootstrapAddr,
+      (Integer,
+       (Maybe (Either Integer Integer),
+        Maybe (Either HSTimelock HSPlutusScript))))
+   -&gt; Integer
+   -&gt; [DCert]
+   -&gt; Integer
+   -&gt; HSMap RwdAddr Integer
+   -&gt; (Maybe Integer, Maybe Integer)
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; [GovVote]
+   -&gt; [GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM
+     ctx
+     (HSMap
+        Integer
+        (Either BaseAddr BootstrapAddr,
+         (Integer,
+          (Maybe (Either Integer Integer),
+           Maybe (Either HSTimelock HSPlutusScript)))))
+-&gt; SpecTransM
+     ctx
+     (Integer
+      -&gt; [DCert]
+      -&gt; Integer
+      -&gt; HSMap RwdAddr Integer
+      -&gt; (Maybe Integer, Maybe Integer)
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; [GovVote]
+      -&gt; [GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Integer,
+  (Either BaseAddr BootstrapAddr,
+   (Integer,
+    (Maybe (Either Integer Integer),
+     Maybe (Either HSTimelock HSPlutusScript)))))]
+-&gt; HSMap
+     Integer
+     (Either BaseAddr BootstrapAddr,
+      (Integer,
+       (Maybe (Either Integer Integer),
+        Maybe (Either HSTimelock HSPlutusScript))))
+forall k v. [(k, v)] -&gt; HSMap k v
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Prelude.Foreign.HSTypes.html#MkHSMap"><span class="hs-identifier hs-var">Agda.MkHSMap</span></a></span><span> </span><span class="annot"><span class="annottext">([(Integer,
+   (Either BaseAddr BootstrapAddr,
+    (Integer,
+     (Maybe (Either Integer Integer),
+      Maybe (Either HSTimelock HSPlutusScript)))))]
+ -&gt; HSMap
+      Integer
+      (Either BaseAddr BootstrapAddr,
+       (Integer,
+        (Maybe (Either Integer Integer),
+         Maybe (Either HSTimelock HSPlutusScript)))))
+-&gt; ([(Either BaseAddr BootstrapAddr,
+      (Integer,
+       (Maybe (Either Integer Integer),
+        Maybe (Either HSTimelock HSPlutusScript))))]
+    -&gt; [(Integer,
+         (Either BaseAddr BootstrapAddr,
+          (Integer,
+           (Maybe (Either Integer Integer),
+            Maybe (Either HSTimelock HSPlutusScript)))))])
+-&gt; [(Either BaseAddr BootstrapAddr,
+     (Integer,
+      (Maybe (Either Integer Integer),
+       Maybe (Either HSTimelock HSPlutusScript))))]
+-&gt; HSMap
+     Integer
+     (Either BaseAddr BootstrapAddr,
+      (Integer,
+       (Maybe (Either Integer Integer),
+        Maybe (Either HSTimelock HSPlutusScript))))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[Integer]
+-&gt; [(Either BaseAddr BootstrapAddr,
+     (Integer,
+      (Maybe (Either Integer Integer),
+       Maybe (Either HSTimelock HSPlutusScript))))]
+-&gt; [(Integer,
+     (Either BaseAddr BootstrapAddr,
+      (Integer,
+       (Maybe (Either Integer Integer),
+        Maybe (Either HSTimelock HSPlutusScript)))))]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><span class="hs-identifier hs-var">zip</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">([(Either BaseAddr BootstrapAddr,
+   (Integer,
+    (Maybe (Either Integer Integer),
+     Maybe (Either HSTimelock HSPlutusScript))))]
+ -&gt; HSMap
+      Integer
+      (Either BaseAddr BootstrapAddr,
+       (Integer,
+        (Maybe (Either Integer Integer),
+         Maybe (Either HSTimelock HSPlutusScript)))))
+-&gt; SpecTransM
+     ctx
+     [(Either BaseAddr BootstrapAddr,
+       (Integer,
+        (Maybe (Either Integer Integer),
+         Maybe (Either HSTimelock HSPlutusScript))))]
+-&gt; SpecTransM
+     ctx
+     (HSMap
+        Integer
+        (Either BaseAddr BootstrapAddr,
+         (Integer,
+          (Maybe (Either Integer Integer),
+           Maybe (Either HSTimelock HSPlutusScript)))))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (BabbageTxOut ConwayEra)
+-&gt; SpecTransM ctx (SpecRep (StrictSeq (BabbageTxOut ConwayEra)))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting
+     (StrictSeq (BabbageTxOut ConwayEra))
+     (TxBody ConwayEra)
+     (StrictSeq (BabbageTxOut ConwayEra))
+-&gt; StrictSeq (BabbageTxOut ConwayEra)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (TxOut ConwayEra)
+ -&gt; Const
+      (StrictSeq (BabbageTxOut ConwayEra)) (StrictSeq (TxOut ConwayEra)))
+-&gt; TxBody ConwayEra
+-&gt; Const (StrictSeq (BabbageTxOut ConwayEra)) (TxBody ConwayEra)
+Getting
+  (StrictSeq (BabbageTxOut ConwayEra))
+  (TxBody ConwayEra)
+  (StrictSeq (BabbageTxOut ConwayEra))
+forall era.
+EraTxBody era =&gt;
+Lens' (TxBody era) (StrictSeq (TxOut era))
+Lens' (TxBody ConwayEra) (StrictSeq (TxOut ConwayEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#outputsTxBodyL"><span class="hs-identifier hs-var">outputsTxBodyL</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  (Integer
+   -&gt; [DCert]
+   -&gt; Integer
+   -&gt; HSMap RwdAddr Integer
+   -&gt; (Maybe Integer, Maybe Integer)
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; [GovVote]
+   -&gt; [GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx Integer
+-&gt; SpecTransM
+     ctx
+     ([DCert]
+      -&gt; Integer
+      -&gt; HSMap RwdAddr Integer
+      -&gt; (Maybe Integer, Maybe Integer)
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; [GovVote]
+      -&gt; [GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; SpecTransM ctx (SpecRep TxId)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679509733"><span class="hs-identifier hs-var">txId</span></a></span><span>
+</span><span id="line-79"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  ([DCert]
+   -&gt; Integer
+   -&gt; HSMap RwdAddr Integer
+   -&gt; (Maybe Integer, Maybe Integer)
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; [GovVote]
+   -&gt; [GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx [DCert]
+-&gt; SpecTransM
+     ctx
+     (Integer
+      -&gt; HSMap RwdAddr Integer
+      -&gt; (Maybe Integer, Maybe Integer)
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; [GovVote]
+      -&gt; [GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (ConwayTxCert ConwayEra)
+-&gt; SpecTransM ctx (SpecRep (StrictSeq (ConwayTxCert ConwayEra)))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting
+     (StrictSeq (ConwayTxCert ConwayEra))
+     (TxBody ConwayEra)
+     (StrictSeq (ConwayTxCert ConwayEra))
+-&gt; StrictSeq (ConwayTxCert ConwayEra)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (TxCert ConwayEra)
+ -&gt; Const
+      (StrictSeq (ConwayTxCert ConwayEra))
+      (StrictSeq (TxCert ConwayEra)))
+-&gt; TxBody ConwayEra
+-&gt; Const (StrictSeq (ConwayTxCert ConwayEra)) (TxBody ConwayEra)
+Getting
+  (StrictSeq (ConwayTxCert ConwayEra))
+  (TxBody ConwayEra)
+  (StrictSeq (ConwayTxCert ConwayEra))
+forall era.
+EraTxBody era =&gt;
+Lens' (TxBody era) (StrictSeq (TxCert era))
+Lens' (TxBody ConwayEra) (StrictSeq (TxCert ConwayEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#certsTxBodyL"><span class="hs-identifier hs-var">certsTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  (Integer
+   -&gt; HSMap RwdAddr Integer
+   -&gt; (Maybe Integer, Maybe Integer)
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; [GovVote]
+   -&gt; [GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx Integer
+-&gt; SpecTransM
+     ctx
+     (HSMap RwdAddr Integer
+      -&gt; (Maybe Integer, Maybe Integer)
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; [GovVote]
+      -&gt; [GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; SpecTransM ctx (SpecRep Coin)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra -&gt; Getting Coin (TxBody ConwayEra) Coin -&gt; Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Coin (TxBody ConwayEra) Coin
+forall era. EraTxBody era =&gt; Lens' (TxBody era) Coin
+Lens' (TxBody ConwayEra) Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#feeTxBodyL"><span class="hs-identifier hs-var">feeTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  (HSMap RwdAddr Integer
+   -&gt; (Maybe Integer, Maybe Integer)
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; [GovVote]
+   -&gt; [GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx (HSMap RwdAddr Integer)
+-&gt; SpecTransM
+     ctx
+     ((Maybe Integer, Maybe Integer)
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; [GovVote]
+      -&gt; [GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Withdrawals -&gt; SpecTransM ctx (SpecRep Withdrawals)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting Withdrawals (TxBody ConwayEra) Withdrawals
+-&gt; Withdrawals
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Withdrawals (TxBody ConwayEra) Withdrawals
+forall era. EraTxBody era =&gt; Lens' (TxBody era) Withdrawals
+Lens' (TxBody ConwayEra) Withdrawals
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#withdrawalsTxBodyL"><span class="hs-identifier hs-var">withdrawalsTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  ((Maybe Integer, Maybe Integer)
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; [GovVote]
+   -&gt; [GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx (Maybe Integer, Maybe Integer)
+-&gt; SpecTransM
+     ctx
+     (Maybe Integer
+      -&gt; Integer
+      -&gt; [GovVote]
+      -&gt; [GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">ValidityInterval -&gt; SpecTransM ctx (SpecRep ValidityInterval)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting ValidityInterval (TxBody ConwayEra) ValidityInterval
+-&gt; ValidityInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting ValidityInterval (TxBody ConwayEra) ValidityInterval
+forall era.
+AllegraEraTxBody era =&gt;
+Lens' (TxBody era) ValidityInterval
+Lens' (TxBody ConwayEra) ValidityInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.TxBody.html#vldtTxBodyL"><span class="hs-identifier hs-var">vldtTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  (Maybe Integer
+   -&gt; Integer
+   -&gt; [GovVote]
+   -&gt; [GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx (Maybe Integer)
+-&gt; SpecTransM
+     ctx
+     (Integer
+      -&gt; [GovVote]
+      -&gt; [GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe TxAuxDataHash
+-&gt; SpecTransM ctx (SpecRep (StrictMaybe TxAuxDataHash))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting
+     (StrictMaybe TxAuxDataHash)
+     (TxBody ConwayEra)
+     (StrictMaybe TxAuxDataHash)
+-&gt; StrictMaybe TxAuxDataHash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictMaybe TxAuxDataHash)
+  (TxBody ConwayEra)
+  (StrictMaybe TxAuxDataHash)
+forall era.
+EraTxBody era =&gt;
+Lens' (TxBody era) (StrictMaybe TxAuxDataHash)
+Lens' (TxBody ConwayEra) (StrictMaybe TxAuxDataHash)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#auxDataHashTxBodyL"><span class="hs-identifier hs-var">auxDataHashTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  (Integer
+   -&gt; [GovVote]
+   -&gt; [GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx Integer
+-&gt; SpecTransM
+     ctx
+     ([GovVote]
+      -&gt; [GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; SpecTransM ctx (SpecRep Coin)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra -&gt; Getting Coin (TxBody ConwayEra) Coin -&gt; Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Coin (TxBody ConwayEra) Coin
+forall era. ConwayEraTxBody era =&gt; Lens' (TxBody era) Coin
+Lens' (TxBody ConwayEra) Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxBody.html#treasuryDonationTxBodyL"><span class="hs-identifier hs-var">treasuryDonationTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  ([GovVote]
+   -&gt; [GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx [GovVote]
+-&gt; SpecTransM
+     ctx
+     ([GovProposal]
+      -&gt; Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">VotingProcedures ConwayEra
+-&gt; SpecTransM ctx (SpecRep (VotingProcedures ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting
+     (VotingProcedures ConwayEra)
+     (TxBody ConwayEra)
+     (VotingProcedures ConwayEra)
+-&gt; VotingProcedures ConwayEra
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (VotingProcedures ConwayEra)
+  (TxBody ConwayEra)
+  (VotingProcedures ConwayEra)
+forall era.
+ConwayEraTxBody era =&gt;
+Lens' (TxBody era) (VotingProcedures era)
+Lens' (TxBody ConwayEra) (VotingProcedures ConwayEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxBody.html#votingProceduresTxBodyL"><span class="hs-identifier hs-var">votingProceduresTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  ([GovProposal]
+   -&gt; Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx [GovProposal]
+-&gt; SpecTransM
+     ctx
+     (Maybe Integer
+      -&gt; Maybe Integer
+      -&gt; Integer
+      -&gt; HSSet Integer
+      -&gt; Maybe Integer
+      -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">OSet (ProposalProcedure ConwayEra)
+-&gt; SpecTransM ctx (SpecRep (OSet (ProposalProcedure ConwayEra)))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting
+     (OSet (ProposalProcedure ConwayEra))
+     (TxBody ConwayEra)
+     (OSet (ProposalProcedure ConwayEra))
+-&gt; OSet (ProposalProcedure ConwayEra)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (OSet (ProposalProcedure ConwayEra))
+  (TxBody ConwayEra)
+  (OSet (ProposalProcedure ConwayEra))
+forall era.
+ConwayEraTxBody era =&gt;
+Lens' (TxBody era) (OSet (ProposalProcedure era))
+Lens' (TxBody ConwayEra) (OSet (ProposalProcedure ConwayEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxBody.html#proposalProceduresTxBodyL"><span class="hs-identifier hs-var">proposalProceduresTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  (Maybe Integer
+   -&gt; Maybe Integer
+   -&gt; Integer
+   -&gt; HSSet Integer
+   -&gt; Maybe Integer
+   -&gt; TxBody)
+-&gt; SpecTransM ctx (Maybe Integer)
+-&gt; SpecTransM
+     ctx
+     (Maybe Integer
+      -&gt; Integer -&gt; HSSet Integer -&gt; Maybe Integer -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Network
+-&gt; SpecTransM ctx (SpecRep (StrictMaybe Network))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting
+     (StrictMaybe Network) (TxBody ConwayEra) (StrictMaybe Network)
+-&gt; StrictMaybe Network
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictMaybe Network) (TxBody ConwayEra) (StrictMaybe Network)
+forall era.
+AlonzoEraTxBody era =&gt;
+Lens' (TxBody era) (StrictMaybe Network)
+Lens' (TxBody ConwayEra) (StrictMaybe Network)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxBody.html#networkIdTxBodyL"><span class="hs-identifier hs-var">networkIdTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx
+  (Maybe Integer
+   -&gt; Integer -&gt; HSSet Integer -&gt; Maybe Integer -&gt; TxBody)
+-&gt; SpecTransM ctx (Maybe Integer)
+-&gt; SpecTransM
+     ctx (Integer -&gt; HSSet Integer -&gt; Maybe Integer -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe Coin -&gt; SpecTransM ctx (SpecRep (StrictMaybe Coin))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting (StrictMaybe Coin) (TxBody ConwayEra) (StrictMaybe Coin)
+-&gt; StrictMaybe Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (StrictMaybe Coin) (TxBody ConwayEra) (StrictMaybe Coin)
+forall era.
+ConwayEraTxBody era =&gt;
+Lens' (TxBody era) (StrictMaybe Coin)
+Lens' (TxBody ConwayEra) (StrictMaybe Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxBody.html#currentTreasuryValueTxBodyL"><span class="hs-identifier hs-var">currentTreasuryValueTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx (Integer -&gt; HSSet Integer -&gt; Maybe Integer -&gt; TxBody)
+-&gt; SpecTransM ctx Integer
+-&gt; SpecTransM ctx (HSSet Integer -&gt; Maybe Integer -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; SpecTransM ctx Integer
+forall a. a -&gt; SpecTransM ctx a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-90"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM ctx (HSSet Integer -&gt; Maybe Integer -&gt; TxBody)
+-&gt; SpecTransM ctx (HSSet Integer)
+-&gt; SpecTransM ctx (Maybe Integer -&gt; TxBody)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set (KeyHash 'Witness)
+-&gt; SpecTransM ctx (SpecRep (Set (KeyHash 'Witness)))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting
+     (Set (KeyHash 'Witness))
+     (TxBody ConwayEra)
+     (Set (KeyHash 'Witness))
+-&gt; Set (KeyHash 'Witness)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Set (KeyHash 'Witness))
+  (TxBody ConwayEra)
+  (Set (KeyHash 'Witness))
+forall era.
+(AlonzoEraTxBody era, AtMostEra &quot;Conway&quot; era) =&gt;
+Lens' (TxBody era) (Set (KeyHash 'Witness))
+Lens' (TxBody ConwayEra) (Set (KeyHash 'Witness))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxBody.html#reqSignerHashesTxBodyL"><span class="hs-identifier hs-var">reqSignerHashesTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM ctx (Maybe Integer -&gt; TxBody)
+-&gt; SpecTransM ctx (Maybe Integer) -&gt; SpecTransM ctx TxBody
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe ScriptIntegrityHash
+-&gt; SpecTransM ctx (SpecRep (StrictMaybe ScriptIntegrityHash))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra
+</span><a href="#local-6989586621679509732"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody ConwayEra
+-&gt; Getting
+     (StrictMaybe ScriptIntegrityHash)
+     (TxBody ConwayEra)
+     (StrictMaybe ScriptIntegrityHash)
+-&gt; StrictMaybe ScriptIntegrityHash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictMaybe ScriptIntegrityHash)
+  (TxBody ConwayEra)
+  (StrictMaybe ScriptIntegrityHash)
+forall era.
+AlonzoEraTxBody era =&gt;
+Lens' (TxBody era) (StrictMaybe ScriptIntegrityHash)
+Lens' (TxBody ConwayEra) (StrictMaybe ScriptIntegrityHash)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxBody.html#scriptIntegrityHashTxBodyL"><span class="hs-identifier hs-var">scriptIntegrityHashTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679509506"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecTranslate"><span class="hs-identifier hs-type">SpecTranslate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679509506"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="SpecRep"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#SpecRep"><span class="hs-identifier hs-var">SpecRep</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Transaction.html#Tx"><span class="hs-identifier hs-type">Agda.Tx</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679509797"><span class="annot"><span class="annottext">toSpecRep :: Tx ConwayEra -&gt; SpecTransM ctx (SpecRep (Tx ConwayEra))
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var hs-var hs-var hs-var">toSpecRep</span></a></span></span><span> </span><span id="local-6989586621679509798"><span class="annot"><span class="annottext">Tx ConwayEra
+</span><a href="#local-6989586621679509798"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><span class="annottext">TxBody -&gt; TxWitnesses -&gt; Integer -&gt; Bool -&gt; Maybe Integer -&gt; Tx
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-ledger-executable-spec-0.1.0.0-482e22cb732052d71cd7c6685b7f3cb9c116717a33dab121f0e39b2baec1dd2b/share/doc/html/src/MAlonzo.Code.Ledger.Conway.Foreign.HSLedger.Transaction.html#MkTx"><span class="hs-identifier hs-var">Agda.MkTx</span></a></span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><span class="annottext">(TxBody -&gt; TxWitnesses -&gt; Integer -&gt; Bool -&gt; Maybe Integer -&gt; Tx)
+-&gt; SpecTransM ctx TxBody
+-&gt; SpecTransM
+     ctx (TxWitnesses -&gt; Integer -&gt; Bool -&gt; Maybe Integer -&gt; Tx)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; SpecTransM TxId TxBody -&gt; SpecTransM ctx TxBody
+forall ctx a ctx'. ctx -&gt; SpecTransM ctx a -&gt; SpecTransM ctx' a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#withCtx"><span class="hs-identifier hs-var">withCtx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx ConwayEra -&gt; TxId
+forall era. EraTx era =&gt; Tx era -&gt; TxId
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#txIdTx"><span class="hs-identifier hs-var">txIdTx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra
+</span><a href="#local-6989586621679509798"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody ConwayEra -&gt; SpecTransM TxId (SpecRep (TxBody ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx ConwayEra
+</span><a href="#local-6989586621679509798"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra
+-&gt; Getting (TxBody ConwayEra) (Tx ConwayEra) (TxBody ConwayEra)
+-&gt; TxBody ConwayEra
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (TxBody ConwayEra) (Tx ConwayEra) (TxBody ConwayEra)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx ConwayEra) (TxBody ConwayEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">bodyTxL</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM
+  ctx (TxWitnesses -&gt; Integer -&gt; Bool -&gt; Maybe Integer -&gt; Tx)
+-&gt; SpecTransM ctx TxWitnesses
+-&gt; SpecTransM ctx (Integer -&gt; Bool -&gt; Maybe Integer -&gt; Tx)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">AlonzoTxWits ConwayEra
+-&gt; SpecTransM ctx (SpecRep (AlonzoTxWits ConwayEra))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx ConwayEra
+</span><a href="#local-6989586621679509798"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra
+-&gt; Getting
+     (AlonzoTxWits ConwayEra) (Tx ConwayEra) (AlonzoTxWits ConwayEra)
+-&gt; AlonzoTxWits ConwayEra
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(TxWits ConwayEra
+ -&gt; Const (AlonzoTxWits ConwayEra) (TxWits ConwayEra))
+-&gt; Tx ConwayEra -&gt; Const (AlonzoTxWits ConwayEra) (Tx ConwayEra)
+Getting
+  (AlonzoTxWits ConwayEra) (Tx ConwayEra) (AlonzoTxWits ConwayEra)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxWits era)
+Lens' (Tx ConwayEra) (TxWits ConwayEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-var">witsTxL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM ctx (Integer -&gt; Bool -&gt; Maybe Integer -&gt; Tx)
+-&gt; SpecTransM ctx Integer
+-&gt; SpecTransM ctx (Bool -&gt; Maybe Integer -&gt; Tx)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; SpecTransM ctx (SpecRep Word32)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx ConwayEra
+</span><a href="#local-6989586621679509798"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra -&gt; Getting Word32 (Tx ConwayEra) Word32 -&gt; Word32
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Word32 (Tx ConwayEra) Word32
+forall era.
+(EraTx era, HasCallStack) =&gt;
+SimpleGetter (Tx era) Word32
+SimpleGetter (Tx ConwayEra) Word32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#sizeTxF"><span class="hs-identifier hs-var">sizeTxF</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM ctx (Bool -&gt; Maybe Integer -&gt; Tx)
+-&gt; SpecTransM ctx Bool -&gt; SpecTransM ctx (Maybe Integer -&gt; Tx)
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">IsValid -&gt; SpecTransM ctx (SpecRep IsValid)
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx ConwayEra
+</span><a href="#local-6989586621679509798"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra -&gt; Getting IsValid (Tx ConwayEra) IsValid -&gt; IsValid
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting IsValid (Tx ConwayEra) IsValid
+forall era. AlonzoEraTx era =&gt; Lens' (Tx era) IsValid
+Lens' (Tx ConwayEra) IsValid
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#isValidTxL"><span class="hs-identifier hs-var">isValidTxL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><span class="annottext">SpecTransM ctx (Maybe Integer -&gt; Tx)
+-&gt; SpecTransM ctx (Maybe Integer) -&gt; SpecTransM ctx Tx
+forall a b.
+SpecTransM ctx (a -&gt; b) -&gt; SpecTransM ctx a -&gt; SpecTransM ctx b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe (AlonzoTxAuxData ConwayEra)
+-&gt; SpecTransM
+     ctx (SpecRep (StrictMaybe (AlonzoTxAuxData ConwayEra)))
+forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Base.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx ConwayEra
+</span><a href="#local-6989586621679509798"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx ConwayEra
+-&gt; Getting
+     (StrictMaybe (AlonzoTxAuxData ConwayEra))
+     (Tx ConwayEra)
+     (StrictMaybe (AlonzoTxAuxData ConwayEra))
+-&gt; StrictMaybe (AlonzoTxAuxData ConwayEra)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe (TxAuxData ConwayEra)
+ -&gt; Const
+      (StrictMaybe (AlonzoTxAuxData ConwayEra))
+      (StrictMaybe (TxAuxData ConwayEra)))
+-&gt; Tx ConwayEra
+-&gt; Const (StrictMaybe (AlonzoTxAuxData ConwayEra)) (Tx ConwayEra)
+Getting
+  (StrictMaybe (AlonzoTxAuxData ConwayEra))
+  (Tx ConwayEra)
+  (StrictMaybe (AlonzoTxAuxData ConwayEra))
+forall era.
+EraTx era =&gt;
+Lens' (Tx era) (StrictMaybe (TxAuxData era))
+Lens' (Tx ConwayEra) (StrictMaybe (TxAuxData ConwayEra))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#auxDataTxL"><span class="hs-identifier hs-var">auxDataTxL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span></pre></body></html>

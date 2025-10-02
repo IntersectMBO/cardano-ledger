@@ -1,0 +1,496 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Dijkstra.Rules.Ledgers</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Rules.html"><span class="hs-identifier">Cardano.Ledger.Allegra.Rules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Rules.Utxo.html#AllegraUtxoPredFailure"><span class="hs-identifier">AllegraUtxoPredFailure</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Rules.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Rules</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Rules.Utxo.html#AlonzoUtxoPredFailure"><span class="hs-identifier">AlonzoUtxoPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Rules.Utxos.html#AlonzoUtxosPredFailure"><span class="hs-identifier">AlonzoUtxosPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Rules.Utxow.html#AlonzoUtxowPredFailure"><span class="hs-identifier">AlonzoUtxowPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Rules.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Rules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Rules.Utxo.html#BabbageUtxoPredFailure"><span class="hs-identifier">BabbageUtxoPredFailure</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Rules.Utxow.html#BabbageUtxowPredFailure"><span class="hs-identifier">BabbageUtxowPredFailure</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.html"><span class="hs-identifier">Cardano.Ledger.Conway.Rules</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Cert.html#ConwayCertPredFailure"><span class="hs-identifier">ConwayCertPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#ConwayCertsPredFailure"><span class="hs-identifier">ConwayCertsPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Deleg.html#ConwayDelegPredFailure"><span class="hs-identifier">ConwayDelegPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.GovCert.html#ConwayGovCertPredFailure"><span class="hs-identifier">ConwayGovCertPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Gov.html#ConwayGovPredFailure"><span class="hs-identifier">ConwayGovPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ledger.html#ConwayLedgerPredFailure"><span class="hs-identifier">ConwayLedgerPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Utxo.html#ConwayUtxoPredFailure"><span class="hs-identifier">ConwayUtxoPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Utxos.html#ConwayUtxosPredFailure"><span class="hs-identifier">ConwayUtxosPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Utxow.html#ConwayUtxowPredFailure"><span class="hs-identifier">ConwayUtxowPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Core.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#EraRuleEvent"><span class="hs-identifier">EraRuleEvent</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#EraRuleFailure"><span class="hs-identifier">EraRuleFailure</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier">InjectRuleFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Era.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Rules.Ledger.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Rules.Ledger</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Rules</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#ShelleyLedgersEvent"><span class="hs-identifier">ShelleyLedgersEvent</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#ShelleyLedgersPredFailure"><span class="hs-identifier">ShelleyLedgersPredFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Pool.html#ShelleyPoolPredFailure"><span class="hs-identifier">ShelleyPoolPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#ShelleyUtxoPredFailure"><span class="hs-identifier">ShelleyUtxoPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxow.html#ShelleyUtxowPredFailure"><span class="hs-identifier">ShelleyUtxowPredFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="EraRuleFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#EraRuleFailure"><span class="hs-identifier hs-var">EraRuleFailure</span></a></span></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#ShelleyLedgersPredFailure"><span class="hs-identifier hs-type">ShelleyLedgersPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="EraRuleEvent"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#EraRuleEvent"><span class="hs-identifier hs-var">EraRuleEvent</span></a></span></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#ShelleyLedgersEvent"><span class="hs-identifier hs-type">ShelleyLedgersEvent</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679358756"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#ShelleyLedgersPredFailure"><span class="hs-identifier hs-type">ShelleyLedgersPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Ledger.html#ConwayLedgerPredFailure"><span class="hs-identifier hs-type">ConwayLedgerPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679358767"><span class="annot"><span class="annottext">injectFailure :: ConwayLedgerPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="#local-6989586621679358767"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Utxow.html#ConwayUtxowPredFailure"><span class="hs-identifier hs-type">ConwayUtxowPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679358777"><span class="annot"><span class="annottext">injectFailure :: ConwayUtxowPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (ConwayUtxowPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; ConwayUtxowPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ConwayUtxowPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+ConwayUtxowPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Rules.Utxow.html#BabbageUtxowPredFailure"><span class="hs-identifier hs-type">BabbageUtxowPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679358786"><span class="annot"><span class="annottext">injectFailure :: BabbageUtxowPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (BabbageUtxowPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; BabbageUtxowPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">BabbageUtxowPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+BabbageUtxowPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Rules.Utxow.html#AlonzoUtxowPredFailure"><span class="hs-identifier hs-type">AlonzoUtxowPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679358794"><span class="annot"><span class="annottext">injectFailure :: AlonzoUtxowPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (AlonzoUtxowPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; AlonzoUtxowPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">AlonzoUtxowPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+AlonzoUtxowPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxow.html#ShelleyUtxowPredFailure"><span class="hs-identifier hs-type">ShelleyUtxowPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679358802"><span class="annot"><span class="annottext">injectFailure :: ShelleyUtxowPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (ShelleyUtxowPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; ShelleyUtxowPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyUtxowPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+ShelleyUtxowPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Utxo.html#ConwayUtxoPredFailure"><span class="hs-identifier hs-type">ConwayUtxoPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679358810"><span class="annot"><span class="annottext">injectFailure :: ConwayUtxoPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (ConwayUtxoPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; ConwayUtxoPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ConwayUtxoPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+ConwayUtxoPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.Rules.Utxo.html#BabbageUtxoPredFailure"><span class="hs-identifier hs-type">BabbageUtxoPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679358818"><span class="annot"><span class="annottext">injectFailure :: BabbageUtxoPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (BabbageUtxoPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; BabbageUtxoPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">BabbageUtxoPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+BabbageUtxoPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Rules.Utxo.html#AlonzoUtxoPredFailure"><span class="hs-identifier hs-type">AlonzoUtxoPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621679358826"><span class="annot"><span class="annottext">injectFailure :: AlonzoUtxoPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (AlonzoUtxoPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; AlonzoUtxoPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">AlonzoUtxoPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+AlonzoUtxoPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Rules.Utxos.html#AlonzoUtxosPredFailure"><span class="hs-identifier hs-type">AlonzoUtxosPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679358834"><span class="annot"><span class="annottext">injectFailure :: AlonzoUtxosPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (AlonzoUtxosPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; AlonzoUtxosPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">AlonzoUtxosPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+AlonzoUtxosPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Utxos.html#ConwayUtxosPredFailure"><span class="hs-identifier hs-type">ConwayUtxosPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621679358842"><span class="annot"><span class="annottext">injectFailure :: ConwayUtxosPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (ConwayUtxosPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; ConwayUtxosPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ConwayUtxosPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+ConwayUtxosPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Utxo.html#ShelleyUtxoPredFailure"><span class="hs-identifier hs-type">ShelleyUtxoPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679358850"><span class="annot"><span class="annottext">injectFailure :: ShelleyUtxoPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (ShelleyUtxoPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; ShelleyUtxoPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyUtxoPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+ShelleyUtxoPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-allegra-1.9.0.0/doc/html/cardano-ledger-allegra/src/Cardano.Ledger.Allegra.Rules.Utxo.html#AllegraUtxoPredFailure"><span class="hs-identifier hs-type">AllegraUtxoPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679358858"><span class="annot"><span class="annottext">injectFailure :: AllegraUtxoPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (AllegraUtxoPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; AllegraUtxoPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">AllegraUtxoPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+AllegraUtxoPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Certs.html#ConwayCertsPredFailure"><span class="hs-identifier hs-type">ConwayCertsPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679358866"><span class="annot"><span class="annottext">injectFailure :: ConwayCertsPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (ConwayCertsPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; ConwayCertsPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ConwayCertsPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+ConwayCertsPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Cert.html#ConwayCertPredFailure"><span class="hs-identifier hs-type">ConwayCertPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621679358874"><span class="annot"><span class="annottext">injectFailure :: ConwayCertPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (ConwayCertPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; ConwayCertPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ConwayCertPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+ConwayCertPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Deleg.html#ConwayDelegPredFailure"><span class="hs-identifier hs-type">ConwayDelegPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679358882"><span class="annot"><span class="annottext">injectFailure :: ConwayDelegPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (ConwayDelegPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; ConwayDelegPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ConwayDelegPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+ConwayDelegPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Pool.html#ShelleyPoolPredFailure"><span class="hs-identifier hs-type">ShelleyPoolPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679358890"><span class="annot"><span class="annottext">injectFailure :: ShelleyPoolPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (ShelleyPoolPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; ShelleyPoolPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyPoolPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+ShelleyPoolPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.GovCert.html#ConwayGovCertPredFailure"><span class="hs-identifier hs-type">ConwayGovCertPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679358898"><span class="annot"><span class="annottext">injectFailure :: ConwayGovCertPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (ConwayGovCertPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; ConwayGovCertPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ConwayGovCertPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+ConwayGovCertPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;LEDGERS&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.Gov.html#ConwayGovPredFailure"><span class="hs-identifier hs-type">ConwayGovPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-95"></span><span>  </span><span id="local-6989586621679358906"><span class="annot"><span class="annottext">injectFailure :: ConwayGovPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGERS&quot; DijkstraEra
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PredicateFailure (EraRule &quot;LEDGER&quot; DijkstraEra)
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+ConwayLedgerPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall era.
+PredicateFailure (EraRule &quot;LEDGER&quot; era)
+-&gt; ShelleyLedgersPredFailure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Ledgers.html#LedgerFailure"><span class="hs-identifier hs-var">LedgerFailure</span></a></span><span> </span><span class="annot"><span class="annottext">(ConwayLedgerPredFailure DijkstraEra
+ -&gt; ShelleyLedgersPredFailure DijkstraEra)
+-&gt; (ConwayGovPredFailure DijkstraEra
+    -&gt; ConwayLedgerPredFailure DijkstraEra)
+-&gt; ConwayGovPredFailure DijkstraEra
+-&gt; ShelleyLedgersPredFailure DijkstraEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ConwayGovPredFailure DijkstraEra
+-&gt; EraRuleFailure &quot;LEDGER&quot; DijkstraEra
+ConwayGovPredFailure DijkstraEra
+-&gt; ConwayLedgerPredFailure DijkstraEra
+forall (rule :: Symbol) (t :: * -&gt; *) era.
+InjectRuleFailure rule t era =&gt;
+t era -&gt; EraRuleFailure rule era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#injectFailure"><span class="hs-identifier hs-var">injectFailure</span></a></span><span>
+</span><span id="line-96"></span></pre></body></html>

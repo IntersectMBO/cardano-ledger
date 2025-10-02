@@ -1,0 +1,65 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Api.Arbitrary</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/doc/html/cardano-ledger-api/src/Cardano.Ledger.Api.State.Query.html"><span class="hs-identifier">Cardano.Ledger.Api.State.Query</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/doc/html/cardano-ledger-api/src/Cardano.Ledger.Api.State.Query.CommitteeMembersState.html#MemberStatus"><span class="hs-identifier">MemberStatus</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/doc/html/cardano-ledger-api/src/Cardano.Ledger.Api.State.Query.html#QueryPoolStateResult"><span class="hs-identifier">QueryPoolStateResult</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-dijkstra-0.2.0.0/l/testlib/doc/html/cardano-ledger-dijkstra/src/Test.Cardano.Ledger.Dijkstra.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Dijkstra.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679270517"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/doc/html/cardano-ledger-api/src/Cardano.Ledger.Api.State.Query.CommitteeMembersState.html#MemberStatus"><span class="hs-identifier hs-type">MemberStatus</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>  </span><span id="local-6989586621679270525"><span class="annot"><span class="annottext">arbitrary :: Gen MemberStatus
+</span><a href="#local-6989586621679270525"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen MemberStatus
+forall a. (Bounded a, Enum a) =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitraryBoundedEnum"><span class="hs-identifier hs-var">arbitraryBoundedEnum</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679270530"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#Arbitrary"><span class="hs-identifier hs-type">Arbitrary</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/doc/html/cardano-ledger-api/src/Cardano.Ledger.Api.State.Query.html#QueryPoolStateResult"><span class="hs-identifier hs-type">QueryPoolStateResult</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>  </span><span id="local-6989586621679270554"><span class="annot"><span class="annottext">arbitrary :: Gen QueryPoolStateResult
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var hs-var hs-var hs-var">arbitrary</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) PoolParams
+-&gt; Map (KeyHash 'StakePool) PoolParams
+-&gt; Map (KeyHash 'StakePool) EpochNo
+-&gt; Map (KeyHash 'StakePool) Coin
+-&gt; QueryPoolStateResult
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-api-1.13.0.0/doc/html/cardano-ledger-api/src/Cardano.Ledger.Api.State.Query.html#QueryPoolStateResult"><span class="hs-identifier hs-var">QueryPoolStateResult</span></a></span><span> </span><span class="annot"><span class="annottext">(Map (KeyHash 'StakePool) PoolParams
+ -&gt; Map (KeyHash 'StakePool) PoolParams
+ -&gt; Map (KeyHash 'StakePool) EpochNo
+ -&gt; Map (KeyHash 'StakePool) Coin
+ -&gt; QueryPoolStateResult)
+-&gt; Gen (Map (KeyHash 'StakePool) PoolParams)
+-&gt; Gen
+     (Map (KeyHash 'StakePool) PoolParams
+      -&gt; Map (KeyHash 'StakePool) EpochNo
+      -&gt; Map (KeyHash 'StakePool) Coin
+      -&gt; QueryPoolStateResult)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Map (KeyHash 'StakePool) PoolParams)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen
+  (Map (KeyHash 'StakePool) PoolParams
+   -&gt; Map (KeyHash 'StakePool) EpochNo
+   -&gt; Map (KeyHash 'StakePool) Coin
+   -&gt; QueryPoolStateResult)
+-&gt; Gen (Map (KeyHash 'StakePool) PoolParams)
+-&gt; Gen
+     (Map (KeyHash 'StakePool) EpochNo
+      -&gt; Map (KeyHash 'StakePool) Coin -&gt; QueryPoolStateResult)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Map (KeyHash 'StakePool) PoolParams)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen
+  (Map (KeyHash 'StakePool) EpochNo
+   -&gt; Map (KeyHash 'StakePool) Coin -&gt; QueryPoolStateResult)
+-&gt; Gen (Map (KeyHash 'StakePool) EpochNo)
+-&gt; Gen (Map (KeyHash 'StakePool) Coin -&gt; QueryPoolStateResult)
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Map (KeyHash 'StakePool) EpochNo)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span> </span><span class="annot"><span class="annottext">Gen (Map (KeyHash 'StakePool) Coin -&gt; QueryPoolStateResult)
+-&gt; Gen (Map (KeyHash 'StakePool) Coin) -&gt; Gen QueryPoolStateResult
+forall a b. Gen (a -&gt; b) -&gt; Gen a -&gt; Gen b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Gen (Map (KeyHash 'StakePool) Coin)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-14"></span></pre></body></html>

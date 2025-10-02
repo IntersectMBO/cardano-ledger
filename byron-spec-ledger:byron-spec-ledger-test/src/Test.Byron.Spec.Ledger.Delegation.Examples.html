@@ -1,0 +1,1419 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedLists #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">-- | Examples of the application of the delegation rules.</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Byron.Spec.Ledger.Delegation.Examples</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Test.Byron.Spec.Ledger.Delegation.Examples.html#deleg"><span class="hs-identifier">deleg</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html"><span class="hs-identifier">Byron.Spec.Ledger.Core</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#BlockCount"><span class="hs-identifier">BlockCount</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#BlockCount"><span class="hs-identifier">BlockCount</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Epoch"><span class="hs-identifier">Epoch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Epoch"><span class="hs-identifier">Epoch</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Owner"><span class="hs-identifier">Owner</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Owner"><span class="hs-identifier">Owner</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Sig"><span class="hs-identifier">Sig</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Sig"><span class="hs-identifier">Sig</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier">Slot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier">Slot</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier">VKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier">VKey</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKeyGenesis"><span class="hs-identifier">VKeyGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKeyGenesis"><span class="hs-identifier">VKeyGenesis</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#owner"><span class="hs-identifier">owner</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html"><span class="hs-identifier">Byron.Spec.Ledger.Delegation</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#ADELEG"><span class="hs-identifier">ADELEG</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#ADELEGS"><span class="hs-identifier">ADELEGS</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DCert"><span class="hs-identifier">DCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DCert"><span class="hs-identifier">DCert</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DELEG"><span class="hs-identifier">DELEG</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DIState"><span class="hs-identifier">DIState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DIState"><span class="hs-identifier">DIState</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSEnv"><span class="hs-identifier">DSEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSEnv"><span class="hs-identifier">DSEnv</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSState"><span class="hs-identifier">DSState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSState"><span class="hs-identifier">DSState</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier">DState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier">DState</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#SDELEG"><span class="hs-identifier">SDELEG</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateDelegationMap"><span class="hs-identifier">_dIStateDelegationMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateKeyEpochDelegations"><span class="hs-identifier">_dIStateKeyEpochDelegations</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateLastDelegation"><span class="hs-identifier">_dIStateLastDelegation</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateScheduledDelegations"><span class="hs-identifier">_dIStateScheduledDelegations</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvAllowedDelegators"><span class="hs-identifier">_dSEnvAllowedDelegators</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvEpoch"><span class="hs-identifier">_dSEnvEpoch</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvK"><span class="hs-identifier">_dSEnvK</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvSlot"><span class="hs-identifier">_dSEnvSlot</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Identity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">runIdentity</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">fromList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Numeric.Natural</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html"><span class="hs-identifier">Test.Control.State.Transition.Trace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#checkTrace"><span class="hs-identifier">checkTrace</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator">(.-)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator">(.-&gt;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.html"><span class="hs-identifier">Test.Tasty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier">TestTree</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier">testGroup</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html"><span class="hs-identifier">Test.Tasty.HUnit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier">testCase</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><span class="hs-comment">-- | Delegation examples.</span></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Test.Byron.Spec.Ledger.Delegation.Examples.html#deleg"><span class="hs-identifier hs-type">deleg</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-48"></span><span id="deleg"><span class="annot"><span class="annottext">deleg :: [TestTree]
+</span><a href="Test.Byron.Spec.Ledger.Delegation.Examples.html#deleg"><span class="hs-identifier hs-var hs-var">deleg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Activation&quot;</span></span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Example 0&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Assertion -&gt; TestTree) -&gt; Assertion -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-52"></span><span>          </span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *).
+(STS s, BaseM s ~ m) =&gt;
+(forall a. m a -&gt; a)
+-&gt; Environment s
+-&gt; ReaderT
+     (State s
+      -&gt; Signal s -&gt; Either (NonEmpty (PredicateFailure s)) (State s))
+     IO
+     (State s)
+-&gt; Assertion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#checkTrace"><span class="hs-identifier hs-var">checkTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#ADELEG"><span class="hs-identifier hs-type">ADELEG</span></a></span><span> </span><span class="annot"><span class="annottext">Identity a -&gt; a
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span> </span><span class="annot"><span class="annottext">Set VKeyGenesis
+Environment ADELEG
+</span><a href="#local-6989586621679189193"><span class="hs-identifier hs-var">genKeys</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT
+   (State ADELEG
+    -&gt; Signal ADELEG
+    -&gt; Either (NonEmpty (PredicateFailure ADELEG)) (State ADELEG))
+   IO
+   (State ADELEG)
+ -&gt; Assertion)
+-&gt; ReaderT
+     (State ADELEG
+      -&gt; Signal ADELEG
+      -&gt; Either (NonEmpty (PredicateFailure ADELEG)) (State ADELEG))
+     IO
+     (State ADELEG)
+-&gt; Assertion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-53"></span><span>            </span><span class="annot"><span class="annottext">DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall a.
+a
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; (Slot, (VKeyGenesis, VKey))
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span>
+</span><span id="line-56"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-57"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; (Slot, (VKeyGenesis, VKey))
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">11</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span>
+</span><span id="line-60"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">11</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-62"></span><span>              </span><span class="hs-comment">-- Here we try to delegate to a key @k 11@ that is already delegated (by</span><span>
+</span><span id="line-63"></span><span>              </span><span class="hs-comment">-- @gk 0@), so the state remains unaltered.</span><span>
+</span><span id="line-64"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; (Slot, (VKeyGenesis, VKey))
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">11</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span>
+</span><span id="line-66"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">11</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-67"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; (Slot, (VKeyGenesis, VKey))
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">3</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">12</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span>
+</span><span id="line-70"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">11</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">12</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Example 1&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Assertion -&gt; TestTree) -&gt; Assertion -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-73"></span><span>          </span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *).
+(STS s, BaseM s ~ m) =&gt;
+(forall a. m a -&gt; a)
+-&gt; Environment s
+-&gt; ReaderT
+     (State s
+      -&gt; Signal s -&gt; Either (NonEmpty (PredicateFailure s)) (State s))
+     IO
+     (State s)
+-&gt; Assertion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#checkTrace"><span class="hs-identifier hs-var">checkTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#ADELEG"><span class="hs-identifier hs-type">ADELEG</span></a></span><span> </span><span class="annot"><span class="annottext">Identity a -&gt; a
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span> </span><span class="annot"><span class="annottext">Set VKeyGenesis
+Environment ADELEG
+</span><a href="#local-6989586621679189193"><span class="hs-identifier hs-var">genKeys</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT
+   (State ADELEG
+    -&gt; Signal ADELEG
+    -&gt; Either (NonEmpty (PredicateFailure ADELEG)) (State ADELEG))
+   IO
+   (State ADELEG)
+ -&gt; Assertion)
+-&gt; ReaderT
+     (State ADELEG
+      -&gt; Signal ADELEG
+      -&gt; Either (NonEmpty (PredicateFailure ADELEG)) (State ADELEG))
+     IO
+     (State ADELEG)
+-&gt; Assertion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-74"></span><span>            </span><span class="annot"><span class="annottext">DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall a.
+a
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; (Slot, (VKeyGenesis, VKey))
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span>
+</span><span id="line-77"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-78"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-79"></span><span>              </span><span class="hs-comment">-- Trying to delegate to a key that was delegated already has no effect</span><span>
+</span><span id="line-80"></span><span>              </span><span class="hs-comment">-- should be a no-op on the delegation state.</span><span>
+</span><span id="line-81"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; (Slot, (VKeyGenesis, VKey))
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span>
+</span><span id="line-83"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-84"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Example 2&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Assertion -&gt; TestTree) -&gt; Assertion -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-86"></span><span>          </span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *).
+(STS s, BaseM s ~ m) =&gt;
+(forall a. m a -&gt; a)
+-&gt; Environment s
+-&gt; ReaderT
+     (State s
+      -&gt; Signal s -&gt; Either (NonEmpty (PredicateFailure s)) (State s))
+     IO
+     (State s)
+-&gt; Assertion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#checkTrace"><span class="hs-identifier hs-var">checkTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#ADELEG"><span class="hs-identifier hs-type">ADELEG</span></a></span><span> </span><span class="annot"><span class="annottext">Identity a -&gt; a
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span> </span><span class="annot"><span class="annottext">Set VKeyGenesis
+Environment ADELEG
+</span><a href="#local-6989586621679189193"><span class="hs-identifier hs-var">genKeys</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT
+   (State ADELEG
+    -&gt; Signal ADELEG
+    -&gt; Either (NonEmpty (PredicateFailure ADELEG)) (State ADELEG))
+   IO
+   (State ADELEG)
+ -&gt; Assertion)
+-&gt; ReaderT
+     (State ADELEG
+      -&gt; Signal ADELEG
+      -&gt; Either (NonEmpty (PredicateFailure ADELEG)) (State ADELEG))
+     IO
+     (State ADELEG)
+-&gt; Assertion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-87"></span><span>            </span><span class="annot"><span class="annottext">DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall a.
+a
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; (Slot, (VKeyGenesis, VKey))
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">6</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span>
+</span><span id="line-90"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-91"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">6</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-92"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; (Slot, (VKeyGenesis, VKey))
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">7</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span>
+</span><span id="line-94"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-95"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">6</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-96"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; (Slot, (VKeyGenesis, VKey))
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">16</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span>
+</span><span id="line-98"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-99"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">16</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-100"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; (Slot, (VKeyGenesis, VKey))
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">19</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; (Slot, (VKeyGenesis, VKey))
+   -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+  IO
+  DState
+-&gt; DState
+-&gt; ReaderT
+     (DState
+      -&gt; (Slot, (VKeyGenesis, VKey))
+      -&gt; Either (NonEmpty AdelegPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span>
+</span><span id="line-102"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">16</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-104"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-106"></span><span>      </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Multiple Activations&quot;</span></span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Example 0&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Assertion -&gt; TestTree) -&gt; Assertion -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-108"></span><span>          </span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *).
+(STS s, BaseM s ~ m) =&gt;
+(forall a. m a -&gt; a)
+-&gt; Environment s
+-&gt; ReaderT
+     (State s
+      -&gt; Signal s -&gt; Either (NonEmpty (PredicateFailure s)) (State s))
+     IO
+     (State s)
+-&gt; Assertion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#checkTrace"><span class="hs-identifier hs-var">checkTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#ADELEGS"><span class="hs-identifier hs-type">ADELEGS</span></a></span><span> </span><span class="annot"><span class="annottext">Identity a -&gt; a
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span> </span><span class="annot"><span class="annottext">Set VKeyGenesis
+Environment ADELEGS
+</span><a href="#local-6989586621679189193"><span class="hs-identifier hs-var">genKeys</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT
+   (State ADELEGS
+    -&gt; Signal ADELEGS
+    -&gt; Either (NonEmpty (PredicateFailure ADELEGS)) (State ADELEGS))
+   IO
+   (State ADELEGS)
+ -&gt; Assertion)
+-&gt; ReaderT
+     (State ADELEGS
+      -&gt; Signal ADELEGS
+      -&gt; Either (NonEmpty (PredicateFailure ADELEGS)) (State ADELEGS))
+     IO
+     (State ADELEGS)
+-&gt; Assertion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-109"></span><span>            </span><span class="annot"><span class="annottext">DState
+-&gt; ReaderT
+     (DState
+      -&gt; [(Slot, (VKeyGenesis, VKey))]
+      -&gt; Either (NonEmpty AdelegsPredicateFailure) DState)
+     IO
+     DState
+forall a.
+a
+-&gt; ReaderT
+     (DState
+      -&gt; [(Slot, (VKeyGenesis, VKey))]
+      -&gt; Either (NonEmpty AdelegsPredicateFailure) DState)
+     IO
+     a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; [(Slot, (VKeyGenesis, VKey))]
+   -&gt; Either (NonEmpty AdelegsPredicateFailure) DState)
+  IO
+  DState
+-&gt; [(Slot, (VKeyGenesis, VKey))]
+-&gt; ReaderT
+     (DState
+      -&gt; [(Slot, (VKeyGenesis, VKey))]
+      -&gt; Either (NonEmpty AdelegsPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>                 </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">5</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>                 </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">5</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>                 </span><span class="hs-special">]</span><span>
+</span><span id="line-114"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DState
+   -&gt; [(Slot, (VKeyGenesis, VKey))]
+   -&gt; Either (NonEmpty AdelegsPredicateFailure) DState)
+  IO
+  DState
+-&gt; DState
+-&gt; ReaderT
+     (DState
+      -&gt; [(Slot, (VKeyGenesis, VKey))]
+      -&gt; Either (NonEmpty AdelegsPredicateFailure) DState)
+     IO
+     DState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bimap VKeyGenesis VKey -&gt; Map VKeyGenesis Slot -&gt; DState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DState"><span class="hs-identifier hs-var">DState</span></a></span><span>
+</span><span id="line-115"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-116"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-117"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Scheduling&quot;</span></span><span>
+</span><span id="line-120"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Example 0&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Assertion -&gt; TestTree) -&gt; Assertion -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-121"></span><span>          </span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *).
+(STS s, BaseM s ~ m) =&gt;
+(forall a. m a -&gt; a)
+-&gt; Environment s
+-&gt; ReaderT
+     (State s
+      -&gt; Signal s -&gt; Either (NonEmpty (PredicateFailure s)) (State s))
+     IO
+     (State s)
+-&gt; Assertion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#checkTrace"><span class="hs-identifier hs-var">checkTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#SDELEG"><span class="hs-identifier hs-type">SDELEG</span></a></span><span> </span><span class="annot"><span class="annottext">Identity a -&gt; a
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set VKeyGenesis -&gt; Epoch -&gt; Slot -&gt; BlockCount -&gt; DSEnv
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSEnv"><span class="hs-identifier hs-var">DSEnv</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">8</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; BlockCount
+</span><a href="#local-6989586621679189198"><span class="hs-identifier hs-var">bk</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">2160</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ReaderT
+   (State SDELEG
+    -&gt; Signal SDELEG
+    -&gt; Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG))
+   IO
+   (State SDELEG)
+ -&gt; Assertion)
+-&gt; ReaderT
+     (State SDELEG
+      -&gt; Signal SDELEG
+      -&gt; Either (NonEmpty (PredicateFailure SDELEG)) (State SDELEG))
+     IO
+     (State SDELEG)
+-&gt; Assertion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-122"></span><span>            </span><span class="annot"><span class="annottext">DSState
+-&gt; ReaderT
+     (DSState
+      -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+     IO
+     DSState
+forall a.
+a
+-&gt; ReaderT
+     (DSState
+      -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+     IO
+     a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Slot, (VKeyGenesis, VKey))]
+-&gt; Set (Epoch, VKeyGenesis) -&gt; DSState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSState"><span class="hs-identifier hs-var">DSState</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DSState
+   -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+  IO
+  DSState
+-&gt; DCert
+-&gt; ReaderT
+     (DSState
+      -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+     IO
+     DSState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="annot"><span class="annottext">VKeyGenesis -&gt; VKey -&gt; Epoch -&gt; DCert
+</span><a href="#local-6989586621679189199"><span class="hs-identifier hs-var">dc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DSState
+   -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+  IO
+  DSState
+-&gt; DSState
+-&gt; ReaderT
+     (DSState
+      -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+     IO
+     DSState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(Slot, (VKeyGenesis, VKey))]
+-&gt; Set (Epoch, VKeyGenesis) -&gt; DSState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSState"><span class="hs-identifier hs-var">DSState</span></a></span><span>
+</span><span id="line-125"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">4322</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-126"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">8</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-127"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DSState
+   -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+  IO
+  DSState
+-&gt; DCert
+-&gt; ReaderT
+     (DSState
+      -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+     IO
+     DSState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="annot"><span class="annottext">VKeyGenesis -&gt; VKey -&gt; Epoch -&gt; DCert
+</span><a href="#local-6989586621679189199"><span class="hs-identifier hs-var">dc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">11</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DSState
+   -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+  IO
+  DSState
+-&gt; DSState
+-&gt; ReaderT
+     (DSState
+      -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+     IO
+     DSState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(Slot, (VKeyGenesis, VKey))]
+-&gt; Set (Epoch, VKeyGenesis) -&gt; DSState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSState"><span class="hs-identifier hs-var">DSState</span></a></span><span>
+</span><span id="line-129"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">4322</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">4322</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">11</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-130"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">8</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">8</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-131"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DSState
+   -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+  IO
+  DSState
+-&gt; DCert
+-&gt; ReaderT
+     (DSState
+      -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+     IO
+     DSState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="annot"><span class="annottext">VKeyGenesis -&gt; VKey -&gt; Epoch -&gt; DCert
+</span><a href="#local-6989586621679189199"><span class="hs-identifier hs-var">dc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>              </span><span class="annot"><span class="annottext">ReaderT
+  (DSState
+   -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+  IO
+  DSState
+-&gt; DSState
+-&gt; ReaderT
+     (DSState
+      -&gt; DCert -&gt; Either (NonEmpty SdelegPredicateFailure) DSState)
+     IO
+     DSState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(Slot, (VKeyGenesis, VKey))]
+-&gt; Set (Epoch, VKeyGenesis) -&gt; DSState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSState"><span class="hs-identifier hs-var">DSState</span></a></span><span>
+</span><span id="line-133"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">4322</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">4322</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">11</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">4322</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-134"></span><span>                </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">8</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">8</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">8</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-135"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-137"></span><span>      </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Interface&quot;</span></span><span>
+</span><span id="line-138"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">testCase</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Non-injective scheduled delegations are ignored.&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Assertion -&gt; TestTree) -&gt; Assertion -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-139"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679189207"><span class="annot"><span class="annottext">env :: DSEnv
+</span><a href="#local-6989586621679189207"><span class="hs-identifier hs-var hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-140"></span><span>                </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DSEnv"><span class="hs-identifier hs-type">DSEnv</span></a></span><span>
+</span><span id="line-141"></span><span>                  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">_dSEnvAllowedDelegators :: Set VKeyGenesis
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvAllowedDelegators"><span class="hs-identifier hs-var">_dSEnvAllowedDelegators</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span class="hs-special">]</span><span>
+</span><span id="line-142"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dSEnvEpoch :: Epoch
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvEpoch"><span class="hs-identifier hs-var">_dSEnvEpoch</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-143"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dSEnvSlot :: Slot
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvSlot"><span class="hs-identifier hs-var">_dSEnvSlot</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">21</span></span><span>
+</span><span id="line-144"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dSEnvK :: BlockCount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dSEnvK"><span class="hs-identifier hs-var">_dSEnvK</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; BlockCount
+</span><a href="#local-6989586621679189198"><span class="hs-identifier hs-var">bk</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-145"></span><span>                  </span><span class="hs-special">}</span><span>
+</span><span id="line-146"></span><span>              </span><span id="local-6989586621679189233"><span class="annot"><span class="annottext">st :: DIState
+</span><a href="#local-6989586621679189233"><span class="hs-identifier hs-var hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-147"></span><span>                </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DIState"><span class="hs-identifier hs-type">DIState</span></a></span><span>
+</span><span id="line-148"></span><span>                  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">_dIStateDelegationMap :: Bimap VKeyGenesis VKey
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateDelegationMap"><span class="hs-identifier hs-var">_dIStateDelegationMap</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-149"></span><span>                      </span><span class="hs-special">[</span><span>
+</span><span id="line-150"></span><span>                        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-151"></span><span>                        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-152"></span><span>                        </span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>                      </span><span class="hs-special">,</span><span>
+</span><span id="line-154"></span><span>                        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-155"></span><span>                        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-156"></span><span>                        </span><span class="hs-special">)</span><span>
+</span><span id="line-157"></span><span>                      </span><span class="hs-special">]</span><span>
+</span><span id="line-158"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dIStateLastDelegation :: Map VKeyGenesis Slot
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateLastDelegation"><span class="hs-identifier hs-var">_dIStateLastDelegation</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-159"></span><span>                      </span><span class="hs-special">[</span><span>
+</span><span id="line-160"></span><span>                        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-161"></span><span>                        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">15</span></span><span>
+</span><span id="line-162"></span><span>                        </span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>                      </span><span class="hs-special">,</span><span>
+</span><span id="line-164"></span><span>                        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-165"></span><span>                        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-166"></span><span>                        </span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>                      </span><span class="hs-special">]</span><span>
+</span><span id="line-168"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dIStateScheduledDelegations :: [(Slot, (VKeyGenesis, VKey))]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateScheduledDelegations"><span class="hs-identifier hs-var">_dIStateScheduledDelegations</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-169"></span><span>                      </span><span class="hs-special">[</span><span>
+</span><span id="line-170"></span><span>                        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">21</span></span><span>
+</span><span id="line-171"></span><span>                        </span><span class="hs-special">,</span><span>
+</span><span id="line-172"></span><span>                          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-173"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-174"></span><span>                          </span><span class="hs-special">)</span><span>
+</span><span id="line-175"></span><span>                        </span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>                      </span><span class="hs-special">]</span><span>
+</span><span id="line-177"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_dIStateKeyEpochDelegations :: Set (Epoch, VKeyGenesis)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#_dIStateKeyEpochDelegations"><span class="hs-identifier hs-var">_dIStateKeyEpochDelegations</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-178"></span><span>                      </span><span class="annot"><span class="annottext">[(Epoch, VKeyGenesis)] -&gt; Set (Epoch, VKeyGenesis)
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">fromList</span></span><span>
+</span><span id="line-179"></span><span>                        </span><span class="hs-special">[</span><span>
+</span><span id="line-180"></span><span>                          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-181"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-182"></span><span>                          </span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>                        </span><span class="hs-special">,</span><span>
+</span><span id="line-184"></span><span>                          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-185"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-186"></span><span>                          </span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>                        </span><span class="hs-special">,</span><span>
+</span><span id="line-188"></span><span>                          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-189"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var">gk</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-190"></span><span>                          </span><span class="hs-special">)</span><span>
+</span><span id="line-191"></span><span>                        </span><span class="hs-special">]</span><span>
+</span><span id="line-192"></span><span>                  </span><span class="hs-special">}</span><span>
+</span><span id="line-193"></span><span>           </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">forall s (m :: * -&gt; *).
+(STS s, BaseM s ~ m) =&gt;
+(forall a. m a -&gt; a)
+-&gt; Environment s
+-&gt; ReaderT
+     (State s
+      -&gt; Signal s -&gt; Either (NonEmpty (PredicateFailure s)) (State s))
+     IO
+     (State s)
+-&gt; Assertion
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#checkTrace"><span class="hs-identifier hs-var">checkTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DELEG"><span class="hs-identifier hs-type">DELEG</span></a></span><span> </span><span class="annot"><span class="annottext">Identity a -&gt; a
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span> </span><span class="annot"><span class="annottext">DSEnv
+Environment DELEG
+</span><a href="#local-6989586621679189207"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT
+   (State DELEG
+    -&gt; Signal DELEG
+    -&gt; Either (NonEmpty (PredicateFailure DELEG)) (State DELEG))
+   IO
+   (State DELEG)
+ -&gt; Assertion)
+-&gt; ReaderT
+     (State DELEG
+      -&gt; Signal DELEG
+      -&gt; Either (NonEmpty (PredicateFailure DELEG)) (State DELEG))
+     IO
+     (State DELEG)
+-&gt; Assertion
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-194"></span><span>                </span><span class="annot"><span class="annottext">DIState
+-&gt; ReaderT
+     (DIState
+      -&gt; [DCert] -&gt; Either (NonEmpty DelegPredicateFailure) DIState)
+     IO
+     DIState
+forall a.
+a
+-&gt; ReaderT
+     (DIState
+      -&gt; [DCert] -&gt; Either (NonEmpty DelegPredicateFailure) DIState)
+     IO
+     a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">DIState
+</span><a href="#local-6989586621679189233"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT
+  (DIState
+   -&gt; [DCert] -&gt; Either (NonEmpty DelegPredicateFailure) DIState)
+  IO
+  DIState
+-&gt; [DCert]
+-&gt; ReaderT
+     (DIState
+      -&gt; [DCert] -&gt; Either (NonEmpty DelegPredicateFailure) DIState)
+     IO
+     DIState
+forall (m :: * -&gt; *) st sig err.
+(MonadIO m, MonadReader (st -&gt; sig -&gt; Either err st) m, Show err,
+ HasCallStack) =&gt;
+m st -&gt; sig -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-"><span class="hs-operator hs-var">.-</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">ReaderT
+  (DIState
+   -&gt; [DCert] -&gt; Either (NonEmpty DelegPredicateFailure) DIState)
+  IO
+  DIState
+-&gt; DIState
+-&gt; ReaderT
+     (DIState
+      -&gt; [DCert] -&gt; Either (NonEmpty DelegPredicateFailure) DIState)
+     IO
+     DIState
+forall (m :: * -&gt; *) st.
+(MonadIO m, Eq st, Show st, HasCallStack) =&gt;
+m st -&gt; st -&gt; m st
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#.-%3E"><span class="hs-operator hs-var">.-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DIState
+</span><a href="#local-6989586621679189233"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-identifier">_dIStateScheduledDelegations</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">}</span><span>
+</span><span id="line-195"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-196"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-197"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-198"></span><span>    </span><span class="annot"><a href="#local-6989586621679189194"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier hs-type">Slot</span></a></span><span>
+</span><span id="line-199"></span><span>    </span><span id="local-6989586621679189194"><span class="annot"><span class="annottext">s :: Word64 -&gt; Slot
+</span><a href="#local-6989586621679189194"><span class="hs-identifier hs-var hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Slot
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Slot"><span class="hs-identifier hs-var">Slot</span></a></span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span>    </span><span class="annot"><a href="#local-6989586621679189196"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span>
+</span><span id="line-202"></span><span>    </span><span id="local-6989586621679189196"><span class="annot"><span class="annottext">k :: Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Owner -&gt; VKey
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier hs-var">VKey</span></a></span><span> </span><span class="annot"><span class="annottext">(Owner -&gt; VKey) -&gt; (Natural -&gt; Owner) -&gt; Natural -&gt; VKey
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Owner
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Owner"><span class="hs-identifier hs-var">Owner</span></a></span><span>
+</span><span id="line-203"></span><span>
+</span><span id="line-204"></span><span>    </span><span class="annot"><a href="#local-6989586621679189195"><span class="hs-identifier hs-type">gk</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKeyGenesis"><span class="hs-identifier hs-type">VKeyGenesis</span></a></span><span>
+</span><span id="line-205"></span><span>    </span><span id="local-6989586621679189195"><span class="annot"><span class="annottext">gk :: Natural -&gt; VKeyGenesis
+</span><a href="#local-6989586621679189195"><span class="hs-identifier hs-var hs-var">gk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VKey -&gt; VKeyGenesis
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKeyGenesis"><span class="hs-identifier hs-var">VKeyGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">(VKey -&gt; VKeyGenesis)
+-&gt; (Natural -&gt; VKey) -&gt; Natural -&gt; VKeyGenesis
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; VKey
+</span><a href="#local-6989586621679189196"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-206"></span><span>
+</span><span id="line-207"></span><span>    </span><span class="annot"><a href="#local-6989586621679189197"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Epoch"><span class="hs-identifier hs-type">Epoch</span></a></span><span>
+</span><span id="line-208"></span><span>    </span><span id="local-6989586621679189197"><span class="annot"><span class="annottext">e :: Word64 -&gt; Epoch
+</span><a href="#local-6989586621679189197"><span class="hs-identifier hs-var hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Epoch
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Epoch"><span class="hs-identifier hs-var">Epoch</span></a></span><span>
+</span><span id="line-209"></span><span>
+</span><span id="line-210"></span><span>    </span><span class="annot"><a href="#local-6989586621679189198"><span class="hs-identifier hs-type">bk</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#BlockCount"><span class="hs-identifier hs-type">BlockCount</span></a></span><span>
+</span><span id="line-211"></span><span>    </span><span id="local-6989586621679189198"><span class="annot"><span class="annottext">bk :: Word64 -&gt; BlockCount
+</span><a href="#local-6989586621679189198"><span class="hs-identifier hs-var hs-var">bk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; BlockCount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#BlockCount"><span class="hs-identifier hs-var">BlockCount</span></a></span><span>
+</span><span id="line-212"></span><span>
+</span><span id="line-213"></span><span>    </span><span class="annot"><a href="#local-6989586621679189199"><span class="hs-identifier hs-type">dc</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKeyGenesis"><span class="hs-identifier hs-type">VKeyGenesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Epoch"><span class="hs-identifier hs-type">Epoch</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DCert"><span class="hs-identifier hs-type">DCert</span></a></span><span>
+</span><span id="line-214"></span><span>    </span><span id="local-6989586621679189199"><span class="annot"><span class="annottext">dc :: VKeyGenesis -&gt; VKey -&gt; Epoch -&gt; DCert
+</span><a href="#local-6989586621679189199"><span class="hs-identifier hs-var hs-var">dc</span></a></span></span><span> </span><span id="local-6989586621679189235"><span class="annot"><span class="annottext">VKeyGenesis
+</span><a href="#local-6989586621679189235"><span class="hs-identifier hs-var">vkg</span></a></span></span><span> </span><span id="local-6989586621679189236"><span class="annot"><span class="annottext">VKey
+</span><a href="#local-6989586621679189236"><span class="hs-identifier hs-var">vk</span></a></span></span><span> </span><span id="local-6989586621679189237"><span class="annot"><span class="annottext">Epoch
+</span><a href="#local-6989586621679189237"><span class="hs-identifier hs-var">ep</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VKeyGenesis -&gt; VKey -&gt; Epoch -&gt; Sig (VKey, Epoch) -&gt; DCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Delegation.html#DCert"><span class="hs-identifier hs-var">DCert</span></a></span><span> </span><span class="annot"><span class="annottext">VKeyGenesis
+</span><a href="#local-6989586621679189235"><span class="hs-identifier hs-var">vkg</span></a></span><span> </span><span class="annot"><span class="annottext">VKey
+</span><a href="#local-6989586621679189236"><span class="hs-identifier hs-var">vk</span></a></span><span> </span><span class="annot"><span class="annottext">Epoch
+</span><a href="#local-6989586621679189237"><span class="hs-identifier hs-var">ep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(VKey, Epoch) -&gt; Owner -&gt; Sig (VKey, Epoch)
+forall a. a -&gt; Owner -&gt; Sig a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Sig"><span class="hs-identifier hs-var">Sig</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VKey
+</span><a href="#local-6989586621679189236"><span class="hs-identifier hs-var">vk</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Epoch
+</span><a href="#local-6989586621679189237"><span class="hs-identifier hs-var">ep</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VKeyGenesis -&gt; Owner
+forall a. HasOwner a =&gt; a -&gt; Owner
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#owner"><span class="hs-identifier hs-var">owner</span></a></span><span> </span><span class="annot"><span class="annottext">VKeyGenesis
+</span><a href="#local-6989586621679189235"><span class="hs-identifier hs-var">vkg</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-215"></span><span>
+</span><span id="line-216"></span><span>    </span><span class="annot"><a href="#local-6989586621679189193"><span class="hs-identifier hs-type">genKeys</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKeyGenesis"><span class="hs-identifier hs-type">VKeyGenesis</span></a></span><span>
+</span><span id="line-217"></span><span>    </span><span id="local-6989586621679189193"><span class="annot"><span class="annottext">genKeys :: Set VKeyGenesis
+</span><a href="#local-6989586621679189193"><span class="hs-identifier hs-var hs-var">genKeys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[VKeyGenesis] -&gt; Set VKeyGenesis
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">fromList</span></span><span> </span><span class="annot"><span class="annottext">([VKeyGenesis] -&gt; Set VKeyGenesis)
+-&gt; [VKeyGenesis] -&gt; Set VKeyGenesis
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Natural -&gt; VKeyGenesis) -&gt; [Natural] -&gt; [VKeyGenesis]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VKey -&gt; VKeyGenesis
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKeyGenesis"><span class="hs-identifier hs-var">VKeyGenesis</span></a></span><span> </span><span class="annot"><span class="annottext">(VKey -&gt; VKeyGenesis)
+-&gt; (Natural -&gt; VKey) -&gt; Natural -&gt; VKeyGenesis
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Owner -&gt; VKey
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier hs-var">VKey</span></a></span><span> </span><span class="annot"><span class="annottext">(Owner -&gt; VKey) -&gt; (Natural -&gt; Owner) -&gt; Natural -&gt; VKey
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Owner
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/byron-spec-ledger-1.1.0.1/doc/html/byron-spec-ledger/src/Byron.Spec.Ledger.Core.html#Owner"><span class="hs-identifier hs-var">Owner</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Natural
+Item [Natural]
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Natural
+Item [Natural]
+</span><span class="hs-number">6</span></span><span class="hs-special">]</span><span>
+</span><span id="line-218"></span></pre></body></html>

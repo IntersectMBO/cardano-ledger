@@ -1,0 +1,804 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#tests"><span class="hs-identifier">tests</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.html"><span class="hs-identifier">Cardano.Crypto.Hash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#HashAlgorithm"><span class="hs-identifier">HashAlgorithm</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashFromBytes"><span class="hs-identifier">hashFromBytes</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashFromTextAsHex"><span class="hs-identifier">hashFromTextAsHex</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#sizeHash"><span class="hs-identifier">sizeHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Blake2b.html"><span class="hs-identifier">Cardano.Crypto.Hash.Blake2b</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Blake2b.html#Blake2b_224"><span class="hs-identifier">Blake2b_224</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html"><span class="hs-identifier">Cardano.Ledger.Address</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Network"><span class="hs-identifier">Network</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkCertIxPartial"><span class="hs-identifier">mkCertIxPartial</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkTxIxPartial"><span class="hs-identifier">mkTxIxPartial</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier">Credential</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Ptr"><span class="hs-identifier">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#SlotNo32"><span class="hs-identifier">SlotNo32</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeReference"><span class="hs-identifier">StakeReference</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Core.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Core</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Binary</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Binary.Put</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/base16-bytestring-1.0.2.0-9ee6195db8aa68eff84c30f8281e5a8902536668e00c8d5aecb570a4d535b748/share/doc/html/src/Data.ByteString.Base16.html"><span class="hs-identifier">Data.ByteString.Base16</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B16</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/base16-bytestring-1.0.2.0-9ee6195db8aa68eff84c30f8281e5a8902536668e00c8d5aecb570a4d535b748/share/doc/html/src/Data.ByteString.Base16.Lazy.html"><span class="hs-identifier">Data.ByteString.Base16.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LB16</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromMaybe</span></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Exts</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IsString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Stack</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">HasCallStack</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.html"><span class="hs-identifier">Test.Tasty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier">TestTree</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.html"><span class="hs-identifier">Test.Tasty</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html"><span class="hs-identifier">Test.Tasty.HUnit</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- Crypto family as used in production Shelley</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- This should match that defined at https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#tests"><span class="hs-identifier hs-type">tests</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-37"></span><span id="tests"><span class="annot"><span class="annottext">tests :: TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#tests"><span class="hs-identifier hs-var hs-var">tests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="annottext">TestName -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">T.testGroup</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Address golden tests&quot;</span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#goldenTests_MockCrypto"><span class="hs-identifier hs-var">goldenTests_MockCrypto</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#goldenTests_ShelleyCrypto"><span class="hs-identifier hs-var">goldenTests_ShelleyCrypto</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">{------------------------------------------------------------------------------
+-- Golden tests
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#goldenTests_MockCrypto"><span class="hs-identifier hs-type">goldenTests_MockCrypto</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-49"></span><span id="goldenTests_MockCrypto"><span class="annot"><span class="annottext">goldenTests_MockCrypto :: TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#goldenTests_MockCrypto"><span class="hs-identifier hs-var hs-var">goldenTests_MockCrypto</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="annottext">TestName -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">T.testGroup</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;MockCrypto golden tests&quot;</span></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestName
+-&gt; (Credential Any -&gt; Put)
+-&gt; Credential Any
+-&gt; ByteString
+-&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;keyHash&quot;</span></span><span> </span><span class="annot"><span class="annottext">Credential Any -&gt; Put
+forall (kr :: KeyRole). Credential kr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putCredential"><span class="hs-identifier hs-var">putCredential</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Any
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372250"><span class="hs-identifier hs-var">keyHash</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372251"><span class="hs-identifier hs-var">keyHashHex</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName
+-&gt; (Credential Any -&gt; Put)
+-&gt; Credential Any
+-&gt; ByteString
+-&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;scriptHash&quot;</span></span><span> </span><span class="annot"><span class="annottext">Credential Any -&gt; Put
+forall (kr :: KeyRole). Credential kr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putCredential"><span class="hs-identifier hs-var">putCredential</span></a></span><span> </span><span class="annot"><span class="annottext">Credential Any
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372252"><span class="hs-identifier hs-var">scriptHash</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372253"><span class="hs-identifier hs-var">scriptHashHex</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Ptr -&gt; Put) -&gt; Ptr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;ptr&quot;</span></span><span> </span><span class="annot"><span class="annottext">Ptr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putPtr"><span class="hs-identifier hs-var">putPtr</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr
+</span><a href="#local-6989586621679372255"><span class="hs-identifier hs-var">ptr</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372256"><span class="hs-identifier hs-var">ptrHex</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-56"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrBaseKK&quot;</span></span><span>
+</span><span id="line-57"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-58"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372250"><span class="hs-identifier hs-var">keyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefBase"><span class="hs-identifier hs-var">StakeRefBase</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372250"><span class="hs-identifier hs-var">keyHash</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;00&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372251"><span class="hs-identifier hs-var">keyHashHex</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372251"><span class="hs-identifier hs-var">keyHashHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-61"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrBaseSK&quot;</span></span><span>
+</span><span id="line-62"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-63"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372252"><span class="hs-identifier hs-var">scriptHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefBase"><span class="hs-identifier hs-var">StakeRefBase</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372250"><span class="hs-identifier hs-var">keyHash</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;10&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372253"><span class="hs-identifier hs-var">scriptHashHex</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372251"><span class="hs-identifier hs-var">keyHashHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-66"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrBaseKS&quot;</span></span><span>
+</span><span id="line-67"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-68"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372250"><span class="hs-identifier hs-var">keyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefBase"><span class="hs-identifier hs-var">StakeRefBase</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372252"><span class="hs-identifier hs-var">scriptHash</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;20&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372251"><span class="hs-identifier hs-var">keyHashHex</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372253"><span class="hs-identifier hs-var">scriptHashHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrBaseSS&quot;</span></span><span>
+</span><span id="line-72"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-73"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372252"><span class="hs-identifier hs-var">scriptHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefBase"><span class="hs-identifier hs-var">StakeRefBase</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372252"><span class="hs-identifier hs-var">scriptHash</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;30&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372253"><span class="hs-identifier hs-var">scriptHashHex</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372253"><span class="hs-identifier hs-var">scriptHashHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-76"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrPtrK&quot;</span></span><span>
+</span><span id="line-77"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-78"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372250"><span class="hs-identifier hs-var">keyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ptr -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefPtr"><span class="hs-identifier hs-var">StakeRefPtr</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr
+</span><a href="#local-6989586621679372255"><span class="hs-identifier hs-var">ptr</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;40&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372251"><span class="hs-identifier hs-var">keyHashHex</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372256"><span class="hs-identifier hs-var">ptrHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrPtrS&quot;</span></span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-83"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372252"><span class="hs-identifier hs-var">scriptHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ptr -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefPtr"><span class="hs-identifier hs-var">StakeRefPtr</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr
+</span><a href="#local-6989586621679372255"><span class="hs-identifier hs-var">ptr</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;50&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372253"><span class="hs-identifier hs-var">scriptHashHex</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372256"><span class="hs-identifier hs-var">ptrHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrEnterpriseK&quot;</span></span><span>
+</span><span id="line-87"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-88"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372250"><span class="hs-identifier hs-var">keyHash</span></a></span><span> </span><span class="annot"><span class="annottext">StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefNull"><span class="hs-identifier hs-var">StakeRefNull</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;60&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372251"><span class="hs-identifier hs-var">keyHashHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-91"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrEnterpriseS&quot;</span></span><span>
+</span><span id="line-92"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-93"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372252"><span class="hs-identifier hs-var">scriptHash</span></a></span><span> </span><span class="annot"><span class="annottext">StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefNull"><span class="hs-identifier hs-var">StakeRefNull</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;70&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372253"><span class="hs-identifier hs-var">scriptHashHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName
+-&gt; (RewardAccount -&gt; Put)
+-&gt; RewardAccount
+-&gt; ByteString
+-&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-96"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;rewardAcntK&quot;</span></span><span>
+</span><span id="line-97"></span><span>        </span><span class="annot"><span class="annottext">RewardAccount -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putRewardAccount"><span class="hs-identifier hs-var">putRewardAccount</span></a></span><span>
+</span><span id="line-98"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; StakeCredential -&gt; RewardAccount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#RewardAccount"><span class="hs-identifier hs-var">RewardAccount</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372250"><span class="hs-identifier hs-var">keyHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;e0&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372251"><span class="hs-identifier hs-var">keyHashHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName
+-&gt; (RewardAccount -&gt; Put)
+-&gt; RewardAccount
+-&gt; ByteString
+-&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-101"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;rewardAcntS&quot;</span></span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">RewardAccount -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putRewardAccount"><span class="hs-identifier hs-var">putRewardAccount</span></a></span><span>
+</span><span id="line-103"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; StakeCredential -&gt; RewardAccount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#RewardAccount"><span class="hs-identifier hs-var">RewardAccount</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372252"><span class="hs-identifier hs-var">scriptHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;f0&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372253"><span class="hs-identifier hs-var">scriptHashHex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621679372046"><span class="annot"><a href="#local-6989586621679372251"><span class="hs-identifier hs-type">keyHashHex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IsString</span></span><span> </span><span class="annot"><a href="#local-6989586621679372046"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679372046"><span class="hs-identifier hs-type">s</span></a></span></span><span>
+</span><span id="line-108"></span><span>    </span><span id="local-6989586621679372251"><span class="annot"><span class="annottext">keyHashHex :: forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372251"><span class="hs-identifier hs-var hs-var">keyHashHex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">s
+</span><span class="hs-string">&quot;01020304a1a2a3a4a5a6a7a8a9b0b1b2b3b4b5b6b7b8b9c0c1c2c3c4&quot;</span></span><span>
+</span><span id="line-109"></span><span>    </span><span id="local-6989586621679372045"><span class="annot"><a href="#local-6989586621679372250"><span class="hs-identifier hs-type">keyHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679372045"><span class="hs-identifier hs-type">kh</span></a></span></span><span>
+</span><span id="line-110"></span><span>    </span><span id="local-6989586621679372250"><span class="annot"><span class="annottext">keyHash :: forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372250"><span class="hs-identifier hs-var hs-var">keyHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">KeyHash kh -&gt; Credential kh
+forall (kr :: KeyRole). KeyHash kr -&gt; Credential kr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#KeyHashObj"><span class="hs-identifier hs-var">KeyHashObj</span></a></span><span>
+</span><span id="line-112"></span><span>        </span><span class="annot"><span class="annottext">(KeyHash kh -&gt; Credential kh)
+-&gt; (Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN)) -&gt; KeyHash kh)
+-&gt; Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN))
+-&gt; Credential kh
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash kh
+forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-var">KeyHash</span></a></span><span>
+</span><span id="line-113"></span><span>        </span><span class="annot"><span class="annottext">(Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash kh)
+-&gt; (Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN))
+    -&gt; Hash ADDRHASH (VerKeyDSIGN DSIGN))
+-&gt; Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN))
+-&gt; KeyHash kh
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN)
+-&gt; Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN))
+-&gt; Hash ADDRHASH (VerKeyDSIGN DSIGN)
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TestName -&gt; Hash ADDRHASH (VerKeyDSIGN DSIGN)
+forall a. HasCallStack =&gt; TestName -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Unable to decode&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>        </span><span class="annot"><span class="annottext">(Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN)) -&gt; Credential kh)
+-&gt; Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN)) -&gt; Credential kh
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN))
+forall h a. HashAlgorithm h =&gt; Text -&gt; Maybe (Hash h a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashFromTextAsHex"><span class="hs-identifier hs-var">hashFromTextAsHex</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372251"><span class="hs-identifier hs-var">keyHashHex</span></a></span><span>
+</span><span id="line-115"></span><span>    </span><span id="local-6989586621679372277"><span class="annot"><a href="#local-6989586621679372253"><span class="hs-identifier hs-type">scriptHashHex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IsString</span></span><span> </span><span class="annot"><a href="#local-6989586621679372277"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679372277"><span class="hs-identifier hs-type">s</span></a></span></span><span>
+</span><span id="line-116"></span><span>    </span><span id="local-6989586621679372253"><span class="annot"><span class="annottext">scriptHashHex :: forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372253"><span class="hs-identifier hs-var hs-var">scriptHashHex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">s
+</span><span class="hs-string">&quot;05060708b5b6b7b8d5d6d7d8d9e0e1e2e3e4e5e6e7e8e9f0f1f2f3f4&quot;</span></span><span>
+</span><span id="line-117"></span><span>    </span><span id="local-6989586621679372280"><span class="annot"><a href="#local-6989586621679372252"><span class="hs-identifier hs-type">scriptHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679372280"><span class="hs-identifier hs-type">kh</span></a></span></span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621679372252"><span class="annot"><span class="annottext">scriptHash :: forall (kh :: KeyRole). Credential kh
+</span><a href="#local-6989586621679372252"><span class="hs-identifier hs-var hs-var">scriptHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">ScriptHash -&gt; Credential kh
+forall (kr :: KeyRole). ScriptHash -&gt; Credential kr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#ScriptHashObj"><span class="hs-identifier hs-var">ScriptHashObj</span></a></span><span>
+</span><span id="line-120"></span><span>        </span><span class="annot"><span class="annottext">(ScriptHash -&gt; Credential kh)
+-&gt; (Maybe (Hash ADDRHASH EraIndependentScript) -&gt; ScriptHash)
+-&gt; Maybe (Hash ADDRHASH EraIndependentScript)
+-&gt; Credential kh
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH EraIndependentScript -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-var">ScriptHash</span></a></span><span>
+</span><span id="line-121"></span><span>        </span><span class="annot"><span class="annottext">(Hash ADDRHASH EraIndependentScript -&gt; ScriptHash)
+-&gt; (Maybe (Hash ADDRHASH EraIndependentScript)
+    -&gt; Hash ADDRHASH EraIndependentScript)
+-&gt; Maybe (Hash ADDRHASH EraIndependentScript)
+-&gt; ScriptHash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH EraIndependentScript
+-&gt; Maybe (Hash ADDRHASH EraIndependentScript)
+-&gt; Hash ADDRHASH EraIndependentScript
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TestName -&gt; Hash ADDRHASH EraIndependentScript
+forall a. HasCallStack =&gt; TestName -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Unable to decode&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>        </span><span class="annot"><span class="annottext">(Maybe (Hash ADDRHASH EraIndependentScript) -&gt; Credential kh)
+-&gt; Maybe (Hash ADDRHASH EraIndependentScript) -&gt; Credential kh
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Maybe (Hash ADDRHASH EraIndependentScript)
+forall h a. HashAlgorithm h =&gt; Text -&gt; Maybe (Hash h a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashFromTextAsHex"><span class="hs-identifier hs-var">hashFromTextAsHex</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372253"><span class="hs-identifier hs-var">scriptHashHex</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span id="local-6989586621679372287"><span class="annot"><a href="#local-6989586621679372256"><span class="hs-identifier hs-type">ptrHex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IsString</span></span><span> </span><span class="annot"><a href="#local-6989586621679372287"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679372287"><span class="hs-identifier hs-type">s</span></a></span></span><span>
+</span><span id="line-124"></span><span>    </span><span id="local-6989586621679372256"><span class="annot"><span class="annottext">ptrHex :: forall s. IsString s =&gt; s
+</span><a href="#local-6989586621679372256"><span class="hs-identifier hs-var hs-var">ptrHex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">s
+</span><span class="hs-string">&quot;81000203&quot;</span></span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><a href="#local-6989586621679372255"><span class="hs-identifier hs-type">ptr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621679372255"><span class="annot"><span class="annottext">ptr :: Ptr
+</span><a href="#local-6989586621679372255"><span class="hs-identifier hs-var hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotNo32 -&gt; TxIx -&gt; CertIx -&gt; Ptr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Ptr"><span class="hs-identifier hs-var">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; SlotNo32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#SlotNo32"><span class="hs-identifier hs-var">SlotNo32</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">128</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; TxIx
+Integer -&gt; TxIx
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkTxIxPartial"><span class="hs-identifier hs-var">mkTxIxPartial</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; CertIx
+Integer -&gt; CertIx
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkCertIxPartial"><span class="hs-identifier hs-var">mkCertIxPartial</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#goldenTests_ShelleyCrypto"><span class="hs-identifier hs-type">goldenTests_ShelleyCrypto</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span><span>
+</span><span id="line-129"></span><span id="goldenTests_ShelleyCrypto"><span class="annot"><span class="annottext">goldenTests_ShelleyCrypto :: TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#goldenTests_ShelleyCrypto"><span class="hs-identifier hs-var hs-var">goldenTests_ShelleyCrypto</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><span class="annottext">TestName -&gt; [TestTree] -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#testGroup"><span class="hs-identifier hs-var">T.testGroup</span></a></span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;ShelleyCrypto golden tests&quot;</span></span><span>
+</span><span id="line-132"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-133"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrEnterpriseK for network id = 0&quot;</span></span><span>
+</span><span id="line-134"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-135"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+</span><a href="#local-6989586621679372292"><span class="hs-identifier hs-var">paymentKey</span></a></span><span> </span><span class="annot"><span class="annottext">StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefNull"><span class="hs-identifier hs-var">StakeRefNull</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>        </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;608a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4&quot;</span></span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-138"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrBaseKK for network id = 0&quot;</span></span><span>
+</span><span id="line-139"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-140"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+</span><a href="#local-6989586621679372292"><span class="hs-identifier hs-var">paymentKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefBase"><span class="hs-identifier hs-var">StakeRefBase</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621679372293"><span class="hs-identifier hs-var">stakeKey</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>        </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;008a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4&quot;</span></span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-143"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrPtrK for network id = 0&quot;</span></span><span>
+</span><span id="line-144"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-145"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+</span><a href="#local-6989586621679372292"><span class="hs-identifier hs-var">paymentKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ptr -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefPtr"><span class="hs-identifier hs-var">StakeRefPtr</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr
+</span><a href="#local-6989586621679372294"><span class="hs-identifier hs-var">ptr</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;408a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203&quot;</span></span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-148"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrEnterpriseK for network id = 1&quot;</span></span><span>
+</span><span id="line-149"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-150"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Mainnet"><span class="hs-identifier hs-var">Mainnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+</span><a href="#local-6989586621679372292"><span class="hs-identifier hs-var">paymentKey</span></a></span><span> </span><span class="annot"><span class="annottext">StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefNull"><span class="hs-identifier hs-var">StakeRefNull</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>        </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;618a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4&quot;</span></span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-153"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrBaseKK for network id = 1&quot;</span></span><span>
+</span><span id="line-154"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-155"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Mainnet"><span class="hs-identifier hs-var">Mainnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+</span><a href="#local-6989586621679372292"><span class="hs-identifier hs-var">paymentKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeCredential -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefBase"><span class="hs-identifier hs-var">StakeRefBase</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621679372293"><span class="hs-identifier hs-var">stakeKey</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>        </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;018a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4&quot;</span></span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-158"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;addrPtrK for network id = 1&quot;</span></span><span>
+</span><span id="line-159"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-160"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; PaymentCredential -&gt; StakeReference -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#Addr"><span class="hs-identifier hs-var">Addr</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Mainnet"><span class="hs-identifier hs-var">Mainnet</span></a></span><span> </span><span class="annot"><span class="annottext">PaymentCredential
+</span><a href="#local-6989586621679372292"><span class="hs-identifier hs-var">paymentKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ptr -&gt; StakeReference
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#StakeRefPtr"><span class="hs-identifier hs-var">StakeRefPtr</span></a></span><span> </span><span class="annot"><span class="annottext">Ptr
+</span><a href="#local-6989586621679372294"><span class="hs-identifier hs-var">ptr</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-161"></span><span>        </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203&quot;</span></span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName
+-&gt; (RewardAccount -&gt; Put)
+-&gt; RewardAccount
+-&gt; ByteString
+-&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-163"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;rewardAcntK&quot;</span></span><span>
+</span><span id="line-164"></span><span>        </span><span class="annot"><span class="annottext">RewardAccount -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putRewardAccount"><span class="hs-identifier hs-var">putRewardAccount</span></a></span><span>
+</span><span id="line-165"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Network -&gt; StakeCredential -&gt; RewardAccount
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#RewardAccount"><span class="hs-identifier hs-var">RewardAccount</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><a href="#local-6989586621679372293"><span class="hs-identifier hs-var">stakeKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>        </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;e008b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4&quot;</span></span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; (Addr -&gt; Put) -&gt; Addr -&gt; ByteString -&gt; TestTree
+forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var">golden</span></a></span><span>
+</span><span id="line-168"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;bootstrapAddr for network id = 1&quot;</span></span><span>
+</span><span id="line-169"></span><span>        </span><span class="annot"><span class="annottext">Addr -&gt; Put
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#putAddr"><span class="hs-identifier hs-var">putAddr</span></a></span><span>
+</span><span id="line-170"></span><span>        </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">BootstrapAddress -&gt; Addr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#AddrBootstrap"><span class="hs-identifier hs-var">AddrBootstrap</span></a></span><span> </span><span class="annot"><span class="annottext">(BootstrapAddress -&gt; Addr)
+-&gt; (Address -&gt; BootstrapAddress) -&gt; Address -&gt; Addr
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Address -&gt; BootstrapAddress
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Address.html#BootstrapAddress"><span class="hs-identifier hs-var">BootstrapAddress</span></a></span><span> </span><span class="annot"><span class="annottext">(Address -&gt; Addr) -&gt; Address -&gt; Addr
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-171"></span><span>            </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Byron.Address</span></a></span><span>
+</span><span id="line-172"></span><span>              </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">addrRoot :: AddressHash Address'
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Address.html#addrRoot"><span class="hs-identifier hs-var">Byron.addrRoot</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; AddressHash Address'
+forall a. Read a =&gt; TestName -&gt; a
+</span><span class="hs-identifier hs-var">read</span></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6a&quot;</span></span><span>
+</span><span id="line-173"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">addrAttributes :: Attributes AddrAttributes
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Address.html#addrAttributes"><span class="hs-identifier hs-var">Byron.addrAttributes</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-174"></span><span>                  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Attributes.html#Attributes"><span class="hs-identifier hs-type">Byron.Attributes</span></a></span><span>
+</span><span id="line-175"></span><span>                    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">attrData :: AddrAttributes
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Attributes.html#attrData"><span class="hs-identifier hs-var">Byron.attrData</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-176"></span><span>                        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">Byron.AddrAttributes</span></a></span><span>
+</span><span id="line-177"></span><span>                          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">aaVKDerivationPath :: Maybe HDAddressPayload
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.AddrAttributes.html#aaVKDerivationPath"><span class="hs-identifier hs-var">Byron.aaVKDerivationPath</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe HDAddressPayload
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-178"></span><span>                          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">aaNetworkMagic :: NetworkMagic
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.AddrAttributes.html#aaNetworkMagic"><span class="hs-identifier hs-var">Byron.aaNetworkMagic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NetworkMagic
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.NetworkMagic.html#NetworkMainOrStage"><span class="hs-identifier hs-var">Byron.NetworkMainOrStage</span></a></span><span>
+</span><span id="line-179"></span><span>                          </span><span class="hs-special">}</span><span>
+</span><span id="line-180"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">attrRemain :: UnparsedFields
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Attributes.html#attrRemain"><span class="hs-identifier hs-var">Byron.attrRemain</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Word8 ByteString -&gt; UnparsedFields
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Attributes.html#UnparsedFields"><span class="hs-identifier hs-var">Byron.UnparsedFields</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word8 ByteString
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-181"></span><span>                    </span><span class="hs-special">}</span><span>
+</span><span id="line-182"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">addrType :: AddrType
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Address.html#addrType"><span class="hs-identifier hs-var">Byron.addrType</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AddrType
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.AddrSpendingData.html#ATVerKey"><span class="hs-identifier hs-var">Byron.ATVerKey</span></a></span><span>
+</span><span id="line-183"></span><span>              </span><span class="hs-special">}</span><span>
+</span><span id="line-184"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span>        </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;82d818582183581c4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6aa0001ab4aad9a5&quot;</span></span><span>
+</span><span id="line-186"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-187"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-188"></span><span>    </span><span class="annot"><a href="#local-6989586621679372292"><span class="hs-identifier hs-type">paymentKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span>
+</span><span id="line-189"></span><span>    </span><span id="local-6989586621679372292"><span class="annot"><span class="annottext">paymentKey :: PaymentCredential
+</span><a href="#local-6989586621679372292"><span class="hs-identifier hs-var hs-var">paymentKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; PaymentCredential
+forall (kh :: KeyRole). ByteString -&gt; Credential kh
+</span><a href="#local-6989586621679372313"><span class="hs-identifier hs-var">keyBlake2b224</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; PaymentCredential)
+-&gt; ByteString -&gt; PaymentCredential
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/base16-bytestring-1.0.2.0-9ee6195db8aa68eff84c30f8281e5a8902536668e00c8d5aecb570a4d535b748/share/doc/html/src/Data.ByteString.Base16.html#encode"><span class="hs-identifier hs-var">B16.encode</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;1a2a3a4a5a6a7a8a&quot;</span></span><span>
+</span><span id="line-190"></span><span>    </span><span class="annot"><a href="#local-6989586621679372293"><span class="hs-identifier hs-type">stakeKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span>
+</span><span id="line-191"></span><span>    </span><span id="local-6989586621679372293"><span class="annot"><span class="annottext">stakeKey :: StakeCredential
+</span><a href="#local-6989586621679372293"><span class="hs-identifier hs-var hs-var">stakeKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; StakeCredential
+forall (kh :: KeyRole). ByteString -&gt; Credential kh
+</span><a href="#local-6989586621679372313"><span class="hs-identifier hs-var">keyBlake2b224</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; StakeCredential) -&gt; ByteString -&gt; StakeCredential
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/base16-bytestring-1.0.2.0-9ee6195db8aa68eff84c30f8281e5a8902536668e00c8d5aecb570a4d535b748/share/doc/html/src/Data.ByteString.Base16.html#encode"><span class="hs-identifier hs-var">B16.encode</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;1c2c3c4c5c6c7c8c&quot;</span></span><span>
+</span><span id="line-192"></span><span>    </span><span class="annot"><a href="#local-6989586621679372294"><span class="hs-identifier hs-type">ptr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Ptr"><span class="hs-identifier hs-type">Ptr</span></a></span><span>
+</span><span id="line-193"></span><span>    </span><span id="local-6989586621679372294"><span class="annot"><span class="annottext">ptr :: Ptr
+</span><a href="#local-6989586621679372294"><span class="hs-identifier hs-var hs-var">ptr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotNo32 -&gt; TxIx -&gt; CertIx -&gt; Ptr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Ptr"><span class="hs-identifier hs-var">Ptr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; SlotNo32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#SlotNo32"><span class="hs-identifier hs-var">SlotNo32</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">128</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; TxIx
+Integer -&gt; TxIx
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkTxIxPartial"><span class="hs-identifier hs-var">mkTxIxPartial</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HasCallStack =&gt; Integer -&gt; CertIx
+Integer -&gt; CertIx
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mkCertIxPartial"><span class="hs-identifier hs-var">mkCertIxPartial</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-comment">-- 32-byte verification key is expected, vk, ie., public key without chain code.</span><span>
+</span><span id="line-195"></span><span>    </span><span class="hs-comment">-- The verification key undergoes Blake2b_224 hashing</span><span>
+</span><span id="line-196"></span><span>    </span><span class="hs-comment">-- and should be 28-byte in the aftermath</span><span>
+</span><span id="line-197"></span><span>    </span><span id="local-6989586621679372096"><span class="annot"><a href="#local-6989586621679372313"><span class="hs-identifier hs-type">keyBlake2b224</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679372096"><span class="hs-identifier hs-type">kh</span></a></span></span><span>
+</span><span id="line-198"></span><span>    </span><span id="local-6989586621679372313"><span class="annot"><span class="annottext">keyBlake2b224 :: forall (kh :: KeyRole). ByteString -&gt; Credential kh
+</span><a href="#local-6989586621679372313"><span class="hs-identifier hs-var hs-var">keyBlake2b224</span></a></span></span><span> </span><span id="local-6989586621679372328"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679372328"><span class="hs-identifier hs-var">vk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-199"></span><span>      </span><span class="annot"><span class="annottext">KeyHash kh -&gt; Credential kh
+forall (kr :: KeyRole). KeyHash kr -&gt; Credential kr
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#KeyHashObj"><span class="hs-identifier hs-var">KeyHashObj</span></a></span><span>
+</span><span id="line-200"></span><span>        </span><span class="annot"><span class="annottext">(KeyHash kh -&gt; Credential kh)
+-&gt; (Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN)) -&gt; KeyHash kh)
+-&gt; Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN))
+-&gt; Credential kh
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash kh
+forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-var">KeyHash</span></a></span><span>
+</span><span id="line-201"></span><span>        </span><span class="annot"><span class="annottext">(Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash kh)
+-&gt; (Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN))
+    -&gt; Hash ADDRHASH (VerKeyDSIGN DSIGN))
+-&gt; Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN))
+-&gt; KeyHash kh
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN DSIGN)
+-&gt; Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN))
+-&gt; Hash ADDRHASH (VerKeyDSIGN DSIGN)
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TestName -&gt; Hash ADDRHASH (VerKeyDSIGN DSIGN)
+forall a. HasCallStack =&gt; TestName -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Supplied bytes are of unexpected length&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-202"></span><span>        </span><span class="annot"><span class="annottext">(Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN)) -&gt; Credential kh)
+-&gt; Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN)) -&gt; Credential kh
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe (Hash ADDRHASH (VerKeyDSIGN DSIGN))
+forall h a. HashAlgorithm h =&gt; ByteString -&gt; Maybe (Hash h a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashFromBytes"><span class="hs-identifier hs-var">hashFromBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679372329"><span class="hs-identifier hs-var">hk</span></a></span><span>
+</span><span id="line-203"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-204"></span><span>        </span><span id="local-6989586621679372331"><span class="annot"><span class="annottext">hash :: ByteString -&gt; ByteString
+</span><a href="#local-6989586621679372331"><span class="hs-identifier hs-var hs-var">hash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy ADDRHASH -&gt; ByteString -&gt; ByteString
+forall h (proxy :: * -&gt; *).
+HashAlgorithm h =&gt;
+proxy h -&gt; ByteString -&gt; ByteString
+forall (proxy :: * -&gt; *).
+proxy ADDRHASH -&gt; ByteString -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#digest"><span class="hs-identifier hs-var">digest</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy ADDRHASH
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Blake2b.html#Blake2b_224"><span class="hs-identifier hs-type">Blake2b_224</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-205"></span><span>        </span><span id="local-6989586621679372334"><span class="annot"><span class="annottext">vk' :: ByteString
+</span><a href="#local-6989586621679372334"><span class="hs-identifier hs-var hs-var">vk'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Int -&gt; ByteString -&gt; ByteString
+Int -&gt; ByteString -&gt; ByteString
+</span><a href="#local-6989586621679372335"><span class="hs-identifier hs-var">invariantSize</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">32</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679372328"><span class="hs-identifier hs-var">vk</span></a></span><span>
+</span><span id="line-206"></span><span>        </span><span id="local-6989586621679372329"><span class="annot"><span class="annottext">hk :: ByteString
+</span><a href="#local-6989586621679372329"><span class="hs-identifier hs-var hs-var">hk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-207"></span><span>          </span><span class="annot"><span class="annottext">HasCallStack =&gt; Int -&gt; ByteString -&gt; ByteString
+Int -&gt; ByteString -&gt; ByteString
+</span><a href="#local-6989586621679372335"><span class="hs-identifier hs-var">invariantSize</span></a></span><span>
+</span><span id="line-208"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Word -&gt; Int) -&gt; Word -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Proxy ADDRHASH -&gt; Word
+forall h (proxy :: * -&gt; *). HashAlgorithm h =&gt; proxy h -&gt; Word
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#sizeHash"><span class="hs-identifier hs-var">sizeHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy ADDRHASH
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Blake2b.html#Blake2b_224"><span class="hs-identifier hs-type">Blake2b_224</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-209"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="#local-6989586621679372331"><span class="hs-identifier hs-var">hash</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679372334"><span class="hs-identifier hs-var">vk'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-210"></span><span>    </span><span class="annot"><a href="#local-6989586621679372335"><span class="hs-identifier hs-type">invariantSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span>
+</span><span id="line-211"></span><span>    </span><span id="local-6989586621679372335"><span class="annot"><span class="annottext">invariantSize :: HasCallStack =&gt; Int -&gt; ByteString -&gt; ByteString
+</span><a href="#local-6989586621679372335"><span class="hs-identifier hs-var hs-var">invariantSize</span></a></span></span><span> </span><span id="local-6989586621679372348"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679372348"><span class="hs-identifier hs-var">expectedLength</span></a></span></span><span> </span><span id="local-6989586621679372349"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679372349"><span class="hs-identifier hs-var">bytes</span></a></span></span><span>
+</span><span id="line-212"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><span class="hs-identifier hs-var">BS.length</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679372349"><span class="hs-identifier hs-var">bytes</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679372348"><span class="hs-identifier hs-var">expectedLength</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679372349"><span class="hs-identifier hs-var">bytes</span></a></span><span>
+</span><span id="line-213"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-214"></span><span>          </span><span class="annot"><span class="annottext">TestName -&gt; ByteString
+forall a. HasCallStack =&gt; TestName -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">(TestName -&gt; ByteString) -&gt; TestName -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-215"></span><span>            </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;length was &quot;</span></span><span>
+</span><span id="line-216"></span><span>              </span><span class="annot"><span class="annottext">TestName -&gt; TestName -&gt; TestName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; TestName
+forall a. Show a =&gt; a -&gt; TestName
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><span class="hs-identifier hs-var">BS.length</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679372349"><span class="hs-identifier hs-var">bytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-217"></span><span>              </span><span class="annot"><span class="annottext">TestName -&gt; TestName -&gt; TestName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;, but expected to be &quot;</span></span><span>
+</span><span id="line-218"></span><span>              </span><span class="annot"><span class="annottext">TestName -&gt; TestName -&gt; TestName
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; TestName
+forall a. Show a =&gt; a -&gt; TestName
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679372348"><span class="hs-identifier hs-var">expectedLength</span></a></span><span>
+</span><span id="line-219"></span><span>
+</span><span id="line-220"></span><span id="local-6989586621679372043"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-type">golden</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679372043"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.Put</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679372043"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LBS.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-1.5.3-88586983451851d5d35dd67c2a04aba64f40e4837f8fdc734bac69f324c5798f/share/doc/html/src/Test.Tasty.Core.html#TestTree"><span class="hs-identifier hs-type">TestTree</span></a></span></span><span>
+</span><span id="line-221"></span><span id="golden"><span class="annot"><span class="annottext">golden :: forall a.
+HasCallStack =&gt;
+TestName -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString -&gt; TestTree
+</span><a href="Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address.html#golden"><span class="hs-identifier hs-var hs-var">golden</span></a></span></span><span> </span><span id="local-6989586621679372359"><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679372359"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679372360"><span class="annot"><span class="annottext">a -&gt; Put
+</span><a href="#local-6989586621679372360"><span class="hs-identifier hs-var">put</span></a></span></span><span> </span><span id="local-6989586621679372361"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679372361"><span class="hs-identifier hs-var">value</span></a></span></span><span> </span><span id="local-6989586621679372362"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679372362"><span class="hs-identifier hs-var">expected</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-222"></span><span>  </span><span class="annot"><span class="annottext">TestName -&gt; Assertion -&gt; TestTree
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.html#testCase"><span class="hs-identifier hs-var">T.testCase</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679372359"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">(Assertion -&gt; TestTree) -&gt; Assertion -&gt; TestTree
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-223"></span><span>    </span><span class="annot"><span class="annottext">TestName -&gt; ByteString -&gt; ByteString -&gt; Assertion
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+TestName -&gt; a -&gt; a -&gt; Assertion
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/tasty-hunit-0.10.2-13f6c220e376577f480388ce7b48845de059e632d2009f6345efd49ff3720c14/share/doc/html/src/Test.Tasty.HUnit.Orig.html#assertEqual"><span class="hs-identifier hs-var">T.assertEqual</span></a></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><a href="#local-6989586621679372359"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679372362"><span class="hs-identifier hs-var">expected</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/base16-bytestring-1.0.2.0-9ee6195db8aa68eff84c30f8281e5a8902536668e00c8d5aecb570a4d535b748/share/doc/html/src/Data.ByteString.Base16.Lazy.html#encode"><span class="hs-identifier hs-var">LB16.encode</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString) -&gt; (a -&gt; ByteString) -&gt; a -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Put -&gt; ByteString
+</span><span class="hs-identifier hs-var">B.runPut</span></span><span> </span><span class="annot"><span class="annottext">(Put -&gt; ByteString) -&gt; (a -&gt; Put) -&gt; a -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Put
+</span><a href="#local-6989586621679372360"><span class="hs-identifier hs-var">put</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; ByteString) -&gt; a -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679372361"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-224"></span></pre></body></html>

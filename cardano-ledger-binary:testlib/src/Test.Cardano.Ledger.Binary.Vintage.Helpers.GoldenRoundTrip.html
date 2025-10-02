@@ -1,0 +1,605 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="annot"><span class="hs-comment">-- | Golden and round-trip testing of 'DecCBOR' and 'EncCBOR' instances</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBOR"><span class="hs-identifier">goldenTestCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBORExplicit"><span class="hs-identifier">goldenTestCBORExplicit</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestExplicit"><span class="hs-identifier">goldenTestExplicit</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#roundTripsCBORShow"><span class="hs-identifier">roundTripsCBORShow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#roundTripsCBORBuildable"><span class="hs-identifier">roundTripsCBORBuildable</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#compareHexDump"><span class="hs-identifier">compareHexDump</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#deprecatedGoldenDecode"><span class="hs-identifier">deprecatedGoldenDecode</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier">Decoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier">DecoderError</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier">Encoding</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier">Version</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull"><span class="hs-identifier">decodeFull</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFullDecoder"><span class="hs-identifier">decodeFullDecoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier">natVersion</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier">serialize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.IO.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadIO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">liftIO</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy.Char8</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proxy</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Text</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier">Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Stack</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">HasCallStack</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">withFrozenCallStack</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier">MonadTest</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier">Property</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#eval"><span class="hs-identifier">eval</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#property"><span class="hs-identifier">property</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#success"><span class="hs-identifier">success</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Tripping.html#tripping"><span class="hs-identifier">tripping</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#withTests"><span class="hs-identifier">withTests</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#%3D%3D%3D"><span class="hs-operator">(===)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html"><span class="hs-identifier">Hedgehog.Internal.Property</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#failWith"><span class="hs-identifier">failWith</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html"><span class="hs-identifier">Hedgehog.Internal.Show</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#LineDiff"><span class="hs-identifier">LineDiff</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#lineDiff"><span class="hs-identifier">lineDiff</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#mkValue"><span class="hs-identifier">mkValue</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#renderLineDiff"><span class="hs-identifier">renderLineDiff</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#showPretty"><span class="hs-identifier">showPretty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.html"><span class="hs-identifier">Test.Cardano.Prelude</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.Base16.html#decodeBase16"><span class="hs-identifier">decodeBase16</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.Base16.html#encodeWithIndex"><span class="hs-identifier">encodeWithIndex</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.Tripping.html#trippingBuildable"><span class="hs-identifier">trippingBuildable</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/pretty-show-1.10-1685b8887cd2307f6e5504e8b2b651b35207ad28db3687dd9a33a6413f763f6e/share/doc/html/src/Text.Show.Pretty.html"><span class="hs-identifier">Text.Show.Pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/pretty-show-1.10-1685b8887cd2307f6e5504e8b2b651b35207ad28db3687dd9a33a6413f763f6e/share/doc/html/src/Text.Show.Value.html#Value"><span class="hs-identifier">Value</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#byronProtVer"><span class="hs-identifier hs-type">byronProtVer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#Version"><span class="hs-identifier hs-type">Version</span></a></span><span>
+</span><span id="line-62"></span><span id="byronProtVer"><span class="annot"><span class="annottext">byronProtVer :: Version
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#byronProtVer"><span class="hs-identifier hs-var hs-var">byronProtVer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#natVersion"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">1</span></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">type</span><span> </span><span id="HexDump"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#HexDump"><span class="hs-identifier hs-var">HexDump</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">type</span><span> </span><span id="HexDumpDiff"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#HexDumpDiff"><span class="hs-identifier hs-var">HexDumpDiff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#LineDiff"><span class="hs-identifier hs-type">LineDiff</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#renderHexDumpDiff"><span class="hs-identifier hs-type">renderHexDumpDiff</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#HexDumpDiff"><span class="hs-identifier hs-type">HexDumpDiff</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span id="renderHexDumpDiff"><span class="annot"><span class="annottext">renderHexDumpDiff :: HexDumpDiff -&gt; [Char]
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#renderHexDumpDiff"><span class="hs-identifier hs-var hs-var">renderHexDumpDiff</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[[Char]] -&gt; [Char]
+</span><span class="hs-identifier hs-var">Prelude.unlines</span></span><span> </span><span class="annot"><span class="annottext">([[Char]] -&gt; [Char])
+-&gt; (HexDumpDiff -&gt; [[Char]]) -&gt; HexDumpDiff -&gt; [Char]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(LineDiff -&gt; [Char]) -&gt; HexDumpDiff -&gt; [[Char]]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">LineDiff -&gt; [Char]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#renderLineDiff"><span class="hs-identifier hs-var">renderLineDiff</span></a></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="annot"><span class="hs-comment">-- | Diff two 'HexDump's by comparing lines pairwise</span></span><span>
+</span><span id="line-72"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#hexDumpDiff"><span class="hs-identifier hs-type">hexDumpDiff</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#HexDump"><span class="hs-identifier hs-type">HexDump</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#HexDump"><span class="hs-identifier hs-type">HexDump</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#HexDumpDiff"><span class="hs-identifier hs-type">HexDumpDiff</span></a></span><span>
+</span><span id="line-73"></span><span id="hexDumpDiff"><span class="annot"><span class="annottext">hexDumpDiff :: ByteString -&gt; ByteString -&gt; Maybe HexDumpDiff
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#hexDumpDiff"><span class="hs-identifier hs-var hs-var">hexDumpDiff</span></a></span></span><span> </span><span id="local-6989586621679253045"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253045"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679253046"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253046"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679253047"><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679253047"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Maybe Value] -&gt; Maybe [Value]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Traversable t, Monad m) =&gt;
+t (m a) -&gt; m (t a)
+forall (m :: * -&gt; *) a. Monad m =&gt; [m a] -&gt; m [a]
+</span><span class="hs-identifier hs-var">sequence</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Maybe Value
+forall a. Show a =&gt; a -&gt; Maybe Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#mkValue"><span class="hs-identifier hs-var">mkValue</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Maybe Value) -&gt; [ByteString] -&gt; [Maybe Value]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString]
+</span><span class="hs-identifier hs-var">BS.lines</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253045"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679253051"><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679253051"><span class="hs-identifier hs-var">ys</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Maybe Value] -&gt; Maybe [Value]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Traversable t, Monad m) =&gt;
+t (m a) -&gt; m (t a)
+forall (m :: * -&gt; *) a. Monad m =&gt; [m a] -&gt; m [a]
+</span><span class="hs-identifier hs-var">sequence</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Maybe Value
+forall a. Show a =&gt; a -&gt; Maybe Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#mkValue"><span class="hs-identifier hs-var">mkValue</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Maybe Value) -&gt; [ByteString] -&gt; [Maybe Value]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString]
+</span><span class="hs-identifier hs-var">BS.lines</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253046"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="annottext">HexDumpDiff -&gt; Maybe HexDumpDiff
+forall a. a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(HexDumpDiff -&gt; Maybe HexDumpDiff)
+-&gt; HexDumpDiff -&gt; Maybe HexDumpDiff
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">((Value, Value) -&gt; HexDumpDiff) -&gt; [(Value, Value)] -&gt; HexDumpDiff
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Value -&gt; Value -&gt; HexDumpDiff) -&gt; (Value, Value) -&gt; HexDumpDiff
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><span class="hs-identifier hs-var">uncurry</span></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; HexDumpDiff
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#lineDiff"><span class="hs-identifier hs-var">lineDiff</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(Value, Value)] -&gt; HexDumpDiff)
+-&gt; [(Value, Value)] -&gt; HexDumpDiff
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">Value -&gt; Value -&gt; [Value] -&gt; [Value] -&gt; [(Value, Value)]
+forall a b. a -&gt; b -&gt; [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#zipWithPadding"><span class="hs-identifier hs-var">zipWithPadding</span></a></span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/pretty-show-1.10-1685b8887cd2307f6e5504e8b2b651b35207ad28db3687dd9a33a6413f763f6e/share/doc/html/src/Text.Show.Value.html#String"><span class="hs-identifier hs-var">String</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; Value
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/pretty-show-1.10-1685b8887cd2307f6e5504e8b2b651b35207ad28db3687dd9a33a6413f763f6e/share/doc/html/src/Text.Show.Value.html#String"><span class="hs-identifier hs-var">String</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679253047"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621679253051"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span id="local-6989586621679252898"><span id="local-6989586621679252899"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#zipWithPadding"><span class="hs-identifier hs-type">zipWithPadding</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679252898"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679252899"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679252898"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679252899"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679252898"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679252899"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span></span></span><span>
+</span><span id="line-85"></span><span id="zipWithPadding"><span class="annot"><span class="annottext">zipWithPadding :: forall a b. a -&gt; b -&gt; [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#zipWithPadding"><span class="hs-identifier hs-var hs-var">zipWithPadding</span></a></span></span><span> </span><span id="local-6989586621679253056"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253056"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679253057"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679253057"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679253058"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253058"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679253059"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679253059"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679253060"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679253060"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679253061"><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679253061"><span class="hs-identifier hs-var">ys</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253058"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679253060"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(a, b) -&gt; [(a, b)] -&gt; [(a, b)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; [a] -&gt; [b] -&gt; [(a, b)]
+forall a b. a -&gt; b -&gt; [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#zipWithPadding"><span class="hs-identifier hs-var">zipWithPadding</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253056"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679253057"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679253059"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679253061"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#zipWithPadding"><span class="hs-identifier hs-var">zipWithPadding</span></a></span><span> </span><span id="local-6989586621679253062"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253062"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span id="local-6989586621679253063"><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679253063"><span class="hs-identifier hs-var">ys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [b] -&gt; [(a, b)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><span class="hs-identifier hs-var">zip</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; [a]
+forall a. a -&gt; [a]
+</span><span class="hs-identifier hs-var">repeat</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253062"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[b]
+</span><a href="#local-6989586621679253063"><span class="hs-identifier hs-var">ys</span></a></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#zipWithPadding"><span class="hs-identifier hs-var">zipWithPadding</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679253065"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679253065"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679253066"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679253066"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; [b] -&gt; [(a, b)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><span class="hs-identifier hs-var">zip</span></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679253066"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">b -&gt; [b]
+forall a. a -&gt; [a]
+</span><span class="hs-identifier hs-var">repeat</span></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679253065"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="annot"><span class="hs-comment">-- | A custom version of '(===)' for 'HexDump's to get prettier diffs</span></span><span>
+</span><span id="line-90"></span><span id="local-6989586621679252906"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#compareHexDump"><span class="hs-identifier hs-type">compareHexDump</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252906"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#HexDump"><span class="hs-identifier hs-type">HexDump</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#HexDump"><span class="hs-identifier hs-type">HexDump</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679252906"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-91"></span><span id="compareHexDump"><span class="annot"><span class="annottext">compareHexDump :: forall (m :: * -&gt; *).
+(MonadTest m, HasCallStack) =&gt;
+ByteString -&gt; ByteString -&gt; m ()
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#compareHexDump"><span class="hs-identifier hs-var hs-var">compareHexDump</span></a></span></span><span> </span><span id="local-6989586621679253077"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253077"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679253078"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253078"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679253079"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679253079"><span class="hs-identifier hs-var">ok</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m Bool) -&gt; m Bool
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><span class="hs-identifier hs-var">withFrozenCallStack</span></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m Bool) -&gt; m Bool)
+-&gt; (HasCallStack =&gt; m Bool) -&gt; m Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; m Bool
+forall (m :: * -&gt; *) a. (MonadTest m, HasCallStack) =&gt; a -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#eval"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253077"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253078"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679253079"><span class="hs-identifier hs-var">ok</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">m ()
+forall (m :: * -&gt; *). MonadTest m =&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#success"><span class="hs-identifier hs-var">success</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><span class="hs-identifier hs-var">withFrozenCallStack</span></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; m ()
+forall (m :: * -&gt; *).
+(MonadTest m, HasCallStack) =&gt;
+ByteString -&gt; ByteString -&gt; m ()
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#failHexDumpDiff"><span class="hs-identifier hs-var">failHexDumpDiff</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253077"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253078"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="annot"><span class="hs-comment">-- | Fail with a nice line diff of the two HexDumps</span></span><span>
+</span><span id="line-96"></span><span id="local-6989586621679253091"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#failHexDumpDiff"><span class="hs-identifier hs-type">failHexDumpDiff</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679253091"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#HexDump"><span class="hs-identifier hs-type">HexDump</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#HexDump"><span class="hs-identifier hs-type">HexDump</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679253091"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-97"></span><span id="failHexDumpDiff"><span class="annot"><span class="annottext">failHexDumpDiff :: forall (m :: * -&gt; *).
+(MonadTest m, HasCallStack) =&gt;
+ByteString -&gt; ByteString -&gt; m ()
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#failHexDumpDiff"><span class="hs-identifier hs-var hs-var">failHexDumpDiff</span></a></span></span><span> </span><span id="local-6989586621679253098"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253098"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679253099"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253099"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Maybe HexDumpDiff
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#hexDumpDiff"><span class="hs-identifier hs-var">hexDumpDiff</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253098"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253099"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">Maybe HexDumpDiff
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><span class="hs-identifier hs-var">withFrozenCallStack</span></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><span class="annottext">Maybe Diff -&gt; [Char] -&gt; m ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, HasCallStack) =&gt;
+Maybe Diff -&gt; [Char] -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#failWith"><span class="hs-identifier hs-var">failWith</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Diff
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; m ()) -&gt; [Char] -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-101"></span><span>        </span><span class="annot"><span class="annottext">[[Char]] -&gt; [Char]
+</span><span class="hs-identifier hs-var">Prelude.unlines</span></span><span>
+</span><span id="line-102"></span><span>          </span><span class="hs-special">[</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;&#9473;&#9473;&#9473; Not Equal &#9473;&#9473;&#9473;&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#showPretty"><span class="hs-identifier hs-var">showPretty</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253098"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Show.html#showPretty"><span class="hs-identifier hs-var">showPretty</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253099"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679253106"><span class="annot"><span class="annottext">HexDumpDiff
+</span><a href="#local-6989586621679253106"><span class="hs-identifier hs-var">dif</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><span class="hs-identifier hs-var">withFrozenCallStack</span></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Maybe Diff -&gt; [Char] -&gt; m ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, HasCallStack) =&gt;
+Maybe Diff -&gt; [Char] -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#failWith"><span class="hs-identifier hs-var">failWith</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Diff
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; m ()) -&gt; [Char] -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">HexDumpDiff -&gt; [Char]
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#renderHexDumpDiff"><span class="hs-identifier hs-var">renderHexDumpDiff</span></a></span><span> </span><span class="annot"><span class="annottext">HexDumpDiff
+</span><a href="#local-6989586621679253106"><span class="hs-identifier hs-var">dif</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- | Check that the 'encode' and 'decode' function of the 'Bi' instances work as</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- expected w.r.t. the give reference data, this is, given a value @x::a@, and</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- a file path @fp@:</span><span>
+</span><span id="line-108"></span><span class="hs-comment">--</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- - The encoded data should coincide with the contents of the @fp@.</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- - Decoding @fp@ should give as a result @x@</span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBOR"><span class="hs-identifier hs-type">goldenTestCBOR</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679252921"><span class="annot"><a href="#local-6989586621679252921"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252921"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252921"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679252921"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621679252921"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><a href="#local-6989586621679252921"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-117"></span><span id="goldenTestCBOR"><span class="annot"><span class="annottext">goldenTestCBOR :: forall a.
+(DecCBOR a, EncCBOR a, Eq a, Show a, HasCallStack) =&gt;
+a -&gt; [Char] -&gt; Property
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBOR"><span class="hs-identifier hs-var hs-var">goldenTestCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><span class="annottext">(HasCallStack =&gt; a -&gt; [Char] -&gt; Property)
+-&gt; a -&gt; [Char] -&gt; Property
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><span class="hs-identifier hs-var">withFrozenCallStack</span></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; a -&gt; [Char] -&gt; Property)
+ -&gt; a -&gt; [Char] -&gt; Property)
+-&gt; (HasCallStack =&gt; a -&gt; [Char] -&gt; Property)
+-&gt; a
+-&gt; [Char]
+-&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">Text
+-&gt; (a -&gt; Encoding)
+-&gt; (forall s. Decoder s a)
+-&gt; a
+-&gt; [Char]
+-&gt; Property
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+Text
+-&gt; (a -&gt; Encoding)
+-&gt; (forall s. Decoder s a)
+-&gt; a
+-&gt; [Char]
+-&gt; Property
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBORExplicit"><span class="hs-identifier hs-var">goldenTestCBORExplicit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy a -&gt; Text
+forall a. DecCBOR a =&gt; Proxy a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#label"><span class="hs-keyword hs-var">label</span></a></span><span> </span><span class="annot"><span class="annottext">(Proxy a -&gt; Text) -&gt; Proxy a -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679252921"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s a
+forall s. Decoder s a
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- | Variant of 'goldenTestBi' using custom encode and decode functions.</span><span>
+</span><span id="line-122"></span><span class="hs-comment">--</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- This is required for the encode/decode golden-tests for types that do no</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- have a 'Bi' instance.</span><span>
+</span><span id="line-125"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBORExplicit"><span class="hs-identifier hs-type">goldenTestCBORExplicit</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679252930"><span class="annot"><a href="#local-6989586621679252930"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679252930"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621679252930"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Label for error reporting when decoding.</span></span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679252930"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#Encoding"><span class="hs-identifier hs-type">Encoding</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679252928"><span class="annot"><a href="#local-6989586621679252928"><span class="hs-identifier hs-type">s</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252928"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252930"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><a href="#local-6989586621679252930"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-135"></span><span id="goldenTestCBORExplicit"><span class="annot"><span class="annottext">goldenTestCBORExplicit :: forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+Text
+-&gt; (a -&gt; Encoding)
+-&gt; (forall s. Decoder s a)
+-&gt; a
+-&gt; [Char]
+-&gt; Property
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBORExplicit"><span class="hs-identifier hs-var hs-var">goldenTestCBORExplicit</span></a></span></span><span> </span><span id="local-6989586621679253139"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679253139"><span class="hs-identifier hs-var">eLabel</span></a></span></span><span> </span><span id="local-6989586621679253140"><span class="annot"><span class="annottext">a -&gt; Encoding
+</span><a href="#local-6989586621679253140"><span class="hs-identifier hs-var">enc</span></a></span></span><span> </span><span id="local-6989586621679253141"><span class="annot"><span class="annottext">forall s. Decoder s a
+</span><a href="#local-6989586621679253141"><span class="hs-identifier hs-var">dec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><span class="annottext">(a -&gt; ByteString)
+-&gt; (ByteString -&gt; Either DecoderError a) -&gt; a -&gt; [Char] -&gt; Property
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+(a -&gt; ByteString)
+-&gt; (ByteString -&gt; Either DecoderError a) -&gt; a -&gt; [Char] -&gt; Property
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestExplicit"><span class="hs-identifier hs-var">goldenTestExplicit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; ByteString) -&gt; (a -&gt; Encoding) -&gt; a -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Encoding
+</span><a href="#local-6989586621679253140"><span class="hs-identifier hs-var">enc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either DecoderError a
+</span><a href="#local-6989586621679253142"><span class="hs-identifier hs-var">fullDecoder</span></a></span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><a href="#local-6989586621679253142"><span class="hs-identifier hs-type">fullDecoder</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BSL.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252930"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span id="local-6989586621679253142"><span class="annot"><span class="annottext">fullDecoder :: ByteString -&gt; Either DecoderError a
+</span><a href="#local-6989586621679253142"><span class="hs-identifier hs-var hs-var">fullDecoder</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s a)
+-&gt; ByteString
+-&gt; Either DecoderError a
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s a)
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFullDecoder"><span class="hs-identifier hs-var">decodeFullDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679253139"><span class="hs-identifier hs-var">eLabel</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s a
+forall s. Decoder s a
+</span><a href="#local-6989586621679253141"><span class="hs-identifier hs-var">dec</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestExplicit"><span class="hs-identifier hs-type">goldenTestExplicit</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679252940"><span class="annot"><a href="#local-6989586621679252940"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679252940"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621679252940"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679252940"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">BS.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252940"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-146"></span><span>  </span><span class="annot"><a href="#local-6989586621679252940"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-147"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-148"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-149"></span><span id="goldenTestExplicit"><span class="annot"><span class="annottext">goldenTestExplicit :: forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+(a -&gt; ByteString)
+-&gt; (ByteString -&gt; Either DecoderError a) -&gt; a -&gt; [Char] -&gt; Property
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestExplicit"><span class="hs-identifier hs-var hs-var">goldenTestExplicit</span></a></span></span><span> </span><span id="local-6989586621679253148"><span class="annot"><span class="annottext">a -&gt; ByteString
+</span><a href="#local-6989586621679253148"><span class="hs-identifier hs-var">encode</span></a></span></span><span> </span><span id="local-6989586621679253149"><span class="annot"><span class="annottext">ByteString -&gt; Either DecoderError a
+</span><a href="#local-6989586621679253149"><span class="hs-identifier hs-var">decode</span></a></span></span><span> </span><span id="local-6989586621679253150"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253150"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679253151"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679253151"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; Property) -&gt; Property
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><span class="hs-identifier hs-var">withFrozenCallStack</span></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; Property) -&gt; Property)
+-&gt; (HasCallStack =&gt; Property) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679253187"><span class="annot"><span class="annottext">bs' :: ByteString
+</span><a href="#local-6989586621679253187"><span class="hs-identifier hs-var hs-var">bs'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.Base16.html#encodeWithIndex"><span class="hs-identifier hs-var">encodeWithIndex</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString) -&gt; (a -&gt; ByteString) -&gt; a -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; ByteString
+</span><a href="#local-6989586621679253148"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; ByteString) -&gt; a -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253150"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><span class="annottext">TestLimit -&gt; Property -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#withTests"><span class="hs-identifier hs-var">withTests</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Property)
+-&gt; (PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; Property
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+PropertyT IO () -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-152"></span><span>    </span><span id="local-6989586621679253188"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253188"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; PropertyT IO ByteString
+forall a. IO a -&gt; PropertyT IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><span class="hs-identifier hs-var">liftIO</span></span><span> </span><span class="annot"><span class="annottext">(IO ByteString -&gt; PropertyT IO ByteString)
+-&gt; IO ByteString -&gt; PropertyT IO ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO ByteString
+</span><span class="hs-identifier hs-var">BS.readFile</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679253151"><span class="hs-identifier hs-var">path</span></a></span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679253190"><span class="annot"><span class="annottext">target :: Maybe ByteString
+</span><a href="#local-6989586621679253190"><span class="hs-identifier hs-var hs-var">target</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.Base16.html#decodeBase16"><span class="hs-identifier hs-var">decodeBase16</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253188"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; PropertyT IO ()
+forall (m :: * -&gt; *).
+(MonadTest m, HasCallStack) =&gt;
+ByteString -&gt; ByteString -&gt; m ()
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#compareHexDump"><span class="hs-identifier hs-var">compareHexDump</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253188"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679253187"><span class="hs-identifier hs-var">bs'</span></a></span><span>
+</span><span id="line-155"></span><span>    </span><span class="annot"><span class="annottext">(ByteString -&gt; Either DecoderError a)
+-&gt; Maybe ByteString -&gt; Maybe (Either DecoderError a)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either DecoderError a
+</span><a href="#local-6989586621679253149"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679253190"><span class="hs-identifier hs-var">target</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Either DecoderError a)
+-&gt; Maybe (Either DecoderError a) -&gt; PropertyT IO ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, Eq a, Show a, HasCallStack) =&gt;
+a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError a -&gt; Maybe (Either DecoderError a)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Either DecoderError a
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253150"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- | Round trip test a value (any instance of 'DecCBOR', 'EncCBOR', and 'Show'</span><span>
+</span><span id="line-158"></span><span class="hs-comment">--   classes) by serializing it to a ByteString and back again and that also has</span><span>
+</span><span id="line-159"></span><span class="hs-comment">--   a 'Show' instance. If the 'a' type has both 'Show' and 'Buildable'</span><span>
+</span><span id="line-160"></span><span class="hs-comment">--   instances, it's best to use this version.</span><span>
+</span><span id="line-161"></span><span id="local-6989586621679252964"><span id="local-6989586621679252965"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#roundTripsCBORShow"><span class="hs-identifier hs-type">roundTripsCBORShow</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252964"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252964"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679252964"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252965"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="annot"><a href="#local-6989586621679252964"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-163"></span><span>  </span><span class="annot"><a href="#local-6989586621679252964"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-164"></span><span>  </span><span class="annot"><a href="#local-6989586621679252965"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-165"></span><span id="roundTripsCBORShow"><span class="annot"><span class="annottext">roundTripsCBORShow :: forall a (m :: * -&gt; *).
+(DecCBOR a, EncCBOR a, Eq a, MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#roundTripsCBORShow"><span class="hs-identifier hs-var hs-var">roundTripsCBORShow</span></a></span></span><span> </span><span id="local-6989586621679253199"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253199"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-166"></span><span>  </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><span class="hs-identifier hs-var">withFrozenCallStack</span></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a
+-&gt; (a -&gt; ByteString)
+-&gt; (ByteString -&gt; Either DecoderError a)
+-&gt; m ()
+forall (m :: * -&gt; *) (f :: * -&gt; *) b a.
+(MonadTest m, Applicative f, Show b, Show (f a), Eq (f a),
+ HasCallStack) =&gt;
+a -&gt; (a -&gt; b) -&gt; (b -&gt; f a) -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Tripping.html#tripping"><span class="hs-identifier hs-var">tripping</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253199"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; a -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; ByteString -&gt; Either DecoderError a
+forall a.
+DecCBOR a =&gt;
+Version -&gt; ByteString -&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull"><span class="hs-identifier hs-var">decodeFull</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- | Round trip (via ByteString) any instance of the 'DecCBOR' and 'EncCBOR'</span><span>
+</span><span id="line-169"></span><span class="hs-comment">--   class that also has a 'Buildable' instance.</span><span>
+</span><span id="line-170"></span><span id="local-6989586621679252974"><span id="local-6989586621679252975"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#roundTripsCBORBuildable"><span class="hs-identifier hs-type">roundTripsCBORBuildable</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252974"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252974"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679252974"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252975"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier hs-type">Buildable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252974"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-172"></span><span>  </span><span class="annot"><a href="#local-6989586621679252974"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-173"></span><span>  </span><span class="annot"><a href="#local-6989586621679252975"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-174"></span><span id="roundTripsCBORBuildable"><span class="annot"><span class="annottext">roundTripsCBORBuildable :: forall a (m :: * -&gt; *).
+(DecCBOR a, EncCBOR a, Eq a, MonadTest m, Buildable a,
+ HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#roundTripsCBORBuildable"><span class="hs-identifier hs-var hs-var">roundTripsCBORBuildable</span></a></span></span><span> </span><span id="local-6989586621679253221"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253221"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-175"></span><span>  </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m ()) -&gt; m ()
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><span class="hs-identifier hs-var">withFrozenCallStack</span></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m ()) -&gt; m ()) -&gt; (HasCallStack =&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a
+-&gt; (a -&gt; ByteString)
+-&gt; (ByteString -&gt; Either DecoderError a)
+-&gt; m ()
+forall (f :: * -&gt; *) a b (m :: * -&gt; *).
+(HasCallStack, Buildable (f a), Eq (f a), Show b, Applicative f,
+ MonadTest m) =&gt;
+a -&gt; (a -&gt; b) -&gt; (b -&gt; f a) -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.Tripping.html#trippingBuildable"><span class="hs-identifier hs-var">trippingBuildable</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679253221"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; a -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; ByteString -&gt; Either DecoderError a
+forall a.
+DecCBOR a =&gt;
+Version -&gt; ByteString -&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull"><span class="hs-identifier hs-var">decodeFull</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#deprecatedGoldenDecode"><span class="hs-identifier hs-type">deprecatedGoldenDecode</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-178"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679252985"><span class="annot"><a href="#local-6989586621679252985"><span class="hs-identifier hs-type">s</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679252985"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-179"></span><span id="deprecatedGoldenDecode"><span class="annot"><span class="annottext">deprecatedGoldenDecode :: HasCallStack =&gt;
+Text -&gt; (forall s. Decoder s ()) -&gt; [Char] -&gt; Property
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#deprecatedGoldenDecode"><span class="hs-identifier hs-var hs-var">deprecatedGoldenDecode</span></a></span></span><span> </span><span id="local-6989586621679253239"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679253239"><span class="hs-identifier hs-var">lbl</span></a></span></span><span> </span><span id="local-6989586621679253240"><span class="annot"><span class="annottext">forall s. Decoder s ()
+</span><a href="#local-6989586621679253240"><span class="hs-identifier hs-var">decoder</span></a></span></span><span> </span><span id="local-6989586621679253241"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679253241"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-180"></span><span>  </span><span class="annot"><span class="annottext">(HasCallStack =&gt; Property) -&gt; Property
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><span class="hs-identifier hs-var">withFrozenCallStack</span></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; Property) -&gt; Property)
+-&gt; (HasCallStack =&gt; Property) -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TestLimit -&gt; Property -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#withTests"><span class="hs-identifier hs-var">withTests</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Property)
+-&gt; (PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; Property
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+PropertyT IO () -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">(PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-181"></span><span>    </span><span id="local-6989586621679253268"><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679253268"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.Base16.html#decodeBase16"><span class="hs-identifier hs-var">decodeBase16</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Maybe ByteString)
+-&gt; PropertyT IO ByteString -&gt; PropertyT IO (Maybe ByteString)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">IO ByteString -&gt; PropertyT IO ByteString
+forall a. IO a -&gt; PropertyT IO a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><span class="hs-identifier hs-var">liftIO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; IO ByteString
+</span><span class="hs-identifier hs-var">BS.readFile</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679253241"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>    </span><span class="annot"><span class="annottext">(ByteString -&gt; Either DecoderError ())
+-&gt; Maybe ByteString -&gt; Maybe (Either DecoderError ())
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s ())
+-&gt; ByteString
+-&gt; Either DecoderError ()
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s a)
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFullDecoder"><span class="hs-identifier hs-var">decodeFullDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679253239"><span class="hs-identifier hs-var">lbl</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s ()
+forall s. Decoder s ()
+</span><a href="#local-6989586621679253240"><span class="hs-identifier hs-var">decoder</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679253268"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Either DecoderError ())
+-&gt; Maybe (Either DecoderError ()) -&gt; PropertyT IO ()
+forall (m :: * -&gt; *) a.
+(MonadTest m, Eq a, Show a, HasCallStack) =&gt;
+a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#%3D%3D%3D"><span class="hs-operator hs-var">===</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError () -&gt; Maybe (Either DecoderError ())
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; Either DecoderError ()
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span></pre></body></html>

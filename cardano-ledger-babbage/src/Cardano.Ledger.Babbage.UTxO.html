@@ -1,0 +1,544 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Babbage.UTxO</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageSupplementalDataHashes"><span class="hs-identifier">getBabbageSupplementalDataHashes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageSpendingDatum"><span class="hs-identifier">getBabbageSpendingDatum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageScriptsProvided"><span class="hs-identifier">getBabbageScriptsProvided</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Babbage.UTxO.html#getReferenceScripts"><span class="hs-identifier">getReferenceScripts</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Babbage.UTxO.html#getReferenceScriptsNonDistinct"><span class="hs-identifier">getReferenceScriptsNonDistinct</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.TxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html#unTxDatsL"><span class="hs-identifier">unTxDatsL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#AlonzoEraUTxO"><span class="hs-identifier">AlonzoEraUTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#AlonzoScriptsNeeded"><span class="hs-identifier">AlonzoScriptsNeeded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#getAlonzoScriptsHashesNeeded"><span class="hs-identifier">getAlonzoScriptsHashesNeeded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#getAlonzoScriptsNeeded"><span class="hs-identifier">getAlonzoScriptsNeeded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#getAlonzoWitsVKeyNeeded"><span class="hs-identifier">getAlonzoWitsVKeyNeeded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.Core.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Core</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.Era.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier">BabbageEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.State.html"><span class="hs-identifier">Cardano.Ledger.Babbage.State</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier">StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier">strictMaybeToMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sized.html#sizedValue"><span class="hs-identifier">sizedValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.UTxO.html"><span class="hs-identifier">Cardano.Ledger.Mary.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.UTxO.html#getConsumedMaryValue"><span class="hs-identifier">getConsumedMaryValue</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.UTxO.html#getProducedMaryValue"><span class="hs-identifier">getProducedMaryValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Data.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html"><span class="hs-identifier">Cardano.Ledger.Shelley.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#getShelleyMinFeeTxUtxo"><span class="hs-identifier">getShelleyMinFeeTxUtxo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#shelleyConsumed"><span class="hs-identifier">shelleyConsumed</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.html"><span class="hs-identifier">Cardano.Ledger.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#EraUTxO"><span class="hs-identifier">EraUTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#ScriptsProvided"><span class="hs-identifier">ScriptsProvided</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier">UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html"><span class="hs-identifier">Cardano.Ledger.TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier">TxIn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Applicative</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.SetAlgebra.html"><span class="hs-identifier">Control.SetAlgebra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.SetAlgebra.html#eval"><span class="hs-identifier">eval</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#%25C1"><span class="hs-operator">(&#9665;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#EraUTxO"><span class="hs-identifier hs-type">EraUTxO</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ScriptsNeeded"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#ScriptsNeeded"><span class="hs-identifier hs-var">ScriptsNeeded</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#AlonzoScriptsNeeded"><span class="hs-identifier hs-type">AlonzoScriptsNeeded</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679388798"><span class="annot"><span class="annottext">consumed :: PParams BabbageEra
+-&gt; CertState BabbageEra
+-&gt; UTxO BabbageEra
+-&gt; TxBody BabbageEra
+-&gt; Value BabbageEra
+</span><a href="#local-6989586621679388798"><span class="hs-identifier hs-var hs-var hs-var hs-var">consumed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams BabbageEra
+-&gt; CertState BabbageEra
+-&gt; UTxO BabbageEra
+-&gt; TxBody BabbageEra
+-&gt; Value BabbageEra
+forall era.
+(EraUTxO era, EraCertState era) =&gt;
+PParams era -&gt; CertState era -&gt; UTxO era -&gt; TxBody era -&gt; Value era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#shelleyConsumed"><span class="hs-identifier hs-var">shelleyConsumed</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679388804"><span class="annot"><span class="annottext">getConsumedValue :: PParams BabbageEra
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; (Credential 'DRepRole -&gt; Maybe Coin)
+-&gt; UTxO BabbageEra
+-&gt; TxBody BabbageEra
+-&gt; Value BabbageEra
+</span><a href="#local-6989586621679388804"><span class="hs-identifier hs-var hs-var hs-var hs-var">getConsumedValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams BabbageEra
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; (Credential 'DRepRole -&gt; Maybe Coin)
+-&gt; UTxO BabbageEra
+-&gt; TxBody BabbageEra
+-&gt; Value BabbageEra
+PParams BabbageEra
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; (Credential 'DRepRole -&gt; Maybe Coin)
+-&gt; UTxO BabbageEra
+-&gt; TxBody BabbageEra
+-&gt; MaryValue
+forall era.
+(MaryEraTxBody era, Value era ~ MaryValue) =&gt;
+PParams era
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; (Credential 'DRepRole -&gt; Maybe Coin)
+-&gt; UTxO era
+-&gt; TxBody era
+-&gt; MaryValue
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.UTxO.html#getConsumedMaryValue"><span class="hs-identifier hs-var">getConsumedMaryValue</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679388809"><span class="annot"><span class="annottext">getProducedValue :: PParams BabbageEra
+-&gt; (KeyHash 'StakePool -&gt; Bool)
+-&gt; TxBody BabbageEra
+-&gt; Value BabbageEra
+</span><a href="#local-6989586621679388809"><span class="hs-identifier hs-var hs-var hs-var hs-var">getProducedValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams BabbageEra
+-&gt; (KeyHash 'StakePool -&gt; Bool)
+-&gt; TxBody BabbageEra
+-&gt; Value BabbageEra
+PParams BabbageEra
+-&gt; (KeyHash 'StakePool -&gt; Bool) -&gt; TxBody BabbageEra -&gt; MaryValue
+forall era.
+(MaryEraTxBody era, Value era ~ MaryValue) =&gt;
+PParams era
+-&gt; (KeyHash 'StakePool -&gt; Bool) -&gt; TxBody era -&gt; MaryValue
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.UTxO.html#getProducedMaryValue"><span class="hs-identifier hs-var">getProducedMaryValue</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621679388814"><span class="annot"><span class="annottext">getScriptsProvided :: UTxO BabbageEra -&gt; Tx BabbageEra -&gt; ScriptsProvided BabbageEra
+</span><a href="#local-6989586621679388814"><span class="hs-identifier hs-var hs-var hs-var hs-var">getScriptsProvided</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO BabbageEra -&gt; Tx BabbageEra -&gt; ScriptsProvided BabbageEra
+forall era.
+(EraTx era, BabbageEraTxBody era) =&gt;
+UTxO era -&gt; Tx era -&gt; ScriptsProvided era
+</span><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageScriptsProvided"><span class="hs-identifier hs-var">getBabbageScriptsProvided</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679388819"><span class="annot"><span class="annottext">getScriptsNeeded :: UTxO BabbageEra -&gt; TxBody BabbageEra -&gt; ScriptsNeeded BabbageEra
+</span><a href="#local-6989586621679388819"><span class="hs-identifier hs-var hs-var hs-var hs-var">getScriptsNeeded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO BabbageEra -&gt; TxBody BabbageEra -&gt; ScriptsNeeded BabbageEra
+UTxO BabbageEra
+-&gt; TxBody BabbageEra -&gt; AlonzoScriptsNeeded BabbageEra
+forall era.
+(MaryEraTxBody era, AlonzoEraScript era) =&gt;
+UTxO era -&gt; TxBody era -&gt; AlonzoScriptsNeeded era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#getAlonzoScriptsNeeded"><span class="hs-identifier hs-var">getAlonzoScriptsNeeded</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#getScriptsNeeded"><span class="hs-pragma hs-type">getScriptsNeeded</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679388821"><span class="annot"><span class="annottext">getScriptsHashesNeeded :: ScriptsNeeded BabbageEra -&gt; Set ScriptHash
+</span><a href="#local-6989586621679388821"><span class="hs-identifier hs-var hs-var hs-var hs-var">getScriptsHashesNeeded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptsNeeded BabbageEra -&gt; Set ScriptHash
+AlonzoScriptsNeeded BabbageEra -&gt; Set ScriptHash
+forall era. AlonzoScriptsNeeded era -&gt; Set ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#getAlonzoScriptsHashesNeeded"><span class="hs-identifier hs-var">getAlonzoScriptsHashesNeeded</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679388829"><span class="annot"><span class="annottext">getWitsVKeyNeeded :: CertState BabbageEra
+-&gt; UTxO BabbageEra -&gt; TxBody BabbageEra -&gt; Set (KeyHash 'Witness)
+</span><a href="#local-6989586621679388829"><span class="hs-identifier hs-var hs-var hs-var hs-var">getWitsVKeyNeeded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CertState BabbageEra
+-&gt; UTxO BabbageEra -&gt; TxBody BabbageEra -&gt; Set (KeyHash 'Witness)
+forall era.
+(EraTx era, AlonzoEraTxBody era, ShelleyEraTxBody era,
+ EraCertState era) =&gt;
+CertState era -&gt; UTxO era -&gt; TxBody era -&gt; Set (KeyHash 'Witness)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#getAlonzoWitsVKeyNeeded"><span class="hs-identifier hs-var">getAlonzoWitsVKeyNeeded</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679388832"><span class="annot"><span class="annottext">getMinFeeTxUtxo :: PParams BabbageEra -&gt; Tx BabbageEra -&gt; UTxO BabbageEra -&gt; Coin
+</span><a href="#local-6989586621679388832"><span class="hs-identifier hs-var hs-var hs-var hs-var">getMinFeeTxUtxo</span></a></span></span><span> </span><span id="local-6989586621679388834"><span class="annot"><span class="annottext">PParams BabbageEra
+</span><a href="#local-6989586621679388834"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679388835"><span class="annot"><span class="annottext">Tx BabbageEra
+</span><a href="#local-6989586621679388835"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="annot"><span class="annottext">UTxO BabbageEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams BabbageEra -&gt; Tx BabbageEra -&gt; Coin
+forall era. EraTx era =&gt; PParams era -&gt; Tx era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.UTxO.html#getShelleyMinFeeTxUtxo"><span class="hs-identifier hs-var">getShelleyMinFeeTxUtxo</span></a></span><span> </span><span class="annot"><span class="annottext">PParams BabbageEra
+</span><a href="#local-6989586621679388834"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">Tx BabbageEra
+</span><a href="#local-6989586621679388835"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.UTxO.html#AlonzoEraUTxO"><span class="hs-identifier hs-type">AlonzoEraUTxO</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679388843"><span class="annot"><span class="annottext">getSupplementalDataHashes :: UTxO BabbageEra -&gt; TxBody BabbageEra -&gt; Set DataHash
+</span><a href="#local-6989586621679388843"><span class="hs-identifier hs-var hs-var hs-var hs-var">getSupplementalDataHashes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO BabbageEra -&gt; TxBody BabbageEra -&gt; Set DataHash
+forall era.
+BabbageEraTxBody era =&gt;
+UTxO era -&gt; TxBody era -&gt; Set DataHash
+</span><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageSupplementalDataHashes"><span class="hs-identifier hs-var">getBabbageSupplementalDataHashes</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679388849"><span class="annot"><span class="annottext">getSpendingDatum :: UTxO BabbageEra
+-&gt; Tx BabbageEra
+-&gt; PlutusPurpose AsItem BabbageEra
+-&gt; Maybe (Data BabbageEra)
+</span><a href="#local-6989586621679388849"><span class="hs-identifier hs-var hs-var hs-var hs-var">getSpendingDatum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO BabbageEra
+-&gt; Tx BabbageEra
+-&gt; PlutusPurpose AsItem BabbageEra
+-&gt; Maybe (Data BabbageEra)
+forall era.
+(AlonzoEraTx era, BabbageEraTxOut era) =&gt;
+UTxO era -&gt; Tx era -&gt; PlutusPurpose AsItem era -&gt; Maybe (Data era)
+</span><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageSpendingDatum"><span class="hs-identifier hs-var">getBabbageSpendingDatum</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span id="local-6989586621679388668"><span class="annot"><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageSupplementalDataHashes"><span class="hs-identifier hs-type">getBabbageSupplementalDataHashes</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Babbage.TxBody.html#BabbageEraTxBody"><span class="hs-identifier hs-type">BabbageEraTxBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388668"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388668"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388668"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Set.Set</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#DataHash"><span class="hs-identifier hs-type">DataHash</span></a></span></span><span>
+</span><span id="line-70"></span><span id="getBabbageSupplementalDataHashes"><span class="annot"><span class="annottext">getBabbageSupplementalDataHashes :: forall era.
+BabbageEraTxBody era =&gt;
+UTxO era -&gt; TxBody era -&gt; Set DataHash
+</span><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageSupplementalDataHashes"><span class="hs-identifier hs-var hs-var">getBabbageSupplementalDataHashes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span id="local-6989586621679388871"><span class="annot"><span class="annottext">Map TxIn (TxOut era)
+</span><a href="#local-6989586621679388871"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679388872"><span class="annot"><span class="annottext">TxBody era
+</span><a href="#local-6989586621679388872"><span class="hs-identifier hs-var">txBody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="annottext">[DataHash] -&gt; Set DataHash
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">DataHash
+</span><a href="#local-6989586621679388874"><span class="hs-identifier hs-var">dh</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679388875"><span class="annot"><span class="annottext">TxOut era
+</span><a href="#local-6989586621679388875"><span class="hs-identifier hs-var">txOut</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[TxOut era]
+</span><a href="#local-6989586621679388876"><span class="hs-identifier hs-var">outs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-type">SJust</span></a></span><span> </span><span id="local-6989586621679388874"><span class="annot"><span class="annottext">DataHash
+</span><a href="#local-6989586621679388874"><span class="hs-identifier hs-var">dh</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TxOut era
+</span><a href="#local-6989586621679388875"><span class="hs-identifier hs-var">txOut</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut era
+-&gt; Getting
+     (StrictMaybe DataHash) (TxOut era) (StrictMaybe DataHash)
+-&gt; StrictMaybe DataHash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (StrictMaybe DataHash) (TxOut era) (StrictMaybe DataHash)
+forall era.
+AlonzoEraTxOut era =&gt;
+Lens' (TxOut era) (StrictMaybe DataHash)
+Lens' (TxOut era) (StrictMaybe DataHash)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxOut.html#dataHashTxOutL"><span class="hs-identifier hs-var">dataHashTxOutL</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679388880"><span class="annot"><span class="annottext">newOuts :: [TxOut era]
+</span><a href="#local-6989586621679388880"><span class="hs-identifier hs-var hs-var">newOuts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Sized (TxOut era) -&gt; TxOut era)
+-&gt; [Sized (TxOut era)] -&gt; [TxOut era]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="annot"><span class="annottext">Sized (TxOut era) -&gt; TxOut era
+forall a. Sized a -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sized.html#sizedValue"><span class="hs-identifier hs-var">sizedValue</span></a></span><span> </span><span class="annot"><span class="annottext">([Sized (TxOut era)] -&gt; [TxOut era])
+-&gt; [Sized (TxOut era)] -&gt; [TxOut era]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">StrictSeq (Sized (TxOut era)) -&gt; [Sized (TxOut era)]
+forall a. StrictSeq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (Sized (TxOut era)) -&gt; [Sized (TxOut era)])
+-&gt; StrictSeq (Sized (TxOut era)) -&gt; [Sized (TxOut era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxBody era
+</span><a href="#local-6989586621679388872"><span class="hs-identifier hs-var">txBody</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody era
+-&gt; Getting
+     (StrictSeq (Sized (TxOut era)))
+     (TxBody era)
+     (StrictSeq (Sized (TxOut era)))
+-&gt; StrictSeq (Sized (TxOut era))
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictSeq (Sized (TxOut era)))
+  (TxBody era)
+  (StrictSeq (Sized (TxOut era)))
+forall era.
+BabbageEraTxBody era =&gt;
+SimpleGetter (TxBody era) (StrictSeq (Sized (TxOut era)))
+SimpleGetter (TxBody era) (StrictSeq (Sized (TxOut era)))
+</span><a href="Cardano.Ledger.Babbage.TxBody.html#allSizedOutputsTxBodyF"><span class="hs-identifier hs-var">allSizedOutputsTxBodyF</span></a></span><span>
+</span><span id="line-74"></span><span>    </span><span id="local-6989586621679388882"><span class="annot"><span class="annottext">referencedOuts :: [TxOut era]
+</span><a href="#local-6989586621679388882"><span class="hs-identifier hs-var hs-var">referencedOuts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut era) -&gt; [TxOut era]
+forall k a. Map k a -&gt; [a]
+</span><span class="hs-identifier hs-var">Map.elems</span></span><span> </span><span class="annot"><span class="annottext">(Map TxIn (TxOut era) -&gt; [TxOut era])
+-&gt; Map TxIn (TxOut era) -&gt; [TxOut era]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut era) -&gt; Set TxIn -&gt; Map TxIn (TxOut era)
+forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.restrictKeys</span></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut era)
+</span><a href="#local-6989586621679388871"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody era
+</span><a href="#local-6989586621679388872"><span class="hs-identifier hs-var">txBody</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody era
+-&gt; Getting (Set TxIn) (TxBody era) (Set TxIn) -&gt; Set TxIn
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Set TxIn) (TxBody era) (Set TxIn)
+forall era. BabbageEraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody era) (Set TxIn)
+</span><a href="Cardano.Ledger.Babbage.TxBody.html#referenceInputsTxBodyL"><span class="hs-identifier hs-var">referenceInputsTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>    </span><span id="local-6989586621679388876"><span class="annot"><span class="annottext">outs :: [TxOut era]
+</span><a href="#local-6989586621679388876"><span class="hs-identifier hs-var hs-var">outs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[TxOut era]
+</span><a href="#local-6989586621679388880"><span class="hs-identifier hs-var">newOuts</span></a></span><span> </span><span class="annot"><span class="annottext">[TxOut era] -&gt; [TxOut era] -&gt; [TxOut era]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">[TxOut era]
+</span><a href="#local-6989586621679388882"><span class="hs-identifier hs-var">referencedOuts</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | Extract binary data either directly from the `Tx` as an &quot;inline datum&quot;</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- or look it up in the witnesses by the hash.</span><span>
+</span><span id="line-79"></span><span id="local-6989586621679388671"><span class="annot"><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageSpendingDatum"><span class="hs-identifier hs-type">getBabbageSpendingDatum</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Tx.html#AlonzoEraTx"><span class="hs-identifier hs-type">AlonzoEraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388671"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.TxOut.html#BabbageEraTxOut"><span class="hs-identifier hs-type">BabbageEraTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388671"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388671"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388671"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#PlutusPurpose"><span class="hs-identifier hs-type">PlutusPurpose</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AsItem"><span class="hs-identifier hs-type">AsItem</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388671"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Data.html#Data"><span class="hs-identifier hs-type">Data</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388671"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-87"></span><span id="getBabbageSpendingDatum"><span class="annot"><span class="annottext">getBabbageSpendingDatum :: forall era.
+(AlonzoEraTx era, BabbageEraTxOut era) =&gt;
+UTxO era -&gt; Tx era -&gt; PlutusPurpose AsItem era -&gt; Maybe (Data era)
+</span><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageSpendingDatum"><span class="hs-identifier hs-var hs-var">getBabbageSpendingDatum</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span id="local-6989586621679388919"><span class="annot"><span class="annottext">Map TxIn (TxOut era)
+</span><a href="#local-6989586621679388919"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679388920"><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679388920"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span id="local-6989586621679388921"><span class="annot"><span class="annottext">PlutusPurpose AsItem era
+</span><a href="#local-6989586621679388921"><span class="hs-identifier hs-var">sp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#AsItem"><span class="hs-identifier hs-type">AsItem</span></a></span><span> </span><span id="local-6989586621679388923"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679388923"><span class="hs-identifier hs-var">txIn</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PlutusPurpose AsItem era -&gt; Maybe (AsItem Word32 TxIn)
+forall era (f :: * -&gt; * -&gt; *).
+AlonzoEraScript era =&gt;
+PlutusPurpose f era -&gt; Maybe (f Word32 TxIn)
+forall (f :: * -&gt; * -&gt; *).
+PlutusPurpose f era -&gt; Maybe (f Word32 TxIn)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.Scripts.html#toSpendingPurpose"><span class="hs-identifier hs-var">toSpendingPurpose</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusPurpose AsItem era
+</span><a href="#local-6989586621679388921"><span class="hs-identifier hs-var">sp</span></a></span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679388925"><span class="annot"><span class="annottext">TxOut era
+</span><a href="#local-6989586621679388925"><span class="hs-identifier hs-var">txOut</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Map TxIn (TxOut era) -&gt; Maybe (TxOut era)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679388923"><span class="hs-identifier hs-var">txIn</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut era)
+</span><a href="#local-6989586621679388919"><span class="hs-identifier hs-var">utxo</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679388927"><span class="annot"><span class="annottext">txOutDataFromWits :: Maybe (Data era)
+</span><a href="#local-6989586621679388927"><span class="hs-identifier hs-var hs-var">txOutDataFromWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-91"></span><span>        </span><span id="local-6989586621679388928"><span class="annot"><span class="annottext">DataHash
+</span><a href="#local-6989586621679388928"><span class="hs-identifier hs-var">dataHash</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StrictMaybe DataHash -&gt; Maybe DataHash
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">strictMaybeToMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOut era
+</span><a href="#local-6989586621679388925"><span class="hs-identifier hs-var">txOut</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut era
+-&gt; Getting
+     (StrictMaybe DataHash) (TxOut era) (StrictMaybe DataHash)
+-&gt; StrictMaybe DataHash
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (StrictMaybe DataHash) (TxOut era) (StrictMaybe DataHash)
+forall era.
+AlonzoEraTxOut era =&gt;
+Lens' (TxOut era) (StrictMaybe DataHash)
+Lens' (TxOut era) (StrictMaybe DataHash)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxOut.html#dataHashTxOutL"><span class="hs-identifier hs-var">dataHashTxOutL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>        </span><span class="annot"><span class="annottext">DataHash -&gt; Map DataHash (Data era) -&gt; Maybe (Data era)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">DataHash
+</span><a href="#local-6989586621679388928"><span class="hs-identifier hs-var">dataHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679388920"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era
+-&gt; Getting
+     (Map DataHash (Data era)) (Tx era) (Map DataHash (Data era))
+-&gt; Map DataHash (Data era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(TxWits era -&gt; Const (Map DataHash (Data era)) (TxWits era))
+-&gt; Tx era -&gt; Const (Map DataHash (Data era)) (Tx era)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxWits era)
+Lens' (Tx era) (TxWits era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-var">witsTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((TxWits era -&gt; Const (Map DataHash (Data era)) (TxWits era))
+ -&gt; Tx era -&gt; Const (Map DataHash (Data era)) (Tx era))
+-&gt; ((Map DataHash (Data era)
+     -&gt; Const (Map DataHash (Data era)) (Map DataHash (Data era)))
+    -&gt; TxWits era -&gt; Const (Map DataHash (Data era)) (TxWits era))
+-&gt; Getting
+     (Map DataHash (Data era)) (Tx era) (Map DataHash (Data era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(TxDats era -&gt; Const (Map DataHash (Data era)) (TxDats era))
+-&gt; TxWits era -&gt; Const (Map DataHash (Data era)) (TxWits era)
+forall era. AlonzoEraTxWits era =&gt; Lens' (TxWits era) (TxDats era)
+Lens' (TxWits era) (TxDats era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html#datsTxWitsL"><span class="hs-identifier hs-var">datsTxWitsL</span></a></span><span> </span><span class="annot"><span class="annottext">((TxDats era -&gt; Const (Map DataHash (Data era)) (TxDats era))
+ -&gt; TxWits era -&gt; Const (Map DataHash (Data era)) (TxWits era))
+-&gt; ((Map DataHash (Data era)
+     -&gt; Const (Map DataHash (Data era)) (Map DataHash (Data era)))
+    -&gt; TxDats era -&gt; Const (Map DataHash (Data era)) (TxDats era))
+-&gt; (Map DataHash (Data era)
+    -&gt; Const (Map DataHash (Data era)) (Map DataHash (Data era)))
+-&gt; TxWits era
+-&gt; Const (Map DataHash (Data era)) (TxWits era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Map DataHash (Data era)
+ -&gt; Const (Map DataHash (Data era)) (Map DataHash (Data era)))
+-&gt; TxDats era -&gt; Const (Map DataHash (Data era)) (TxDats era)
+forall era. Era era =&gt; Lens' (TxDats era) (Map DataHash (Data era))
+Lens' (TxDats era) (Map DataHash (Data era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.TxWits.html#unTxDatsL"><span class="hs-identifier hs-var">unTxDatsL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><span class="annottext">StrictMaybe (Data era) -&gt; Maybe (Data era)
+forall a. StrictMaybe a -&gt; Maybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#strictMaybeToMaybe"><span class="hs-identifier hs-var">strictMaybeToMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOut era
+</span><a href="#local-6989586621679388925"><span class="hs-identifier hs-var">txOut</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut era
+-&gt; Getting
+     (StrictMaybe (Data era)) (TxOut era) (StrictMaybe (Data era))
+-&gt; StrictMaybe (Data era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictMaybe (Data era)) (TxOut era) (StrictMaybe (Data era))
+forall era.
+BabbageEraTxOut era =&gt;
+Lens' (TxOut era) (StrictMaybe (Data era))
+Lens' (TxOut era) (StrictMaybe (Data era))
+</span><a href="Cardano.Ledger.Babbage.TxOut.html#dataTxOutL"><span class="hs-identifier hs-var">dataTxOutL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe (Data era) -&gt; Maybe (Data era) -&gt; Maybe (Data era)
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f a -&gt; f a
+</span><span class="hs-operator hs-var">&lt;|&gt;</span></span><span> </span><span class="annot"><span class="annottext">Maybe (Data era)
+</span><a href="#local-6989586621679388927"><span class="hs-identifier hs-var">txOutDataFromWits</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- Figure 3 of the Specification</span><span>
+</span><span id="line-96"></span><span class="hs-comment">{- txscripts tx utxo = txwitscripts tx &#8746; {hash s &#8614; s | ( , , , s) &#8712; utxo (spendInputs tx &#8746; refInputs tx)} -}</span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- Uses of inputs in &#8216;txscripts&#8217; and &#8216;neededScripts&#8217;</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- There are currently 3 sets of inputs (spending, collateral, reference). A particular TxInput</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- can appear in more than one of the sets. Even in all three at the same, but that may not be</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- a really useful case.</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- 1) Collateral inputs are only spent if phase two fails. Their corresponding TxOut can only have</span><span>
+</span><span id="line-104"></span><span class="hs-comment">--    Key (not Script) Pay credentials, so &#8216;neededScripts&#8217; does not look there.</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- 2) Reference inputs are not spent in the current Tx, unless that same input also appears in one</span><span>
+</span><span id="line-106"></span><span class="hs-comment">--    of the other sets. If that is not the case, their credentials are never needed, so anyone can</span><span>
+</span><span id="line-107"></span><span class="hs-comment">--    access the inline datums and scripts in their corresponding TxOut, without needing any</span><span>
+</span><span id="line-108"></span><span class="hs-comment">--    authorizing credentials. So &#8216;neededScripts&#8217; does not look there.</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- 3) Spending inputs are always spent. So their Pay credentials are always needed.</span><span>
+</span><span id="line-110"></span><span class="hs-comment">--</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- Compute a Map of (ScriptHash -&gt; Script) for all Scripts found in a AlonzoTx.</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- Note we are interested in the actual scripts that might be run during the Utxow</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- rule. There are two places to look:</span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- 1) The Script part of the TxWits</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- 2) The reference scripts found in the TxOuts, pointed to by the spending and reference inputs</span><span>
+</span><span id="line-116"></span><span class="hs-comment">--    of the Tx.  Given such a TxOut, we look in the Pay credentials of the Addr of that TxOut.</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--      A. We only look in the Pay credential of the TxOut, because the Stake credential plays</span><span>
+</span><span id="line-118"></span><span class="hs-comment">--         no role in the Utxow rule.</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--      B. We don&#8217;t use the collateral inputs, because they only have key-locked Pay credentials</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- 3) Note that 'txscripts' includes both Plutus and Non-Plutus scripts</span><span>
+</span><span id="line-121"></span><span class="hs-comment">--</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- The flip side is 'ScriptsNeeded' which computes the ScriptHash of every Pay Credential</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- in spending and collateral inputs. Since reference inputs do not need to be authorized,</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- 'scriptsNeeded' does not look there.</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- It is an invariant that every such Credential points to some actual script found here.</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span id="local-6989586621679388653"><span class="annot"><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageScriptsProvided"><span class="hs-identifier hs-type">getBabbageScriptsProvided</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">EraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388653"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.TxBody.html#BabbageEraTxBody"><span class="hs-identifier hs-type">BabbageEraTxBody</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388653"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-131"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388653"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388653"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#ScriptsProvided"><span class="hs-identifier hs-type">ScriptsProvided</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388653"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-134"></span><span id="getBabbageScriptsProvided"><span class="annot"><span class="annottext">getBabbageScriptsProvided :: forall era.
+(EraTx era, BabbageEraTxBody era) =&gt;
+UTxO era -&gt; Tx era -&gt; ScriptsProvided era
+</span><a href="Cardano.Ledger.Babbage.UTxO.html#getBabbageScriptsProvided"><span class="hs-identifier hs-var hs-var">getBabbageScriptsProvided</span></a></span></span><span> </span><span id="local-6989586621679388956"><span class="annot"><span class="annottext">UTxO era
+</span><a href="#local-6989586621679388956"><span class="hs-identifier hs-var">utxo</span></a></span></span><span> </span><span id="local-6989586621679388957"><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679388957"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era) -&gt; ScriptsProvided era
+forall era. Map ScriptHash (Script era) -&gt; ScriptsProvided era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#ScriptsProvided"><span class="hs-identifier hs-var">ScriptsProvided</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679388959"><span class="hs-identifier hs-var">ans</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-136"></span><span>    </span><span id="local-6989586621679388960"><span class="annot"><span class="annottext">txBody :: TxBody era
+</span><a href="#local-6989586621679388960"><span class="hs-identifier hs-var hs-var">txBody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679388957"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era -&gt; Getting (TxBody era) (Tx era) (TxBody era) -&gt; TxBody era
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (TxBody era) (Tx era) (TxBody era)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx era) (TxBody era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">bodyTxL</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span id="local-6989586621679388962"><span class="annot"><span class="annottext">ins :: Set TxIn
+</span><a href="#local-6989586621679388962"><span class="hs-identifier hs-var hs-var">ins</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody era
+</span><a href="#local-6989586621679388960"><span class="hs-identifier hs-var">txBody</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody era
+-&gt; Getting (Set TxIn) (TxBody era) (Set TxIn) -&gt; Set TxIn
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Set TxIn) (TxBody era) (Set TxIn)
+forall era. BabbageEraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody era) (Set TxIn)
+</span><a href="Cardano.Ledger.Babbage.TxBody.html#referenceInputsTxBodyL"><span class="hs-identifier hs-var">referenceInputsTxBodyL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Set TxIn -&gt; Set TxIn -&gt; Set TxIn
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><span class="hs-operator hs-var">`Set.union`</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody era
+</span><a href="#local-6989586621679388960"><span class="hs-identifier hs-var">txBody</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody era
+-&gt; Getting (Set TxIn) (TxBody era) (Set TxIn) -&gt; Set TxIn
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Set TxIn) (TxBody era) (Set TxIn)
+forall era. EraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody era) (Set TxIn)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#inputsTxBodyL"><span class="hs-identifier hs-var">inputsTxBodyL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>    </span><span id="local-6989586621679388959"><span class="annot"><span class="annottext">ans :: Map ScriptHash (Script era)
+</span><a href="#local-6989586621679388959"><span class="hs-identifier hs-var hs-var">ans</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO era -&gt; Set TxIn -&gt; Map ScriptHash (Script era)
+forall era.
+BabbageEraTxOut era =&gt;
+UTxO era -&gt; Set TxIn -&gt; Map ScriptHash (Script era)
+</span><a href="Cardano.Ledger.Babbage.UTxO.html#getReferenceScripts"><span class="hs-identifier hs-var">getReferenceScripts</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO era
+</span><a href="#local-6989586621679388956"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="annot"><span class="annottext">Set TxIn
+</span><a href="#local-6989586621679388962"><span class="hs-identifier hs-var">ins</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+-&gt; Map ScriptHash (Script era) -&gt; Map ScriptHash (Script era)
+forall k a. Ord k =&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-operator hs-var">`Map.union`</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Tx era
+</span><a href="#local-6989586621679388957"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="annot"><span class="annottext">Tx era
+-&gt; Getting
+     (Map ScriptHash (Script era))
+     (Tx era)
+     (Map ScriptHash (Script era))
+-&gt; Map ScriptHash (Script era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(TxWits era -&gt; Const (Map ScriptHash (Script era)) (TxWits era))
+-&gt; Tx era -&gt; Const (Map ScriptHash (Script era)) (Tx era)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxWits era)
+Lens' (Tx era) (TxWits era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-var">witsTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((TxWits era -&gt; Const (Map ScriptHash (Script era)) (TxWits era))
+ -&gt; Tx era -&gt; Const (Map ScriptHash (Script era)) (Tx era))
+-&gt; ((Map ScriptHash (Script era)
+     -&gt; Const
+          (Map ScriptHash (Script era)) (Map ScriptHash (Script era)))
+    -&gt; TxWits era -&gt; Const (Map ScriptHash (Script era)) (TxWits era))
+-&gt; Getting
+     (Map ScriptHash (Script era))
+     (Tx era)
+     (Map ScriptHash (Script era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Map ScriptHash (Script era)
+ -&gt; Const
+      (Map ScriptHash (Script era)) (Map ScriptHash (Script era)))
+-&gt; TxWits era -&gt; Const (Map ScriptHash (Script era)) (TxWits era)
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Map ScriptHash (Script era))
+Lens' (TxWits era) (Map ScriptHash (Script era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#scriptTxWitsL"><span class="hs-identifier hs-var">scriptTxWitsL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="annot"><span class="hs-comment">-- | Collect all the reference scripts found in the TxOuts, pointed to by some input.</span></span><span>
+</span><span id="line-141"></span><span id="local-6989586621679388737"><span class="annot"><a href="Cardano.Ledger.Babbage.UTxO.html#getReferenceScripts"><span class="hs-identifier hs-type">getReferenceScripts</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-142"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Babbage.TxOut.html#BabbageEraTxOut"><span class="hs-identifier hs-type">BabbageEraTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388737"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388737"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-144"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388737"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-146"></span><span id="getReferenceScripts"><span class="annot"><span class="annottext">getReferenceScripts :: forall era.
+BabbageEraTxOut era =&gt;
+UTxO era -&gt; Set TxIn -&gt; Map ScriptHash (Script era)
+</span><a href="Cardano.Ledger.Babbage.UTxO.html#getReferenceScripts"><span class="hs-identifier hs-var hs-var">getReferenceScripts</span></a></span></span><span> </span><span id="local-6989586621679388970"><span class="annot"><span class="annottext">UTxO era
+</span><a href="#local-6989586621679388970"><span class="hs-identifier hs-var">utxo</span></a></span></span><span> </span><span id="local-6989586621679388971"><span class="annot"><span class="annottext">Set TxIn
+</span><a href="#local-6989586621679388971"><span class="hs-identifier hs-var">ins</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(ScriptHash, Script era)] -&gt; Map ScriptHash (Script era)
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UTxO era -&gt; Set TxIn -&gt; [(ScriptHash, Script era)]
+forall era.
+BabbageEraTxOut era =&gt;
+UTxO era -&gt; Set TxIn -&gt; [(ScriptHash, Script era)]
+</span><a href="Cardano.Ledger.Babbage.UTxO.html#getReferenceScriptsNonDistinct"><span class="hs-identifier hs-var">getReferenceScriptsNonDistinct</span></a></span><span> </span><span class="annot"><span class="annottext">UTxO era
+</span><a href="#local-6989586621679388970"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="annot"><span class="annottext">Set TxIn
+</span><a href="#local-6989586621679388971"><span class="hs-identifier hs-var">ins</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span id="local-6989586621679388744"><span class="annot"><a href="Cardano.Ledger.Babbage.UTxO.html#getReferenceScriptsNonDistinct"><span class="hs-identifier hs-type">getReferenceScriptsNonDistinct</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-149"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Babbage.TxOut.html#BabbageEraTxOut"><span class="hs-identifier hs-type">BabbageEraTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388744"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388744"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679388744"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span></span><span>
+</span><span id="line-153"></span><span id="getReferenceScriptsNonDistinct"><span class="annot"><span class="annottext">getReferenceScriptsNonDistinct :: forall era.
+BabbageEraTxOut era =&gt;
+UTxO era -&gt; Set TxIn -&gt; [(ScriptHash, Script era)]
+</span><a href="Cardano.Ledger.Babbage.UTxO.html#getReferenceScriptsNonDistinct"><span class="hs-identifier hs-var hs-var">getReferenceScriptsNonDistinct</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span id="local-6989586621679388988"><span class="annot"><span class="annottext">Map TxIn (TxOut era)
+</span><a href="#local-6989586621679388988"><span class="hs-identifier hs-var">mp</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679388989"><span class="annot"><span class="annottext">Set TxIn
+</span><a href="#local-6989586621679388989"><span class="hs-identifier hs-var">inputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Script era -&gt; ScriptHash
+forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">hashScript</span></a></span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679388991"><span class="hs-identifier hs-var">script</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679388991"><span class="hs-identifier hs-var">script</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679388992"><span class="annot"><span class="annottext">TxOut era
+</span><a href="#local-6989586621679388992"><span class="hs-identifier hs-var">txOut</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut era) -&gt; [TxOut era]
+forall k a. Map k a -&gt; [a]
+</span><span class="hs-identifier hs-var">Map.elems</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Exp (Map TxIn (TxOut era)) -&gt; Map TxIn (TxOut era)
+forall s t. Embed s t =&gt; Exp t -&gt; s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.SetAlgebra.html#eval"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set TxIn
+</span><a href="#local-6989586621679388989"><span class="hs-identifier hs-var">inputs</span></a></span><span> </span><span class="annot"><span class="annottext">Set TxIn -&gt; Map TxIn (TxOut era) -&gt; Exp (Map TxIn (TxOut era))
+forall k s1 s2 (f :: * -&gt; * -&gt; *) v.
+(Ord k, HasExp s1 (Sett k ()), HasExp s2 (f k v)) =&gt;
+s1 -&gt; s2 -&gt; Exp (f k v)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#%25C1"><span class="hs-operator hs-var">&#9665;</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut era)
+</span><a href="#local-6989586621679388988"><span class="hs-identifier hs-var">mp</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-type">SJust</span></a></span><span> </span><span id="local-6989586621679388991"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679388991"><span class="hs-identifier hs-var">script</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TxOut era
+</span><a href="#local-6989586621679388992"><span class="hs-identifier hs-var">txOut</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut era
+-&gt; Getting
+     (StrictMaybe (Script era)) (TxOut era) (StrictMaybe (Script era))
+-&gt; StrictMaybe (Script era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictMaybe (Script era)) (TxOut era) (StrictMaybe (Script era))
+forall era.
+BabbageEraTxOut era =&gt;
+Lens' (TxOut era) (StrictMaybe (Script era))
+Lens' (TxOut era) (StrictMaybe (Script era))
+</span><a href="Cardano.Ledger.Babbage.TxOut.html#referenceScriptTxOutL"><span class="hs-identifier hs-var">referenceScriptTxOutL</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-158"></span></pre></body></html>

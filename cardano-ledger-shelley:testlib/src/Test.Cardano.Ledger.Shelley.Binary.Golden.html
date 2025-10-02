@@ -1,0 +1,292 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Binary.Golden</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Binary.Golden.html#goldenNewEpochStateExpectation"><span class="hs-identifier">goldenNewEpochStateExpectation</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#BlocksMade"><span class="hs-identifier">BlocksMade</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier">EpochNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#lengthThreshold"><span class="hs-identifier">lengthThreshold</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html"><span class="hs-identifier">Cardano.Ledger.Binary.Plain</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Core.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Core</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.html"><span class="hs-identifier">Cardano.Ledger.State</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html"><span class="hs-identifier">Data.VMap</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">VMap</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Plain.Golden</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Binary.Golden.html#goldenNewEpochStateExpectation"><span class="hs-identifier hs-type">goldenNewEpochStateExpectation</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679705329"><span class="annot"><a href="#local-6989586621679705329"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxOut"><span class="hs-identifier hs-type">EraTxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679705329"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#EraGov"><span class="hs-identifier hs-type">EraGov</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679705329"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Stake.html#EraStake"><span class="hs-identifier hs-type">EraStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679705329"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#StashedAVVMAddresses"><span class="hs-identifier hs-type">StashedAVVMAddresses</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679705329"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#StashedAVVMAddresses"><span class="hs-identifier hs-type">StashedAVVMAddresses</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679705329"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier hs-type">EraCertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679705329"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier hs-type">NewEpochState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679705329"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#Expectation"><span class="hs-identifier hs-type">Expectation</span></a></span><span>
+</span><span id="line-35"></span><span id="goldenNewEpochStateExpectation"><span class="annot"><span class="annottext">goldenNewEpochStateExpectation :: forall era.
+(HasCallStack, EraTxOut era, EraGov era, EraStake era,
+ ToCBOR (StashedAVVMAddresses era),
+ EncCBOR (StashedAVVMAddresses era), EraCertState era) =&gt;
+NewEpochState era -&gt; Expectation
+</span><a href="Test.Cardano.Ledger.Shelley.Binary.Golden.html#goldenNewEpochStateExpectation"><span class="hs-identifier hs-var hs-var">goldenNewEpochStateExpectation</span></a></span></span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679705514"><span class="annot"><span class="annottext">nes :: NewEpochState era
+</span><a href="#local-6989586621679705514"><span class="hs-identifier hs-var">nes</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier hs-type">NewEpochState</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">nesEs :: forall era. NewEpochState era -&gt; EpochState era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEs"><span class="hs-identifier hs-var">nesEs</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#EpochState"><span class="hs-identifier hs-type">EpochState</span></a></span><span>
+</span><span id="line-39"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">esChainAccountState :: forall era. EpochState era -&gt; ChainAccountState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#esChainAccountState"><span class="hs-identifier hs-var">esChainAccountState</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.ChainAccount.html#ChainAccountState"><span class="hs-identifier hs-type">ChainAccountState</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679705520"><span id="local-6989586621679705521"><span class="annot"><span class="annottext">Coin
+casTreasury :: Coin
+casReserves :: Coin
+casTreasury :: ChainAccountState -&gt; Coin
+casReserves :: ChainAccountState -&gt; Coin
+</span><a href="#local-6989586621679705520"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span>
+</span><span id="line-40"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">esSnapshots :: forall era. EpochState era -&gt; SnapShots
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.LedgerState.Types.html#esSnapshots"><span class="hs-identifier hs-var">esSnapshots</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#SnapShots"><span class="hs-identifier hs-type">SnapShots</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679705526"><span id="local-6989586621679705527"><span id="local-6989586621679705528"><span id="local-6989586621679705529"><span id="local-6989586621679705530"><span class="annot"><span class="annottext">Coin
+PoolDistr
+SnapShot
+ssStakeMark :: SnapShot
+ssStakeMarkPoolDistr :: PoolDistr
+ssStakeSet :: SnapShot
+ssStakeGo :: SnapShot
+ssFee :: Coin
+$sel:ssStakeMark:SnapShots :: SnapShots -&gt; SnapShot
+$sel:ssStakeMarkPoolDistr:SnapShots :: SnapShots -&gt; PoolDistr
+$sel:ssStakeSet:SnapShots :: SnapShots -&gt; SnapShot
+$sel:ssStakeGo:SnapShots :: SnapShots -&gt; SnapShot
+$sel:ssFee:SnapShots :: SnapShots -&gt; Coin
+</span><a href="#local-6989586621679705526"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span>
+</span><span id="line-41"></span><span>        </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679705536"><span id="local-6989586621679705537"><span class="annot"><span class="annottext">NonMyopic
+LedgerState era
+esLState :: LedgerState era
+esNonMyopic :: NonMyopic
+esLState :: forall era. EpochState era -&gt; LedgerState era
+esNonMyopic :: forall era. EpochState era -&gt; NonMyopic
+</span><a href="#local-6989586621679705536"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span>
+</span><span id="line-42"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679705540"><span id="local-6989586621679705541"><span id="local-6989586621679705542"><span id="local-6989586621679705543"><span id="local-6989586621679705544"><span id="local-6989586621679705545"><span class="annot"><span class="annottext">StrictMaybe PulsingRewUpdate
+EpochNo
+BlocksMade
+PoolDistr
+StashedAVVMAddresses era
+nesEL :: EpochNo
+nesBprev :: BlocksMade
+nesBcur :: BlocksMade
+nesRu :: StrictMaybe PulsingRewUpdate
+nesPd :: PoolDistr
+stashedAVVMAddresses :: StashedAVVMAddresses era
+nesEL :: forall era. NewEpochState era -&gt; EpochNo
+nesBprev :: forall era. NewEpochState era -&gt; BlocksMade
+nesBcur :: forall era. NewEpochState era -&gt; BlocksMade
+nesRu :: forall era. NewEpochState era -&gt; StrictMaybe PulsingRewUpdate
+nesPd :: forall era. NewEpochState era -&gt; PoolDistr
+stashedAVVMAddresses :: forall era. NewEpochState era -&gt; StashedAVVMAddresses era
+</span><a href="#local-6989586621679705540"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">DiffView -&gt; NewEpochState era -&gt; Enc -&gt; Expectation
+forall a b.
+(HasCallStack, ToCBOR a, ToCBOR b) =&gt;
+DiffView -&gt; a -&gt; b -&gt; Expectation
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#expectGoldenToCBOR"><span class="hs-identifier hs-var">expectGoldenToCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">DiffView
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#DiffHex"><span class="hs-identifier hs-var">DiffHex</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState era
+</span><a href="#local-6989586621679705514"><span class="hs-identifier hs-var">nes</span></a></span><span> </span><span class="annot"><span class="annottext">(Enc -&gt; Expectation) -&gt; Enc -&gt; Expectation
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">[Enc] -&gt; Enc
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-47"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">7</span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkWord64"><span class="hs-identifier hs-var">TkWord64</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochNo -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#unEpochNo"><span class="hs-identifier hs-var">unEpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679705540"><span class="hs-identifier hs-var">nesEL</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Natural -&gt; Enc
+forall {k} {a}. (EncCBOR k, EncCBOR a) =&gt; Map k a -&gt; Enc
+</span><a href="#local-6989586621679705558"><span class="hs-identifier hs-var">mapEnc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlocksMade -&gt; Map (KeyHash 'StakePool) Natural
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unBlocksMade"><span class="hs-identifier hs-var">unBlocksMade</span></a></span><span> </span><span class="annot"><span class="annottext">BlocksMade
+</span><a href="#local-6989586621679705541"><span class="hs-identifier hs-var">nesBprev</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) Natural -&gt; Enc
+forall {k} {a}. (EncCBOR k, EncCBOR a) =&gt; Map k a -&gt; Enc
+</span><a href="#local-6989586621679705558"><span class="hs-identifier hs-var">mapEnc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlocksMade -&gt; Map (KeyHash 'StakePool) Natural
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#unBlocksMade"><span class="hs-identifier hs-var">unBlocksMade</span></a></span><span> </span><span class="annot"><span class="annottext">BlocksMade
+</span><a href="#local-6989586621679705542"><span class="hs-identifier hs-var">nesBcur</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Enc] -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Em"><span class="hs-identifier hs-var">Em</span></a></span><span>
+</span><span id="line-52"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">4</span></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Enc] -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Em"><span class="hs-identifier hs-var">Em</span></a></span><span>
+</span><span id="line-54"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679705520"><span class="hs-identifier hs-var">casTreasury</span></a></span><span>
+</span><span id="line-56"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679705521"><span class="hs-identifier hs-var">casReserves</span></a></span><span>
+</span><span id="line-57"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-58"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LedgerState era -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="annot"><span class="annottext">LedgerState era
+</span><a href="#local-6989586621679705536"><span class="hs-identifier hs-var">esLState</span></a></span><span>
+</span><span id="line-59"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Enc] -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Em"><span class="hs-identifier hs-var">Em</span></a></span><span>
+</span><span id="line-60"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">4</span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SnapShot -&gt; Enc
+</span><a href="#local-6989586621679705561"><span class="hs-identifier hs-var">snapShotEnc</span></a></span><span> </span><span class="annot"><span class="annottext">SnapShot
+</span><a href="#local-6989586621679705526"><span class="hs-identifier hs-var">ssStakeMark</span></a></span><span>
+</span><span id="line-62"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SnapShot -&gt; Enc
+</span><a href="#local-6989586621679705561"><span class="hs-identifier hs-var">snapShotEnc</span></a></span><span> </span><span class="annot"><span class="annottext">SnapShot
+</span><a href="#local-6989586621679705528"><span class="hs-identifier hs-var">ssStakeSet</span></a></span><span>
+</span><span id="line-63"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SnapShot -&gt; Enc
+</span><a href="#local-6989586621679705561"><span class="hs-identifier hs-var">snapShotEnc</span></a></span><span> </span><span class="annot"><span class="annottext">SnapShot
+</span><a href="#local-6989586621679705529"><span class="hs-identifier hs-var">ssStakeGo</span></a></span><span>
+</span><span id="line-64"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679705530"><span class="hs-identifier hs-var">ssFee</span></a></span><span>
+</span><span id="line-65"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-66"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; NonMyopic -&gt; Enc
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Ev"><span class="hs-identifier hs-var">Ev</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679705563"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">NonMyopic
+</span><a href="#local-6989586621679705537"><span class="hs-identifier hs-var">esNonMyopic</span></a></span><span>
+</span><span id="line-67"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; StrictMaybe PulsingRewUpdate -&gt; Enc
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Ev"><span class="hs-identifier hs-var">Ev</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679705563"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe PulsingRewUpdate
+</span><a href="#local-6989586621679705543"><span class="hs-identifier hs-var">nesRu</span></a></span><span>
+</span><span id="line-69"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; PoolDistr -&gt; Enc
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Ev"><span class="hs-identifier hs-var">Ev</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679705563"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">PoolDistr
+</span><a href="#local-6989586621679705544"><span class="hs-identifier hs-var">nesPd</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StashedAVVMAddresses era -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="annot"><span class="annottext">StashedAVVMAddresses era
+</span><a href="#local-6989586621679705545"><span class="hs-identifier hs-var">stashedAVVMAddresses</span></a></span><span>
+</span><span id="line-71"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>      </span><span id="local-6989586621679705563"><span class="annot"><span class="annottext">ver :: Version
+</span><a href="#local-6989586621679705563"><span class="hs-identifier hs-var hs-var">ver</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerLow"><span class="hs-identifier hs-var">eraProtVerLow</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679705329"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span id="local-6989586621679705558"><span class="annot"><span class="annottext">mapEnc :: Map k a -&gt; Enc
+</span><a href="#local-6989586621679705558"><span class="hs-identifier hs-var hs-var">mapEnc</span></a></span></span><span> </span><span id="local-6989586621679705599"><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679705599"><span class="hs-identifier hs-var">m</span></a></span></span><span>
+</span><span id="line-75"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; Int
+forall k a. Map k a -&gt; Int
+</span><span class="hs-identifier hs-var">Map.size</span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679705599"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#lengthThreshold"><span class="hs-identifier hs-var">lengthThreshold</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>            </span><span class="annot"><span class="annottext">[Enc] -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Em"><span class="hs-identifier hs-var">Em</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="annot"><span class="annottext">Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkMapBegin"><span class="hs-identifier hs-var">TkMapBegin</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Enc
+</span><a href="#local-6989586621679705603"><span class="hs-identifier hs-var">me</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="annot"><span class="annottext">Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkBreak"><span class="hs-identifier hs-var">TkBreak</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-77"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>            </span><span class="annot"><span class="annottext">[Enc] -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Em"><span class="hs-identifier hs-var">Em</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkMapLen"><span class="hs-identifier hs-var">TkMapLen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Word
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map k a -&gt; Int
+forall k a. Map k a -&gt; Int
+</span><span class="hs-identifier hs-var">Map.size</span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679705599"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Enc
+</span><a href="#local-6989586621679705603"><span class="hs-identifier hs-var">me</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>          </span><span id="local-6989586621679705603"><span class="annot"><span class="annottext">me :: Enc
+</span><a href="#local-6989586621679705603"><span class="hs-identifier hs-var hs-var">me</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Enc] -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Em"><span class="hs-identifier hs-var">Em</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Version -&gt; k -&gt; Enc
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Ev"><span class="hs-identifier hs-var">Ev</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679705563"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679705612"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Enc -&gt; Enc -&gt; Enc
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Version -&gt; a -&gt; Enc
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Ev"><span class="hs-identifier hs-var">Ev</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679705563"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679705613"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679705612"><span class="annot"><span class="annottext">k
+</span><a href="#local-6989586621679705612"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679705613"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679705613"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map k a -&gt; [(k, a)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">Map.toList</span></span><span> </span><span class="annot"><span class="annottext">Map k a
+</span><a href="#local-6989586621679705599"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span><span>      </span><span id="local-6989586621679705561"><span class="annot"><span class="annottext">snapShotEnc :: SnapShot -&gt; Enc
+</span><a href="#local-6989586621679705561"><span class="hs-identifier hs-var hs-var">snapShotEnc</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#SnapShot"><span class="hs-identifier hs-type">SnapShot</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679705647"><span id="local-6989586621679705648"><span id="local-6989586621679705649"><span class="annot"><span class="annottext">Stake
+VMap VB VB (KeyHash 'StakePool) PoolParams
+VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+ssStake :: Stake
+ssDelegations :: VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+ssPoolParams :: VMap VB VB (KeyHash 'StakePool) PoolParams
+$sel:ssStake:SnapShot :: SnapShot -&gt; Stake
+$sel:ssDelegations:SnapShot :: SnapShot -&gt; VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+$sel:ssPoolParams:SnapShot :: SnapShot -&gt; VMap VB VB (KeyHash 'StakePool) PoolParams
+</span><a href="#local-6989586621679705647"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><span class="annottext">[Enc] -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Em"><span class="hs-identifier hs-var">Em</span></a></span><span>
+</span><span id="line-83"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">(Tokens -&gt; Tokens) -&gt; Enc
+forall a. ToCBOR a =&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Tokens -&gt; Tokens
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#TkListLen"><span class="hs-identifier hs-var">TkListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map (Credential 'Staking) (CompactForm Coin) -&gt; Enc
+forall {k} {a}. (EncCBOR k, EncCBOR a) =&gt; Map k a -&gt; Enc
+</span><a href="#local-6989586621679705558"><span class="hs-identifier hs-var">mapEnc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VMap VB VP (Credential 'Staking) (CompactForm Coin)
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+VMap kv vv k v -&gt; Map k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#toMap"><span class="hs-identifier hs-var">VMap.toMap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Stake -&gt; VMap VB VP (Credential 'Staking) (CompactForm Coin)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.SnapShots.html#%24sel%3AunStake%3AStake"><span class="hs-identifier hs-var">unStake</span></a></span><span> </span><span class="annot"><span class="annottext">Stake
+</span><a href="#local-6989586621679705647"><span class="hs-identifier hs-var">ssStake</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; VMap VB VB (Credential 'Staking) (KeyHash 'StakePool) -&gt; Enc
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Ev"><span class="hs-identifier hs-var">Ev</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679705563"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+</span><a href="#local-6989586621679705648"><span class="hs-identifier hs-var">ssDelegations</span></a></span><span>
+</span><span id="line-86"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Version -&gt; VMap VB VB (KeyHash 'StakePool) PoolParams -&gt; Enc
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; Enc
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Plain.Golden.html#Ev"><span class="hs-identifier hs-var">Ev</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679705563"><span class="hs-identifier hs-var">ver</span></a></span><span> </span><span class="annot"><span class="annottext">VMap VB VB (KeyHash 'StakePool) PoolParams
+</span><a href="#local-6989586621679705649"><span class="hs-identifier hs-var">ssPoolParams</span></a></span><span>
+</span><span id="line-87"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-88"></span></pre></body></html>

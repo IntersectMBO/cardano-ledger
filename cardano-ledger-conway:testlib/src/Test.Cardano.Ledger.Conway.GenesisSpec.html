@@ -1,0 +1,282 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conway.GenesisSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-babbage-1.12.1.0/doc/html/cardano-ledger-babbage/src/Cardano.Ledger.Babbage.html"><span class="hs-identifier">Cardano.Ledger.Babbage</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier">BabbageEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Core.html"><span class="hs-identifier">Cardano.Ledger.Conway.Core</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html"><span class="hs-identifier">Cardano.Ledger.Conway.PParams</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html"><span class="hs-identifier">Cardano.Ledger.Plutus.CostModels</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#costModelsValid"><span class="hs-identifier">costModelsValid</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier">Language</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#PlutusV3"><span class="hs-identifier">PlutusV3</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Encoding.Internal.html#Encoding"><span class="hs-identifier">Encoding</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Identity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Identity</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Paths_cardano_ledger_conway.html"><span class="hs-identifier">Paths_cardano_ledger_conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Paths_cardano_ledger_conway.html#getDataFileName"><span class="hs-identifier">getDataFileName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Genesis.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Genesis.html#expectedConwayGenesis"><span class="hs-identifier">expectedConwayGenesis</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-l-testlib-19de88297209d951ba64f90e0ca040d80a228f9bb6bb64c3a3f507c1a30868e8/share/doc/html/src/Test.Cardano.Slotting.Numeric.html"><span class="hs-identifier">Test.Cardano.Slotting.Numeric</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-25"></span><span id="spec"><span class="annot"><span class="annottext">spec :: Spec
+</span><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><span class="annottext">[Char] -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; [Char] -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;ConwayGenesis&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">[Char] -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; [Char] -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Golden Spec&quot;</span></span><span> </span><span class="annot"><span class="annottext">Spec
+</span><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#goldenConwayGenesisJSON"><span class="hs-identifier hs-var">goldenConwayGenesisJSON</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">[Char]
+-&gt; (UpgradeConwayPParams Identity
+    -&gt; PParams BabbageEra -&gt; Property)
+-&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+[Char] -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Upgrades&quot;</span></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity -&gt; PParams BabbageEra -&gt; Property
+</span><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#propConwayPParamsUpgrade"><span class="hs-identifier hs-var">propConwayPParamsUpgrade</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#fileName"><span class="hs-identifier hs-type">fileName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-31"></span><span id="fileName"><span class="annot"><span class="annottext">fileName :: [Char]
+</span><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#fileName"><span class="hs-identifier hs-var hs-var">fileName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;test/data/conway-genesis.json&quot;</span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#goldenConwayGenesisJSON"><span class="hs-identifier hs-type">goldenConwayGenesisJSON</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-34"></span><span id="goldenConwayGenesisJSON"><span class="annot"><span class="annottext">goldenConwayGenesisJSON :: Spec
+</span><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#goldenConwayGenesisJSON"><span class="hs-identifier hs-var hs-var">goldenConwayGenesisJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="annottext">[Char] -&gt; IO () -&gt; SpecWith (Arg (IO ()))
+forall a.
+(HasCallStack, Example a) =&gt;
+[Char] -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#it"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;should deserialize to the default value&quot;</span></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; SpecWith (Arg (IO ())))
+-&gt; IO () -&gt; SpecWith (Arg (IO ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>    </span><span id="local-6989586621686844996"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621686844996"><span class="hs-identifier hs-var">file</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO [Char]
+</span><a href="Paths_cardano_ledger_conway.html#getDataFileName"><span class="hs-identifier hs-var">getDataFileName</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#fileName"><span class="hs-identifier hs-var">fileName</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span id="local-6989586621686844997"><span class="annot"><span class="annottext">Either [Char] ConwayGenesis
+</span><a href="#local-6989586621686844997"><span class="hs-identifier hs-var">dec</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO (Either [Char] ConwayGenesis)
+forall a. FromJSON a =&gt; [Char] -&gt; IO (Either [Char] a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html#eitherDecodeFileStrict%27"><span class="hs-identifier hs-var">eitherDecodeFileStrict'</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621686844996"><span class="hs-identifier hs-var">file</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span id="local-6989586621686844999"><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621686844999"><span class="hs-identifier hs-var">cg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either [Char] ConwayGenesis
+</span><a href="#local-6989586621686844997"><span class="hs-identifier hs-var">dec</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621686845000"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621686845000"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO ConwayGenesis
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Failed to deserialize JSON: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621686845000"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621686845002"><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621686845002"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ConwayGenesis -&gt; IO ConwayGenesis
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621686845002"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="#local-6989586621686844999"><span class="hs-identifier hs-var">cg</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayGenesis -&gt; ConwayGenesis -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayGenesis
+</span><a href="Test.Cardano.Ledger.Conway.Genesis.html#expectedConwayGenesis"><span class="hs-identifier hs-var">expectedConwayGenesis</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#propConwayPParamsUpgrade"><span class="hs-identifier hs-type">propConwayPParamsUpgrade</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#UpgradeConwayPParams"><span class="hs-identifier hs-type">UpgradeConwayPParams</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-44"></span><span id="propConwayPParamsUpgrade"><span class="annot"><span class="annottext">propConwayPParamsUpgrade :: UpgradeConwayPParams Identity -&gt; PParams BabbageEra -&gt; Property
+</span><a href="Test.Cardano.Ledger.Conway.GenesisSpec.html#propConwayPParamsUpgrade"><span class="hs-identifier hs-var hs-var">propConwayPParamsUpgrade</span></a></span></span><span> </span><span id="local-6989586621686845004"><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span></span><span> </span><span id="local-6989586621686845005"><span class="annot"><span class="annottext">PParams BabbageEra
+</span><a href="#local-6989586621686845005"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; Property
+forall prop. Testable prop =&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#property"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; Property) -&gt; IO () -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621686845012"><span class="annot"><span class="annottext">pp' :: PParams ConwayEra
+</span><a href="#local-6989586621686845012"><span class="hs-identifier hs-var hs-var">pp'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpgradePParams Identity ConwayEra
+-&gt; PParams (PreviousEra ConwayEra) -&gt; PParams ConwayEra
+forall era.
+(EraPParams era, EraPParams (PreviousEra era)) =&gt;
+UpgradePParams Identity era
+-&gt; PParams (PreviousEra era) -&gt; PParams era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#upgradePParams"><span class="hs-identifier hs-var">upgradePParams</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradePParams Identity ConwayEra
+UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span><span> </span><span class="annot"><span class="annottext">PParams (PreviousEra ConwayEra)
+PParams BabbageEra
+</span><a href="#local-6989586621686845005"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621686845012"><span class="hs-identifier hs-var">pp'</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra
+-&gt; Getting
+     PoolVotingThresholds (PParams ConwayEra) PoolVotingThresholds
+-&gt; PoolVotingThresholds
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  PoolVotingThresholds (PParams ConwayEra) PoolVotingThresholds
+forall era.
+ConwayEraPParams era =&gt;
+Lens' (PParams era) PoolVotingThresholds
+Lens' (PParams ConwayEra) PoolVotingThresholds
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ppPoolVotingThresholdsL"><span class="hs-identifier hs-var">ppPoolVotingThresholdsL</span></a></span><span> </span><span class="annot"><span class="annottext">PoolVotingThresholds -&gt; PoolVotingThresholds -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity -&gt; HKD Identity PoolVotingThresholds
+forall (f :: * -&gt; *).
+UpgradeConwayPParams f -&gt; HKD f PoolVotingThresholds
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ucppPoolVotingThresholds"><span class="hs-identifier hs-var">ucppPoolVotingThresholds</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621686845012"><span class="hs-identifier hs-var">pp'</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra
+-&gt; Getting
+     DRepVotingThresholds (PParams ConwayEra) DRepVotingThresholds
+-&gt; DRepVotingThresholds
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  DRepVotingThresholds (PParams ConwayEra) DRepVotingThresholds
+forall era.
+ConwayEraPParams era =&gt;
+Lens' (PParams era) DRepVotingThresholds
+Lens' (PParams ConwayEra) DRepVotingThresholds
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ppDRepVotingThresholdsL"><span class="hs-identifier hs-var">ppDRepVotingThresholdsL</span></a></span><span> </span><span class="annot"><span class="annottext">DRepVotingThresholds -&gt; DRepVotingThresholds -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity -&gt; HKD Identity DRepVotingThresholds
+forall (f :: * -&gt; *).
+UpgradeConwayPParams f -&gt; HKD f DRepVotingThresholds
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ucppDRepVotingThresholds"><span class="hs-identifier hs-var">ucppDRepVotingThresholds</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">Natural -&gt; Word16
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621686845012"><span class="hs-identifier hs-var">pp'</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra
+-&gt; Getting Natural (PParams ConwayEra) Natural -&gt; Natural
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Natural (PParams ConwayEra) Natural
+forall era. ConwayEraPParams era =&gt; Lens' (PParams era) Natural
+Lens' (PParams ConwayEra) Natural
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ppCommitteeMinSizeL"><span class="hs-identifier hs-var">ppCommitteeMinSizeL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Word16 -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity -&gt; HKD Identity Word16
+forall (f :: * -&gt; *). UpgradeConwayPParams f -&gt; HKD f Word16
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ucppCommitteeMinSize"><span class="hs-identifier hs-var">ucppCommitteeMinSize</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621686845012"><span class="hs-identifier hs-var">pp'</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra
+-&gt; Getting EpochInterval (PParams ConwayEra) EpochInterval
+-&gt; EpochInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting EpochInterval (PParams ConwayEra) EpochInterval
+forall era.
+ConwayEraPParams era =&gt;
+Lens' (PParams era) EpochInterval
+Lens' (PParams ConwayEra) EpochInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ppCommitteeMaxTermLengthL"><span class="hs-identifier hs-var">ppCommitteeMaxTermLengthL</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInterval -&gt; EpochInterval -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity -&gt; HKD Identity EpochInterval
+forall (f :: * -&gt; *). UpgradeConwayPParams f -&gt; HKD f EpochInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ucppCommitteeMaxTermLength"><span class="hs-identifier hs-var">ucppCommitteeMaxTermLength</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621686845012"><span class="hs-identifier hs-var">pp'</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra
+-&gt; Getting EpochInterval (PParams ConwayEra) EpochInterval
+-&gt; EpochInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting EpochInterval (PParams ConwayEra) EpochInterval
+forall era.
+ConwayEraPParams era =&gt;
+Lens' (PParams era) EpochInterval
+Lens' (PParams ConwayEra) EpochInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ppGovActionLifetimeL"><span class="hs-identifier hs-var">ppGovActionLifetimeL</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInterval -&gt; EpochInterval -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity -&gt; HKD Identity EpochInterval
+forall (f :: * -&gt; *). UpgradeConwayPParams f -&gt; HKD f EpochInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ucppGovActionLifetime"><span class="hs-identifier hs-var">ucppGovActionLifetime</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621686845012"><span class="hs-identifier hs-var">pp'</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra -&gt; Getting Coin (PParams ConwayEra) Coin -&gt; Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Coin (PParams ConwayEra) Coin
+forall era. ConwayEraPParams era =&gt; Lens' (PParams era) Coin
+Lens' (PParams ConwayEra) Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ppGovActionDepositL"><span class="hs-identifier hs-var">ppGovActionDepositL</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Coin -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity -&gt; HKD Identity Coin
+forall (f :: * -&gt; *). UpgradeConwayPParams f -&gt; HKD f Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ucppGovActionDeposit"><span class="hs-identifier hs-var">ucppGovActionDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621686845012"><span class="hs-identifier hs-var">pp'</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra -&gt; Getting Coin (PParams ConwayEra) Coin -&gt; Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Coin (PParams ConwayEra) Coin
+forall era. ConwayEraPParams era =&gt; Lens' (PParams era) Coin
+Lens' (PParams ConwayEra) Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ppDRepDepositL"><span class="hs-identifier hs-var">ppDRepDepositL</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Coin -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity -&gt; HKD Identity Coin
+forall (f :: * -&gt; *). UpgradeConwayPParams f -&gt; HKD f Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ucppDRepDeposit"><span class="hs-identifier hs-var">ucppDRepDeposit</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621686845012"><span class="hs-identifier hs-var">pp'</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra
+-&gt; Getting EpochInterval (PParams ConwayEra) EpochInterval
+-&gt; EpochInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting EpochInterval (PParams ConwayEra) EpochInterval
+forall era.
+ConwayEraPParams era =&gt;
+Lens' (PParams era) EpochInterval
+Lens' (PParams ConwayEra) EpochInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ppDRepActivityL"><span class="hs-identifier hs-var">ppDRepActivityL</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInterval -&gt; EpochInterval -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity -&gt; HKD Identity EpochInterval
+forall (f :: * -&gt; *). UpgradeConwayPParams f -&gt; HKD f EpochInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ucppDRepActivity"><span class="hs-identifier hs-var">ucppDRepActivity</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621686845012"><span class="hs-identifier hs-var">pp'</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra
+-&gt; Getting
+     NonNegativeInterval (PParams ConwayEra) NonNegativeInterval
+-&gt; NonNegativeInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting NonNegativeInterval (PParams ConwayEra) NonNegativeInterval
+forall era.
+ConwayEraPParams era =&gt;
+Lens' (PParams era) NonNegativeInterval
+Lens' (PParams ConwayEra) NonNegativeInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ppMinFeeRefScriptCostPerByteL"><span class="hs-identifier hs-var">ppMinFeeRefScriptCostPerByteL</span></a></span><span> </span><span class="annot"><span class="annottext">NonNegativeInterval -&gt; NonNegativeInterval -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity -&gt; HKD Identity NonNegativeInterval
+forall (f :: * -&gt; *).
+UpgradeConwayPParams f -&gt; HKD f NonNegativeInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ucppMinFeeRefScriptCostPerByte"><span class="hs-identifier hs-var">ucppMinFeeRefScriptCostPerByte</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><span class="annottext">Language -&gt; Map Language CostModel -&gt; Maybe CostModel
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">Language
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#PlutusV3"><span class="hs-identifier hs-var">PlutusV3</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModels -&gt; Map Language CostModel
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#costModelsValid"><span class="hs-identifier hs-var">costModelsValid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621686845012"><span class="hs-identifier hs-var">pp'</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra
+-&gt; Getting CostModels (PParams ConwayEra) CostModels -&gt; CostModels
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting CostModels (PParams ConwayEra) CostModels
+forall era. AlonzoEraPParams era =&gt; Lens' (PParams era) CostModels
+Lens' (PParams ConwayEra) CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#ppCostModelsL"><span class="hs-identifier hs-var">ppCostModelsL</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="annottext">Maybe CostModel -&gt; Maybe CostModel -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">CostModel -&gt; Maybe CostModel
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity -&gt; HKD Identity CostModel
+forall (f :: * -&gt; *). UpgradeConwayPParams f -&gt; HKD f CostModel
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ucppPlutusV3CostModel"><span class="hs-identifier hs-var">ucppPlutusV3CostModel</span></a></span><span> </span><span class="annot"><span class="annottext">UpgradeConwayPParams Identity
+</span><a href="#local-6989586621686845004"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span></pre></body></html>

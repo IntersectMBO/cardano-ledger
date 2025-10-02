@@ -1,0 +1,397 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Chain.MempoolPayload.CBOR</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#tests"><span class="hs-identifier">tests</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#ByteSpan"><span class="hs-identifier">ByteSpan</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier">Decoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#byronProtVer"><span class="hs-identifier">byronProtVer</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier">decCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull"><span class="hs-identifier">decodeFull</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFullDecoder"><span class="hs-identifier">decodeFullDecoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier">encCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier">serialize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#slice"><span class="hs-identifier">slice</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier">Property</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Tripping.html#tripping"><span class="hs-identifier">tripping</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.Example.html"><span class="hs-identifier">Test.Cardano.Chain.MempoolPayload.Example</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload"><span class="hs-identifier">exampleMempoolPayload</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload1"><span class="hs-identifier">exampleMempoolPayload1</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload2"><span class="hs-identifier">exampleMempoolPayload2</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload3"><span class="hs-identifier">exampleMempoolPayload3</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.Gen.html"><span class="hs-identifier">Test.Cardano.Chain.MempoolPayload.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.Gen.html#genMempoolPayload"><span class="hs-identifier">genMempoolPayload</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Gen.html"><span class="hs-identifier">Test.Cardano.Crypto.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Gen.html#feedPM"><span class="hs-identifier">feedPM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBOR"><span class="hs-identifier">goldenTestCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBORExplicit"><span class="hs-identifier">goldenTestCBORExplicit</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#roundTripsCBORShow"><span class="hs-identifier">roundTripsCBORShow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.html"><span class="hs-identifier">Test.Cardano.Prelude</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Options.html"><span class="hs-identifier">Test.Options</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Options.html#TSGroup"><span class="hs-identifier">TSGroup</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier">TSProperty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Options.html#concatTSGroups"><span class="hs-identifier">concatTSGroups</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Options.html#eachOfTS"><span class="hs-identifier">eachOfTS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- Helpers</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- | Serialises @f ()@ and uses that 'ByteString' as the annotation to splice</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- in.</span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#fillInByteString"><span class="hs-identifier hs-type">fillInByteString</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679373348"><span class="annot"><a href="#local-6989586621679373348"><span class="hs-identifier hs-type">f</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679373348"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#ByteSpan"><span class="hs-identifier hs-type">ByteSpan</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679373348"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Functor</span></span><span> </span><span class="annot"><a href="#local-6989586621679373348"><span class="hs-identifier hs-type">f</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="#local-6989586621679373348"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="#local-6989586621679373348"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-53"></span><span id="fillInByteString"><span class="annot"><span class="annottext">fillInByteString :: forall (f :: * -&gt; *).
+(DecCBOR (f ByteSpan), EncCBOR (f ()), Functor f) =&gt;
+f () -&gt; f ByteString
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#fillInByteString"><span class="hs-identifier hs-var hs-var">fillInByteString</span></a></span></span><span> </span><span id="local-6989586621679373564"><span class="annot"><span class="annottext">f ()
+</span><a href="#local-6989586621679373564"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">(DecoderError -&gt; f ByteString)
+-&gt; (f ByteString -&gt; f ByteString)
+-&gt; Either DecoderError (f ByteString)
+-&gt; f ByteString
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><span class="hs-identifier hs-var">either</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; f ByteString
+forall a. HasCallStack =&gt; Text -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Panic.html#panic"><span class="hs-identifier hs-var">panic</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; f ByteString)
+-&gt; (DecoderError -&gt; Text) -&gt; DecoderError -&gt; f ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; Text
+forall a b. (Show a, ConvertText String b) =&gt; a -&gt; b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">f ByteString -&gt; f ByteString
+forall (cat :: * -&gt; * -&gt; *) a. Category cat =&gt; cat a a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Base.html#identity"><span class="hs-identifier hs-var">identity</span></a></span><span> </span><span class="annot"><span class="annottext">(Either DecoderError (f ByteString) -&gt; f ByteString)
+-&gt; Either DecoderError (f ByteString) -&gt; f ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s (f ByteString))
+-&gt; ByteString
+-&gt; Either DecoderError (f ByteString)
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s a)
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFullDecoder"><span class="hs-identifier hs-var">decodeFullDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (f ByteString)
+forall s. Decoder s (f ByteString)
+</span><a href="#local-6989586621679373570"><span class="hs-identifier hs-var">dec</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679373571"><span class="hs-identifier hs-var">bytes</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><a href="#local-6989586621679373571"><span class="hs-identifier hs-type">bytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Base.html#LByteString"><span class="hs-identifier hs-type">LByteString</span></a></span><span>
+</span><span id="line-57"></span><span>    </span><span id="local-6989586621679373571"><span class="annot"><span class="annottext">bytes :: ByteString
+</span><a href="#local-6989586621679373571"><span class="hs-identifier hs-var hs-var">bytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; f () -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">f ()
+</span><a href="#local-6989586621679373564"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span>    </span><span id="local-6989586621679373573"><span class="annot"><a href="#local-6989586621679373570"><span class="hs-identifier hs-type">dec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679373573"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679373348"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span></span><span>
+</span><span id="line-60"></span><span>    </span><span id="local-6989586621679373570"><span class="annot"><span class="annottext">dec :: forall s. Decoder s (f ByteString)
+</span><a href="#local-6989586621679373570"><span class="hs-identifier hs-var hs-var">dec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByteSpan -&gt; ByteString) -&gt; f ByteSpan -&gt; f ByteString
+forall a b. (a -&gt; b) -&gt; f a -&gt; f b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">LBS.toStrict</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; (ByteSpan -&gt; ByteString) -&gt; ByteSpan -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteSpan -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#slice"><span class="hs-identifier hs-var">slice</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679373571"><span class="hs-identifier hs-var">bytes</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(f ByteSpan -&gt; f ByteString)
+-&gt; Decoder s (f ByteSpan) -&gt; Decoder s (f ByteString)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (f ByteSpan)
+forall s. Decoder s (f ByteSpan)
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- | Variant of 'goldenTestCBOR' that does not use the @'EncCBOR' (f ())@</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- instance, but the @'EncCBOR' (f ByteString)@ instance. The latter instance</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- allows reusing the annotation when serialising instead of reserialising</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- from scratch.</span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#filledInGoldenTestCBOR"><span class="hs-identifier hs-type">filledInGoldenTestCBOR</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679373385"><span class="annot"><a href="#local-6989586621679373385"><span class="hs-identifier hs-type">f</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679373385"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679373385"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679373385"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#ByteSpan"><span class="hs-identifier hs-type">ByteSpan</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679373385"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Functor</span></span><span> </span><span class="annot"><a href="#local-6989586621679373385"><span class="hs-identifier hs-type">f</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679373385"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679373385"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="#local-6989586621679373385"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-80"></span><span id="filledInGoldenTestCBOR"><span class="annot"><span class="annottext">filledInGoldenTestCBOR :: forall (f :: * -&gt; *).
+(DecCBOR (f ()), EncCBOR (f ()), DecCBOR (f ByteSpan),
+ EncCBOR (f ByteString), Functor f, Eq (f ()), Show (f ()),
+ HasCallStack) =&gt;
+f () -&gt; String -&gt; Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#filledInGoldenTestCBOR"><span class="hs-identifier hs-var hs-var">filledInGoldenTestCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">Text
+-&gt; (f () -&gt; Encoding)
+-&gt; (forall s. Decoder s (f ()))
+-&gt; f ()
+-&gt; String
+-&gt; Property
+forall a.
+(Eq a, Show a, HasCallStack) =&gt;
+Text
+-&gt; (a -&gt; Encoding)
+-&gt; (forall s. Decoder s a)
+-&gt; a
+-&gt; String
+-&gt; Property
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBORExplicit"><span class="hs-identifier hs-var">goldenTestCBORExplicit</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy (f ()) -&gt; Text
+forall a. DecCBOR a =&gt; Proxy a -&gt; Text
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#label"><span class="hs-keyword hs-var">label</span></a></span><span> </span><span class="annot"><span class="annottext">(Proxy (f ()) -&gt; Text) -&gt; Proxy (f ()) -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679373385"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">f ByteString -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">(f ByteString -&gt; Encoding)
+-&gt; (f () -&gt; f ByteString) -&gt; f () -&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">f () -&gt; f ByteString
+forall (f :: * -&gt; *).
+(DecCBOR (f ByteSpan), EncCBOR (f ()), Functor f) =&gt;
+f () -&gt; f ByteString
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#fillInByteString"><span class="hs-identifier hs-var">fillInByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">Decoder s (f ())
+forall s. Decoder s (f ())
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- MempoolPayload</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload"><span class="hs-identifier hs-type">goldenMempoolPayload</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-91"></span><span id="goldenMempoolPayload"><span class="annot"><span class="annottext">goldenMempoolPayload :: Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload"><span class="hs-identifier hs-var hs-var">goldenMempoolPayload</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><span class="annottext">MempoolPayload -&gt; String -&gt; Property
+forall a.
+(DecCBOR a, EncCBOR a, Eq a, Show a, HasCallStack) =&gt;
+a -&gt; String -&gt; Property
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBOR"><span class="hs-identifier hs-var">goldenTestCBOR</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">MempoolPayload
+</span><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload"><span class="hs-identifier hs-var">exampleMempoolPayload</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;golden/cbor/mempoolpayload/MempoolPayload&quot;</span></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayloadFilledIn"><span class="hs-identifier hs-type">goldenMempoolPayloadFilledIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-97"></span><span id="goldenMempoolPayloadFilledIn"><span class="annot"><span class="annottext">goldenMempoolPayloadFilledIn :: Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayloadFilledIn"><span class="hs-identifier hs-var hs-var">goldenMempoolPayloadFilledIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">MempoolPayload -&gt; String -&gt; Property
+forall (f :: * -&gt; *).
+(DecCBOR (f ()), EncCBOR (f ()), DecCBOR (f ByteSpan),
+ EncCBOR (f ByteString), Functor f, Eq (f ()), Show (f ()),
+ HasCallStack) =&gt;
+f () -&gt; String -&gt; Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#filledInGoldenTestCBOR"><span class="hs-identifier hs-var">filledInGoldenTestCBOR</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">MempoolPayload
+</span><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload"><span class="hs-identifier hs-var">exampleMempoolPayload</span></a></span><span>
+</span><span id="line-100"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;golden/cbor/mempoolpayload/MempoolPayload&quot;</span></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload1"><span class="hs-identifier hs-type">goldenMempoolPayload1</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-103"></span><span id="goldenMempoolPayload1"><span class="annot"><span class="annottext">goldenMempoolPayload1 :: Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload1"><span class="hs-identifier hs-var hs-var">goldenMempoolPayload1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><span class="annottext">MempoolPayload -&gt; String -&gt; Property
+forall a.
+(DecCBOR a, EncCBOR a, Eq a, Show a, HasCallStack) =&gt;
+a -&gt; String -&gt; Property
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBOR"><span class="hs-identifier hs-var">goldenTestCBOR</span></a></span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><span class="annottext">MempoolPayload
+</span><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload1"><span class="hs-identifier hs-var">exampleMempoolPayload1</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;golden/cbor/mempoolpayload/MempoolPayload1&quot;</span></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload1FilledIn"><span class="hs-identifier hs-type">goldenMempoolPayload1FilledIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-109"></span><span id="goldenMempoolPayload1FilledIn"><span class="annot"><span class="annottext">goldenMempoolPayload1FilledIn :: Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload1FilledIn"><span class="hs-identifier hs-var hs-var">goldenMempoolPayload1FilledIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><span class="annottext">MempoolPayload -&gt; String -&gt; Property
+forall (f :: * -&gt; *).
+(DecCBOR (f ()), EncCBOR (f ()), DecCBOR (f ByteSpan),
+ EncCBOR (f ByteString), Functor f, Eq (f ()), Show (f ()),
+ HasCallStack) =&gt;
+f () -&gt; String -&gt; Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#filledInGoldenTestCBOR"><span class="hs-identifier hs-var">filledInGoldenTestCBOR</span></a></span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><span class="annottext">MempoolPayload
+</span><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload1"><span class="hs-identifier hs-var">exampleMempoolPayload1</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;golden/cbor/mempoolpayload/MempoolPayload1&quot;</span></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload2"><span class="hs-identifier hs-type">goldenMempoolPayload2</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-115"></span><span id="goldenMempoolPayload2"><span class="annot"><span class="annottext">goldenMempoolPayload2 :: Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload2"><span class="hs-identifier hs-var hs-var">goldenMempoolPayload2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><span class="annottext">MempoolPayload -&gt; String -&gt; Property
+forall a.
+(DecCBOR a, EncCBOR a, Eq a, Show a, HasCallStack) =&gt;
+a -&gt; String -&gt; Property
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBOR"><span class="hs-identifier hs-var">goldenTestCBOR</span></a></span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">MempoolPayload
+</span><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload2"><span class="hs-identifier hs-var">exampleMempoolPayload2</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;golden/cbor/mempoolpayload/MempoolPayload2&quot;</span></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload2FilledIn"><span class="hs-identifier hs-type">goldenMempoolPayload2FilledIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-121"></span><span id="goldenMempoolPayload2FilledIn"><span class="annot"><span class="annottext">goldenMempoolPayload2FilledIn :: Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload2FilledIn"><span class="hs-identifier hs-var hs-var">goldenMempoolPayload2FilledIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-122"></span><span>  </span><span class="annot"><span class="annottext">MempoolPayload -&gt; String -&gt; Property
+forall (f :: * -&gt; *).
+(DecCBOR (f ()), EncCBOR (f ()), DecCBOR (f ByteSpan),
+ EncCBOR (f ByteString), Functor f, Eq (f ()), Show (f ()),
+ HasCallStack) =&gt;
+f () -&gt; String -&gt; Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#filledInGoldenTestCBOR"><span class="hs-identifier hs-var">filledInGoldenTestCBOR</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><span class="annottext">MempoolPayload
+</span><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload2"><span class="hs-identifier hs-var">exampleMempoolPayload2</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;golden/cbor/mempoolpayload/MempoolPayload2&quot;</span></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload3"><span class="hs-identifier hs-type">goldenMempoolPayload3</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-127"></span><span id="goldenMempoolPayload3"><span class="annot"><span class="annottext">goldenMempoolPayload3 :: Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload3"><span class="hs-identifier hs-var hs-var">goldenMempoolPayload3</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><span class="annottext">MempoolPayload -&gt; String -&gt; Property
+forall a.
+(DecCBOR a, EncCBOR a, Eq a, Show a, HasCallStack) =&gt;
+a -&gt; String -&gt; Property
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#goldenTestCBOR"><span class="hs-identifier hs-var">goldenTestCBOR</span></a></span><span>
+</span><span id="line-129"></span><span>    </span><span class="annot"><span class="annottext">MempoolPayload
+</span><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload3"><span class="hs-identifier hs-var">exampleMempoolPayload3</span></a></span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;golden/cbor/mempoolpayload/MempoolPayload3&quot;</span></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload3FilledIn"><span class="hs-identifier hs-type">goldenMempoolPayload3FilledIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-133"></span><span id="goldenMempoolPayload3FilledIn"><span class="annot"><span class="annottext">goldenMempoolPayload3FilledIn :: Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload3FilledIn"><span class="hs-identifier hs-var hs-var">goldenMempoolPayload3FilledIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><span class="annottext">MempoolPayload -&gt; String -&gt; Property
+forall (f :: * -&gt; *).
+(DecCBOR (f ()), EncCBOR (f ()), DecCBOR (f ByteSpan),
+ EncCBOR (f ByteString), Functor f, Eq (f ()), Show (f ()),
+ HasCallStack) =&gt;
+f () -&gt; String -&gt; Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#filledInGoldenTestCBOR"><span class="hs-identifier hs-var">filledInGoldenTestCBOR</span></a></span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><span class="annottext">MempoolPayload
+</span><a href="Test.Cardano.Chain.MempoolPayload.Example.html#exampleMempoolPayload3"><span class="hs-identifier hs-var">exampleMempoolPayload3</span></a></span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;golden/cbor/mempoolpayload/MempoolPayload3&quot;</span></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#ts_roundTripMempoolPayload"><span class="hs-identifier hs-type">ts_roundTripMempoolPayload</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-139"></span><span id="ts_roundTripMempoolPayload"><span class="annot"><span class="annottext">ts_roundTripMempoolPayload :: TSProperty
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#ts_roundTripMempoolPayload"><span class="hs-identifier hs-var hs-var">ts_roundTripMempoolPayload</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><span class="annottext">TestLimit
+-&gt; Gen MempoolPayload
+-&gt; (MempoolPayload -&gt; PropertyT IO ())
+-&gt; TSProperty
+forall a.
+(Show a, HasCallStack) =&gt;
+TestLimit -&gt; Gen a -&gt; (a -&gt; PropertyT IO ()) -&gt; TSProperty
+</span><a href="Test.Options.html#eachOfTS"><span class="hs-identifier hs-var">eachOfTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">200</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ProtocolMagicId -&gt; Gen MempoolPayload) -&gt; Gen MempoolPayload
+forall a. (ProtocolMagicId -&gt; Gen a) -&gt; Gen a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Gen.html#feedPM"><span class="hs-identifier hs-var">feedPM</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; Gen MempoolPayload
+</span><a href="Test.Cardano.Chain.MempoolPayload.Gen.html#genMempoolPayload"><span class="hs-identifier hs-var">genMempoolPayload</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MempoolPayload -&gt; PropertyT IO ()
+forall a (m :: * -&gt; *).
+(DecCBOR a, EncCBOR a, Eq a, MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/l/testlib/doc/html/cardano-ledger-binary/src/Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip.html#roundTripsCBORShow"><span class="hs-identifier hs-var">roundTripsCBORShow</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#ts_roundTripMempoolPayloadFilledIn"><span class="hs-identifier hs-type">ts_roundTripMempoolPayloadFilledIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-143"></span><span id="ts_roundTripMempoolPayloadFilledIn"><span class="annot"><span class="annottext">ts_roundTripMempoolPayloadFilledIn :: TSProperty
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#ts_roundTripMempoolPayloadFilledIn"><span class="hs-identifier hs-var hs-var">ts_roundTripMempoolPayloadFilledIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-144"></span><span>  </span><span class="annot"><span class="annottext">TestLimit
+-&gt; Gen MempoolPayload
+-&gt; (MempoolPayload -&gt; PropertyT IO ())
+-&gt; TSProperty
+forall a.
+(Show a, HasCallStack) =&gt;
+TestLimit -&gt; Gen a -&gt; (a -&gt; PropertyT IO ()) -&gt; TSProperty
+</span><a href="Test.Options.html#eachOfTS"><span class="hs-identifier hs-var">eachOfTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">200</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ProtocolMagicId -&gt; Gen MempoolPayload) -&gt; Gen MempoolPayload
+forall a. (ProtocolMagicId -&gt; Gen a) -&gt; Gen a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/l/testlib/doc/html/cardano-crypto-wrapper/src/Test.Cardano.Crypto.Gen.html#feedPM"><span class="hs-identifier hs-var">feedPM</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; Gen MempoolPayload
+</span><a href="Test.Cardano.Chain.MempoolPayload.Gen.html#genMempoolPayload"><span class="hs-identifier hs-var">genMempoolPayload</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((MempoolPayload -&gt; PropertyT IO ()) -&gt; TSProperty)
+-&gt; (MempoolPayload -&gt; PropertyT IO ()) -&gt; TSProperty
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679373614"><span class="annot"><span class="annottext">MempoolPayload
+</span><a href="#local-6989586621679373614"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><span class="annottext">MempoolPayload
+-&gt; (MempoolPayload -&gt; ByteString)
+-&gt; (ByteString -&gt; Either DecoderError MempoolPayload)
+-&gt; PropertyT IO ()
+forall (m :: * -&gt; *) (f :: * -&gt; *) b a.
+(MonadTest m, Applicative f, Show b, Show (f a), Eq (f a),
+ HasCallStack) =&gt;
+a -&gt; (a -&gt; b) -&gt; (b -&gt; f a) -&gt; m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Tripping.html#tripping"><span class="hs-identifier hs-var">tripping</span></a></span><span> </span><span class="annot"><span class="annottext">MempoolPayload
+</span><a href="#local-6989586621679373614"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; AMempoolPayload ByteString -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">(AMempoolPayload ByteString -&gt; ByteString)
+-&gt; (MempoolPayload -&gt; AMempoolPayload ByteString)
+-&gt; MempoolPayload
+-&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">MempoolPayload -&gt; AMempoolPayload ByteString
+forall (f :: * -&gt; *).
+(DecCBOR (f ByteSpan), EncCBOR (f ()), Functor f) =&gt;
+f () -&gt; f ByteString
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#fillInByteString"><span class="hs-identifier hs-var">fillInByteString</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; ByteString -&gt; Either DecoderError MempoolPayload
+forall a.
+DecCBOR a =&gt;
+Version -&gt; ByteString -&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull"><span class="hs-identifier hs-var">decodeFull</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="annot"><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#tests"><span class="hs-identifier hs-type">tests</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSGroup"><span class="hs-identifier hs-type">TSGroup</span></a></span><span>
+</span><span id="line-148"></span><span id="tests"><span class="annot"><span class="annottext">tests :: TSGroup
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#tests"><span class="hs-identifier hs-var hs-var">tests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[TSGroup] -&gt; TSGroup
+</span><a href="Test.Options.html#concatTSGroups"><span class="hs-identifier hs-var">concatTSGroups</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Group -&gt; TSGroup
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="hs-special">$$</span><span class="annot"><span class="annottext">String
+[(PropertyName, Property)]
+Property
+String -&gt; GroupName
+String -&gt; PropertyName
+GroupName -&gt; [(PropertyName, Property)] -&gt; Group
+goldenMempoolPayload :: Property
+goldenMempoolPayloadFilledIn :: Property
+goldenMempoolPayload1 :: Property
+goldenMempoolPayload1FilledIn :: Property
+goldenMempoolPayload2 :: Property
+goldenMempoolPayload2FilledIn :: Property
+goldenMempoolPayload3 :: Property
+goldenMempoolPayload3FilledIn :: Property
+</span><a href="Test.Cardano.Chain.MempoolPayload.CBOR.html#goldenMempoolPayload"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">discoverGolden</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">$$</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-test-0.1.0.5-1696ff9dfe28e79e45c7f4d61d4d2aee5cd8c8a1c8e41332b69038cc5c66e5fe/share/doc/html/src/Test.Cardano.Prelude.Tripping.html#discoverRoundTripArg"><span class="hs-identifier hs-type">discoverRoundTripArg</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-149"></span></pre></body></html>

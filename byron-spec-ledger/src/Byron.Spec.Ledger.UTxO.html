@@ -1,0 +1,2267 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679678210"><span id="local-6989586621679678211"><span id="local-6989586621679678212"><span id="local-6989586621679678213"><span id="local-6989586621679678214"><span id="local-6989586621679678215"><span id="local-6989586621679678216"><span id="local-6989586621679678217"><span id="local-6989586621679678218"><span id="local-6989586621679678219"><span id="local-6989586621679678220"><span id="local-6989586621679678221"><span id="local-6989586621679678222"><span id="local-6989586621679678223"></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE StrictData #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-16"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-redundant-constraints #-}</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Byron.Spec.Ledger.UTxO</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html"><span class="hs-identifier">Byron.Spec.Ledger.Core</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#%3C%7C"><span class="hs-operator">(&lt;|)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Update.html"><span class="hs-identifier">Byron.Spec.Ledger.Update</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#FactorA"><span class="hs-identifier">FactorA</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#FactorB"><span class="hs-identifier">FactorB</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#PParams"><span class="hs-identifier">PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#PParams"><span class="hs-identifier">PParams</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#_factorA"><span class="hs-identifier">_factorA</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#_factorB"><span class="hs-identifier">_factorB</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.AbstractSize.html"><span class="hs-identifier">Data.AbstractSize</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.AbstractSize.html#HasTypeReps"><span class="hs-identifier">HasTypeReps</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.AbstractSize.html#abstractSize"><span class="hs-identifier">abstractSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Data</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Data</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hashable-1.5.0.0-781ba3c0c110db8233c015d5f01bc0e7490531b36c6e815cc50d3e9f08c40994/share/doc/html/src/Data.Hashable.html"><span class="hs-identifier">Data.Hashable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hashable-1.5.0.0-781ba3c0c110db8233c015d5f01bc0e7490531b36c6e815cc50d3e9f08c40994/share/doc/html/src/Data.Hashable.Class.html#Hashable"><span class="hs-identifier">Hashable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hashable-1.5.0.0-781ba3c0c110db8233c015d5f01bc0e7490531b36c6e815cc50d3e9f08c40994/share/doc/html/src/Data.Hashable.html"><span class="hs-identifier">Data.Hashable</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromMaybe</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Typeable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">typeOf</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Numeric.Natural</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><span class="hs-comment">-- | A unique ID of a transaction, which is computable from the transaction.</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">newtype</span><span> </span><span id="TxId"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxId"><span class="hs-identifier hs-var">TxId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxId"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxId"><span class="hs-identifier hs-var">TxId</span></a></span></span><span> </span><span class="hs-special">{</span><span id="getTxId"><span class="annot"><span class="annottext">TxId -&gt; Hash
+</span><a href="Byron.Spec.Ledger.UTxO.html#getTxId"><span class="hs-identifier hs-var hs-var">getTxId</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679678272"><span id="local-6989586621679678278"><span id="local-6989586621679678282"><span class="annot"><span class="annottext">Int -&gt; TxId -&gt; ShowS
+[TxId] -&gt; ShowS
+TxId -&gt; String
+(Int -&gt; TxId -&gt; ShowS)
+-&gt; (TxId -&gt; String) -&gt; ([TxId] -&gt; ShowS) -&gt; Show TxId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TxId -&gt; ShowS
+showsPrec :: Int -&gt; TxId -&gt; ShowS
+$cshow :: TxId -&gt; String
+show :: TxId -&gt; String
+$cshowList :: [TxId] -&gt; ShowS
+showList :: [TxId] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678286"><span id="local-6989586621679678288"><span class="annot"><span class="annottext">(forall x. TxId -&gt; Rep TxId x)
+-&gt; (forall x. Rep TxId x -&gt; TxId) -&gt; Generic TxId
+forall x. Rep TxId x -&gt; TxId
+forall x. TxId -&gt; Rep TxId x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. TxId -&gt; Rep TxId x
+from :: forall x. TxId -&gt; Rep TxId x
+$cto :: forall x. Rep TxId x -&gt; TxId
+to :: forall x. Rep TxId x -&gt; TxId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678294"><span id="local-6989586621679678298"><span id="local-6989586621679678301"><span id="local-6989586621679678303"><span id="local-6989586621679678305"><span id="local-6989586621679678311"><span id="local-6989586621679678316"><span id="local-6989586621679678319"><span id="local-6989586621679678322"><span id="local-6989586621679678325"><span id="local-6989586621679678328"><span id="local-6989586621679678331"><span id="local-6989586621679678336"><span id="local-6989586621679678341"><span class="annot"><span class="annottext">Typeable TxId
+Typeable TxId =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; TxId -&gt; c TxId)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxId)
+-&gt; (TxId -&gt; Constr)
+-&gt; (TxId -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxId))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxId))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; TxId -&gt; TxId)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxId -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxId -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxId -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxId -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxId -&gt; m TxId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxId -&gt; m TxId)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxId -&gt; m TxId)
+-&gt; Data TxId
+TxId -&gt; Constr
+TxId -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; TxId -&gt; TxId
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxId -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxId -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxId -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxId -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxId -&gt; m TxId
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxId -&gt; m TxId
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxId
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxId -&gt; c TxId
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxId)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxId)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxId -&gt; c TxId
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxId -&gt; c TxId
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxId
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxId
+$ctoConstr :: TxId -&gt; Constr
+toConstr :: TxId -&gt; Constr
+$cdataTypeOf :: TxId -&gt; DataType
+dataTypeOf :: TxId -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxId)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxId)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxId)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxId)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; TxId -&gt; TxId
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; TxId -&gt; TxId
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxId -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxId -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxId -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxId -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxId -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxId -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxId -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxId -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxId -&gt; m TxId
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxId -&gt; m TxId
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxId -&gt; m TxId
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxId -&gt; m TxId
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxId -&gt; m TxId
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxId -&gt; m TxId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679678347"><span id="local-6989586621679678352"><span class="annot"><span class="annottext">TxId -&gt; TxId -&gt; Bool
+(TxId -&gt; TxId -&gt; Bool) -&gt; (TxId -&gt; TxId -&gt; Bool) -&gt; Eq TxId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TxId -&gt; TxId -&gt; Bool
+== :: TxId -&gt; TxId -&gt; Bool
+$c/= :: TxId -&gt; TxId -&gt; Bool
+/= :: TxId -&gt; TxId -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678360"><span id="local-6989586621679678365"><span id="local-6989586621679678369"><span id="local-6989586621679678373"><span id="local-6989586621679678377"><span id="local-6989586621679678381"><span id="local-6989586621679678385"><span class="annot"><span class="annottext">Eq TxId
+Eq TxId =&gt;
+(TxId -&gt; TxId -&gt; Ordering)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; TxId)
+-&gt; (TxId -&gt; TxId -&gt; TxId)
+-&gt; Ord TxId
+TxId -&gt; TxId -&gt; Bool
+TxId -&gt; TxId -&gt; Ordering
+TxId -&gt; TxId -&gt; TxId
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TxId -&gt; TxId -&gt; Ordering
+compare :: TxId -&gt; TxId -&gt; Ordering
+$c&lt; :: TxId -&gt; TxId -&gt; Bool
+&lt; :: TxId -&gt; TxId -&gt; Bool
+$c&lt;= :: TxId -&gt; TxId -&gt; Bool
+&lt;= :: TxId -&gt; TxId -&gt; Bool
+$c&gt; :: TxId -&gt; TxId -&gt; Bool
+&gt; :: TxId -&gt; TxId -&gt; Bool
+$c&gt;= :: TxId -&gt; TxId -&gt; Bool
+&gt;= :: TxId -&gt; TxId -&gt; Bool
+$cmax :: TxId -&gt; TxId -&gt; TxId
+max :: TxId -&gt; TxId -&gt; TxId
+$cmin :: TxId -&gt; TxId -&gt; TxId
+min :: TxId -&gt; TxId -&gt; TxId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678393"><span id="local-6989586621679678398"><span class="annot"><span class="annottext">Eq TxId
+Eq TxId =&gt; (Int -&gt; TxId -&gt; Int) -&gt; (TxId -&gt; Int) -&gt; Hashable TxId
+Int -&gt; TxId -&gt; Int
+TxId -&gt; Int
+forall a. Eq a =&gt; (Int -&gt; a -&gt; Int) -&gt; (a -&gt; Int) -&gt; Hashable a
+$chashWithSalt :: Int -&gt; TxId -&gt; Int
+hashWithSalt :: Int -&gt; TxId -&gt; Int
+$chash :: TxId -&gt; Int
+hash :: TxId -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hashable-1.5.0.0-781ba3c0c110db8233c015d5f01bc0e7490531b36c6e815cc50d3e9f08c40994/share/doc/html/src/Data.Hashable.Class.html#Hashable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Hashable</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678404"><span id="local-6989586621679678409"><span id="local-6989586621679678413"><span class="annot"><span class="annottext">Context -&gt; TxId -&gt; IO (Maybe ThunkInfo)
+Proxy TxId -&gt; String
+(Context -&gt; TxId -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; TxId -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy TxId -&gt; String)
+-&gt; NoThunks TxId
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; TxId -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; TxId -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; TxId -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; TxId -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy TxId -&gt; String
+showTypeOf :: Proxy TxId -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679678419"><span class="annot"><span class="annottext">TxId -&gt; Seq TypeRep
+(TxId -&gt; Seq TypeRep) -&gt; HasTypeReps TxId
+forall a. (a -&gt; Seq TypeRep) -&gt; HasTypeReps a
+$ctypeReps :: TxId -&gt; Seq TypeRep
+typeReps :: TxId -&gt; Seq TypeRep
+</span><a href="Data.AbstractSize.html#HasTypeReps"><span class="hs-identifier hs-var hs-var hs-var hs-var">HasTypeReps</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | The input of a UTxO.</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--      * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">data</span><span> </span><span id="TxIn"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxIn"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679678436"><span id="local-6989586621679678442"><span id="local-6989586621679678446"><span class="annot"><span class="annottext">Int -&gt; TxIn -&gt; ShowS
+[TxIn] -&gt; ShowS
+TxIn -&gt; String
+(Int -&gt; TxIn -&gt; ShowS)
+-&gt; (TxIn -&gt; String) -&gt; ([TxIn] -&gt; ShowS) -&gt; Show TxIn
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TxIn -&gt; ShowS
+showsPrec :: Int -&gt; TxIn -&gt; ShowS
+$cshow :: TxIn -&gt; String
+show :: TxIn -&gt; String
+$cshowList :: [TxIn] -&gt; ShowS
+showList :: [TxIn] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678449"><span id="local-6989586621679678454"><span class="annot"><span class="annottext">TxIn -&gt; TxIn -&gt; Bool
+(TxIn -&gt; TxIn -&gt; Bool) -&gt; (TxIn -&gt; TxIn -&gt; Bool) -&gt; Eq TxIn
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TxIn -&gt; TxIn -&gt; Bool
+== :: TxIn -&gt; TxIn -&gt; Bool
+$c/= :: TxIn -&gt; TxIn -&gt; Bool
+/= :: TxIn -&gt; TxIn -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678460"><span id="local-6989586621679678465"><span id="local-6989586621679678469"><span id="local-6989586621679678472"><span id="local-6989586621679678475"><span id="local-6989586621679678478"><span id="local-6989586621679678481"><span class="annot"><span class="annottext">Eq TxIn
+Eq TxIn =&gt;
+(TxIn -&gt; TxIn -&gt; Ordering)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; TxIn)
+-&gt; (TxIn -&gt; TxIn -&gt; TxIn)
+-&gt; Ord TxIn
+TxIn -&gt; TxIn -&gt; Bool
+TxIn -&gt; TxIn -&gt; Ordering
+TxIn -&gt; TxIn -&gt; TxIn
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TxIn -&gt; TxIn -&gt; Ordering
+compare :: TxIn -&gt; TxIn -&gt; Ordering
+$c&lt; :: TxIn -&gt; TxIn -&gt; Bool
+&lt; :: TxIn -&gt; TxIn -&gt; Bool
+$c&lt;= :: TxIn -&gt; TxIn -&gt; Bool
+&lt;= :: TxIn -&gt; TxIn -&gt; Bool
+$c&gt; :: TxIn -&gt; TxIn -&gt; Bool
+&gt; :: TxIn -&gt; TxIn -&gt; Bool
+$c&gt;= :: TxIn -&gt; TxIn -&gt; Bool
+&gt;= :: TxIn -&gt; TxIn -&gt; Bool
+$cmax :: TxIn -&gt; TxIn -&gt; TxIn
+max :: TxIn -&gt; TxIn -&gt; TxIn
+$cmin :: TxIn -&gt; TxIn -&gt; TxIn
+min :: TxIn -&gt; TxIn -&gt; TxIn
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678484"><span id="local-6989586621679678486"><span class="annot"><span class="annottext">(forall x. TxIn -&gt; Rep TxIn x)
+-&gt; (forall x. Rep TxIn x -&gt; TxIn) -&gt; Generic TxIn
+forall x. Rep TxIn x -&gt; TxIn
+forall x. TxIn -&gt; Rep TxIn x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. TxIn -&gt; Rep TxIn x
+from :: forall x. TxIn -&gt; Rep TxIn x
+$cto :: forall x. Rep TxIn x -&gt; TxIn
+to :: forall x. Rep TxIn x -&gt; TxIn
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678491"><span id="local-6989586621679678498"><span class="annot"><span class="annottext">Eq TxIn
+Eq TxIn =&gt; (Int -&gt; TxIn -&gt; Int) -&gt; (TxIn -&gt; Int) -&gt; Hashable TxIn
+Int -&gt; TxIn -&gt; Int
+TxIn -&gt; Int
+forall a. Eq a =&gt; (Int -&gt; a -&gt; Int) -&gt; (a -&gt; Int) -&gt; Hashable a
+$chashWithSalt :: Int -&gt; TxIn -&gt; Int
+hashWithSalt :: Int -&gt; TxIn -&gt; Int
+$chash :: TxIn -&gt; Int
+hash :: TxIn -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hashable-1.5.0.0-781ba3c0c110db8233c015d5f01bc0e7490531b36c6e815cc50d3e9f08c40994/share/doc/html/src/Data.Hashable.Class.html#Hashable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Hashable</span></a></span></span></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678513"><span class="annot"><span class="annottext">TxIn -&gt; Seq TypeRep
+(TxIn -&gt; Seq TypeRep) -&gt; HasTypeReps TxIn
+forall a. (a -&gt; Seq TypeRep) -&gt; HasTypeReps a
+$ctypeReps :: TxIn -&gt; Seq TypeRep
+typeReps :: TxIn -&gt; Seq TypeRep
+</span><a href="Data.AbstractSize.html#HasTypeReps"><span class="hs-identifier hs-var hs-var hs-var hs-var">HasTypeReps</span></a></span></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678533"><span id="local-6989586621679678538"><span id="local-6989586621679678542"><span id="local-6989586621679678544"><span id="local-6989586621679678546"><span id="local-6989586621679678552"><span id="local-6989586621679678557"><span id="local-6989586621679678560"><span id="local-6989586621679678563"><span id="local-6989586621679678566"><span id="local-6989586621679678569"><span id="local-6989586621679678572"><span id="local-6989586621679678577"><span id="local-6989586621679678582"><span class="annot"><span class="annottext">Typeable TxIn
+Typeable TxIn =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; TxIn -&gt; c TxIn)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxIn)
+-&gt; (TxIn -&gt; Constr)
+-&gt; (TxIn -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxIn))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxIn))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; TxIn -&gt; TxIn)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxIn -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxIn -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxIn -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxIn -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxIn -&gt; m TxIn)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxIn -&gt; m TxIn)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxIn -&gt; m TxIn)
+-&gt; Data TxIn
+TxIn -&gt; Constr
+TxIn -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; TxIn -&gt; TxIn
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxIn -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxIn -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxIn -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxIn -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxIn -&gt; m TxIn
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxIn -&gt; m TxIn
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxIn
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxIn -&gt; c TxIn
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxIn)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxIn)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxIn -&gt; c TxIn
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxIn -&gt; c TxIn
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxIn
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxIn
+$ctoConstr :: TxIn -&gt; Constr
+toConstr :: TxIn -&gt; Constr
+$cdataTypeOf :: TxIn -&gt; DataType
+dataTypeOf :: TxIn -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxIn)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxIn)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxIn)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxIn)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; TxIn -&gt; TxIn
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; TxIn -&gt; TxIn
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxIn -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxIn -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxIn -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxIn -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxIn -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxIn -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxIn -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxIn -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxIn -&gt; m TxIn
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxIn -&gt; m TxIn
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxIn -&gt; m TxIn
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxIn -&gt; m TxIn
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxIn -&gt; m TxIn
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxIn -&gt; m TxIn
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678587"><span id="local-6989586621679678591"><span id="local-6989586621679678597"><span class="annot"><span class="annottext">Context -&gt; TxIn -&gt; IO (Maybe ThunkInfo)
+Proxy TxIn -&gt; String
+(Context -&gt; TxIn -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; TxIn -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy TxIn -&gt; String)
+-&gt; NoThunks TxIn
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; TxIn -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; TxIn -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; TxIn -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; TxIn -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy TxIn -&gt; String
+showTypeOf :: Proxy TxIn -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><span class="hs-comment">-- | The output of a UTxO.</span></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">data</span><span> </span><span id="TxOut"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxOut"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="addr"><span class="annot"><span class="annottext">TxOut -&gt; Addr
+</span><a href="Byron.Spec.Ledger.UTxO.html#addr"><span class="hs-identifier hs-var hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="value"><span class="annot"><span class="annottext">TxOut -&gt; Lovelace
+</span><a href="Byron.Spec.Ledger.UTxO.html#value"><span class="hs-identifier hs-var hs-var">value</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679678628"><span id="local-6989586621679678635"><span id="local-6989586621679678639"><span class="annot"><span class="annottext">Int -&gt; TxOut -&gt; ShowS
+[TxOut] -&gt; ShowS
+TxOut -&gt; String
+(Int -&gt; TxOut -&gt; ShowS)
+-&gt; (TxOut -&gt; String) -&gt; ([TxOut] -&gt; ShowS) -&gt; Show TxOut
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TxOut -&gt; ShowS
+showsPrec :: Int -&gt; TxOut -&gt; ShowS
+$cshow :: TxOut -&gt; String
+show :: TxOut -&gt; String
+$cshowList :: [TxOut] -&gt; ShowS
+showList :: [TxOut] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678642"><span id="local-6989586621679678648"><span class="annot"><span class="annottext">TxOut -&gt; TxOut -&gt; Bool
+(TxOut -&gt; TxOut -&gt; Bool) -&gt; (TxOut -&gt; TxOut -&gt; Bool) -&gt; Eq TxOut
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TxOut -&gt; TxOut -&gt; Bool
+== :: TxOut -&gt; TxOut -&gt; Bool
+$c/= :: TxOut -&gt; TxOut -&gt; Bool
+/= :: TxOut -&gt; TxOut -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678654"><span id="local-6989586621679678660"><span id="local-6989586621679678664"><span id="local-6989586621679678668"><span id="local-6989586621679678671"><span id="local-6989586621679678674"><span id="local-6989586621679678677"><span class="annot"><span class="annottext">Eq TxOut
+Eq TxOut =&gt;
+(TxOut -&gt; TxOut -&gt; Ordering)
+-&gt; (TxOut -&gt; TxOut -&gt; Bool)
+-&gt; (TxOut -&gt; TxOut -&gt; Bool)
+-&gt; (TxOut -&gt; TxOut -&gt; Bool)
+-&gt; (TxOut -&gt; TxOut -&gt; Bool)
+-&gt; (TxOut -&gt; TxOut -&gt; TxOut)
+-&gt; (TxOut -&gt; TxOut -&gt; TxOut)
+-&gt; Ord TxOut
+TxOut -&gt; TxOut -&gt; Bool
+TxOut -&gt; TxOut -&gt; Ordering
+TxOut -&gt; TxOut -&gt; TxOut
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TxOut -&gt; TxOut -&gt; Ordering
+compare :: TxOut -&gt; TxOut -&gt; Ordering
+$c&lt; :: TxOut -&gt; TxOut -&gt; Bool
+&lt; :: TxOut -&gt; TxOut -&gt; Bool
+$c&lt;= :: TxOut -&gt; TxOut -&gt; Bool
+&lt;= :: TxOut -&gt; TxOut -&gt; Bool
+$c&gt; :: TxOut -&gt; TxOut -&gt; Bool
+&gt; :: TxOut -&gt; TxOut -&gt; Bool
+$c&gt;= :: TxOut -&gt; TxOut -&gt; Bool
+&gt;= :: TxOut -&gt; TxOut -&gt; Bool
+$cmax :: TxOut -&gt; TxOut -&gt; TxOut
+max :: TxOut -&gt; TxOut -&gt; TxOut
+$cmin :: TxOut -&gt; TxOut -&gt; TxOut
+min :: TxOut -&gt; TxOut -&gt; TxOut
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678680"><span id="local-6989586621679678682"><span class="annot"><span class="annottext">(forall x. TxOut -&gt; Rep TxOut x)
+-&gt; (forall x. Rep TxOut x -&gt; TxOut) -&gt; Generic TxOut
+forall x. Rep TxOut x -&gt; TxOut
+forall x. TxOut -&gt; Rep TxOut x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. TxOut -&gt; Rep TxOut x
+from :: forall x. TxOut -&gt; Rep TxOut x
+$cto :: forall x. Rep TxOut x -&gt; TxOut
+to :: forall x. Rep TxOut x -&gt; TxOut
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678687"><span id="local-6989586621679678694"><span class="annot"><span class="annottext">Eq TxOut
+Eq TxOut =&gt;
+(Int -&gt; TxOut -&gt; Int) -&gt; (TxOut -&gt; Int) -&gt; Hashable TxOut
+Int -&gt; TxOut -&gt; Int
+TxOut -&gt; Int
+forall a. Eq a =&gt; (Int -&gt; a -&gt; Int) -&gt; (a -&gt; Int) -&gt; Hashable a
+$chashWithSalt :: Int -&gt; TxOut -&gt; Int
+hashWithSalt :: Int -&gt; TxOut -&gt; Int
+$chash :: TxOut -&gt; Int
+hash :: TxOut -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hashable-1.5.0.0-781ba3c0c110db8233c015d5f01bc0e7490531b36c6e815cc50d3e9f08c40994/share/doc/html/src/Data.Hashable.Class.html#Hashable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Hashable</span></a></span></span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678707"><span class="annot"><span class="annottext">TxOut -&gt; Seq TypeRep
+(TxOut -&gt; Seq TypeRep) -&gt; HasTypeReps TxOut
+forall a. (a -&gt; Seq TypeRep) -&gt; HasTypeReps a
+$ctypeReps :: TxOut -&gt; Seq TypeRep
+typeReps :: TxOut -&gt; Seq TypeRep
+</span><a href="Data.AbstractSize.html#HasTypeReps"><span class="hs-identifier hs-var hs-var hs-var hs-var">HasTypeReps</span></a></span></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678727"><span id="local-6989586621679678733"><span id="local-6989586621679678737"><span id="local-6989586621679678739"><span id="local-6989586621679678741"><span id="local-6989586621679678747"><span id="local-6989586621679678752"><span id="local-6989586621679678755"><span id="local-6989586621679678758"><span id="local-6989586621679678761"><span id="local-6989586621679678764"><span id="local-6989586621679678767"><span id="local-6989586621679678772"><span id="local-6989586621679678777"><span class="annot"><span class="annottext">Typeable TxOut
+Typeable TxOut =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; TxOut -&gt; c TxOut)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxOut)
+-&gt; (TxOut -&gt; Constr)
+-&gt; (TxOut -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxOut))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxOut))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; TxOut -&gt; TxOut)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxOut -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxOut -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxOut -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxOut -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxOut -&gt; m TxOut)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxOut -&gt; m TxOut)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxOut -&gt; m TxOut)
+-&gt; Data TxOut
+TxOut -&gt; Constr
+TxOut -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; TxOut -&gt; TxOut
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxOut -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxOut -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxOut -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxOut -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxOut -&gt; m TxOut
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxOut -&gt; m TxOut
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxOut
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxOut -&gt; c TxOut
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxOut)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxOut)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxOut -&gt; c TxOut
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxOut -&gt; c TxOut
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxOut
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxOut
+$ctoConstr :: TxOut -&gt; Constr
+toConstr :: TxOut -&gt; Constr
+$cdataTypeOf :: TxOut -&gt; DataType
+dataTypeOf :: TxOut -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxOut)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxOut)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxOut)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxOut)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; TxOut -&gt; TxOut
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; TxOut -&gt; TxOut
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxOut -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxOut -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxOut -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxOut -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxOut -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxOut -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxOut -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxOut -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxOut -&gt; m TxOut
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxOut -&gt; m TxOut
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxOut -&gt; m TxOut
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxOut -&gt; m TxOut
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxOut -&gt; m TxOut
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxOut -&gt; m TxOut
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678782"><span id="local-6989586621679678786"><span id="local-6989586621679678792"><span class="annot"><span class="annottext">Context -&gt; TxOut -&gt; IO (Maybe ThunkInfo)
+Proxy TxOut -&gt; String
+(Context -&gt; TxOut -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; TxOut -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy TxOut -&gt; String)
+-&gt; NoThunks TxOut
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; TxOut -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; TxOut -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; TxOut -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; TxOut -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy TxOut -&gt; String
+showTypeOf :: Proxy TxOut -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="annot"><span class="hs-comment">-- | The unspent transaction outputs.</span></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">newtype</span><span> </span><span id="UTxO"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-var">UTxO</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UTxO"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-var">UTxO</span></a></span></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unUTxO"><span class="annot"><span class="annottext">UTxO -&gt; Map TxIn TxOut
+</span><a href="Byron.Spec.Ledger.UTxO.html#unUTxO"><span class="hs-identifier hs-var hs-var">unUTxO</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679678823"><span id="local-6989586621679678830"><span id="local-6989586621679678834"><span class="annot"><span class="annottext">Int -&gt; UTxO -&gt; ShowS
+[UTxO] -&gt; ShowS
+UTxO -&gt; String
+(Int -&gt; UTxO -&gt; ShowS)
+-&gt; (UTxO -&gt; String) -&gt; ([UTxO] -&gt; ShowS) -&gt; Show UTxO
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; UTxO -&gt; ShowS
+showsPrec :: Int -&gt; UTxO -&gt; ShowS
+$cshow :: UTxO -&gt; String
+show :: UTxO -&gt; String
+$cshowList :: [UTxO] -&gt; ShowS
+showList :: [UTxO] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678839"><span id="local-6989586621679678845"><span id="local-6989586621679678850"><span id="local-6989586621679678852"><span id="local-6989586621679678854"><span id="local-6989586621679678860"><span id="local-6989586621679678865"><span id="local-6989586621679678868"><span id="local-6989586621679678871"><span id="local-6989586621679678874"><span id="local-6989586621679678877"><span id="local-6989586621679678880"><span id="local-6989586621679678885"><span id="local-6989586621679678890"><span class="annot"><span class="annottext">Typeable UTxO
+Typeable UTxO =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; UTxO -&gt; c UTxO)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UTxO)
+-&gt; (UTxO -&gt; Constr)
+-&gt; (UTxO -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UTxO))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UTxO))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; UTxO -&gt; UTxO)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTxO -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTxO -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UTxO -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UTxO -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; UTxO -&gt; m UTxO)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; UTxO -&gt; m UTxO)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; UTxO -&gt; m UTxO)
+-&gt; Data UTxO
+UTxO -&gt; Constr
+UTxO -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; UTxO -&gt; UTxO
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UTxO -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UTxO -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTxO -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTxO -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTxO -&gt; m UTxO
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTxO -&gt; m UTxO
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UTxO
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; UTxO -&gt; c UTxO
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UTxO)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UTxO)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; UTxO -&gt; c UTxO
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; UTxO -&gt; c UTxO
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UTxO
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c UTxO
+$ctoConstr :: UTxO -&gt; Constr
+toConstr :: UTxO -&gt; Constr
+$cdataTypeOf :: UTxO -&gt; DataType
+dataTypeOf :: UTxO -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UTxO)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c UTxO)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UTxO)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c UTxO)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; UTxO -&gt; UTxO
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; UTxO -&gt; UTxO
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTxO -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTxO -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTxO -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; UTxO -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UTxO -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; UTxO -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UTxO -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; UTxO -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTxO -&gt; m UTxO
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTxO -&gt; m UTxO
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTxO -&gt; m UTxO
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTxO -&gt; m UTxO
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTxO -&gt; m UTxO
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; UTxO -&gt; m UTxO
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679678895"><span id="local-6989586621679678902"><span class="annot"><span class="annottext">UTxO -&gt; UTxO -&gt; Bool
+(UTxO -&gt; UTxO -&gt; Bool) -&gt; (UTxO -&gt; UTxO -&gt; Bool) -&gt; Eq UTxO
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: UTxO -&gt; UTxO -&gt; Bool
+== :: UTxO -&gt; UTxO -&gt; Bool
+$c/= :: UTxO -&gt; UTxO -&gt; Bool
+/= :: UTxO -&gt; UTxO -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679678909"><span id="local-6989586621679678917"><span id="local-6989586621679678927"><span id="local-6989586621679678939"><span id="local-6989586621679678952"><span id="local-6989586621679678965"><span id="local-6989586621679678978"><span id="local-6989586621679678990"><span id="local-6989586621679679001"><span id="local-6989586621679679012"><span id="local-6989586621679679023"><span id="local-6989586621679679036"><span id="local-6989586621679679052"><span id="local-6989586621679679066"><span id="local-6989586621679679076"><span id="local-6989586621679679087"><span id="local-6989586621679679097"><span class="annot"><span class="annottext">(Ord (Domain UTxO), Ord (Range UTxO)) =&gt; UTxO -&gt; UTxO -&gt; UTxO
+Ord (Domain UTxO) =&gt; Domain UTxO -&gt; UTxO -&gt; UTxO
+Ord (Domain UTxO) =&gt; UTxO -&gt; Set (Domain UTxO)
+Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO)
+Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO
+Ord (Range UTxO) =&gt; UTxO -&gt; Range UTxO -&gt; UTxO
+Domain UTxO -&gt; Range UTxO -&gt; UTxO
+(Domain UTxO -&gt; Range UTxO -&gt; UTxO)
+-&gt; (Ord (Domain UTxO) =&gt; UTxO -&gt; Set (Domain UTxO))
+-&gt; (Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO))
+-&gt; (forall (f :: * -&gt; *).
+    (Ord (Domain UTxO), Foldable f) =&gt;
+    f (Domain UTxO) -&gt; UTxO -&gt; UTxO)
+-&gt; (forall (f :: * -&gt; *).
+    (Ord (Domain UTxO), Foldable f) =&gt;
+    f (Domain UTxO) -&gt; UTxO -&gt; UTxO)
+-&gt; (forall (f :: * -&gt; *).
+    (Ord (Domain UTxO), Foldable f) =&gt;
+    f (Domain UTxO) -&gt; UTxO -&gt; UTxO)
+-&gt; (forall (f :: * -&gt; *).
+    (Ord (Domain UTxO), Foldable f) =&gt;
+    f (Domain UTxO) -&gt; UTxO -&gt; UTxO)
+-&gt; (Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO)
+-&gt; (Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO)
+-&gt; (Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO)
+-&gt; (Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO)
+-&gt; ((Ord (Domain UTxO), Ord (Range UTxO)) =&gt; UTxO -&gt; UTxO -&gt; UTxO)
+-&gt; (forall (f :: * -&gt; *).
+    (Ord (Domain UTxO), Ord (Range UTxO), Foldable f) =&gt;
+    UTxO -&gt; f (Domain UTxO, Range UTxO) -&gt; UTxO)
+-&gt; (Ord (Domain UTxO) =&gt; Domain UTxO -&gt; UTxO -&gt; UTxO)
+-&gt; (Ord (Range UTxO) =&gt; UTxO -&gt; Range UTxO -&gt; UTxO)
+-&gt; (Ord (Range UTxO) =&gt; UTxO -&gt; Range UTxO -&gt; UTxO)
+-&gt; (forall n. Integral n =&gt; UTxO -&gt; n)
+-&gt; Relation UTxO
+forall n. Integral n =&gt; UTxO -&gt; n
+forall m.
+(Domain m -&gt; Range m -&gt; m)
+-&gt; (Ord (Domain m) =&gt; m -&gt; Set (Domain m))
+-&gt; (Ord (Range m) =&gt; m -&gt; Set (Range m))
+-&gt; (forall (f :: * -&gt; *).
+    (Ord (Domain m), Foldable f) =&gt;
+    f (Domain m) -&gt; m -&gt; m)
+-&gt; (forall (f :: * -&gt; *).
+    (Ord (Domain m), Foldable f) =&gt;
+    f (Domain m) -&gt; m -&gt; m)
+-&gt; (forall (f :: * -&gt; *).
+    (Ord (Domain m), Foldable f) =&gt;
+    f (Domain m) -&gt; m -&gt; m)
+-&gt; (forall (f :: * -&gt; *).
+    (Ord (Domain m), Foldable f) =&gt;
+    f (Domain m) -&gt; m -&gt; m)
+-&gt; (Ord (Range m) =&gt; m -&gt; Set (Range m) -&gt; m)
+-&gt; (Ord (Range m) =&gt; m -&gt; Set (Range m) -&gt; m)
+-&gt; (Ord (Range m) =&gt; m -&gt; Set (Range m) -&gt; m)
+-&gt; (Ord (Range m) =&gt; m -&gt; Set (Range m) -&gt; m)
+-&gt; ((Ord (Domain m), Ord (Range m)) =&gt; m -&gt; m -&gt; m)
+-&gt; (forall (f :: * -&gt; *).
+    (Ord (Domain m), Ord (Range m), Foldable f) =&gt;
+    m -&gt; f (Domain m, Range m) -&gt; m)
+-&gt; (Ord (Domain m) =&gt; Domain m -&gt; m -&gt; m)
+-&gt; (Ord (Range m) =&gt; m -&gt; Range m -&gt; m)
+-&gt; (Ord (Range m) =&gt; m -&gt; Range m -&gt; m)
+-&gt; (forall n. Integral n =&gt; m -&gt; n)
+-&gt; Relation m
+forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Ord (Range UTxO), Foldable f) =&gt;
+UTxO -&gt; f (Domain UTxO, Range UTxO) -&gt; UTxO
+forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Foldable f) =&gt;
+f (Domain UTxO) -&gt; UTxO -&gt; UTxO
+$csingleton :: Domain UTxO -&gt; Range UTxO -&gt; UTxO
+singleton :: Domain UTxO -&gt; Range UTxO -&gt; UTxO
+$cdom :: Ord (Domain UTxO) =&gt; UTxO -&gt; Set (Domain UTxO)
+dom :: Ord (Domain UTxO) =&gt; UTxO -&gt; Set (Domain UTxO)
+$crange :: Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO)
+range :: Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO)
+$c&#9665; :: forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Foldable f) =&gt;
+f (Domain UTxO) -&gt; UTxO -&gt; UTxO
+&#9665; :: forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Foldable f) =&gt;
+f (Domain UTxO) -&gt; UTxO -&gt; UTxO
+$c&lt;| :: forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Foldable f) =&gt;
+f (Domain UTxO) -&gt; UTxO -&gt; UTxO
+&lt;| :: forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Foldable f) =&gt;
+f (Domain UTxO) -&gt; UTxO -&gt; UTxO
+$c&#8938; :: forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Foldable f) =&gt;
+f (Domain UTxO) -&gt; UTxO -&gt; UTxO
+&#8938; :: forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Foldable f) =&gt;
+f (Domain UTxO) -&gt; UTxO -&gt; UTxO
+$c&lt;/| :: forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Foldable f) =&gt;
+f (Domain UTxO) -&gt; UTxO -&gt; UTxO
+&lt;/| :: forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Foldable f) =&gt;
+f (Domain UTxO) -&gt; UTxO -&gt; UTxO
+$c&#9655; :: Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO
+&#9655; :: Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO
+$c|&gt; :: Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO
+|&gt; :: Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO
+$c&#8939; :: Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO
+&#8939; :: Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO
+$c|/&gt; :: Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO
+|/&gt; :: Ord (Range UTxO) =&gt; UTxO -&gt; Set (Range UTxO) -&gt; UTxO
+$c&#8746; :: (Ord (Domain UTxO), Ord (Range UTxO)) =&gt; UTxO -&gt; UTxO -&gt; UTxO
+&#8746; :: (Ord (Domain UTxO), Ord (Range UTxO)) =&gt; UTxO -&gt; UTxO -&gt; UTxO
+$c&#10755; :: forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Ord (Range UTxO), Foldable f) =&gt;
+UTxO -&gt; f (Domain UTxO, Range UTxO) -&gt; UTxO
+&#10755; :: forall (f :: * -&gt; *).
+(Ord (Domain UTxO), Ord (Range UTxO), Foldable f) =&gt;
+UTxO -&gt; f (Domain UTxO, Range UTxO) -&gt; UTxO
+$c&lt;=&#9665; :: Ord (Domain UTxO) =&gt; Domain UTxO -&gt; UTxO -&gt; UTxO
+&lt;=&#9665; :: Ord (Domain UTxO) =&gt; Domain UTxO -&gt; UTxO -&gt; UTxO
+$c&#9655;&lt;= :: Ord (Range UTxO) =&gt; UTxO -&gt; Range UTxO -&gt; UTxO
+&#9655;&lt;= :: Ord (Range UTxO) =&gt; UTxO -&gt; Range UTxO -&gt; UTxO
+$c&#9655;&gt;= :: Ord (Range UTxO) =&gt; UTxO -&gt; Range UTxO -&gt; UTxO
+&#9655;&gt;= :: Ord (Range UTxO) =&gt; UTxO -&gt; Range UTxO -&gt; UTxO
+$csize :: forall n. Integral n =&gt; UTxO -&gt; n
+size :: forall n. Integral n =&gt; UTxO -&gt; n
+</span><a href="Byron.Spec.Ledger.Core.html#Relation"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Relation</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679105"><span id="local-6989586621679679110"><span id="local-6989586621679679116"><span class="annot"><span class="annottext">NonEmpty UTxO -&gt; UTxO
+UTxO -&gt; UTxO -&gt; UTxO
+(UTxO -&gt; UTxO -&gt; UTxO)
+-&gt; (NonEmpty UTxO -&gt; UTxO)
+-&gt; (forall b. Integral b =&gt; b -&gt; UTxO -&gt; UTxO)
+-&gt; Semigroup UTxO
+forall b. Integral b =&gt; b -&gt; UTxO -&gt; UTxO
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (NonEmpty a -&gt; a)
+-&gt; (forall b. Integral b =&gt; b -&gt; a -&gt; a)
+-&gt; Semigroup a
+$c&lt;&gt; :: UTxO -&gt; UTxO -&gt; UTxO
+&lt;&gt; :: UTxO -&gt; UTxO -&gt; UTxO
+$csconcat :: NonEmpty UTxO -&gt; UTxO
+sconcat :: NonEmpty UTxO -&gt; UTxO
+$cstimes :: forall b. Integral b =&gt; b -&gt; UTxO -&gt; UTxO
+stimes :: forall b. Integral b =&gt; b -&gt; UTxO -&gt; UTxO
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679126"><span id="local-6989586621679679131"><span id="local-6989586621679679135"><span class="annot"><span class="annottext">Semigroup UTxO
+UTxO
+Semigroup UTxO =&gt;
+UTxO -&gt; (UTxO -&gt; UTxO -&gt; UTxO) -&gt; ([UTxO] -&gt; UTxO) -&gt; Monoid UTxO
+[UTxO] -&gt; UTxO
+UTxO -&gt; UTxO -&gt; UTxO
+forall a.
+Semigroup a =&gt;
+a -&gt; (a -&gt; a -&gt; a) -&gt; ([a] -&gt; a) -&gt; Monoid a
+$cmempty :: UTxO
+mempty :: UTxO
+$cmappend :: UTxO -&gt; UTxO -&gt; UTxO
+mappend :: UTxO -&gt; UTxO -&gt; UTxO
+$cmconcat :: [UTxO] -&gt; UTxO
+mconcat :: [UTxO] -&gt; UTxO
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monoid</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679141"><span id="local-6989586621679679148"><span id="local-6989586621679679154"><span class="annot"><span class="annottext">Context -&gt; UTxO -&gt; IO (Maybe ThunkInfo)
+Proxy UTxO -&gt; String
+(Context -&gt; UTxO -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; UTxO -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy UTxO -&gt; String)
+-&gt; NoThunks UTxO
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; UTxO -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; UTxO -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; UTxO -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; UTxO -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy UTxO -&gt; String
+showTypeOf :: Proxy UTxO -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="annot"><span class="hs-comment">-- | Apply function uniformly across all outputs</span></span><span>
+</span><span id="line-79"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#mapUTxOValues"><span class="hs-identifier hs-type">mapUTxOValues</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span>
+</span><span id="line-80"></span><span id="mapUTxOValues"><span class="annot"><span class="annottext">mapUTxOValues :: (Lovelace -&gt; Lovelace) -&gt; UTxO -&gt; UTxO
+</span><a href="Byron.Spec.Ledger.UTxO.html#mapUTxOValues"><span class="hs-identifier hs-var hs-var">mapUTxOValues</span></a></span></span><span> </span><span id="local-6989586621679679161"><span class="annot"><span class="annottext">Lovelace -&gt; Lovelace
+</span><a href="#local-6989586621679679161"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span id="local-6989586621679679162"><span class="annot"><span class="annottext">Map TxIn TxOut
+</span><a href="#local-6989586621679679162"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map TxIn TxOut -&gt; UTxO
+</span><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-var">UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOut -&gt; TxOut
+</span><a href="#local-6989586621679679163"><span class="hs-identifier hs-var">f'</span></a></span><span> </span><span class="annot"><span class="annottext">(TxOut -&gt; TxOut) -&gt; Map TxIn TxOut -&gt; Map TxIn TxOut
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Map TxIn TxOut
+</span><a href="#local-6989586621679679162"><span class="hs-identifier hs-var">utxo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><a href="#local-6989586621679679163"><span class="hs-identifier hs-type">f'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679679163"><span class="annot"><span class="annottext">f' :: TxOut -&gt; TxOut
+</span><a href="#local-6989586621679679163"><span class="hs-identifier hs-var hs-var">f'</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span id="local-6989586621679679165"><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679679165"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span id="local-6989586621679679166"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679679166"><span class="hs-identifier hs-var">value</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Lovelace -&gt; TxOut
+</span><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><a href="#local-6989586621679679165"><span class="hs-identifier hs-var">addr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Lovelace -&gt; Lovelace
+</span><a href="#local-6989586621679679161"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679679166"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#addValue"><span class="hs-identifier hs-type">addValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span>
+</span><span id="line-86"></span><span id="addValue"><span class="annot"><span class="annottext">addValue :: TxOut -&gt; Lovelace -&gt; TxOut
+</span><a href="Byron.Spec.Ledger.UTxO.html#addValue"><span class="hs-identifier hs-var hs-var">addValue</span></a></span></span><span> </span><span id="local-6989586621679679168"><span class="annot"><span class="annottext">tx :: TxOut
+</span><a href="#local-6989586621679679168"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679679169"><span class="annot"><span class="annottext">Lovelace
+value :: TxOut -&gt; Lovelace
+value :: Lovelace
+</span><a href="Byron.Spec.Ledger.UTxO.html#value"><span class="hs-identifier hs-var hs-var">value</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679679170"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679679170"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxOut
+</span><a href="#local-6989586621679679168"><span class="hs-identifier hs-var">tx</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679679169"><span class="hs-identifier hs-type">value</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">+</span></span><span> </span><span class="annot"><a href="#local-6989586621679679170"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="annot"><span class="hs-comment">-- | Construct a UTxO from initial TxOuts</span></span><span>
+</span><span id="line-89"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#fromTxOuts"><span class="hs-identifier hs-type">fromTxOuts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span>
+</span><span id="line-90"></span><span id="fromTxOuts"><span class="annot"><span class="annottext">fromTxOuts :: [TxOut] -&gt; UTxO
+</span><a href="Byron.Spec.Ledger.UTxO.html#fromTxOuts"><span class="hs-identifier hs-var hs-var">fromTxOuts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map TxIn TxOut -&gt; UTxO
+</span><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-var">UTxO</span></a></span><span> </span><span class="annot"><span class="annottext">(Map TxIn TxOut -&gt; UTxO)
+-&gt; ([TxOut] -&gt; Map TxIn TxOut) -&gt; [TxOut] -&gt; UTxO
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[(TxIn, TxOut)] -&gt; Map TxIn TxOut
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="annot"><span class="annottext">([(TxIn, TxOut)] -&gt; Map TxIn TxOut)
+-&gt; ([TxOut] -&gt; [(TxIn, TxOut)]) -&gt; [TxOut] -&gt; Map TxIn TxOut
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(TxOut -&gt; (TxIn, TxOut)) -&gt; [TxOut] -&gt; [(TxIn, TxOut)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679679175"><span class="annot"><span class="annottext">TxOut
+</span><a href="#local-6989586621679679175"><span class="hs-identifier hs-var">out</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId -&gt; Natural -&gt; TxIn
+</span><a href="Byron.Spec.Ledger.UTxO.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOut -&gt; TxId
+</span><a href="#local-6989586621679679176"><span class="hs-identifier hs-var">mkId</span></a></span><span> </span><span class="annot"><span class="annottext">TxOut
+</span><a href="#local-6989586621679679175"><span class="hs-identifier hs-var">out</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxOut
+</span><a href="#local-6989586621679679175"><span class="hs-identifier hs-var">out</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621679679176"><span class="annot"><span class="annottext">mkId :: TxOut -&gt; TxId
+</span><a href="#local-6989586621679679176"><span class="hs-identifier hs-var hs-var">mkId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash -&gt; TxId
+</span><a href="Byron.Spec.Ledger.UTxO.html#TxId"><span class="hs-identifier hs-var">TxId</span></a></span><span> </span><span class="annot"><span class="annottext">(Hash -&gt; TxId) -&gt; (TxOut -&gt; Hash) -&gt; TxOut -&gt; TxId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Hash
+forall a. HasHash a =&gt; a -&gt; Hash
+</span><a href="Byron.Spec.Ledger.Core.html#hash"><span class="hs-identifier hs-var">hash</span></a></span><span> </span><span class="annot"><span class="annottext">(Addr -&gt; Hash) -&gt; (TxOut -&gt; Addr) -&gt; TxOut -&gt; Hash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">TxOut -&gt; Addr
+</span><a href="Byron.Spec.Ledger.UTxO.html#addr"><span class="hs-identifier hs-var">addr</span></a></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="annot"><span class="hs-comment">-- | A raw transaction</span></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">data</span><span> </span><span id="TxBody"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-var">TxBody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxBody"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-var">TxBody</span></a></span></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="inputs"><span class="annot"><span class="annottext">TxBody -&gt; [TxIn]
+</span><a href="Byron.Spec.Ledger.UTxO.html#inputs"><span class="hs-identifier hs-var hs-var">inputs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="outputs"><span class="annot"><span class="annottext">TxBody -&gt; [TxOut]
+</span><a href="Byron.Spec.Ledger.UTxO.html#outputs"><span class="hs-identifier hs-var hs-var">outputs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679679184"><span id="local-6989586621679679191"><span class="annot"><span class="annottext">TxBody -&gt; TxBody -&gt; Bool
+(TxBody -&gt; TxBody -&gt; Bool)
+-&gt; (TxBody -&gt; TxBody -&gt; Bool) -&gt; Eq TxBody
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TxBody -&gt; TxBody -&gt; Bool
+== :: TxBody -&gt; TxBody -&gt; Bool
+$c/= :: TxBody -&gt; TxBody -&gt; Bool
+/= :: TxBody -&gt; TxBody -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679195"><span id="local-6989586621679679203"><span id="local-6989586621679679207"><span class="annot"><span class="annottext">Int -&gt; TxBody -&gt; ShowS
+[TxBody] -&gt; ShowS
+TxBody -&gt; String
+(Int -&gt; TxBody -&gt; ShowS)
+-&gt; (TxBody -&gt; String) -&gt; ([TxBody] -&gt; ShowS) -&gt; Show TxBody
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TxBody -&gt; ShowS
+showsPrec :: Int -&gt; TxBody -&gt; ShowS
+$cshow :: TxBody -&gt; String
+show :: TxBody -&gt; String
+$cshowList :: [TxBody] -&gt; ShowS
+showList :: [TxBody] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679212"><span id="local-6989586621679679218"><span id="local-6989586621679679223"><span id="local-6989586621679679227"><span id="local-6989586621679679230"><span id="local-6989586621679679233"><span id="local-6989586621679679236"><span class="annot"><span class="annottext">Eq TxBody
+Eq TxBody =&gt;
+(TxBody -&gt; TxBody -&gt; Ordering)
+-&gt; (TxBody -&gt; TxBody -&gt; Bool)
+-&gt; (TxBody -&gt; TxBody -&gt; Bool)
+-&gt; (TxBody -&gt; TxBody -&gt; Bool)
+-&gt; (TxBody -&gt; TxBody -&gt; Bool)
+-&gt; (TxBody -&gt; TxBody -&gt; TxBody)
+-&gt; (TxBody -&gt; TxBody -&gt; TxBody)
+-&gt; Ord TxBody
+TxBody -&gt; TxBody -&gt; Bool
+TxBody -&gt; TxBody -&gt; Ordering
+TxBody -&gt; TxBody -&gt; TxBody
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TxBody -&gt; TxBody -&gt; Ordering
+compare :: TxBody -&gt; TxBody -&gt; Ordering
+$c&lt; :: TxBody -&gt; TxBody -&gt; Bool
+&lt; :: TxBody -&gt; TxBody -&gt; Bool
+$c&lt;= :: TxBody -&gt; TxBody -&gt; Bool
+&lt;= :: TxBody -&gt; TxBody -&gt; Bool
+$c&gt; :: TxBody -&gt; TxBody -&gt; Bool
+&gt; :: TxBody -&gt; TxBody -&gt; Bool
+$c&gt;= :: TxBody -&gt; TxBody -&gt; Bool
+&gt;= :: TxBody -&gt; TxBody -&gt; Bool
+$cmax :: TxBody -&gt; TxBody -&gt; TxBody
+max :: TxBody -&gt; TxBody -&gt; TxBody
+$cmin :: TxBody -&gt; TxBody -&gt; TxBody
+min :: TxBody -&gt; TxBody -&gt; TxBody
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679239"><span id="local-6989586621679679241"><span class="annot"><span class="annottext">(forall x. TxBody -&gt; Rep TxBody x)
+-&gt; (forall x. Rep TxBody x -&gt; TxBody) -&gt; Generic TxBody
+forall x. Rep TxBody x -&gt; TxBody
+forall x. TxBody -&gt; Rep TxBody x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. TxBody -&gt; Rep TxBody x
+from :: forall x. TxBody -&gt; Rep TxBody x
+$cto :: forall x. Rep TxBody x -&gt; TxBody
+to :: forall x. Rep TxBody x -&gt; TxBody
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679246"><span id="local-6989586621679679253"><span class="annot"><span class="annottext">Eq TxBody
+Eq TxBody =&gt;
+(Int -&gt; TxBody -&gt; Int) -&gt; (TxBody -&gt; Int) -&gt; Hashable TxBody
+Int -&gt; TxBody -&gt; Int
+TxBody -&gt; Int
+forall a. Eq a =&gt; (Int -&gt; a -&gt; Int) -&gt; (a -&gt; Int) -&gt; Hashable a
+$chashWithSalt :: Int -&gt; TxBody -&gt; Int
+hashWithSalt :: Int -&gt; TxBody -&gt; Int
+$chash :: TxBody -&gt; Int
+hash :: TxBody -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hashable-1.5.0.0-781ba3c0c110db8233c015d5f01bc0e7490531b36c6e815cc50d3e9f08c40994/share/doc/html/src/Data.Hashable.Class.html#Hashable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Hashable</span></a></span></span></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679267"><span class="annot"><span class="annottext">TxBody -&gt; Seq TypeRep
+(TxBody -&gt; Seq TypeRep) -&gt; HasTypeReps TxBody
+forall a. (a -&gt; Seq TypeRep) -&gt; HasTypeReps a
+$ctypeReps :: TxBody -&gt; Seq TypeRep
+typeReps :: TxBody -&gt; Seq TypeRep
+</span><a href="Data.AbstractSize.html#HasTypeReps"><span class="hs-identifier hs-var hs-var hs-var hs-var">HasTypeReps</span></a></span></span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679290"><span id="local-6989586621679679297"><span id="local-6989586621679679303"><span id="local-6989586621679679305"><span id="local-6989586621679679307"><span id="local-6989586621679679313"><span id="local-6989586621679679318"><span id="local-6989586621679679321"><span id="local-6989586621679679324"><span id="local-6989586621679679327"><span id="local-6989586621679679330"><span id="local-6989586621679679333"><span id="local-6989586621679679338"><span id="local-6989586621679679343"><span class="annot"><span class="annottext">Typeable TxBody
+Typeable TxBody =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; TxBody -&gt; c TxBody)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxBody)
+-&gt; (TxBody -&gt; Constr)
+-&gt; (TxBody -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxBody))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxBody))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; TxBody -&gt; TxBody)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxBody -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxBody -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxBody -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxBody -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxBody -&gt; m TxBody)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxBody -&gt; m TxBody)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; TxBody -&gt; m TxBody)
+-&gt; Data TxBody
+TxBody -&gt; Constr
+TxBody -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; TxBody -&gt; TxBody
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxBody -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxBody -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxBody -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxBody -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxBody -&gt; m TxBody
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxBody -&gt; m TxBody
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxBody
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxBody -&gt; c TxBody
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxBody)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxBody)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxBody -&gt; c TxBody
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; TxBody -&gt; c TxBody
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxBody
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c TxBody
+$ctoConstr :: TxBody -&gt; Constr
+toConstr :: TxBody -&gt; Constr
+$cdataTypeOf :: TxBody -&gt; DataType
+dataTypeOf :: TxBody -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxBody)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c TxBody)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxBody)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c TxBody)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; TxBody -&gt; TxBody
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; TxBody -&gt; TxBody
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxBody -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxBody -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxBody -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; TxBody -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxBody -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; TxBody -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxBody -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; TxBody -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxBody -&gt; m TxBody
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxBody -&gt; m TxBody
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxBody -&gt; m TxBody
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxBody -&gt; m TxBody
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxBody -&gt; m TxBody
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; TxBody -&gt; m TxBody
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679348"><span id="local-6989586621679679352"><span id="local-6989586621679679358"><span class="annot"><span class="annottext">Context -&gt; TxBody -&gt; IO (Maybe ThunkInfo)
+Proxy TxBody -&gt; String
+(Context -&gt; TxBody -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; TxBody -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy TxBody -&gt; String)
+-&gt; NoThunks TxBody
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; TxBody -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; TxBody -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; TxBody -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; TxBody -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy TxBody -&gt; String
+showTypeOf :: Proxy TxBody -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#txid"><span class="hs-identifier hs-type">txid</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-111"></span><span id="txid"><span class="annot"><span class="annottext">txid :: TxBody -&gt; TxId
+</span><a href="Byron.Spec.Ledger.UTxO.html#txid"><span class="hs-identifier hs-var hs-var">txid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash -&gt; TxId
+</span><a href="Byron.Spec.Ledger.UTxO.html#TxId"><span class="hs-identifier hs-var">TxId</span></a></span><span> </span><span class="annot"><span class="annottext">(Hash -&gt; TxId) -&gt; (TxBody -&gt; Hash) -&gt; TxBody -&gt; TxId
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">TxBody -&gt; Hash
+forall a. HasHash a =&gt; a -&gt; Hash
+</span><a href="Byron.Spec.Ledger.Core.html#hash"><span class="hs-identifier hs-var">hash</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><span class="hs-comment">-- | Total value of a transaction.</span></span><span>
+</span><span id="line-114"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#txValue"><span class="hs-identifier hs-type">txValue</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-115"></span><span id="txValue"><span class="annot"><span class="annottext">txValue :: TxBody -&gt; Lovelace
+</span><a href="Byron.Spec.Ledger.UTxO.html#txValue"><span class="hs-identifier hs-var hs-var">txValue</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679679387"><span class="annot"><span class="annottext">[TxOut]
+outputs :: TxBody -&gt; [TxOut]
+outputs :: [TxOut]
+</span><a href="Byron.Spec.Ledger.UTxO.html#outputs"><span class="hs-identifier hs-var hs-var">outputs</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Lovelace] -&gt; Lovelace
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><span class="hs-identifier hs-var">sum</span></span><span> </span><span class="annot"><span class="annottext">([Lovelace] -&gt; Lovelace) -&gt; [Lovelace] -&gt; Lovelace
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(TxOut -&gt; Lovelace) -&gt; [TxOut] -&gt; [Lovelace]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">TxOut -&gt; Lovelace
+</span><a href="Byron.Spec.Ledger.UTxO.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">[TxOut]
+</span><a href="#local-6989586621679679387"><span class="hs-identifier hs-var">outputs</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><span class="hs-comment">-- | Compute the UTxO inputs of a transaction.</span></span><span>
+</span><span id="line-118"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#txins"><span class="hs-identifier hs-type">txins</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-119"></span><span id="txins"><span class="annot"><span class="annottext">txins :: TxBody -&gt; [TxIn]
+</span><a href="Byron.Spec.Ledger.UTxO.html#txins"><span class="hs-identifier hs-var hs-var">txins</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxBody -&gt; [TxIn]
+</span><a href="Byron.Spec.Ledger.UTxO.html#inputs"><span class="hs-identifier hs-var">inputs</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="annot"><span class="hs-comment">-- | Compute the UTxO outputs of a transaction.</span></span><span>
+</span><span id="line-122"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#txouts"><span class="hs-identifier hs-type">txouts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span>
+</span><span id="line-123"></span><span id="txouts"><span class="annot"><span class="annottext">txouts :: TxBody -&gt; UTxO
+</span><a href="Byron.Spec.Ledger.UTxO.html#txouts"><span class="hs-identifier hs-var hs-var">txouts</span></a></span></span><span> </span><span id="local-6989586621679679391"><span class="annot"><span class="annottext">TxBody
+</span><a href="#local-6989586621679679391"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><span class="annottext">Map TxIn TxOut -&gt; UTxO
+</span><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-var">UTxO</span></a></span><span> </span><span class="annot"><span class="annottext">(Map TxIn TxOut -&gt; UTxO) -&gt; Map TxIn TxOut -&gt; UTxO
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">[(TxIn, TxOut)] -&gt; Map TxIn TxOut
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span>
+</span><span id="line-126"></span><span>      </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId -&gt; Natural -&gt; TxIn
+</span><a href="Byron.Spec.Ledger.UTxO.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679679392"><span class="hs-identifier hs-var">transId</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679679393"><span class="hs-identifier hs-var">idx</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxOut
+</span><a href="#local-6989586621679679394"><span class="hs-identifier hs-var">out</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679679394"><span class="annot"><span class="annottext">TxOut
+</span><a href="#local-6989586621679679394"><span class="hs-identifier hs-var">out</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679393"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679679393"><span class="hs-identifier hs-var">idx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[TxOut] -&gt; [Natural] -&gt; [(TxOut, Natural)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><span class="hs-identifier hs-var">zip</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxBody -&gt; [TxOut]
+</span><a href="Byron.Spec.Ledger.UTxO.html#outputs"><span class="hs-identifier hs-var">outputs</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody
+</span><a href="#local-6989586621679679391"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">..</span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-128"></span><span>    </span><span id="local-6989586621679679392"><span class="annot"><span class="annottext">transId :: TxId
+</span><a href="#local-6989586621679679392"><span class="hs-identifier hs-var hs-var">transId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxBody -&gt; TxId
+</span><a href="Byron.Spec.Ledger.UTxO.html#txid"><span class="hs-identifier hs-var">txid</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody
+</span><a href="#local-6989586621679679391"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="annot"><span class="hs-comment">-- | Determine the total balance contained in the UTxO.</span></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#balance"><span class="hs-identifier hs-type">balance</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-132"></span><span id="balance"><span class="annot"><span class="annottext">balance :: UTxO -&gt; Lovelace
+</span><a href="Byron.Spec.Ledger.UTxO.html#balance"><span class="hs-identifier hs-var hs-var">balance</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span id="local-6989586621679679396"><span class="annot"><span class="annottext">Map TxIn TxOut
+</span><a href="#local-6989586621679679396"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Lovelace -&gt; TxOut -&gt; Lovelace)
+-&gt; Lovelace -&gt; Map TxIn TxOut -&gt; Lovelace
+forall a b k. (a -&gt; b -&gt; a) -&gt; a -&gt; Map k b -&gt; a
+</span><span class="hs-identifier hs-var">Map.foldl'</span></span><span> </span><span class="annot"><span class="annottext">Lovelace -&gt; TxOut -&gt; Lovelace
+</span><a href="#local-6989586621679679398"><span class="hs-identifier hs-var">addValues</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">Map TxIn TxOut
+</span><a href="#local-6989586621679679396"><span class="hs-identifier hs-var">utxo</span></a></span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-134"></span><span>    </span><span id="local-6989586621679679398"><span class="annot"><span class="annottext">addValues :: Lovelace -&gt; TxOut -&gt; Lovelace
+</span><a href="#local-6989586621679679398"><span class="hs-identifier hs-var hs-var">addValues</span></a></span></span><span> </span><span id="local-6989586621679679401"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679679401"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><span class="annottext">Addr
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679679402"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679679402"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679679401"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace -&gt; Lovelace -&gt; Lovelace
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679679402"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#HasHash"><span class="hs-identifier hs-type">Byron.Spec.Ledger.Core.HasHash</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621679679406"><span class="annot"><span class="annottext">hash :: TxBody -&gt; Hash
+</span><a href="Byron.Spec.Ledger.Core.html#hash"><span class="hs-identifier hs-var hs-var hs-var hs-var">hash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Int -&gt; Hash
+</span><a href="Byron.Spec.Ledger.Core.html#Hash"><span class="hs-identifier hs-var">Hash</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Int -&gt; Hash) -&gt; (TxBody -&gt; Maybe Int) -&gt; TxBody -&gt; Hash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Maybe Int) -&gt; (TxBody -&gt; Int) -&gt; TxBody -&gt; Maybe Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">TxBody -&gt; Int
+forall a. Hashable a =&gt; a -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hashable-1.5.0.0-781ba3c0c110db8233c015d5f01bc0e7490531b36c6e815cc50d3e9f08c40994/share/doc/html/src/Data.Hashable.Class.html#hash"><span class="hs-identifier hs-var">H.hash</span></a></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="hs-comment">---------------------------------------------------------------------------------</span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- UTxO transitions</span><span>
+</span><span id="line-141"></span><span class="hs-comment">---------------------------------------------------------------------------------</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#pcMinFee"><span class="hs-identifier hs-type">pcMinFee</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-144"></span><span id="pcMinFee"><span class="annot"><span class="annottext">pcMinFee :: PParams -&gt; Tx -&gt; Lovelace
+</span><a href="Byron.Spec.Ledger.UTxO.html#pcMinFee"><span class="hs-identifier hs-var hs-var">pcMinFee</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">_factorA :: PParams -&gt; FactorA
+</span><a href="Byron.Spec.Ledger.Update.html#_factorA"><span class="hs-identifier hs-var">_factorA</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#FactorA"><span class="hs-identifier hs-type">FactorA</span></a></span><span> </span><span id="local-6989586621679679411"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679679411"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">_factorB :: PParams -&gt; FactorB
+</span><a href="Byron.Spec.Ledger.Update.html#_factorB"><span class="hs-identifier hs-var">_factorB</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#FactorB"><span class="hs-identifier hs-type">FactorB</span></a></span><span> </span><span id="local-6989586621679679413"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679679413"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679679414"><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679679414"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; Lovelace
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Lovelace) -&gt; Int -&gt; Lovelace
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679679411"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679679413"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Tx -&gt; Int
+</span><a href="Byron.Spec.Ledger.UTxO.html#txsize"><span class="hs-identifier hs-var">txsize</span></a></span><span> </span><span class="annot"><span class="annottext">Tx
+</span><a href="#local-6989586621679679414"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#txsize"><span class="hs-identifier hs-type">txsize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-148"></span><span id="txsize"><span class="annot"><span class="annottext">txsize :: Tx -&gt; Int
+</span><a href="Byron.Spec.Ledger.UTxO.html#txsize"><span class="hs-identifier hs-var hs-var">txsize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AccountingMap -&gt; Tx -&gt; Int
+forall a. HasTypeReps a =&gt; AccountingMap -&gt; a -&gt; Int
+</span><a href="Data.AbstractSize.html#abstractSize"><span class="hs-identifier hs-var">abstractSize</span></a></span><span> </span><span class="annot"><span class="annottext">AccountingMap
+</span><a href="#local-6989586621679679417"><span class="hs-identifier hs-var">costs</span></a></span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-150"></span><span>    </span><span id="local-6989586621679679417"><span class="annot"><span class="annottext">costs :: AccountingMap
+</span><a href="#local-6989586621679679417"><span class="hs-identifier hs-var hs-var">costs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-151"></span><span>      </span><span class="annot"><span class="annottext">[(TypeRep, Int)] -&gt; AccountingMap
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span>
+</span><span id="line-152"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxIn -&gt; TypeRep
+forall a. Typeable a =&gt; a -&gt; TypeRep
+</span><span class="hs-identifier hs-var">typeOf</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxIn
+forall a. HasCallStack =&gt; a
+</span><span class="hs-identifier hs-var">undefined</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOut -&gt; TypeRep
+forall a. Typeable a =&gt; a -&gt; TypeRep
+</span><span class="hs-identifier hs-var">typeOf</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxOut
+forall a. HasCallStack =&gt; a
+</span><span class="hs-identifier hs-var">undefined</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Wit -&gt; TypeRep
+forall a. Typeable a =&gt; a -&gt; TypeRep
+</span><span class="hs-identifier hs-var">typeOf</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Wit
+forall a. HasCallStack =&gt; a
+</span><span class="hs-identifier hs-var">undefined</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Wit"><span class="hs-identifier hs-type">Wit</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="hs-comment">---------------------------------------------------------------------------------</span><span>
+</span><span id="line-158"></span><span class="hs-comment">-- UTxO transitions</span><span>
+</span><span id="line-159"></span><span class="hs-comment">---------------------------------------------------------------------------------</span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="annot"><span class="hs-comment">-- | Proof/Witness that a transaction is authorized by the given key holder.</span></span><span>
+</span><span id="line-162"></span><span class="hs-keyword">data</span><span> </span><span id="Wit"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Wit"><span class="hs-identifier hs-var">Wit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Wit"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Wit"><span class="hs-identifier hs-var">Wit</span></a></span></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#Sig"><span class="hs-identifier hs-type">Sig</span></a></span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679679435"><span id="local-6989586621679679443"><span id="local-6989586621679679447"><span class="annot"><span class="annottext">Int -&gt; Wit -&gt; ShowS
+[Wit] -&gt; ShowS
+Wit -&gt; String
+(Int -&gt; Wit -&gt; ShowS)
+-&gt; (Wit -&gt; String) -&gt; ([Wit] -&gt; ShowS) -&gt; Show Wit
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Wit -&gt; ShowS
+showsPrec :: Int -&gt; Wit -&gt; ShowS
+$cshow :: Wit -&gt; String
+show :: Wit -&gt; String
+$cshowList :: [Wit] -&gt; ShowS
+showList :: [Wit] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679450"><span id="local-6989586621679679457"><span class="annot"><span class="annottext">Wit -&gt; Wit -&gt; Bool
+(Wit -&gt; Wit -&gt; Bool) -&gt; (Wit -&gt; Wit -&gt; Bool) -&gt; Eq Wit
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Wit -&gt; Wit -&gt; Bool
+== :: Wit -&gt; Wit -&gt; Bool
+$c/= :: Wit -&gt; Wit -&gt; Bool
+/= :: Wit -&gt; Wit -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679463"><span id="local-6989586621679679470"><span id="local-6989586621679679475"><span id="local-6989586621679679479"><span id="local-6989586621679679482"><span id="local-6989586621679679485"><span id="local-6989586621679679488"><span class="annot"><span class="annottext">Eq Wit
+Eq Wit =&gt;
+(Wit -&gt; Wit -&gt; Ordering)
+-&gt; (Wit -&gt; Wit -&gt; Bool)
+-&gt; (Wit -&gt; Wit -&gt; Bool)
+-&gt; (Wit -&gt; Wit -&gt; Bool)
+-&gt; (Wit -&gt; Wit -&gt; Bool)
+-&gt; (Wit -&gt; Wit -&gt; Wit)
+-&gt; (Wit -&gt; Wit -&gt; Wit)
+-&gt; Ord Wit
+Wit -&gt; Wit -&gt; Bool
+Wit -&gt; Wit -&gt; Ordering
+Wit -&gt; Wit -&gt; Wit
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Wit -&gt; Wit -&gt; Ordering
+compare :: Wit -&gt; Wit -&gt; Ordering
+$c&lt; :: Wit -&gt; Wit -&gt; Bool
+&lt; :: Wit -&gt; Wit -&gt; Bool
+$c&lt;= :: Wit -&gt; Wit -&gt; Bool
+&lt;= :: Wit -&gt; Wit -&gt; Bool
+$c&gt; :: Wit -&gt; Wit -&gt; Bool
+&gt; :: Wit -&gt; Wit -&gt; Bool
+$c&gt;= :: Wit -&gt; Wit -&gt; Bool
+&gt;= :: Wit -&gt; Wit -&gt; Bool
+$cmax :: Wit -&gt; Wit -&gt; Wit
+max :: Wit -&gt; Wit -&gt; Wit
+$cmin :: Wit -&gt; Wit -&gt; Wit
+min :: Wit -&gt; Wit -&gt; Wit
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679491"><span id="local-6989586621679679493"><span class="annot"><span class="annottext">(forall x. Wit -&gt; Rep Wit x)
+-&gt; (forall x. Rep Wit x -&gt; Wit) -&gt; Generic Wit
+forall x. Rep Wit x -&gt; Wit
+forall x. Wit -&gt; Rep Wit x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Wit -&gt; Rep Wit x
+from :: forall x. Wit -&gt; Rep Wit x
+$cto :: forall x. Rep Wit x -&gt; Wit
+to :: forall x. Rep Wit x -&gt; Wit
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679498"><span id="local-6989586621679679505"><span class="annot"><span class="annottext">Eq Wit
+Eq Wit =&gt; (Int -&gt; Wit -&gt; Int) -&gt; (Wit -&gt; Int) -&gt; Hashable Wit
+Int -&gt; Wit -&gt; Int
+Wit -&gt; Int
+forall a. Eq a =&gt; (Int -&gt; a -&gt; Int) -&gt; (a -&gt; Int) -&gt; Hashable a
+$chashWithSalt :: Int -&gt; Wit -&gt; Int
+hashWithSalt :: Int -&gt; Wit -&gt; Int
+$chash :: Wit -&gt; Int
+hash :: Wit -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hashable-1.5.0.0-781ba3c0c110db8233c015d5f01bc0e7490531b36c6e815cc50d3e9f08c40994/share/doc/html/src/Data.Hashable.Class.html#Hashable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Hashable</span></a></span></span></span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679519"><span class="annot"><span class="annottext">Wit -&gt; Seq TypeRep
+(Wit -&gt; Seq TypeRep) -&gt; HasTypeReps Wit
+forall a. (a -&gt; Seq TypeRep) -&gt; HasTypeReps a
+$ctypeReps :: Wit -&gt; Seq TypeRep
+typeReps :: Wit -&gt; Seq TypeRep
+</span><a href="Data.AbstractSize.html#HasTypeReps"><span class="hs-identifier hs-var hs-var hs-var hs-var">HasTypeReps</span></a></span></span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679540"><span id="local-6989586621679679547"><span id="local-6989586621679679552"><span id="local-6989586621679679554"><span id="local-6989586621679679556"><span id="local-6989586621679679562"><span id="local-6989586621679679567"><span id="local-6989586621679679570"><span id="local-6989586621679679573"><span id="local-6989586621679679576"><span id="local-6989586621679679579"><span id="local-6989586621679679582"><span id="local-6989586621679679587"><span id="local-6989586621679679592"><span class="annot"><span class="annottext">Typeable Wit
+Typeable Wit =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; Wit -&gt; c Wit)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Wit)
+-&gt; (Wit -&gt; Constr)
+-&gt; (Wit -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Wit))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Wit))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Wit -&gt; Wit)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Wit -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Wit -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Wit -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Wit -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Wit -&gt; m Wit)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Wit -&gt; m Wit)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Wit -&gt; m Wit)
+-&gt; Data Wit
+Wit -&gt; Constr
+Wit -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; Wit -&gt; Wit
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Wit -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Wit -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Wit -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Wit -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Wit -&gt; m Wit
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Wit -&gt; m Wit
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Wit
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Wit -&gt; c Wit
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Wit)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Wit)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Wit -&gt; c Wit
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Wit -&gt; c Wit
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Wit
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Wit
+$ctoConstr :: Wit -&gt; Constr
+toConstr :: Wit -&gt; Constr
+$cdataTypeOf :: Wit -&gt; DataType
+dataTypeOf :: Wit -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Wit)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Wit)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Wit)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Wit)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Wit -&gt; Wit
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Wit -&gt; Wit
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Wit -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Wit -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Wit -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Wit -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Wit -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Wit -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Wit -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Wit -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Wit -&gt; m Wit
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Wit -&gt; m Wit
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Wit -&gt; m Wit
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Wit -&gt; m Wit
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Wit -&gt; m Wit
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Wit -&gt; m Wit
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679597"><span id="local-6989586621679679601"><span id="local-6989586621679679607"><span class="annot"><span class="annottext">Context -&gt; Wit -&gt; IO (Maybe ThunkInfo)
+Proxy Wit -&gt; String
+(Context -&gt; Wit -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; Wit -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy Wit -&gt; String)
+-&gt; NoThunks Wit
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; Wit -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; Wit -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; Wit -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; Wit -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy Wit -&gt; String
+showTypeOf :: Proxy Wit -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="annot"><span class="hs-comment">-- | A fully formed transaction.</span></span><span>
+</span><span id="line-175"></span><span class="hs-keyword">data</span><span> </span><span id="Tx"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier hs-var">Tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Tx"><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier hs-var">Tx</span></a></span></span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="body"><span class="annot"><span class="annottext">Tx -&gt; TxBody
+</span><a href="Byron.Spec.Ledger.UTxO.html#body"><span class="hs-identifier hs-var hs-var">body</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="witnesses"><span class="annot"><span class="annottext">Tx -&gt; [Wit]
+</span><a href="Byron.Spec.Ledger.UTxO.html#witnesses"><span class="hs-identifier hs-var hs-var">witnesses</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Wit"><span class="hs-identifier hs-type">Wit</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-180"></span><span>    </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679679632"><span id="local-6989586621679679638"><span id="local-6989586621679679642"><span class="annot"><span class="annottext">Int -&gt; Tx -&gt; ShowS
+[Tx] -&gt; ShowS
+Tx -&gt; String
+(Int -&gt; Tx -&gt; ShowS)
+-&gt; (Tx -&gt; String) -&gt; ([Tx] -&gt; ShowS) -&gt; Show Tx
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Tx -&gt; ShowS
+showsPrec :: Int -&gt; Tx -&gt; ShowS
+$cshow :: Tx -&gt; String
+show :: Tx -&gt; String
+$cshowList :: [Tx] -&gt; ShowS
+showList :: [Tx] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span>
+</span><span id="line-181"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679645"><span id="local-6989586621679679650"><span class="annot"><span class="annottext">Tx -&gt; Tx -&gt; Bool
+(Tx -&gt; Tx -&gt; Bool) -&gt; (Tx -&gt; Tx -&gt; Bool) -&gt; Eq Tx
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Tx -&gt; Tx -&gt; Bool
+== :: Tx -&gt; Tx -&gt; Bool
+$c/= :: Tx -&gt; Tx -&gt; Bool
+/= :: Tx -&gt; Tx -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span>
+</span><span id="line-182"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679654"><span id="local-6989586621679679656"><span class="annot"><span class="annottext">(forall x. Tx -&gt; Rep Tx x)
+-&gt; (forall x. Rep Tx x -&gt; Tx) -&gt; Generic Tx
+forall x. Rep Tx x -&gt; Tx
+forall x. Tx -&gt; Rep Tx x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Tx -&gt; Rep Tx x
+from :: forall x. Tx -&gt; Rep Tx x
+$cto :: forall x. Rep Tx x -&gt; Tx
+to :: forall x. Rep Tx x -&gt; Tx
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span>
+</span><span id="line-183"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679661"><span id="local-6989586621679679668"><span class="annot"><span class="annottext">Eq Tx
+Eq Tx =&gt; (Int -&gt; Tx -&gt; Int) -&gt; (Tx -&gt; Int) -&gt; Hashable Tx
+Int -&gt; Tx -&gt; Int
+Tx -&gt; Int
+forall a. Eq a =&gt; (Int -&gt; a -&gt; Int) -&gt; (a -&gt; Int) -&gt; Hashable a
+$chashWithSalt :: Int -&gt; Tx -&gt; Int
+hashWithSalt :: Int -&gt; Tx -&gt; Int
+$chash :: Tx -&gt; Int
+hash :: Tx -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hashable-1.5.0.0-781ba3c0c110db8233c015d5f01bc0e7490531b36c6e815cc50d3e9f08c40994/share/doc/html/src/Data.Hashable.Class.html#Hashable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Hashable</span></a></span></span></span><span>
+</span><span id="line-184"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679680"><span class="annot"><span class="annottext">Tx -&gt; Seq TypeRep
+(Tx -&gt; Seq TypeRep) -&gt; HasTypeReps Tx
+forall a. (a -&gt; Seq TypeRep) -&gt; HasTypeReps a
+$ctypeReps :: Tx -&gt; Seq TypeRep
+typeReps :: Tx -&gt; Seq TypeRep
+</span><a href="Data.AbstractSize.html#HasTypeReps"><span class="hs-identifier hs-var hs-var hs-var hs-var">HasTypeReps</span></a></span></span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679699"><span id="local-6989586621679679704"><span id="local-6989586621679679709"><span id="local-6989586621679679711"><span id="local-6989586621679679713"><span id="local-6989586621679679719"><span id="local-6989586621679679724"><span id="local-6989586621679679727"><span id="local-6989586621679679730"><span id="local-6989586621679679733"><span id="local-6989586621679679736"><span id="local-6989586621679679739"><span id="local-6989586621679679744"><span id="local-6989586621679679749"><span class="annot"><span class="annottext">Typeable Tx
+Typeable Tx =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; Tx -&gt; c Tx)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Tx)
+-&gt; (Tx -&gt; Constr)
+-&gt; (Tx -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Tx))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Tx))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; Tx -&gt; Tx)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Tx -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Tx -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Tx -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Tx -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Tx -&gt; m Tx)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Tx -&gt; m Tx)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; Tx -&gt; m Tx)
+-&gt; Data Tx
+Tx -&gt; Constr
+Tx -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; Tx -&gt; Tx
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Tx -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Tx -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Tx -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Tx -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Tx -&gt; m Tx
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Tx -&gt; m Tx
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Tx
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Tx -&gt; c Tx
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Tx)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Tx)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Tx -&gt; c Tx
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; Tx -&gt; c Tx
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Tx
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c Tx
+$ctoConstr :: Tx -&gt; Constr
+toConstr :: Tx -&gt; Constr
+$cdataTypeOf :: Tx -&gt; DataType
+dataTypeOf :: Tx -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Tx)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c Tx)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Tx)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c Tx)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Tx -&gt; Tx
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; Tx -&gt; Tx
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Tx -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Tx -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Tx -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; Tx -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Tx -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; Tx -&gt; [u]
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Tx -&gt; u
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; Tx -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Tx -&gt; m Tx
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Tx -&gt; m Tx
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Tx -&gt; m Tx
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Tx -&gt; m Tx
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Tx -&gt; m Tx
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; Tx -&gt; m Tx
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-186"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679679754"><span id="local-6989586621679679758"><span id="local-6989586621679679764"><span class="annot"><span class="annottext">Context -&gt; Tx -&gt; IO (Maybe ThunkInfo)
+Proxy Tx -&gt; String
+(Context -&gt; Tx -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; Tx -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy Tx -&gt; String)
+-&gt; NoThunks Tx
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; Tx -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; Tx -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; Tx -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; Tx -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy Tx -&gt; String
+showTypeOf :: Proxy Tx -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span>
+</span><span id="line-187"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#HasHash"><span class="hs-identifier hs-type">HasHash</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-190"></span><span>  </span><span id="local-6989586621679679793"><span class="annot"><span class="annottext">hash :: [Tx] -&gt; Hash
+</span><a href="Byron.Spec.Ledger.Core.html#hash"><span class="hs-identifier hs-var hs-var hs-var hs-var">hash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Int -&gt; Hash
+</span><a href="Byron.Spec.Ledger.Core.html#Hash"><span class="hs-identifier hs-var">Hash</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Int -&gt; Hash) -&gt; ([Tx] -&gt; Maybe Int) -&gt; [Tx] -&gt; Hash
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Maybe Int
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Maybe Int) -&gt; ([Tx] -&gt; Int) -&gt; [Tx] -&gt; Maybe Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[Tx] -&gt; Int
+forall a. Hashable a =&gt; a -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hashable-1.5.0.0-781ba3c0c110db8233c015d5f01bc0e7490531b36c6e815cc50d3e9f08c40994/share/doc/html/src/Data.Hashable.Class.html#hash"><span class="hs-identifier hs-var">H.hash</span></a></span><span>
+</span><span id="line-191"></span><span>
+</span><span id="line-192"></span><span class="annot"><span class="hs-comment">-- | Create a witness for transaction</span></span><span>
+</span><span id="line-193"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#makeWitness"><span class="hs-identifier hs-type">makeWitness</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Wit"><span class="hs-identifier hs-type">Wit</span></a></span><span>
+</span><span id="line-194"></span><span id="makeWitness"><span class="annot"><span class="annottext">makeWitness :: KeyPair -&gt; TxBody -&gt; Wit
+</span><a href="Byron.Spec.Ledger.UTxO.html#makeWitness"><span class="hs-identifier hs-var hs-var">makeWitness</span></a></span></span><span> </span><span id="local-6989586621679679795"><span class="annot"><span class="annottext">KeyPair
+</span><a href="#local-6989586621679679795"><span class="hs-identifier hs-var">keys</span></a></span></span><span> </span><span id="local-6989586621679679796"><span class="annot"><span class="annottext">TxBody
+</span><a href="#local-6989586621679679796"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VKey -&gt; Sig TxBody -&gt; Wit
+</span><a href="Byron.Spec.Ledger.UTxO.html#Wit"><span class="hs-identifier hs-var">Wit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyPair -&gt; VKey
+</span><a href="Byron.Spec.Ledger.Core.html#vKey"><span class="hs-identifier hs-var">vKey</span></a></span><span> </span><span class="annot"><span class="annottext">KeyPair
+</span><a href="#local-6989586621679679795"><span class="hs-identifier hs-var">keys</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SKey -&gt; TxBody -&gt; Sig TxBody
+forall a. SKey -&gt; a -&gt; Sig a
+</span><a href="Byron.Spec.Ledger.Core.html#sign"><span class="hs-identifier hs-var">sign</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyPair -&gt; SKey
+</span><a href="Byron.Spec.Ledger.Core.html#sKey"><span class="hs-identifier hs-var">sKey</span></a></span><span> </span><span class="annot"><span class="annottext">KeyPair
+</span><a href="#local-6989586621679679795"><span class="hs-identifier hs-var">keys</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">TxBody
+</span><a href="#local-6989586621679679796"><span class="hs-identifier hs-var">tx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#makeTxWits"><span class="hs-identifier hs-type">makeTxWits</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxBody"><span class="hs-identifier hs-type">TxBody</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span>
+</span><span id="line-197"></span><span id="makeTxWits"><span class="annot"><span class="annottext">makeTxWits :: UTxO -&gt; TxBody -&gt; Tx
+</span><a href="Byron.Spec.Ledger.UTxO.html#makeTxWits"><span class="hs-identifier hs-var hs-var">makeTxWits</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span id="local-6989586621679679801"><span class="annot"><span class="annottext">Map TxIn TxOut
+</span><a href="#local-6989586621679679801"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679679802"><span class="annot"><span class="annottext">TxBody
+</span><a href="#local-6989586621679679802"><span class="hs-identifier hs-var">tx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-198"></span><span>  </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span>
+</span><span id="line-199"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">body :: TxBody
+</span><a href="Byron.Spec.Ledger.UTxO.html#body"><span class="hs-identifier hs-var">body</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxBody
+</span><a href="#local-6989586621679679802"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-200"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">witnesses :: [Wit]
+</span><a href="Byron.Spec.Ledger.UTxO.html#witnesses"><span class="hs-identifier hs-var">witnesses</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Wit]
+</span><a href="#local-6989586621679679803"><span class="hs-identifier hs-var">wits</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-203"></span><span>    </span><span id="local-6989586621679679804"><span class="annot"><span class="annottext">getKey :: TxIn -&gt; KeyPair
+</span><a href="#local-6989586621679679804"><span class="hs-identifier hs-var hs-var">getKey</span></a></span></span><span> </span><span id="local-6989586621679679805"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679679805"><span class="hs-identifier hs-var">txin</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-204"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.UTxO.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#Addr"><span class="hs-identifier hs-type">Addr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span id="local-6989586621679679808"><span class="annot"><span class="annottext">Owner
+</span><a href="#local-6989586621679679808"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-205"></span><span>            </span><span class="annot"><span class="annottext">TxOut -&gt; Maybe TxOut -&gt; TxOut
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span>
+</span><span id="line-206"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; TxOut
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;makeTxWits: Missing output for transaction input&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span><span>              </span><span class="annot"><span class="annottext">(Maybe TxOut -&gt; TxOut) -&gt; Maybe TxOut -&gt; TxOut
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Map TxIn TxOut -&gt; Maybe TxOut
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621679679805"><span class="hs-identifier hs-var">txin</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn TxOut
+</span><a href="#local-6989586621679679801"><span class="hs-identifier hs-var">utxo</span></a></span><span>
+</span><span id="line-208"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">SKey -&gt; VKey -&gt; KeyPair
+</span><a href="Byron.Spec.Ledger.Core.html#KeyPair"><span class="hs-identifier hs-var">KeyPair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Owner -&gt; SKey
+</span><a href="Byron.Spec.Ledger.Core.html#SKey"><span class="hs-identifier hs-var">SKey</span></a></span><span> </span><span class="annot"><span class="annottext">Owner
+</span><a href="#local-6989586621679679808"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Owner -&gt; VKey
+</span><a href="Byron.Spec.Ledger.Core.html#VKey"><span class="hs-identifier hs-var">VKey</span></a></span><span> </span><span class="annot"><span class="annottext">Owner
+</span><a href="#local-6989586621679679808"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-209"></span><span>    </span><span id="local-6989586621679679813"><span class="annot"><span class="annottext">keys :: [KeyPair]
+</span><a href="#local-6989586621679679813"><span class="hs-identifier hs-var hs-var">keys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; KeyPair
+</span><a href="#local-6989586621679679804"><span class="hs-identifier hs-var">getKey</span></a></span><span> </span><span class="annot"><span class="annottext">(TxIn -&gt; KeyPair) -&gt; [TxIn] -&gt; [KeyPair]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxBody -&gt; [TxIn]
+</span><a href="Byron.Spec.Ledger.UTxO.html#inputs"><span class="hs-identifier hs-var">inputs</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody
+</span><a href="#local-6989586621679679802"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-210"></span><span>    </span><span id="local-6989586621679679803"><span class="annot"><span class="annottext">wits :: [Wit]
+</span><a href="#local-6989586621679679803"><span class="hs-identifier hs-var hs-var">wits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KeyPair -&gt; TxBody -&gt; Wit
+</span><a href="Byron.Spec.Ledger.UTxO.html#makeWitness"><span class="hs-identifier hs-var">makeWitness</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyPair -&gt; TxBody -&gt; Wit) -&gt; [KeyPair] -&gt; [TxBody -&gt; Wit]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[KeyPair]
+</span><a href="#local-6989586621679679813"><span class="hs-identifier hs-var">keys</span></a></span><span> </span><span class="annot"><span class="annottext">[TxBody -&gt; Wit] -&gt; [TxBody] -&gt; [Wit]
+forall a b. [a -&gt; b] -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">TxBody -&gt; [TxBody]
+forall a. a -&gt; [a]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">TxBody
+</span><a href="#local-6989586621679679802"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-211"></span></pre></body></html>

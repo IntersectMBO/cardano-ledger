@@ -1,0 +1,882 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- | Specs necessary to generate, environment, state, and signal</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- for the GOVCERT rule</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.GovCert</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.html"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Core.html"><span class="hs-identifier">Cardano.Ledger.Conway.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier">Era</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.html"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html"><span class="hs-identifier">Cardano.Ledger.Conway.PParams</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.html"><span class="hs-identifier">Cardano.Ledger.Conway.Rules</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.html"><span class="hs-identifier">Cardano.Ledger.Conway.State</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html"><span class="hs-identifier">Cardano.Ledger.Conway.TxCert</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier">Credential</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier">KeyRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.API.html"><span class="hs-identifier">Constrained.API</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.PParams.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.PParams</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- | There are no hard constraints on VState, other than witnessing, and delegatee conformance</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--   which must align with the conwayCertExecContextSpec</span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#vStateSpec"><span class="hs-identifier hs-type">vStateSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682698804"><span class="annot"><a href="#local-6989586621682698804"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682698804"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682698804"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#DRepRole"><span class="hs-identifier hs-type">DRepRole</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.VState.html#VState"><span class="hs-identifier hs-type">VState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682698804"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span id="vStateSpec"><span class="annot"><span class="annottext">vStateSpec :: forall era.
+Era era =&gt;
+WitUniv era
+-&gt; Set (Credential 'DRepRole) -&gt; Specification (VState era)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#vStateSpec"><span class="hs-identifier hs-var hs-var">vStateSpec</span></a></span></span><span> </span><span id="local-6989586621682699320"><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682699320"><span class="hs-identifier hs-var">univ</span></a></span></span><span> </span><span id="local-6989586621682699321"><span class="annot"><span class="annottext">Set (Credential 'DRepRole)
+</span><a href="#local-6989586621682699321"><span class="hs-identifier hs-var">delegatees</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (VState era) -&gt; Pred) -&gt; Specification (VState era)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (VState era) -&gt; Pred) -&gt; Specification (VState era))
+-&gt; (Term (VState era) -&gt; Pred) -&gt; Specification (VState era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (VState era)
+</span><span class="">[var|vstate|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="annottext">Term (VState era)
+-&gt; FunTy (MapList Term (ProductAsList (VState era))) [Pred] -&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (VState era)
+</span><a href="#local-6989586621682699323"><span class="hs-identifier hs-var">vstate</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (VState era))) [Pred] -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList (VState era))) [Pred] -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'DRepRole) DRepState)
+</span><span class="">[var|dreps2|]</span></span><span> </span><span class="annot"><span class="annottext">Term (CommitteeState era)
+</span><span class="">[var|committeestate|]</span></span><span> </span><span class="annot"><span class="annottext">Term EpochNo
+</span><span class="">[var|_numdormant|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (CommitteeState era)
+-&gt; FunTy (MapList Term (ProductAsList (CommitteeState era))) Pred
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (CommitteeState era)
+</span><a href="#local-6989586621682699327"><span class="hs-identifier hs-var">committeestate</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (CommitteeState era))) Pred
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList (CommitteeState era))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
+</span><span class="">[var|committeemap|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Set (Credential 'ColdCommitteeRole)) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682699320"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
+-&gt; Term (Set (Credential 'ColdCommitteeRole))
+forall k v.
+(HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k,
+ IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term (Set k)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
+</span><a href="#local-6989586621682699329"><span class="hs-identifier hs-var">committeemap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'DRepRole) DRepState)
+-&gt; Term (Set (Credential 'DRepRole))
+forall k v.
+(HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k,
+ IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term (Set k)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'DRepRole) DRepState)
+</span><a href="#local-6989586621682699326"><span class="hs-identifier hs-var">dreps2</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Credential 'DRepRole))
+-&gt; Term (Set (Credential 'DRepRole)) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Credential 'DRepRole) -&gt; Term (Set (Credential 'DRepRole))
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Credential 'DRepRole)
+</span><a href="#local-6989586621682699321"><span class="hs-identifier hs-var">delegatees</span></a></span><span> </span><span class="hs-comment">-- TODO, there are missing constraints about the (rng_ dreps)</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'DRepRole) DRepState)
+-&gt; (Term (Credential 'DRepRole, DRepState) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (Credential 'DRepRole) DRepState)
+</span><a href="#local-6989586621682699326"><span class="hs-identifier hs-var">dreps2</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (Credential 'DRepRole, DRepState) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (Credential 'DRepRole, DRepState) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole, DRepState)
+</span><span class="">[var|pair|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-46"></span><span>        </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole, DRepState)
+-&gt; FunTy
+     (MapList Term (ProductAsList (Credential 'DRepRole, DRepState)))
+     [Pred]
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole, DRepState)
+</span><a href="#local-6989586621682699336"><span class="hs-identifier hs-var">pair</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (ProductAsList (Credential 'DRepRole, DRepState)))
+   [Pred]
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (Credential 'DRepRole, DRepState)))
+     [Pred]
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><span class="">[var|drep|]</span></span><span> </span><span class="annot"><span class="annottext">Term DRepState
+</span><span class="">[var|drepstate|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-47"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term DRepState -&gt; Term (Credential 'DRepRole) -&gt; Pred
+forall a b. (HasSpec a, HasSpec b) =&gt; Term a -&gt; Term b -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#dependsOn"><span class="hs-identifier hs-var">dependsOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term DRepState
+</span><a href="#local-6989586621682699338"><span class="hs-identifier hs-var">drepstate</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><a href="#local-6989586621682699337"><span class="hs-identifier hs-var">drep</span></a></span><span>
+</span><span id="line-48"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Credential 'DRepRole) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682699320"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><a href="#local-6989586621682699337"><span class="hs-identifier hs-var">drep</span></a></span><span>
+</span><span id="line-49"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term DRepState
+-&gt; FunTy (MapList Term (ProductAsList DRepState)) Pred -&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term DRepState
+</span><a href="#local-6989586621682699338"><span class="hs-identifier hs-var">drepstate</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList DRepState)) Pred -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList DRepState)) Pred -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-50"></span><span>              </span><span class="hs-glyph">\</span><span id="local-6989586621682699340"><span class="annot"><span class="annottext">Term EpochNo
+</span><a href="#local-6989586621682699340"><span class="hs-identifier hs-var">_expiry</span></a></span></span><span> </span><span id="local-6989586621682699341"><span class="annot"><span class="annottext">TermD Deps (StrictMaybe Anchor)
+</span><a href="#local-6989586621682699341"><span class="hs-identifier hs-var">_anchor</span></a></span></span><span> </span><span id="local-6989586621682699342"><span class="annot"><span class="annottext">TermD Deps (CompactForm Coin)
+</span><a href="#local-6989586621682699342"><span class="hs-identifier hs-var">_deposit</span></a></span></span><span> </span><span class="annot"><span class="annottext">Term (Set (Credential 'Staking))
+</span><span class="">[var|delegs|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Set (Credential 'Staking)) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682699320"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Credential 'Staking))
+</span><a href="#local-6989586621682699343"><span class="hs-identifier hs-var">delegs</span></a></span><span>
+</span><span id="line-51"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span id="local-6989586621682698872"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#govCertSpec"><span class="hs-identifier hs-type">govCertSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier hs-type">EraCertState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682698872"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682698872"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.GovCert.html#ConwayGovCertEnv"><span class="hs-identifier hs-type">ConwayGovCertEnv</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#CertState"><span class="hs-identifier hs-type">CertState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.TxCert.html#ConwayGovCert"><span class="hs-identifier hs-type">ConwayGovCert</span></a></span></span><span>
+</span><span id="line-60"></span><span id="govCertSpec"><span class="annot"><span class="annottext">govCertSpec :: forall era.
+EraCertState era =&gt;
+WitUniv era
+-&gt; ConwayGovCertEnv ConwayEra
+-&gt; CertState ConwayEra
+-&gt; Specification ConwayGovCert
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#govCertSpec"><span class="hs-identifier hs-var hs-var">govCertSpec</span></a></span></span><span> </span><span id="local-6989586621682699535"><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682699535"><span class="hs-identifier hs-var">univ</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.GovCert.html#ConwayGovCertEnv"><span class="hs-identifier hs-type">ConwayGovCertEnv</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621682699537"><span id="local-6989586621682699538"><span id="local-6989586621682699539"><span id="local-6989586621682699540"><span class="annot"><span class="annottext">Map (GovPurposeId 'CommitteePurpose) (GovActionState ConwayEra)
+StrictMaybe (Committee ConwayEra)
+PParams ConwayEra
+EpochNo
+cgcePParams :: PParams ConwayEra
+cgceCurrentEpoch :: EpochNo
+cgceCurrentCommittee :: StrictMaybe (Committee ConwayEra)
+cgceCommitteeProposals :: Map (GovPurposeId 'CommitteePurpose) (GovActionState ConwayEra)
+cgcePParams :: forall era. ConwayGovCertEnv era -&gt; PParams era
+cgceCurrentEpoch :: forall era. ConwayGovCertEnv era -&gt; EpochNo
+cgceCurrentCommittee :: forall era. ConwayGovCertEnv era -&gt; StrictMaybe (Committee era)
+cgceCommitteeProposals :: forall era.
+ConwayGovCertEnv era
+-&gt; Map (GovPurposeId 'CommitteePurpose) (GovActionState era)
+</span><a href="#local-6989586621682699537"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621682699545"><span class="annot"><span class="annottext">CertState ConwayEra
+</span><a href="#local-6989586621682699545"><span class="hs-identifier hs-var">certState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621682699546"><span class="annot"><span class="annottext">vs :: VState ConwayEra
+</span><a href="#local-6989586621682699546"><span class="hs-identifier hs-var hs-var">vs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CertState ConwayEra
+ConwayCertState ConwayEra
+</span><a href="#local-6989586621682699545"><span class="hs-identifier hs-var">certState</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayCertState ConwayEra
+-&gt; Getting
+     (VState ConwayEra) (ConwayCertState ConwayEra) (VState ConwayEra)
+-&gt; VState ConwayEra
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">(VState ConwayEra -&gt; Const (VState ConwayEra) (VState ConwayEra))
+-&gt; CertState ConwayEra
+-&gt; Const (VState ConwayEra) (CertState ConwayEra)
+Getting
+  (VState ConwayEra) (ConwayCertState ConwayEra) (VState ConwayEra)
+forall era.
+ConwayEraCertState era =&gt;
+Lens' (CertState era) (VState era)
+Lens' (CertState ConwayEra) (VState ConwayEra)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#certVStateL"><span class="hs-identifier hs-var">certVStateL</span></a></span><span>
+</span><span id="line-62"></span><span>      </span><span id="local-6989586621682699549"><span class="annot"><span class="annottext">reps :: Term (Set (Credential 'DRepRole))
+</span><a href="#local-6989586621682699549"><span class="hs-identifier hs-var hs-var">reps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set (Credential 'DRepRole) -&gt; Term (Set (Credential 'DRepRole))
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">(Set (Credential 'DRepRole) -&gt; Term (Set (Credential 'DRepRole)))
+-&gt; Set (Credential 'DRepRole) -&gt; Term (Set (Credential 'DRepRole))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'DRepRole) DRepState -&gt; Set (Credential 'DRepRole)
+forall k a. Map k a -&gt; Set k
+</span><span class="hs-identifier hs-var">Map.keysSet</span></span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'DRepRole) DRepState
+ -&gt; Set (Credential 'DRepRole))
+-&gt; Map (Credential 'DRepRole) DRepState
+-&gt; Set (Credential 'DRepRole)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">VState ConwayEra -&gt; Map (Credential 'DRepRole) DRepState
+forall era. VState era -&gt; Map (Credential 'DRepRole) DRepState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.VState.html#vsDReps"><span class="hs-identifier hs-var">vsDReps</span></a></span><span> </span><span class="annot"><span class="annottext">VState ConwayEra
+</span><a href="#local-6989586621682699546"><span class="hs-identifier hs-var">vs</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span id="local-6989586621682699552"><span class="annot"><span class="annottext">deposits :: Map (Credential 'DRepRole) (CompactForm Coin)
+</span><a href="#local-6989586621682699552"><span class="hs-identifier hs-var hs-var">deposits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DRepState -&gt; CompactForm Coin)
+-&gt; Map (Credential 'DRepRole) DRepState
+-&gt; Map (Credential 'DRepRole) (CompactForm Coin)
+forall a b k. (a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><span class="hs-identifier hs-var">Map.map</span></span><span> </span><span class="annot"><span class="annottext">DRepState -&gt; CompactForm Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.DRep.html#drepDeposit"><span class="hs-identifier hs-var">drepDeposit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VState ConwayEra -&gt; Map (Credential 'DRepRole) DRepState
+forall era. VState era -&gt; Map (Credential 'DRepRole) DRepState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.VState.html#vsDReps"><span class="hs-identifier hs-var">vsDReps</span></a></span><span> </span><span class="annot"><span class="annottext">VState ConwayEra
+</span><a href="#local-6989586621682699546"><span class="hs-identifier hs-var">vs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>      </span><span id="local-6989586621682699557"><span class="annot"><span class="annottext">getNewMembers :: GovAction era -&gt; Set (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699557"><span class="hs-identifier hs-var hs-var">getNewMembers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-65"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#UpdateCommittee"><span class="hs-identifier hs-type">UpdateCommittee</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe (GovPurposeId 'CommitteePurpose)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Set (Credential 'ColdCommitteeRole)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682699559"><span class="annot"><span class="annottext">Map (Credential 'ColdCommitteeRole) EpochNo
+</span><a href="#local-6989586621682699559"><span class="hs-identifier hs-var">newMembers</span></a></span></span><span> </span><span class="annot"><span class="annottext">UnitInterval
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Map (Credential 'ColdCommitteeRole) EpochNo
+-&gt; Set (Credential 'ColdCommitteeRole)
+forall k a. Map k a -&gt; Set k
+</span><span class="hs-identifier hs-var">Map.keysSet</span></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'ColdCommitteeRole) EpochNo
+</span><a href="#local-6989586621682699559"><span class="hs-identifier hs-var">newMembers</span></a></span><span>
+</span><span id="line-66"></span><span>        </span><span class="annot"><span class="annottext">GovAction era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Set (Credential 'ColdCommitteeRole)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-67"></span><span>      </span><span id="local-6989586621682699560"><span class="annot"><span class="annottext">knownColdCreds :: Set (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699560"><span class="hs-identifier hs-var hs-var">knownColdCreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>        </span><span class="annot"><span class="annottext">Map (Credential 'ColdCommitteeRole) EpochNo
+-&gt; Set (Credential 'ColdCommitteeRole)
+forall k a. Map k a -&gt; Set k
+</span><span class="hs-identifier hs-var">Map.keysSet</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Committee ConwayEra
+ -&gt; Map (Credential 'ColdCommitteeRole) EpochNo)
+-&gt; StrictMaybe (Committee ConwayEra)
+-&gt; Map (Credential 'ColdCommitteeRole) EpochNo
+forall m a. Monoid m =&gt; (a -&gt; m) -&gt; StrictMaybe a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><span class="hs-identifier hs-var">foldMap</span></span><span> </span><span class="annot"><span class="annottext">Committee ConwayEra -&gt; Map (Credential 'ColdCommitteeRole) EpochNo
+forall era.
+Committee era -&gt; Map (Credential 'ColdCommitteeRole) EpochNo
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#committeeMembers"><span class="hs-identifier hs-var">committeeMembers</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe (Committee ConwayEra)
+</span><a href="#local-6989586621682699539"><span class="hs-identifier hs-var">cgceCurrentCommittee</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>          </span><span class="annot"><span class="annottext">Set (Credential 'ColdCommitteeRole)
+-&gt; Set (Credential 'ColdCommitteeRole)
+-&gt; Set (Credential 'ColdCommitteeRole)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">(GovActionState ConwayEra -&gt; Set (Credential 'ColdCommitteeRole))
+-&gt; Map (GovPurposeId 'CommitteePurpose) (GovActionState ConwayEra)
+-&gt; Set (Credential 'ColdCommitteeRole)
+forall m a.
+Monoid m =&gt;
+(a -&gt; m) -&gt; Map (GovPurposeId 'CommitteePurpose) a -&gt; m
+forall (t :: * -&gt; *) m a.
+(Foldable t, Monoid m) =&gt;
+(a -&gt; m) -&gt; t a -&gt; m
+</span><span class="hs-identifier hs-var">foldMap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovAction ConwayEra -&gt; Set (Credential 'ColdCommitteeRole)
+forall {era}. GovAction era -&gt; Set (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699557"><span class="hs-identifier hs-var">getNewMembers</span></a></span><span> </span><span class="annot"><span class="annottext">(GovAction ConwayEra -&gt; Set (Credential 'ColdCommitteeRole))
+-&gt; (GovActionState ConwayEra -&gt; GovAction ConwayEra)
+-&gt; GovActionState ConwayEra
+-&gt; Set (Credential 'ColdCommitteeRole)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ProposalProcedure ConwayEra -&gt; GovAction ConwayEra
+forall era. ProposalProcedure era -&gt; GovAction era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#pProcGovAction"><span class="hs-identifier hs-var">pProcGovAction</span></a></span><span> </span><span class="annot"><span class="annottext">(ProposalProcedure ConwayEra -&gt; GovAction ConwayEra)
+-&gt; (GovActionState ConwayEra -&gt; ProposalProcedure ConwayEra)
+-&gt; GovActionState ConwayEra
+-&gt; GovAction ConwayEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">GovActionState ConwayEra -&gt; ProposalProcedure ConwayEra
+forall era. GovActionState era -&gt; ProposalProcedure era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Governance.Procedures.html#gasProposalProcedure"><span class="hs-identifier hs-var">gasProposalProcedure</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map (GovPurposeId 'CommitteePurpose) (GovActionState ConwayEra)
+</span><a href="#local-6989586621682699540"><span class="hs-identifier hs-var">cgceCommitteeProposals</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span id="local-6989586621682699566"><span class="annot"><span class="annottext">ccCertSpec :: Term (Credential 'ColdCommitteeRole) -&gt; Pred
+</span><a href="#local-6989586621682699566"><span class="hs-identifier hs-var hs-var">ccCertSpec</span></a></span></span><span> </span><span id="local-6989586621682699567"><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699567"><span class="hs-identifier hs-var">coldCred</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred)
+-&gt; (Term (Set (Credential 'ColdCommitteeRole)) -&gt; Term Bool)
+-&gt; Term (Set (Credential 'ColdCommitteeRole))
+-&gt; Pred
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole)
+-&gt; Term (Set (Credential 'ColdCommitteeRole)) -&gt; Term Bool
+forall a. (Ord a, HasSpec a) =&gt; Term a -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Set.html#member_"><span class="hs-identifier hs-var">member_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699567"><span class="hs-identifier hs-var">coldCred</span></a></span><span> </span><span class="annot"><span class="annottext">(Term (Set (Credential 'ColdCommitteeRole)) -&gt; Pred)
+-&gt; Term (Set (Credential 'ColdCommitteeRole)) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set (Credential 'ColdCommitteeRole)
+-&gt; Term (Set (Credential 'ColdCommitteeRole))
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699560"><span class="hs-identifier hs-var">knownColdCreds</span></a></span><span>
+</span><span id="line-72"></span><span>      </span><span id="local-6989586621682699569"><span class="annot"><span class="annottext">commiteeStatus :: Map (Credential 'ColdCommitteeRole) CommitteeAuthorization
+</span><a href="#local-6989586621682699569"><span class="hs-identifier hs-var hs-var">commiteeStatus</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CommitteeState ConwayEra
+-&gt; Map (Credential 'ColdCommitteeRole) CommitteeAuthorization
+forall era.
+CommitteeState era
+-&gt; Map (Credential 'ColdCommitteeRole) CommitteeAuthorization
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#csCommitteeCreds"><span class="hs-identifier hs-var">csCommitteeCreds</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VState ConwayEra -&gt; CommitteeState ConwayEra
+forall era. VState era -&gt; CommitteeState era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.VState.html#vsCommitteeState"><span class="hs-identifier hs-var">vsCommitteeState</span></a></span><span> </span><span class="annot"><span class="annottext">VState ConwayEra
+</span><a href="#local-6989586621682699546"><span class="hs-identifier hs-var">vs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">(Term ConwayGovCert -&gt; Pred) -&gt; Specification ConwayGovCert
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term ConwayGovCert -&gt; Pred) -&gt; Specification ConwayGovCert)
+-&gt; (Term ConwayGovCert -&gt; Pred) -&gt; Specification ConwayGovCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term ConwayGovCert
+</span><span class="">[var|gc|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>        </span><span class="annot"><span class="annottext">Term ConwayGovCert
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps)) (Cases (SimpleRep ConwayGovCert)))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span>
+</span><span id="line-75"></span><span>          </span><span class="annot"><span class="annottext">Term ConwayGovCert
+</span><a href="#local-6989586621682699572"><span class="hs-identifier hs-var">gc</span></a></span><span>
+</span><span id="line-76"></span><span>          </span><span class="hs-comment">-- The weights on each 'branchW' case try to make it likely</span><span>
+</span><span id="line-77"></span><span>          </span><span class="hs-comment">-- that each branch is choosen with similar frequency</span><span>
+</span><span id="line-78"></span><span>          </span><span class="hs-comment">-- ConwayRegDRep</span><span>
+</span><span id="line-79"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; FunTy
+     (MapList
+        Term
+        (Args
+           (Prod (Credential 'DRepRole) (Prod Coin (StrictMaybe Anchor)))))
+     [Pred]
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod (Credential 'DRepRole) (Prod Coin (StrictMaybe Anchor)))
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term
+      (Args
+         (Prod (Credential 'DRepRole) (Prod Coin (StrictMaybe Anchor)))))
+   [Pred]
+ -&gt; Weighted
+      (BinderD Deps)
+      (Prod (Credential 'DRepRole) (Prod Coin (StrictMaybe Anchor))))
+-&gt; FunTy
+     (MapList
+        Term
+        (Args
+           (Prod (Credential 'DRepRole) (Prod Coin (StrictMaybe Anchor)))))
+     [Pred]
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod (Credential 'DRepRole) (Prod Coin (StrictMaybe Anchor)))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><span class="">[var|keyreg|]</span></span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><span class="">[var|coinreg|]</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (StrictMaybe Anchor)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-80"></span><span>              </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#not_"><span class="hs-identifier hs-var">not_</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Term Bool) -&gt; Term Bool -&gt; Term Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+-&gt; Term (Map (Credential 'DRepRole) (CompactForm Coin))
+-&gt; Term Bool
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term k -&gt; Term (Map k v) -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#mapMember_"><span class="hs-identifier hs-var">mapMember_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><a href="#local-6989586621682699575"><span class="hs-identifier hs-var">keyreg</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (Credential 'DRepRole) (CompactForm Coin)
+-&gt; Term (Map (Credential 'DRepRole) (CompactForm Coin))
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'DRepRole) (CompactForm Coin)
+</span><a href="#local-6989586621682699552"><span class="hs-identifier hs-var">deposits</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682699576"><span class="hs-identifier hs-var">coinreg</span></a></span><span> </span><span class="annot"><span class="annottext">Term Coin -&gt; Term Coin -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; Term Coin
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621682699537"><span class="hs-identifier hs-var">cgcePParams</span></a></span><span> </span><span class="annot"><span class="annottext">PParams ConwayEra -&gt; Getting Coin (PParams ConwayEra) Coin -&gt; Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Coin (PParams ConwayEra) Coin
+forall era. ConwayEraPParams era =&gt; Lens' (PParams era) Coin
+Lens' (PParams ConwayEra) Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.PParams.html#ppDRepDepositL"><span class="hs-identifier hs-var">ppDRepDepositL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Credential 'DRepRole) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682699535"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><a href="#local-6989586621682699575"><span class="hs-identifier hs-var">keyreg</span></a></span><span>
+</span><span id="line-83"></span><span>              </span><span class="hs-special">]</span><span>
+</span><span id="line-84"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>          </span><span class="hs-comment">-- ConwayUnRegDRep -- Commented out on purpose, to make conformance tests pass.</span><span>
+</span><span id="line-86"></span><span>          </span><span class="hs-comment">-- Should be uncommented when they are fixed to handle un registration</span><span>
+</span><span id="line-87"></span><span>          </span><span class="hs-comment">-- ( branchW 3 $ \ [var|credUnreg|] [var|coinUnreg|] -&gt;</span><span>
+</span><span id="line-88"></span><span>          </span><span class="hs-comment">--     assert $ elem_ (pair_ credUnreg coinUnreg) (lit (Map.toList deposits))</span><span>
+</span><span id="line-89"></span><span>          </span><span class="hs-comment">-- )</span><span>
+</span><span id="line-90"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+-&gt; FunTy
+     (MapList Term (Args (Prod (Credential 'DRepRole) Coin))) Bool
+-&gt; Weighted (BinderD Deps) (Prod (Credential 'DRepRole) Coin)
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (Args (Prod (Credential 'DRepRole) Coin))) Bool
+ -&gt; Weighted (BinderD Deps) (Prod (Credential 'DRepRole) Coin))
+-&gt; FunTy
+     (MapList Term (Args (Prod (Credential 'DRepRole) Coin))) Bool
+-&gt; Weighted (BinderD Deps) (Prod (Credential 'DRepRole) Coin)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682699580"><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><a href="#local-6989586621682699580"><span class="hs-identifier hs-var">_credUnreg</span></a></span></span><span> </span><span id="local-6989586621682699581"><span class="annot"><span class="annottext">Term Coin
+</span><a href="#local-6989586621682699581"><span class="hs-identifier hs-var">_coinUnreg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>          </span><span class="hs-comment">-- ConwayUpdateDRep</span><span>
+</span><span id="line-92"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; FunTy
+     (MapList
+        Term (Args (Prod (Credential 'DRepRole) (StrictMaybe Anchor))))
+     [Pred]
+-&gt; Weighted
+     (BinderD Deps) (Prod (Credential 'DRepRole) (StrictMaybe Anchor))
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term (Args (Prod (Credential 'DRepRole) (StrictMaybe Anchor))))
+   [Pred]
+ -&gt; Weighted
+      (BinderD Deps) (Prod (Credential 'DRepRole) (StrictMaybe Anchor)))
+-&gt; FunTy
+     (MapList
+        Term (Args (Prod (Credential 'DRepRole) (StrictMaybe Anchor))))
+     [Pred]
+-&gt; Weighted
+     (BinderD Deps) (Prod (Credential 'DRepRole) (StrictMaybe Anchor))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><span class="">[var|keyupdate|]</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (StrictMaybe Anchor)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-93"></span><span>              </span><span class="hs-special">[</span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Credential 'DRepRole) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682699535"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><a href="#local-6989586621682699582"><span class="hs-identifier hs-var">keyupdate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+-&gt; Term (Set (Credential 'DRepRole)) -&gt; Term Bool
+forall a. (Ord a, HasSpec a) =&gt; Term a -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Set.html#member_"><span class="hs-identifier hs-var">member_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'DRepRole)
+</span><a href="#local-6989586621682699582"><span class="hs-identifier hs-var">keyupdate</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (Credential 'DRepRole))
+</span><a href="#local-6989586621682699549"><span class="hs-identifier hs-var">reps</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-94"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>          </span><span class="hs-comment">-- ConwayAuthCommitteeHotKey</span><span>
+</span><span id="line-96"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; FunTy
+     (MapList
+        Term
+        (Args
+           (Prod
+              (Credential 'ColdCommitteeRole) (Credential 'HotCommitteeRole))))
+     [Pred]
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod
+        (Credential 'ColdCommitteeRole) (Credential 'HotCommitteeRole))
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term
+      (Args
+         (Prod
+            (Credential 'ColdCommitteeRole) (Credential 'HotCommitteeRole))))
+   [Pred]
+ -&gt; Weighted
+      (BinderD Deps)
+      (Prod
+         (Credential 'ColdCommitteeRole) (Credential 'HotCommitteeRole)))
+-&gt; FunTy
+     (MapList
+        Term
+        (Args
+           (Prod
+              (Credential 'ColdCommitteeRole) (Credential 'HotCommitteeRole))))
+     [Pred]
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod
+        (Credential 'ColdCommitteeRole) (Credential 'HotCommitteeRole))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole)
+</span><span class="">[var|coldCredAuth|]</span></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'HotCommitteeRole)
+</span><span class="">[var|hotcred|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>              </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole) -&gt; Pred
+</span><a href="#local-6989586621682699566"><span class="hs-identifier hs-var">ccCertSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699583"><span class="hs-identifier hs-var">coldCredAuth</span></a></span><span>
+</span><span id="line-98"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map (Credential 'ColdCommitteeRole) CommitteeAuthorization
+-&gt; Term (Credential 'ColdCommitteeRole) -&gt; Pred
+forall x.
+(HasSpec x, Ord x, IsNormalType x) =&gt;
+Map x CommitteeAuthorization -&gt; Term x -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#notYetResigned"><span class="hs-identifier hs-var">notYetResigned</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'ColdCommitteeRole) CommitteeAuthorization
+</span><a href="#local-6989586621682699569"><span class="hs-identifier hs-var">commiteeStatus</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699583"><span class="hs-identifier hs-var">coldCredAuth</span></a></span><span>
+</span><span id="line-99"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Credential 'ColdCommitteeRole) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682699535"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699583"><span class="hs-identifier hs-var">coldCredAuth</span></a></span><span>
+</span><span id="line-100"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Credential 'HotCommitteeRole) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682699535"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'HotCommitteeRole)
+</span><a href="#local-6989586621682699584"><span class="hs-identifier hs-var">hotcred</span></a></span><span>
+</span><span id="line-101"></span><span>              </span><span class="hs-special">]</span><span>
+</span><span id="line-102"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>          </span><span class="hs-comment">-- ConwayResignCommitteeColdKey</span><span>
+</span><span id="line-104"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; FunTy
+     (MapList
+        Term
+        (Args (Prod (Credential 'ColdCommitteeRole) (StrictMaybe Anchor))))
+     [Pred]
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod (Credential 'ColdCommitteeRole) (StrictMaybe Anchor))
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList
+      Term
+      (Args (Prod (Credential 'ColdCommitteeRole) (StrictMaybe Anchor))))
+   [Pred]
+ -&gt; Weighted
+      (BinderD Deps)
+      (Prod (Credential 'ColdCommitteeRole) (StrictMaybe Anchor)))
+-&gt; FunTy
+     (MapList
+        Term
+        (Args (Prod (Credential 'ColdCommitteeRole) (StrictMaybe Anchor))))
+     [Pred]
+-&gt; Weighted
+     (BinderD Deps)
+     (Prod (Credential 'ColdCommitteeRole) (StrictMaybe Anchor))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole)
+</span><span class="">[var|coldCredResign|]</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (StrictMaybe Anchor)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-105"></span><span>              </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Credential 'ColdCommitteeRole) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682699535"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699586"><span class="hs-identifier hs-var">coldCredResign</span></a></span><span>
+</span><span id="line-106"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole) -&gt; Pred
+</span><a href="#local-6989586621682699566"><span class="hs-identifier hs-var">ccCertSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699586"><span class="hs-identifier hs-var">coldCredResign</span></a></span><span>
+</span><span id="line-107"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map (Credential 'ColdCommitteeRole) CommitteeAuthorization
+-&gt; Term (Credential 'ColdCommitteeRole) -&gt; Pred
+forall x.
+(HasSpec x, Ord x, IsNormalType x) =&gt;
+Map x CommitteeAuthorization -&gt; Term x -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#notYetResigned"><span class="hs-identifier hs-var">notYetResigned</span></a></span><span> </span><span class="annot"><span class="annottext">Map (Credential 'ColdCommitteeRole) CommitteeAuthorization
+</span><a href="#local-6989586621682699569"><span class="hs-identifier hs-var">commiteeStatus</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Credential 'ColdCommitteeRole)
+</span><a href="#local-6989586621682699586"><span class="hs-identifier hs-var">coldCredResign</span></a></span><span>
+</span><span id="line-108"></span><span>              </span><span class="hs-special">]</span><span>
+</span><span id="line-109"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- | Operations for authenticating a HotKey, or resigning a ColdKey are illegal</span><span>
+</span><span id="line-112"></span><span class="hs-comment">--   if that key has already resigned.</span><span>
+</span><span id="line-113"></span><span id="local-6989586621682698943"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#notYetResigned"><span class="hs-identifier hs-type">notYetResigned</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#HasSpec"><span class="hs-identifier hs-type">HasSpec</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682698943"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621682698943"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#IsNormalType"><span class="hs-identifier hs-type">IsNormalType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682698943"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="annot"><a href="#local-6989586621682698943"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#CommitteeAuthorization"><span class="hs-identifier hs-type">CommitteeAuthorization</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Term"><span class="hs-identifier hs-type">Term</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682698943"><span class="hs-identifier hs-type">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-117"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Pred"><span class="hs-identifier hs-type">Pred</span></a></span></span><span>
+</span><span id="line-118"></span><span id="notYetResigned"><span class="annot"><span class="annottext">notYetResigned :: forall x.
+(HasSpec x, Ord x, IsNormalType x) =&gt;
+Map x CommitteeAuthorization -&gt; Term x -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#notYetResigned"><span class="hs-identifier hs-var hs-var">notYetResigned</span></a></span></span><span> </span><span id="local-6989586621682699685"><span class="annot"><span class="annottext">Map x CommitteeAuthorization
+</span><a href="#local-6989586621682699685"><span class="hs-identifier hs-var">committeeStatus</span></a></span></span><span> </span><span id="local-6989586621682699686"><span class="annot"><span class="annottext">Term x
+</span><a href="#local-6989586621682699686"><span class="hs-identifier hs-var">coldcred</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Term (Maybe CommitteeAuthorization)
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps))
+        (Cases (SimpleRep (Maybe CommitteeAuthorization))))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term x
+-&gt; Term (Map x CommitteeAuthorization)
+-&gt; Term (Maybe CommitteeAuthorization)
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term k -&gt; Term (Map k v) -&gt; Term (Maybe v)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#lookup_"><span class="hs-identifier hs-var">lookup_</span></a></span><span> </span><span class="annot"><span class="annottext">Term x
+</span><a href="#local-6989586621682699686"><span class="hs-identifier hs-var">coldcred</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map x CommitteeAuthorization -&gt; Term (Map x CommitteeAuthorization)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Map x CommitteeAuthorization
+</span><a href="#local-6989586621682699685"><span class="hs-identifier hs-var">committeeStatus</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>      </span><span class="hs-comment">-- SNothing</span><span>
+</span><span id="line-122"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args ())) Bool -&gt; Weighted (BinderD Deps) ()
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args ())) Bool -&gt; Weighted (BinderD Deps) ())
+-&gt; FunTy (MapList Term (Args ())) Bool
+-&gt; Weighted (BinderD Deps) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>      </span><span class="hs-comment">-- SJust</span><span>
+</span><span id="line-124"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">FunTy (MapList Term (Args CommitteeAuthorization)) [Pred]
+-&gt; Weighted (BinderD Deps) CommitteeAuthorization
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args CommitteeAuthorization)) [Pred]
+ -&gt; Weighted (BinderD Deps) CommitteeAuthorization)
+-&gt; FunTy (MapList Term (Args CommitteeAuthorization)) [Pred]
+-&gt; Weighted (BinderD Deps) CommitteeAuthorization
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682699689"><span class="annot"><span class="annottext">Term CommitteeAuthorization
+</span><a href="#local-6989586621682699689"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-125"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term CommitteeAuthorization
+-&gt; FunTy
+     (MapList
+        (Weighted (BinderD Deps))
+        (Cases (SimpleRep CommitteeAuthorization)))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term CommitteeAuthorization
+</span><a href="#local-6989586621682699689"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>              </span><span class="hs-comment">--  CommitteeHotCredential</span><span>
+</span><span id="line-127"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args (Credential 'HotCommitteeRole))) Bool
+-&gt; Weighted (BinderD Deps) (Credential 'HotCommitteeRole)
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args (Credential 'HotCommitteeRole))) Bool
+ -&gt; Weighted (BinderD Deps) (Credential 'HotCommitteeRole))
+-&gt; FunTy (MapList Term (Args (Credential 'HotCommitteeRole))) Bool
+-&gt; Weighted (BinderD Deps) (Credential 'HotCommitteeRole)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term (Credential 'HotCommitteeRole)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>              </span><span class="hs-comment">-- CommitteeMemberResigned</span><span>
+</span><span id="line-129"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FunTy (MapList Term (Args (StrictMaybe Anchor))) Bool
+-&gt; Weighted (BinderD Deps) (StrictMaybe Anchor)
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args (StrictMaybe Anchor))) Bool
+ -&gt; Weighted (BinderD Deps) (StrictMaybe Anchor))
+-&gt; FunTy (MapList Term (Args (StrictMaybe Anchor))) Bool
+-&gt; Weighted (BinderD Deps) (StrictMaybe Anchor)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps (StrictMaybe Anchor)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-131"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#govCertEnvSpec"><span class="hs-identifier hs-type">govCertEnvSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Rules.GovCert.html#ConwayGovCertEnv"><span class="hs-identifier hs-type">ConwayGovCertEnv</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span id="govCertEnvSpec"><span class="annot"><span class="annottext">govCertEnvSpec :: WitUniv ConwayEra -&gt; Specification (ConwayGovCertEnv ConwayEra)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#govCertEnvSpec"><span class="hs-identifier hs-var hs-var">govCertEnvSpec</span></a></span></span><span> </span><span id="local-6989586621682699691"><span class="annot"><span class="annottext">WitUniv ConwayEra
+</span><a href="#local-6989586621682699691"><span class="hs-identifier hs-var">univ</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-138"></span><span>  </span><span class="annot"><span class="annottext">(Term (ConwayGovCertEnv ConwayEra) -&gt; Pred)
+-&gt; Specification (ConwayGovCertEnv ConwayEra)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (ConwayGovCertEnv ConwayEra) -&gt; Pred)
+ -&gt; Specification (ConwayGovCertEnv ConwayEra))
+-&gt; (Term (ConwayGovCertEnv ConwayEra) -&gt; Pred)
+-&gt; Specification (ConwayGovCertEnv ConwayEra)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (ConwayGovCertEnv ConwayEra)
+</span><span class="">[var|gce|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">Term (ConwayGovCertEnv ConwayEra)
+-&gt; FunTy
+     (MapList Term (ProductAsList (ConwayGovCertEnv ConwayEra))) [Pred]
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (ConwayGovCertEnv ConwayEra)
+</span><a href="#local-6989586621682699692"><span class="hs-identifier hs-var">gce</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (ProductAsList (ConwayGovCertEnv ConwayEra))) [Pred]
+ -&gt; Pred)
+-&gt; FunTy
+     (MapList Term (ProductAsList (ConwayGovCertEnv ConwayEra))) [Pred]
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span> </span><span class="annot"><span class="annottext">Term (PParams ConwayEra)
+</span><span class="">[var|pp|]</span></span><span> </span><span class="annot"><span class="annottext">Term EpochNo
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Term (StrictMaybe (Committee ConwayEra))
+</span><span class="">[var|committee|]</span></span><span> </span><span class="annot"><span class="annottext">Term
+  (Map (GovPurposeId 'CommitteePurpose) (GovActionState ConwayEra))
+</span><span class="">[var|proposalmap|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-140"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term (PParams ConwayEra)
+-&gt; Specification (PParams ConwayEra) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term (PParams ConwayEra)
+</span><a href="#local-6989586621682699693"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (PParams ConwayEra)
+forall era. EraSpecPParams era =&gt; Specification (PParams era)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.PParams.html#pparamsSpec"><span class="hs-identifier hs-var">pparamsSpec</span></a></span><span>
+</span><span id="line-141"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Term (Committee ConwayEra) -&gt; [Pred]) -&gt; Pred
+forall a p. (HasSpec a, IsPred p) =&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#unsafeExists"><span class="hs-identifier hs-var">unsafeExists</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621682699699"><span class="annot"><span class="annottext">Term (Committee ConwayEra)
+</span><a href="#local-6989586621682699699"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Term (Committee ConwayEra)
+-&gt; Specification (Committee ConwayEra) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Committee ConwayEra)
+</span><a href="#local-6989586621682699699"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">WitUniv ConwayEra -&gt; Specification (Committee ConwayEra)
+forall era.
+EraSpecPParams era =&gt;
+WitUniv era -&gt; Specification (Committee era)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#committeeWitness"><span class="hs-identifier hs-var">committeeWitness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv ConwayEra
+</span><a href="#local-6989586621682699691"><span class="hs-identifier hs-var">univ</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (StrictMaybe (Committee ConwayEra))
+</span><a href="#local-6989586621682699694"><span class="hs-identifier hs-var">committee</span></a></span><span> </span><span class="annot"><span class="annottext">Term (StrictMaybe (Committee ConwayEra))
+-&gt; Term (StrictMaybe (Committee ConwayEra)) -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Committee ConwayEra)
+-&gt; Term (StrictMaybe (Committee ConwayEra))
+forall a.
+(HasSpec a, IsNormalType a) =&gt;
+Term a -&gt; Term (StrictMaybe a)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Basic.html#cSJust_"><span class="hs-identifier hs-var">cSJust_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Committee ConwayEra)
+</span><a href="#local-6989586621682699699"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term
+  (Map (GovPurposeId 'CommitteePurpose) (GovActionState ConwayEra))
+-&gt; Term Integer
+forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term
+  (Map (GovPurposeId 'CommitteePurpose) (GovActionState ConwayEra))
+</span><a href="#local-6989586621682699695"><span class="hs-identifier hs-var">proposalmap</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Term Integer
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-143"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term
+  (Map (GovPurposeId 'CommitteePurpose) (GovActionState ConwayEra))
+-&gt; Term Integer
+forall a. (HasSpec a, Sized a) =&gt; Term a -&gt; Term Integer
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.TheKnot.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term
+  (Map (GovPurposeId 'CommitteePurpose) (GovActionState ConwayEra))
+</span><a href="#local-6989586621682699695"><span class="hs-identifier hs-var">proposalmap</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term Integer -&gt; Term Integer -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3E%3D."><span class="hs-operator hs-var">&gt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Term Integer
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-144"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term [GovActionState ConwayEra]
+-&gt; (Term (GovActionState ConwayEra) -&gt; Pred) -&gt; Pred
+forall p t a.
+(Forallable t a, HasSpec t, HasSpec a, IsPred p) =&gt;
+Term t -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term
+  (Map (GovPurposeId 'CommitteePurpose) (GovActionState ConwayEra))
+-&gt; Term [GovActionState ConwayEra]
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term [v]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Map (GovPurposeId 'CommitteePurpose) (GovActionState ConwayEra))
+</span><a href="#local-6989586621682699695"><span class="hs-identifier hs-var">proposalmap</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Term (GovActionState ConwayEra) -&gt; Pred) -&gt; Pred)
+-&gt; (Term (GovActionState ConwayEra) -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682699706"><span class="annot"><span class="annottext">Term (GovActionState ConwayEra)
+</span><a href="#local-6989586621682699706"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term (GovActionState ConwayEra)
+-&gt; Specification (GovActionState ConwayEra) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term (GovActionState ConwayEra)
+</span><a href="#local-6989586621682699706"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">WitUniv ConwayEra -&gt; Specification (GovActionState ConwayEra)
+forall era.
+EraSpecPParams era =&gt;
+WitUniv era -&gt; Specification (GovActionState era)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#govActionStateWitness"><span class="hs-identifier hs-var">govActionStateWitness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv ConwayEra
+</span><a href="#local-6989586621682699691"><span class="hs-identifier hs-var">univ</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-146"></span></pre></body></html>

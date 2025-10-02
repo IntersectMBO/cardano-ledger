@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Allegra.TxOut</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Allegra.Era.html"><span class="hs-identifier">Cardano.Ledger.Allegra.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier">AllegraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Allegra.PParams.html"><span class="hs-identifier">Cardano.Ledger.Allegra.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html"><span class="hs-identifier">Cardano.Ledger.Shelley.TxOut</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#ShelleyTxOut"><span class="hs-identifier">ShelleyTxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#addrEitherShelleyTxOutL"><span class="hs-identifier">addrEitherShelleyTxOutL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#valueEitherShelleyTxOutL"><span class="hs-identifier">valueEitherShelleyTxOutL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Coerce</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">coerce</span></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679294855"><span id="local-6989586621679294861"><span id="local-6989586621679294870"><span id="local-6989586621679294875"><span id="local-6989586621679294881"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxOut"><span class="hs-identifier hs-type">EraTxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TxOut"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#ShelleyTxOut"><span class="hs-identifier hs-type">ShelleyTxOut</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>  </span><span id="local-6989586621679294934"><span class="annot"><span class="annottext">mkBasicTxOut :: HasCallStack =&gt; Addr -&gt; Value AllegraEra -&gt; TxOut AllegraEra
+</span><a href="#local-6989586621679294934"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkBasicTxOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Addr -&gt; Value AllegraEra -&gt; TxOut AllegraEra
+Addr -&gt; Value AllegraEra -&gt; ShelleyTxOut AllegraEra
+forall era.
+(HasCallStack, Era era, Val (Value era)) =&gt;
+Addr -&gt; Value era -&gt; ShelleyTxOut era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#ShelleyTxOut"><span class="hs-identifier hs-var">ShelleyTxOut</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>  </span><span id="local-6989586621679294939"><span class="annot"><span class="annottext">upgradeTxOut :: EraTxOut (PreviousEra AllegraEra) =&gt;
+TxOut (PreviousEra AllegraEra) -&gt; TxOut AllegraEra
+</span><a href="#local-6989586621679294939"><span class="hs-identifier hs-var hs-var hs-var hs-var">upgradeTxOut</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#TxOutCompact"><span class="hs-identifier hs-type">TxOutCompact</span></a></span><span> </span><span id="local-6989586621679294942"><span class="annot"><span class="annottext">CompactAddr
+</span><a href="#local-6989586621679294942"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span id="local-6989586621679294943"><span class="annot"><span class="annottext">CompactForm (Value ShelleyEra)
+</span><a href="#local-6989586621679294943"><span class="hs-identifier hs-var">cfval</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CompactAddr
+-&gt; CompactForm (Value AllegraEra) -&gt; ShelleyTxOut AllegraEra
+forall era.
+CompactAddr -&gt; CompactForm (Value era) -&gt; ShelleyTxOut era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#TxOutCompact"><span class="hs-identifier hs-var">TxOutCompact</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CompactAddr -&gt; CompactAddr
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">CompactAddr
+</span><a href="#local-6989586621679294942"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">CompactForm (Value AllegraEra)
+CompactForm (Value ShelleyEra)
+</span><a href="#local-6989586621679294943"><span class="hs-identifier hs-var">cfval</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>  </span><span id="local-6989586621679294946"><span class="annot"><span class="annottext">addrEitherTxOutL :: Lens' (TxOut AllegraEra) (Either Addr CompactAddr)
+</span><a href="#local-6989586621679294946"><span class="hs-identifier hs-var hs-var hs-var hs-var">addrEitherTxOutL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either Addr CompactAddr -&gt; f (Either Addr CompactAddr))
+-&gt; TxOut AllegraEra -&gt; f (TxOut AllegraEra)
+(Either Addr CompactAddr -&gt; f (Either Addr CompactAddr))
+-&gt; ShelleyTxOut AllegraEra -&gt; f (ShelleyTxOut AllegraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Either Addr CompactAddr -&gt; f (Either Addr CompactAddr))
+-&gt; ShelleyTxOut era -&gt; f (ShelleyTxOut era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#addrEitherShelleyTxOutL"><span class="hs-identifier hs-var">addrEitherShelleyTxOutL</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#addrEitherTxOutL"><span class="hs-pragma hs-type">addrEitherTxOutL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679294952"><span class="annot"><span class="annottext">valueEitherTxOutL :: Lens'
+  (TxOut AllegraEra)
+  (Either (Value AllegraEra) (CompactForm (Value AllegraEra)))
+</span><a href="#local-6989586621679294952"><span class="hs-identifier hs-var hs-var hs-var hs-var">valueEitherTxOutL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Either (Value AllegraEra) (CompactForm (Value AllegraEra))
+ -&gt; f (Either (Value AllegraEra) (CompactForm (Value AllegraEra))))
+-&gt; TxOut AllegraEra -&gt; f (TxOut AllegraEra)
+(Either (Value AllegraEra) (CompactForm (Value AllegraEra))
+ -&gt; f (Either (Value AllegraEra) (CompactForm (Value AllegraEra))))
+-&gt; ShelleyTxOut AllegraEra -&gt; f (ShelleyTxOut AllegraEra)
+forall era.
+Val (Value era) =&gt;
+Lens'
+  (ShelleyTxOut era) (Either (Value era) (CompactForm (Value era)))
+Lens'
+  (ShelleyTxOut AllegraEra)
+  (Either (Value AllegraEra) (CompactForm (Value AllegraEra)))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxOut.html#valueEitherShelleyTxOutL"><span class="hs-identifier hs-var">valueEitherShelleyTxOutL</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#valueEitherTxOutL"><span class="hs-pragma hs-type">valueEitherTxOutL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679294959"><span class="annot"><span class="annottext">getMinCoinTxOut :: PParams AllegraEra -&gt; TxOut AllegraEra -&gt; Coin
+</span><a href="#local-6989586621679294959"><span class="hs-identifier hs-var hs-var hs-var hs-var">getMinCoinTxOut</span></a></span></span><span> </span><span id="local-6989586621679294961"><span class="annot"><span class="annottext">PParams AllegraEra
+</span><a href="#local-6989586621679294961"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679294962"><span class="annot"><span class="annottext">TxOut AllegraEra
+</span><a href="#local-6989586621679294962"><span class="hs-identifier hs-var">_txOut</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams AllegraEra
+</span><a href="#local-6989586621679294961"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">PParams AllegraEra
+-&gt; Getting Coin (PParams AllegraEra) Coin -&gt; Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Coin (PParams AllegraEra) Coin
+forall era.
+(EraPParams era, AtMostEra &quot;Mary&quot; era) =&gt;
+Lens' (PParams era) Coin
+Lens' (PParams AllegraEra) Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMinUTxOValueL"><span class="hs-identifier hs-var">ppMinUTxOValueL</span></a></span><span>
+</span><span id="line-32"></span></pre></body></html>

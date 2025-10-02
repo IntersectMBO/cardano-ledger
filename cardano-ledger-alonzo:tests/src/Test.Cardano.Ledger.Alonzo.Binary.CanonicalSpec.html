@@ -1,0 +1,605 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.html"><span class="hs-identifier">Cardano.Ledger.Alonzo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier">AlonzoEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.PParams</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier">Decoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TokenType"><span class="hs-identifier">TokenType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeBool"><span class="hs-identifier">decodeBool</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeBytesCanonical"><span class="hs-identifier">decodeBytesCanonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeDoubleCanonical"><span class="hs-identifier">decodeDoubleCanonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFullAnnotator"><span class="hs-identifier">decodeFullAnnotator</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeIntegerCanonical"><span class="hs-identifier">decodeIntegerCanonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeListLenCanonical"><span class="hs-identifier">decodeListLenCanonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeMapLenCanonical"><span class="hs-identifier">decodeMapLenCanonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeNull"><span class="hs-identifier">decodeNull</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeSimpleCanonical"><span class="hs-identifier">decodeSimpleCanonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeStringCanonical"><span class="hs-identifier">decodeStringCanonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#peekTokenType"><span class="hs-identifier">peekTokenType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier">serialize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#withSlice"><span class="hs-identifier">withSlice</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier">Language</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/base16-bytestring-1.0.2.0-9ee6195db8aa68eff84c30f8281e5a8902536668e00c8d5aecb570a4d535b748/share/doc/html/src/Data.ByteString.Base16.html"><span class="hs-identifier">Data.ByteString.Base16</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B16</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Compose</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Compose</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/l/testlib/doc/html/cardano-ledger-alonzo/src/Test.Cardano.Ledger.Alonzo.Arbitrary.html"><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Common.html"><span class="hs-identifier">Test.Cardano.Ledger.Common</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html"><span class="hs-identifier">Test.QuickCheck.Property</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">QCP</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-39"></span><span id="spec"><span class="annot"><span class="annottext">spec :: Spec
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;LangDepView encoding&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; (PParams AlonzoEra -&gt; Set Language -&gt; Property) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;is canonical&quot;</span></span><span> </span><span class="annot"><span class="annottext">PParams AlonzoEra -&gt; Set Language -&gt; Property
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#canonicalLangDepView"><span class="hs-identifier hs-var">canonicalLangDepView</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#canonicalLangDepView"><span class="hs-identifier hs-type">canonicalLangDepView</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier hs-type">Language</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-43"></span><span id="canonicalLangDepView"><span class="annot"><span class="annottext">canonicalLangDepView :: PParams AlonzoEra -&gt; Set Language -&gt; Property
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#canonicalLangDepView"><span class="hs-identifier hs-var hs-var">canonicalLangDepView</span></a></span></span><span> </span><span id="local-6989586621679195253"><span class="annot"><span class="annottext">PParams AlonzoEra
+</span><a href="#local-6989586621679195253"><span class="hs-identifier hs-var">pparams</span></a></span></span><span> </span><span id="local-6989586621679195254"><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621679195254"><span class="hs-identifier hs-var">langs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679195261"><span class="annot"><span class="annottext">langViews :: Set LangDepView
+</span><a href="#local-6989586621679195261"><span class="hs-identifier hs-var hs-var">langViews</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[LangDepView] -&gt; Set LangDepView
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span> </span><span class="annot"><span class="annottext">([LangDepView] -&gt; Set LangDepView)
+-&gt; [LangDepView] -&gt; Set LangDepView
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PParams AlonzoEra -&gt; Language -&gt; LangDepView
+forall era.
+AlonzoEraPParams era =&gt;
+PParams era -&gt; Language -&gt; LangDepView
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#getLanguageView"><span class="hs-identifier hs-var">getLanguageView</span></a></span><span> </span><span class="annot"><span class="annottext">PParams AlonzoEra
+</span><a href="#local-6989586621679195253"><span class="hs-identifier hs-var">pparams</span></a></span><span> </span><span class="annot"><span class="annottext">(Language -&gt; LangDepView) -&gt; [Language] -&gt; [LangDepView]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set Language -&gt; [Language]
+forall a. Set a -&gt; [a]
+</span><span class="hs-identifier hs-var">Set.toList</span></span><span> </span><span class="annot"><span class="annottext">Set Language
+</span><a href="#local-6989586621679195254"><span class="hs-identifier hs-var">langs</span></a></span><span>
+</span><span id="line-45"></span><span>      </span><span id="local-6989586621679195269"><span class="annot"><span class="annottext">encodedViews :: ByteString
+</span><a href="#local-6989586621679195269"><span class="hs-identifier hs-var hs-var">encodedViews</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Encoding -&gt; ByteString) -&gt; Encoding -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set LangDepView -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-alonzo-1.15.0.0/doc/html/cardano-ledger-alonzo/src/Cardano.Ledger.Alonzo.PParams.html#encodeLangViews"><span class="hs-identifier hs-var">encodeLangViews</span></a></span><span> </span><span class="annot"><span class="annottext">Set LangDepView
+</span><a href="#local-6989586621679195261"><span class="hs-identifier hs-var">langViews</span></a></span><span>
+</span><span id="line-46"></span><span>      </span><span id="local-6989586621679195274"><span class="annot"><span class="annottext">base16String :: String
+</span><a href="#local-6989586621679195274"><span class="hs-identifier hs-var hs-var">base16String</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/base16-bytestring-1.0.2.0-9ee6195db8aa68eff84c30f8281e5a8902536668e00c8d5aecb570a4d535b748/share/doc/html/src/Data.ByteString.Base16.html#encode"><span class="hs-identifier hs-var">B16.encode</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString) -&gt; ByteString -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">LBS.toStrict</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195269"><span class="hs-identifier hs-var">encodedViews</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">String -&gt; Result -&gt; Property
+forall prop. Testable prop =&gt; String -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#counterexample"><span class="hs-identifier hs-var">counterexample</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679195274"><span class="hs-identifier hs-var">base16String</span></a></span><span> </span><span class="annot"><span class="annottext">(Result -&gt; Property) -&gt; Result -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either String ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#isCanonical"><span class="hs-identifier hs-var">isCanonical</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195269"><span class="hs-identifier hs-var">encodedViews</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-48"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Result
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#succeeded"><span class="hs-identifier hs-var">QCP.succeeded</span></a></span><span>
+</span><span id="line-49"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679195281"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679195281"><span class="hs-identifier hs-var">message</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Result
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#failed"><span class="hs-identifier hs-var">QCP.failed</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#reason"><span class="hs-identifier hs-var">QCP.reason</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679195281"><span class="hs-identifier hs-type">message</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#isCanonical"><span class="hs-identifier hs-type">isCanonical</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LBS.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span id="isCanonical"><span class="annot"><span class="annottext">isCanonical :: ByteString -&gt; Either String ()
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#isCanonical"><span class="hs-identifier hs-var hs-var">isCanonical</span></a></span></span><span> </span><span id="local-6989586621679195284"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195284"><span class="hs-identifier hs-var">bytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator (Either String ())))
+-&gt; ByteString
+-&gt; Either DecoderError (Either String ())
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator a))
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFullAnnotator"><span class="hs-identifier hs-var">decodeFullAnnotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraProtVerHigh"><span class="hs-identifier hs-var">eraProtVerHigh</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Canonicity check&quot;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall s. Decoder s (Annotator (Either String ()))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalTerm"><span class="hs-identifier hs-var">checkCanonicalTerm</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195284"><span class="hs-identifier hs-var">bytes</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679195286"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679195286"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String ()
+forall a b. a -&gt; Either a b
+</span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DecoderError -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679195286"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679195287"><span class="annot"><span class="annottext">Either String ()
+</span><a href="#local-6989586621679195287"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either String ()
+</span><a href="#local-6989586621679195287"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span id="local-6989586621679195288"><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalTerm"><span class="hs-identifier hs-type">checkCanonicalTerm</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679195288"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-58"></span><span id="checkCanonicalTerm"><span class="annot"><span class="annottext">checkCanonicalTerm :: forall s. Decoder s (Annotator (Either String ()))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalTerm"><span class="hs-identifier hs-var hs-var">checkCanonicalTerm</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679195328"><span class="annot"><span class="annottext">TokenType
+</span><a href="#local-6989586621679195328"><span class="hs-identifier hs-var">tt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s TokenType
+forall s. Decoder s TokenType
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#peekTokenType"><span class="hs-identifier hs-var">peekTokenType</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679195334"><span class="annot"><span class="annottext">t :: p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var hs-var">t</span></a></span></span><span> </span><span class="annot"><span class="annottext">p
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Either a () -&gt; f (Either a ())
+forall a. a -&gt; f a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; Either a ()
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>      </span><span id="local-6989586621679195349"><span class="annot"><span class="annottext">failNotImplemented :: Decoder s a
+</span><a href="#local-6989586621679195349"><span class="hs-identifier hs-var hs-var">failNotImplemented</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; Decoder s a
+forall a. String -&gt; Decoder s a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Decoder s a) -&gt; String -&gt; Decoder s a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;canonicity check for &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">TokenType -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="annot"><span class="annottext">TokenType
+</span><a href="#local-6989586621679195328"><span class="hs-identifier hs-var">tt</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; not implemented&quot;</span></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TokenType
+</span><a href="#local-6989586621679195328"><span class="hs-identifier hs-var">tt</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeUInt"><span class="hs-identifier hs-var">TypeUInt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Annotator (Either String ()))
+-&gt; Decoder s Integer -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Integer
+forall s. Decoder s Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeIntegerCanonical"><span class="hs-identifier hs-var">decodeIntegerCanonical</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeUInt64"><span class="hs-identifier hs-var">TypeUInt64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Annotator (Either String ()))
+-&gt; Decoder s Integer -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Integer
+forall s. Decoder s Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeIntegerCanonical"><span class="hs-identifier hs-var">decodeIntegerCanonical</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeNInt"><span class="hs-identifier hs-var">TypeNInt</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Annotator (Either String ()))
+-&gt; Decoder s Integer -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Integer
+forall s. Decoder s Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeIntegerCanonical"><span class="hs-identifier hs-var">decodeIntegerCanonical</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeNInt64"><span class="hs-identifier hs-var">TypeNInt64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Annotator (Either String ()))
+-&gt; Decoder s Integer -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Integer
+forall s. Decoder s Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeIntegerCanonical"><span class="hs-identifier hs-var">decodeIntegerCanonical</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeInteger"><span class="hs-identifier hs-var">TypeInteger</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Annotator (Either String ()))
+-&gt; Decoder s Integer -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Integer
+forall s. Decoder s Integer
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeIntegerCanonical"><span class="hs-identifier hs-var">decodeIntegerCanonical</span></a></span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeFloat16"><span class="hs-identifier hs-var">TypeFloat16</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Annotator (Either String ()))
+-&gt; Decoder s Double -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Double
+forall s. Decoder s Double
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeDoubleCanonical"><span class="hs-identifier hs-var">decodeDoubleCanonical</span></a></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeFloat32"><span class="hs-identifier hs-var">TypeFloat32</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Annotator (Either String ()))
+-&gt; Decoder s Double -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Double
+forall s. Decoder s Double
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeDoubleCanonical"><span class="hs-identifier hs-var">decodeDoubleCanonical</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeFloat64"><span class="hs-identifier hs-var">TypeFloat64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Annotator (Either String ()))
+-&gt; Decoder s Double -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Double
+forall s. Decoder s Double
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeDoubleCanonical"><span class="hs-identifier hs-var">decodeDoubleCanonical</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeBytes"><span class="hs-identifier hs-var">TypeBytes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Annotator (Either String ()))
+-&gt; Decoder s ByteString -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s ByteString
+forall s. Decoder s ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeBytesCanonical"><span class="hs-identifier hs-var">decodeBytesCanonical</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeBytesIndef"><span class="hs-identifier hs-var">TypeBytesIndef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Decoder s (Annotator (Either String ()))
+forall a. String -&gt; Decoder s a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;indefinite bytes encoding&quot;</span></span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeString"><span class="hs-identifier hs-var">TypeString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Annotator (Either String ()))
+-&gt; Decoder s Text -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Text
+forall s. Decoder s Text
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeStringCanonical"><span class="hs-identifier hs-var">decodeStringCanonical</span></a></span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeStringIndef"><span class="hs-identifier hs-var">TypeStringIndef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Decoder s (Annotator (Either String ()))
+forall a. String -&gt; Decoder s a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;indefinite string encoding&quot;</span></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeListLen"><span class="hs-identifier hs-var">TypeListLen</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Annotator (Either String ()) -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Annotator (Either String ()) -&gt; Annotator (Either String ()))
+-&gt; Decoder s (Annotator (Either String ()))
+-&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall s. Decoder s (Annotator (Either String ()))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalList"><span class="hs-identifier hs-var">checkCanonicalList</span></a></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeListLen64"><span class="hs-identifier hs-var">TypeListLen64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Annotator (Either String ()) -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Annotator (Either String ()) -&gt; Annotator (Either String ()))
+-&gt; Decoder s (Annotator (Either String ()))
+-&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall s. Decoder s (Annotator (Either String ()))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalList"><span class="hs-identifier hs-var">checkCanonicalList</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeListLenIndef"><span class="hs-identifier hs-var">TypeListLenIndef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Decoder s (Annotator (Either String ()))
+forall a. String -&gt; Decoder s a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;indefinite list encoding&quot;</span></span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeMapLen"><span class="hs-identifier hs-var">TypeMapLen</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall s. Decoder s (Annotator (Either String ()))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalMap"><span class="hs-identifier hs-var">checkCanonicalMap</span></a></span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeMapLen64"><span class="hs-identifier hs-var">TypeMapLen64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall s. Decoder s (Annotator (Either String ()))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalMap"><span class="hs-identifier hs-var">checkCanonicalMap</span></a></span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeMapLenIndef"><span class="hs-identifier hs-var">TypeMapLenIndef</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Decoder s (Annotator (Either String ()))
+forall a. String -&gt; Decoder s a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;indefinite map encoding&quot;</span></span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeTag"><span class="hs-identifier hs-var">TypeTag</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall {a}. Decoder s a
+</span><a href="#local-6989586621679195349"><span class="hs-identifier hs-var">failNotImplemented</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeTag64"><span class="hs-identifier hs-var">TypeTag64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall {a}. Decoder s a
+</span><a href="#local-6989586621679195349"><span class="hs-identifier hs-var">failNotImplemented</span></a></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeBool"><span class="hs-identifier hs-var">TypeBool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Annotator (Either String ()))
+-&gt; Decoder s Bool -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Bool
+forall s. Decoder s Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeBool"><span class="hs-identifier hs-var">decodeBool</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeNull"><span class="hs-identifier hs-var">TypeNull</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(() -&gt; Annotator (Either String ()))
+-&gt; Decoder s () -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s ()
+forall s. Decoder s ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeNull"><span class="hs-identifier hs-var">decodeNull</span></a></span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeSimple"><span class="hs-identifier hs-var">TypeSimple</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Annotator (Either String ())
+forall {f :: * -&gt; *} {p} {a}. Applicative f =&gt; p -&gt; f (Either a ())
+</span><a href="#local-6989586621679195334"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Annotator (Either String ()))
+-&gt; Decoder s Word8 -&gt; Decoder s (Annotator (Either String ()))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s Word8
+forall s. Decoder s Word8
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeSimpleCanonical"><span class="hs-identifier hs-var">decodeSimpleCanonical</span></a></span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeBreak"><span class="hs-identifier hs-var">TypeBreak</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall {a}. Decoder s a
+</span><a href="#local-6989586621679195349"><span class="hs-identifier hs-var">failNotImplemented</span></a></span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="annottext">TokenType
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Decoding.html#TypeInvalid"><span class="hs-identifier hs-var">TypeInvalid</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall {a}. Decoder s a
+</span><a href="#local-6989586621679195349"><span class="hs-identifier hs-var">failNotImplemented</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-comment">{-
+- The keys in the map must be sorted as follows:
+   -  If two keys have different lengths, the shorter one sorts earlier.
+   -  If two keys have the same length, the one with the lower value
+      in (byte-wise) lexical order sorts earlier.
+-}</span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#shortLex"><span class="hs-identifier hs-type">shortLex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-97"></span><span id="shortLex"><span class="annot"><span class="annottext">shortLex :: ByteString -&gt; ByteString -&gt; Ordering
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#shortLex"><span class="hs-identifier hs-var hs-var">shortLex</span></a></span></span><span> </span><span id="local-6989586621679195378"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195378"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679195379"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195379"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Int64 -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-identifier hs-var">compare</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Int64
+</span><span class="hs-identifier hs-var">LBS.length</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195378"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Int64
+</span><span class="hs-identifier hs-var">LBS.length</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195379"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">LT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">LT</span></span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Word8] -&gt; [Word8] -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-identifier hs-var">compare</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; [Word8]
+</span><span class="hs-identifier hs-var">LBS.unpack</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195378"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; [Word8]
+</span><span class="hs-identifier hs-var">LBS.unpack</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195379"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span id="local-6989586621679195383"><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalMap"><span class="hs-identifier hs-type">checkCanonicalMap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679195383"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-103"></span><span id="checkCanonicalMap"><span class="annot"><span class="annottext">checkCanonicalMap :: forall s. Decoder s (Annotator (Either String ()))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalMap"><span class="hs-identifier hs-var hs-var">checkCanonicalMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-104"></span><span>  </span><span id="local-6989586621679195400"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679195400"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s Int
+forall s. Decoder s Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeMapLenCanonical"><span class="hs-identifier hs-var">decodeMapLenCanonical</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679195401"><span class="annot"><span class="annottext">[Annotator (Either String ByteString)]
+</span><a href="#local-6989586621679195401"><span class="hs-identifier hs-var">keys</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; Decoder s (Annotator (Either String ByteString))
+-&gt; Decoder s [Annotator (Either String ByteString)]
+forall (m :: * -&gt; *) a. Applicative m =&gt; Int -&gt; m a -&gt; m [a]
+</span><span class="hs-identifier hs-var">replicateM</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679195400"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ByteString))
+forall s. Decoder s (Annotator (Either String ByteString))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalKVPair"><span class="hs-identifier hs-var">checkCanonicalKVPair</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679195404"><span class="hs-identifier hs-type">keys'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>      </span><span id="local-6989586621679195404"><span class="annot"><span class="annottext">keys' :: Annotator (Either String [ByteString])
+</span><a href="#local-6989586621679195404"><span class="hs-identifier hs-var hs-var">keys'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Compose Annotator (Either String) [ByteString]
+-&gt; Annotator (Either String [ByteString])
+forall {k1} {k2} (f :: k1 -&gt; *) (g :: k2 -&gt; k1) (a :: k2).
+Compose f g a -&gt; f (g a)
+</span><span class="hs-identifier hs-var">getCompose</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Annotator (Either String ByteString)
+ -&gt; Compose Annotator (Either String) ByteString)
+-&gt; [Annotator (Either String ByteString)]
+-&gt; Compose Annotator (Either String) [ByteString]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><span class="hs-identifier hs-var">traverse</span></span><span> </span><span class="annot"><span class="annottext">Annotator (Either String ByteString)
+-&gt; Compose Annotator (Either String) ByteString
+forall {k} {k1} (f :: k -&gt; *) (g :: k1 -&gt; k) (a :: k1).
+f (g a) -&gt; Compose f g a
+</span><span class="hs-identifier hs-var">Compose</span></span><span> </span><span class="annot"><span class="annottext">[Annotator (Either String ByteString)]
+</span><a href="#local-6989586621679195401"><span class="hs-identifier hs-var">keys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><span class="annottext">Annotator (Either String ())
+-&gt; Decoder s (Annotator (Either String ()))
+forall a. a -&gt; Decoder s a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Annotator (Either String ())
+ -&gt; Decoder s (Annotator (Either String ())))
+-&gt; Annotator (Either String ())
+-&gt; Decoder s (Annotator (Either String ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><span class="annottext">(FullByteString -&gt; Either String ())
+-&gt; Annotator (Either String ())
+forall a. (FullByteString -&gt; a) -&gt; Annotator a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-var">Annotator</span></a></span><span> </span><span class="annot"><span class="annottext">((FullByteString -&gt; Either String ())
+ -&gt; Annotator (Either String ()))
+-&gt; (FullByteString -&gt; Either String ())
+-&gt; Annotator (Either String ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679195409"><span class="annot"><span class="annottext">FullByteString
+</span><a href="#local-6989586621679195409"><span class="hs-identifier hs-var">fullBytes</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-110"></span><span>      </span><span id="local-6989586621679195410"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679195410"><span class="hs-identifier hs-var">ks</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Annotator (Either String [ByteString])
+-&gt; FullByteString -&gt; Either String [ByteString]
+forall a. Annotator a -&gt; FullByteString -&gt; a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#runAnnotator"><span class="hs-identifier hs-var">runAnnotator</span></a></span><span> </span><span class="annot"><span class="annottext">Annotator (Either String [ByteString])
+</span><a href="#local-6989586621679195404"><span class="hs-identifier hs-var">keys'</span></a></span><span> </span><span class="annot"><span class="annottext">FullByteString
+</span><a href="#local-6989586621679195409"><span class="hs-identifier hs-var">fullBytes</span></a></span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; Either String () -&gt; Either String ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><span class="hs-identifier hs-var">unless</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[ByteString] -&gt; Bool
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#isSorted"><span class="hs-identifier hs-var">isSorted</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679195410"><span class="hs-identifier hs-var">ks</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Either String ()
+forall a b. a -&gt; Either a b
+</span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;map keys out of order&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span id="local-6989586621679195414"><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalList"><span class="hs-identifier hs-type">checkCanonicalList</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679195414"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-114"></span><span id="checkCanonicalList"><span class="annot"><span class="annottext">checkCanonicalList :: forall s. Decoder s (Annotator (Either String ()))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalList"><span class="hs-identifier hs-var hs-var">checkCanonicalList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-115"></span><span>  </span><span id="local-6989586621679195427"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679195427"><span class="hs-identifier hs-var">len</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s Int
+forall s. Decoder s Int
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeListLenCanonical"><span class="hs-identifier hs-var">decodeListLenCanonical</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621679195428"><span class="annot"><span class="annottext">[Annotator (Either String ())]
+</span><a href="#local-6989586621679195428"><span class="hs-identifier hs-var">checkedTerms</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; Decoder s (Annotator (Either String ()))
+-&gt; Decoder s [Annotator (Either String ())]
+forall (m :: * -&gt; *) a. Applicative m =&gt; Int -&gt; m a -&gt; m [a]
+</span><span class="hs-identifier hs-var">replicateM</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679195427"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall s. Decoder s (Annotator (Either String ()))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalTerm"><span class="hs-identifier hs-var">checkCanonicalTerm</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span class="annot"><span class="annottext">Annotator (Either String ())
+-&gt; Decoder s (Annotator (Either String ()))
+forall a. a -&gt; Decoder s a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Annotator (Either String ())
+ -&gt; Decoder s (Annotator (Either String ())))
+-&gt; Annotator (Either String ())
+-&gt; Decoder s (Annotator (Either String ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Either String [()] -&gt; Either String ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><span class="hs-identifier hs-var">void</span></span><span> </span><span class="annot"><span class="annottext">(Either String [()] -&gt; Either String ())
+-&gt; Annotator (Either String [()]) -&gt; Annotator (Either String ())
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Compose Annotator (Either String) [()]
+-&gt; Annotator (Either String [()])
+forall {k1} {k2} (f :: k1 -&gt; *) (g :: k2 -&gt; k1) (a :: k2).
+Compose f g a -&gt; f (g a)
+</span><span class="hs-identifier hs-var">getCompose</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Annotator (Either String ())
+ -&gt; Compose Annotator (Either String) ())
+-&gt; [Annotator (Either String ())]
+-&gt; Compose Annotator (Either String) [()]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><span class="hs-identifier hs-var">traverse</span></span><span> </span><span class="annot"><span class="annottext">Annotator (Either String ())
+-&gt; Compose Annotator (Either String) ()
+forall {k} {k1} (f :: k -&gt; *) (g :: k1 -&gt; k) (a :: k1).
+f (g a) -&gt; Compose f g a
+</span><span class="hs-identifier hs-var">Compose</span></span><span> </span><span class="annot"><span class="annottext">[Annotator (Either String ())]
+</span><a href="#local-6989586621679195428"><span class="hs-identifier hs-var">checkedTerms</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#isSorted"><span class="hs-identifier hs-type">isSorted</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-120"></span><span id="isSorted"><span class="annot"><span class="annottext">isSorted :: [ByteString] -&gt; Bool
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#isSorted"><span class="hs-identifier hs-var hs-var">isSorted</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#isSorted"><span class="hs-identifier hs-var">isSorted</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span>
+</span><span id="line-122"></span><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#isSorted"><span class="hs-identifier hs-var">isSorted</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679195430"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195430"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679195431"><span class="annot"><span class="annottext">xs :: [ByteString]
+</span><a href="#local-6989586621679195431"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679195432"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195432"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Ordering
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#shortLex"><span class="hs-identifier hs-var">shortLex</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195430"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679195432"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-123"></span><span>  </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; Bool
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#isSorted"><span class="hs-identifier hs-var">isSorted</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679195431"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span id="local-6989586621679195165"><span class="annot"><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalKVPair"><span class="hs-identifier hs-type">checkCanonicalKVPair</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679195165"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-127"></span><span id="checkCanonicalKVPair"><span class="annot"><span class="annottext">checkCanonicalKVPair :: forall s. Decoder s (Annotator (Either String ByteString))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalKVPair"><span class="hs-identifier hs-var hs-var">checkCanonicalKVPair</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679195441"><span class="annot"><span class="annottext">Annotator (Either String ())
+</span><a href="#local-6989586621679195441"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679195442"><span class="annot"><span class="annottext">Annotator ByteString
+</span><a href="#local-6989586621679195442"><span class="hs-identifier hs-var">keyBytes</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+-&gt; Decoder s (Annotator (Either String ()), Annotator ByteString)
+forall s a. Decoder s a -&gt; Decoder s (a, Annotator ByteString)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#withSlice"><span class="hs-identifier hs-var">withSlice</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall s. Decoder s (Annotator (Either String ()))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalTerm"><span class="hs-identifier hs-var">checkCanonicalTerm</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621679195443"><span class="annot"><span class="annottext">Annotator (Either String ())
+</span><a href="#local-6989586621679195443"><span class="hs-identifier hs-var">value</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Either String ()))
+forall s. Decoder s (Annotator (Either String ()))
+</span><a href="Test.Cardano.Ledger.Alonzo.Binary.CanonicalSpec.html#checkCanonicalTerm"><span class="hs-identifier hs-var">checkCanonicalTerm</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><span class="annottext">Annotator (Either String ByteString)
+-&gt; Decoder s (Annotator (Either String ByteString))
+forall a. a -&gt; Decoder s a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Annotator (Either String ByteString)
+ -&gt; Decoder s (Annotator (Either String ByteString)))
+-&gt; Annotator (Either String ByteString)
+-&gt; Decoder s (Annotator (Either String ByteString))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Compose Annotator (Either String) ByteString
+-&gt; Annotator (Either String ByteString)
+forall {k1} {k2} (f :: k1 -&gt; *) (g :: k2 -&gt; k1) (a :: k2).
+Compose f g a -&gt; f (g a)
+</span><span class="hs-identifier hs-var">getCompose</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Annotator (Either String ())
+-&gt; Compose Annotator (Either String) ()
+forall {k} {k1} (f :: k -&gt; *) (g :: k1 -&gt; k) (a :: k1).
+f (g a) -&gt; Compose f g a
+</span><span class="hs-identifier hs-var">Compose</span></span><span> </span><span class="annot"><span class="annottext">Annotator (Either String ())
+</span><a href="#local-6989586621679195441"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">Compose Annotator (Either String) ()
+-&gt; Compose Annotator (Either String) ()
+-&gt; Compose Annotator (Either String) ()
+forall a b.
+Compose Annotator (Either String) a
+-&gt; Compose Annotator (Either String) b
+-&gt; Compose Annotator (Either String) b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><span class="hs-operator hs-var">*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Annotator (Either String ())
+-&gt; Compose Annotator (Either String) ()
+forall {k} {k1} (f :: k -&gt; *) (g :: k1 -&gt; k) (a :: k1).
+f (g a) -&gt; Compose f g a
+</span><span class="hs-identifier hs-var">Compose</span></span><span> </span><span class="annot"><span class="annottext">Annotator (Either String ())
+</span><a href="#local-6989586621679195443"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="annot"><span class="annottext">Compose Annotator (Either String) ()
+-&gt; Compose Annotator (Either String) ByteString
+-&gt; Compose Annotator (Either String) ByteString
+forall a b.
+Compose Annotator (Either String) a
+-&gt; Compose Annotator (Either String) b
+-&gt; Compose Annotator (Either String) b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><span class="hs-operator hs-var">*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Annotator (Either String ByteString)
+-&gt; Compose Annotator (Either String) ByteString
+forall {k} {k1} (f :: k -&gt; *) (g :: k1 -&gt; k) (a :: k1).
+f (g a) -&gt; Compose f g a
+</span><span class="hs-identifier hs-var">Compose</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Either String ByteString
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Either String ByteString)
+-&gt; Annotator ByteString -&gt; Annotator (Either String ByteString)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Annotator ByteString
+</span><a href="#local-6989586621679195442"><span class="hs-identifier hs-var">keyBytes</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span></pre></body></html>

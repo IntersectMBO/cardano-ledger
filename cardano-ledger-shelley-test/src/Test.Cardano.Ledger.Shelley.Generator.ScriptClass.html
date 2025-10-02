@@ -1,0 +1,864 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveFunctor #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE UndecidableSuperClasses #-}</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Generator.ScriptClass</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier">ScriptClass</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#Quantifier"><span class="hs-identifier">Quantifier</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#exponential"><span class="hs-identifier">exponential</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#anyOf"><span class="hs-identifier">anyOf</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#allOf"><span class="hs-identifier">allOf</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mOf"><span class="hs-identifier">mOf</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#keyPairs"><span class="hs-identifier">keyPairs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkPayScriptHashMap"><span class="hs-identifier">mkPayScriptHashMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkStakeScriptHashMap"><span class="hs-identifier">mkStakeScriptHashMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptsFromKeyPair"><span class="hs-identifier">mkScriptsFromKeyPair</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkKeyPairs"><span class="hs-identifier">mkKeyPairs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScripts"><span class="hs-identifier">mkScripts</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptCombinations"><span class="hs-identifier">mkScriptCombinations</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#combinedScripts"><span class="hs-identifier">combinedScripts</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#baseScripts"><span class="hs-identifier">baseScripts</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombinations"><span class="hs-identifier">scriptKeyCombinations</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombination"><span class="hs-identifier">scriptKeyCombination</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier">asWitness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.List</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">permutations</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.List</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">List</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Tuple</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">swap</span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html"><span class="hs-identifier">Test.Cardano.Ledger.Core.KeyPair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier">KeyPair</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPairs"><span class="hs-identifier">KeyPairs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#vKey"><span class="hs-identifier">vKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Constants</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier">Constants</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Utils.html"><span class="hs-identifier">Test.Cardano.Ledger.Shelley.Utils</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Arbitrary.html#RawSeed"><span class="hs-identifier">RawSeed</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Utils.html#mkKeyPair"><span class="hs-identifier">mkKeyPair</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.html"><span class="hs-identifier">Test.QuickCheck</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier">Gen</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.html"><span class="hs-identifier">Test.QuickCheck</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">QC</span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">{------------------------------------------------------------------------------
+  ScriptClass defines the operations that enable an Era's scripts to
+  be adapated to property tests. This is a key component of the EraGen class.
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="ScriptClass"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-var">ScriptClass</span></a></span></span><span> </span><span id="local-6989586621679555718"><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>  </span><span id="basescript"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#basescript"><span class="hs-identifier hs-type">basescript</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span id="isKey"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#isKey"><span class="hs-identifier hs-type">isKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>  </span><span id="isOnePhase"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#isOnePhase"><span class="hs-identifier hs-type">isOnePhase</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679555887"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#isOnePhase"><span class="hs-identifier hs-var hs-var">isOnePhase</span></a></span><span> </span><span id="local-6989586621679555888"><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555888"><span class="hs-identifier hs-var">_proxy</span></a></span></span><span> </span><span class="annot"><span class="annottext">Script era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span></span><span> </span><span class="hs-comment">-- Many Eras have only OnePhase Scripts.</span><span>
+</span><span id="line-59"></span><span>  </span><span id="quantify"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#quantify"><span class="hs-identifier hs-type">quantify</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#Quantifier"><span class="hs-identifier hs-type">Quantifier</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>  </span><span id="unQuantify"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#unQuantify"><span class="hs-identifier hs-type">unQuantify</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#Quantifier"><span class="hs-identifier hs-type">Quantifier</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555718"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-comment">{------------------------------------------------------------------------------
+  Abstracts the quantifier structure of (Script era)
+  used in the 'quantify' and 'unQuantify' methods of ScriptClass.
+ -----------------------------------------------------------------------------}</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">data</span><span> </span><span id="Quantifier"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#Quantifier"><span class="hs-identifier hs-var">Quantifier</span></a></span></span><span> </span><span id="local-6989586621679555734"><span class="annot"><a href="#local-6989586621679555734"><span class="hs-identifier hs-type">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AllOf"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#AllOf"><span class="hs-identifier hs-var">AllOf</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679555734"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="AnyOf"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#AnyOf"><span class="hs-identifier hs-var">AnyOf</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679555734"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="MOf"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#MOf"><span class="hs-identifier hs-var">MOf</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679555734"><span class="hs-identifier hs-type">t</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Leaf"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#Leaf"><span class="hs-identifier hs-var">Leaf</span></a></span></span><span> </span><span class="annot"><a href="#local-6989586621679555734"><span class="hs-identifier hs-type">t</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679555896"><span id="local-6989586621679555901"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; Quantifier a -&gt; Quantifier b)
+-&gt; (forall a b. a -&gt; Quantifier b -&gt; Quantifier a)
+-&gt; Functor Quantifier
+forall a b. a -&gt; Quantifier b -&gt; Quantifier a
+forall a b. (a -&gt; b) -&gt; Quantifier a -&gt; Quantifier b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; Quantifier a -&gt; Quantifier b
+fmap :: forall a b. (a -&gt; b) -&gt; Quantifier a -&gt; Quantifier b
+$c&lt;$ :: forall a b. a -&gt; Quantifier b -&gt; Quantifier a
+&lt;$ :: forall a b. a -&gt; Quantifier b -&gt; Quantifier a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#anyOf"><span class="hs-identifier hs-type">anyOf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555729"><span class="annot"><a href="#local-6989586621679555729"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555729"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679555729"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555729"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555729"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-71"></span><span id="anyOf"><span class="annot"><span class="annottext">anyOf :: forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#anyOf"><span class="hs-identifier hs-var hs-var">anyOf</span></a></span></span><span> </span><span id="local-6989586621679555909"><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555909"><span class="hs-identifier hs-var">prox</span></a></span></span><span> </span><span id="local-6989586621679555910"><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555910"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Quantifier (Script era) -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Quantifier (Script era) -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#unQuantify"><span class="hs-identifier hs-var">unQuantify</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555909"><span class="hs-identifier hs-var">prox</span></a></span><span> </span><span class="annot"><span class="annottext">(Quantifier (Script era) -&gt; Script era)
+-&gt; Quantifier (Script era) -&gt; Script era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Script era] -&gt; Quantifier (Script era)
+forall t. [t] -&gt; Quantifier t
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#AnyOf"><span class="hs-identifier hs-var">AnyOf</span></a></span><span> </span><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555910"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#allOf"><span class="hs-identifier hs-type">allOf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555911"><span class="annot"><a href="#local-6989586621679555911"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555911"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679555911"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555911"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555911"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-74"></span><span id="allOf"><span class="annot"><span class="annottext">allOf :: forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#allOf"><span class="hs-identifier hs-var hs-var">allOf</span></a></span></span><span> </span><span id="local-6989586621679555914"><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555914"><span class="hs-identifier hs-var">prox</span></a></span></span><span> </span><span id="local-6989586621679555915"><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555915"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Quantifier (Script era) -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Quantifier (Script era) -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#unQuantify"><span class="hs-identifier hs-var">unQuantify</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555914"><span class="hs-identifier hs-var">prox</span></a></span><span> </span><span class="annot"><span class="annottext">(Quantifier (Script era) -&gt; Script era)
+-&gt; Quantifier (Script era) -&gt; Script era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Script era] -&gt; Quantifier (Script era)
+forall t. [t] -&gt; Quantifier t
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#AllOf"><span class="hs-identifier hs-var">AllOf</span></a></span><span> </span><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555915"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mOf"><span class="hs-identifier hs-type">mOf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555736"><span class="annot"><a href="#local-6989586621679555736"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555736"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679555736"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555736"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555736"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-77"></span><span id="mOf"><span class="annot"><span class="annottext">mOf :: forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mOf"><span class="hs-identifier hs-var hs-var">mOf</span></a></span></span><span> </span><span id="local-6989586621679555918"><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555918"><span class="hs-identifier hs-var">prox</span></a></span></span><span> </span><span id="local-6989586621679555919"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679555919"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679555920"><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555920"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Quantifier (Script era) -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Quantifier (Script era) -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#unQuantify"><span class="hs-identifier hs-var">unQuantify</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555918"><span class="hs-identifier hs-var">prox</span></a></span><span> </span><span class="annot"><span class="annottext">(Quantifier (Script era) -&gt; Script era)
+-&gt; Quantifier (Script era) -&gt; Script era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; [Script era] -&gt; Quantifier (Script era)
+forall t. Int -&gt; [t] -&gt; Quantifier t
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#MOf"><span class="hs-identifier hs-var">MOf</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679555919"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555920"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-comment">{------------------------------------------------------------------------------
+  Compute lists of keyHashes
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><span class="hs-comment">-- | return the first sublist that meets the predicate p.</span></span><span>
+</span><span id="line-84"></span><span id="local-6989586621679555738"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#getFirst"><span class="hs-identifier hs-type">getFirst</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679555738"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679555738"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679555738"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-85"></span><span id="getFirst"><span class="annot"><span class="annottext">getFirst :: forall a. ([a] -&gt; Bool) -&gt; [[a]] -&gt; [a]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#getFirst"><span class="hs-identifier hs-var hs-var">getFirst</span></a></span></span><span> </span><span id="local-6989586621679555922"><span class="annot"><span class="annottext">[a] -&gt; Bool
+</span><a href="#local-6989586621679555922"><span class="hs-identifier hs-var">_p</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#getFirst"><span class="hs-identifier hs-var">getFirst</span></a></span><span> </span><span id="local-6989586621679555923"><span class="annot"><span class="annottext">[a] -&gt; Bool
+</span><a href="#local-6989586621679555923"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679555924"><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679555924"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679555925"><span class="annot"><span class="annottext">[[a]]
+</span><a href="#local-6989586621679555925"><span class="hs-identifier hs-var">xss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; Bool
+</span><a href="#local-6989586621679555923"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679555924"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">[a]
+</span><a href="#local-6989586621679555924"><span class="hs-identifier hs-var">xs</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">([a] -&gt; Bool) -&gt; [[a]] -&gt; [a]
+forall a. ([a] -&gt; Bool) -&gt; [[a]] -&gt; [a]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#getFirst"><span class="hs-identifier hs-var">getFirst</span></a></span><span> </span><span class="annot"><span class="annottext">[a] -&gt; Bool
+</span><a href="#local-6989586621679555923"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">[[a]]
+</span><a href="#local-6989586621679555925"><span class="hs-identifier hs-var">xss</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- | Produce a valid list of key hashes that appear in a Script.</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- Note: in the case of AnyOf, we just take the first script in the expression.</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- This only works if we generate AnyOf scripts such that all script options</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- are valid scripts (that is, valid in the context of a transaction, at generation time</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- and execution/spend time).</span><span>
+</span><span id="line-93"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombination"><span class="hs-identifier hs-type">scriptKeyCombination</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555741"><span class="annot"><a href="#local-6989586621679555741"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555741"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679555741"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555741"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-99"></span><span id="scriptKeyCombination"><span class="annot"><span class="annottext">scriptKeyCombination :: forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; [KeyHash 'Witness]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombination"><span class="hs-identifier hs-var hs-var">scriptKeyCombination</span></a></span></span><span> </span><span id="local-6989586621679555935"><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555935"><span class="hs-identifier hs-var">prox</span></a></span></span><span> </span><span id="local-6989586621679555936"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679555936"><span class="hs-identifier hs-var">script</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Script era -&gt; Quantifier (Script era)
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; Quantifier (Script era)
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#quantify"><span class="hs-identifier hs-var">quantify</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555935"><span class="hs-identifier hs-var">prox</span></a></span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679555936"><span class="hs-identifier hs-var">script</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#AllOf"><span class="hs-identifier hs-type">AllOf</span></a></span><span> </span><span id="local-6989586621679555937"><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555937"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Script era -&gt; [KeyHash 'Witness])
+-&gt; [Script era] -&gt; [KeyHash 'Witness]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy era -&gt; Script era -&gt; [KeyHash 'Witness]
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; [KeyHash 'Witness]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombination"><span class="hs-identifier hs-var">scriptKeyCombination</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555935"><span class="hs-identifier hs-var">prox</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555937"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#AnyOf"><span class="hs-identifier hs-type">AnyOf</span></a></span><span> </span><span id="local-6989586621679555939"><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555939"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">([KeyHash 'Witness] -&gt; Bool)
+-&gt; [[KeyHash 'Witness]] -&gt; [KeyHash 'Witness]
+forall a. ([a] -&gt; Bool) -&gt; [[a]] -&gt; [a]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#getFirst"><span class="hs-identifier hs-var">getFirst</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool)
+-&gt; ([KeyHash 'Witness] -&gt; Bool) -&gt; [KeyHash 'Witness] -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[KeyHash 'Witness] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Script era -&gt; [KeyHash 'Witness])
+-&gt; [Script era] -&gt; [[KeyHash 'Witness]]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy era -&gt; Script era -&gt; [KeyHash 'Witness]
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; [KeyHash 'Witness]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombination"><span class="hs-identifier hs-var">scriptKeyCombination</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555935"><span class="hs-identifier hs-var">prox</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555939"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#MOf"><span class="hs-identifier hs-type">MOf</span></a></span><span> </span><span id="local-6989586621679555943"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679555943"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679555944"><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555944"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Script era -&gt; [KeyHash 'Witness])
+-&gt; [Script era] -&gt; [KeyHash 'Witness]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy era -&gt; Script era -&gt; [KeyHash 'Witness]
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; [KeyHash 'Witness]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombination"><span class="hs-identifier hs-var">scriptKeyCombination</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555935"><span class="hs-identifier hs-var">prox</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; [Script era] -&gt; [Script era]
+forall a. Int -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">take</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679555943"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555944"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#Leaf"><span class="hs-identifier hs-type">Leaf</span></a></span><span> </span><span id="local-6989586621679555946"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679555946"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Script era -&gt; Maybe (KeyHash 'Witness)
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; Maybe (KeyHash 'Witness)
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#isKey"><span class="hs-identifier hs-var">isKey</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555935"><span class="hs-identifier hs-var">prox</span></a></span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679555946"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-104"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679555947"><span class="annot"><span class="annottext">KeyHash 'Witness
+</span><a href="#local-6989586621679555947"><span class="hs-identifier hs-var">hk</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">KeyHash 'Witness
+</span><a href="#local-6989586621679555947"><span class="hs-identifier hs-var">hk</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><span class="annottext">Maybe (KeyHash 'Witness)
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- | Return all valid lists of KeyHashes that appear in a Script</span><span>
+</span><span id="line-108"></span><span class="hs-comment">--   used in testing.</span><span>
+</span><span id="line-109"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombinations"><span class="hs-identifier hs-type">scriptKeyCombinations</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555756"><span class="annot"><a href="#local-6989586621679555756"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555756"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679555756"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-113"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555756"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-115"></span><span id="scriptKeyCombinations"><span class="annot"><span class="annottext">scriptKeyCombinations :: forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; [[KeyHash 'Witness]]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombinations"><span class="hs-identifier hs-var hs-var">scriptKeyCombinations</span></a></span></span><span> </span><span id="local-6989586621679555959"><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555959"><span class="hs-identifier hs-var">prox</span></a></span></span><span> </span><span id="local-6989586621679555960"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679555960"><span class="hs-identifier hs-var">script</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Script era -&gt; Quantifier (Script era)
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; Quantifier (Script era)
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#quantify"><span class="hs-identifier hs-var">quantify</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555959"><span class="hs-identifier hs-var">prox</span></a></span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679555960"><span class="hs-identifier hs-var">script</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#AllOf"><span class="hs-identifier hs-type">AllOf</span></a></span><span> </span><span id="local-6989586621679555961"><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555961"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">[[KeyHash 'Witness]] -&gt; [KeyHash 'Witness]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">concat</span></span><span> </span><span class="annot"><span class="annottext">([[KeyHash 'Witness]] -&gt; [KeyHash 'Witness])
+-&gt; [[KeyHash 'Witness]] -&gt; [KeyHash 'Witness]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Script era -&gt; [[KeyHash 'Witness]])
+-&gt; [Script era] -&gt; [[KeyHash 'Witness]]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy era -&gt; Script era -&gt; [[KeyHash 'Witness]]
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; [[KeyHash 'Witness]]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombinations"><span class="hs-identifier hs-var">scriptKeyCombinations</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555959"><span class="hs-identifier hs-var">prox</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555961"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-117"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#AnyOf"><span class="hs-identifier hs-type">AnyOf</span></a></span><span> </span><span id="local-6989586621679555963"><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555963"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Script era -&gt; [[KeyHash 'Witness]])
+-&gt; [Script era] -&gt; [[KeyHash 'Witness]]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy era -&gt; Script era -&gt; [[KeyHash 'Witness]]
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; [[KeyHash 'Witness]]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombinations"><span class="hs-identifier hs-var">scriptKeyCombinations</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555959"><span class="hs-identifier hs-var">prox</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555963"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#MOf"><span class="hs-identifier hs-type">MOf</span></a></span><span> </span><span id="local-6989586621679555964"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679555964"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679555965"><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555965"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679555966"><span class="annot"><span class="annottext">perms :: [[Script era]]
+</span><a href="#local-6989586621679555966"><span class="hs-identifier hs-var hs-var">perms</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([Script era] -&gt; [Script era]) -&gt; [[Script era]] -&gt; [[Script era]]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; [Script era] -&gt; [Script era]
+forall a. Int -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">take</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679555964"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([[Script era]] -&gt; [[Script era]])
+-&gt; [[Script era]] -&gt; [[Script era]]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Script era] -&gt; [[Script era]]
+forall a. [a] -&gt; [[a]]
+</span><span class="hs-identifier hs-var">permutations</span></span><span> </span><span class="annot"><span class="annottext">[Script era]
+</span><a href="#local-6989586621679555965"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-120"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">([Script era] -&gt; [KeyHash 'Witness])
+-&gt; [[Script era]] -&gt; [[KeyHash 'Witness]]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[[KeyHash 'Witness]] -&gt; [KeyHash 'Witness]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">concat</span></span><span> </span><span class="annot"><span class="annottext">([[KeyHash 'Witness]] -&gt; [KeyHash 'Witness])
+-&gt; ([Script era] -&gt; [[KeyHash 'Witness]])
+-&gt; [Script era]
+-&gt; [KeyHash 'Witness]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Script era -&gt; [[KeyHash 'Witness]])
+-&gt; [Script era] -&gt; [[KeyHash 'Witness]]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy era -&gt; Script era -&gt; [[KeyHash 'Witness]]
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; [[KeyHash 'Witness]]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#scriptKeyCombinations"><span class="hs-identifier hs-var">scriptKeyCombinations</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555959"><span class="hs-identifier hs-var">prox</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[[Script era]]
+</span><a href="#local-6989586621679555966"><span class="hs-identifier hs-var">perms</span></a></span><span>
+</span><span id="line-121"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#Leaf"><span class="hs-identifier hs-type">Leaf</span></a></span><span> </span><span id="local-6989586621679555967"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679555967"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Script era -&gt; Maybe (KeyHash 'Witness)
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Script era -&gt; Maybe (KeyHash 'Witness)
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#isKey"><span class="hs-identifier hs-var">isKey</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy era
+</span><a href="#local-6989586621679555959"><span class="hs-identifier hs-var">prox</span></a></span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679555967"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-122"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679555968"><span class="annot"><span class="annottext">KeyHash 'Witness
+</span><a href="#local-6989586621679555968"><span class="hs-identifier hs-var">hk</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><span class="annottext">KeyHash 'Witness
+</span><a href="#local-6989586621679555968"><span class="hs-identifier hs-var">hk</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><span class="annottext">Maybe (KeyHash 'Witness)
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- | Make a simple (non-combined, ie NO quantifer like All, Any, MofN, etc.) script.</span><span>
+</span><span id="line-126"></span><span class="hs-comment">--   'basescript' is a method of ScriptClass, and is different for every Era.</span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptFromKey"><span class="hs-identifier hs-type">mkScriptFromKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555761"><span class="annot"><a href="#local-6989586621679555761"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555761"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555761"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-128"></span><span id="mkScriptFromKey"><span class="annot"><span class="annottext">mkScriptFromKey :: forall era. ScriptClass era =&gt; KeyPair 'Witness -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptFromKey"><span class="hs-identifier hs-var hs-var">mkScriptFromKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; KeyHash 'Witness -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; KeyHash 'Witness -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#basescript"><span class="hs-identifier hs-var">basescript</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy era
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="#local-6989586621679555761"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(KeyHash 'Witness -&gt; Script era)
+-&gt; (KeyPair 'Witness -&gt; KeyHash 'Witness)
+-&gt; KeyPair 'Witness
+-&gt; Script era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">VKey 'Witness -&gt; KeyHash 'Witness
+forall (kd :: KeyRole). VKey kd -&gt; KeyHash kd
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#hashKey"><span class="hs-identifier hs-var">hashKey</span></a></span><span> </span><span class="annot"><span class="annottext">(VKey 'Witness -&gt; KeyHash 'Witness)
+-&gt; (KeyPair 'Witness -&gt; VKey 'Witness)
+-&gt; KeyPair 'Witness
+-&gt; KeyHash 'Witness
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">KeyPair 'Witness -&gt; VKey 'Witness
+forall (kd :: KeyRole). KeyPair kd -&gt; VKey kd
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#vKey"><span class="hs-identifier hs-var">vKey</span></a></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptsFromKeyPair"><span class="hs-identifier hs-type">mkScriptsFromKeyPair</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555770"><span class="annot"><a href="#local-6989586621679555770"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555770"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Payment"><span class="hs-identifier hs-type">Payment</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555770"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555770"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span id="mkScriptsFromKeyPair"><span class="annot"><span class="annottext">mkScriptsFromKeyPair :: forall era.
+ScriptClass era =&gt;
+(KeyPair 'Payment, KeyPair 'Staking) -&gt; (Script era, Script era)
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptsFromKeyPair"><span class="hs-identifier hs-var hs-var">mkScriptsFromKeyPair</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679555980"><span class="annot"><span class="annottext">KeyPair 'Payment
+</span><a href="#local-6989586621679555980"><span class="hs-identifier hs-var">k0</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679555981"><span class="annot"><span class="annottext">KeyPair 'Staking
+</span><a href="#local-6989586621679555981"><span class="hs-identifier hs-var">k1</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. ScriptClass era =&gt; KeyPair 'Witness -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptFromKey"><span class="hs-identifier hs-var">mkScriptFromKey</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555770"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyPair 'Witness -&gt; Script era) -&gt; KeyPair 'Witness -&gt; Script era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">KeyPair 'Payment -&gt; KeyPair 'Witness
+forall (a :: KeyRole -&gt; *) (r :: KeyRole).
+HasKeyRole a =&gt;
+a r -&gt; a 'Witness
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier hs-var">asWitness</span></a></span><span> </span><span class="annot"><span class="annottext">KeyPair 'Payment
+</span><a href="#local-6989586621679555980"><span class="hs-identifier hs-var">k0</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall era. ScriptClass era =&gt; KeyPair 'Witness -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptFromKey"><span class="hs-identifier hs-var">mkScriptFromKey</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555770"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyPair 'Witness -&gt; Script era) -&gt; KeyPair 'Witness -&gt; Script era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">KeyPair 'Staking -&gt; KeyPair 'Witness
+forall (a :: KeyRole -&gt; *) (r :: KeyRole).
+HasKeyRole a =&gt;
+a r -&gt; a 'Witness
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier hs-var">asWitness</span></a></span><span> </span><span class="annot"><span class="annottext">KeyPair 'Staking
+</span><a href="#local-6989586621679555981"><span class="hs-identifier hs-var">k1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="annot"><span class="hs-comment">-- | make Scripts based on the given key pairs</span></span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScripts"><span class="hs-identifier hs-type">mkScripts</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555777"><span class="annot"><a href="#local-6989586621679555777"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-141"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555777"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-142"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPairs"><span class="hs-identifier hs-type">KeyPairs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555777"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555777"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-144"></span><span id="mkScripts"><span class="annot"><span class="annottext">mkScripts :: forall era.
+ScriptClass era =&gt;
+KeyPairs -&gt; [(Script era, Script era)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScripts"><span class="hs-identifier hs-var hs-var">mkScripts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((KeyPair 'Payment, KeyPair 'Staking) -&gt; (Script era, Script era))
+-&gt; KeyPairs -&gt; [(Script era, Script era)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era.
+ScriptClass era =&gt;
+(KeyPair 'Payment, KeyPair 'Staking) -&gt; (Script era, Script era)
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptsFromKeyPair"><span class="hs-identifier hs-var">mkScriptsFromKeyPair</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555777"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkPayScriptHashMap"><span class="hs-identifier hs-type">mkPayScriptHashMap</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555780"><span class="annot"><a href="#local-6989586621679555780"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-148"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555780"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555780"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555780"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555780"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555780"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span id="mkPayScriptHashMap"><span class="annot"><span class="annottext">mkPayScriptHashMap :: forall era.
+ScriptClass era =&gt;
+[(Script era, Script era)]
+-&gt; Map ScriptHash (Script era, Script era)
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkPayScriptHashMap"><span class="hs-identifier hs-var hs-var">mkPayScriptHashMap</span></a></span></span><span> </span><span id="local-6989586621679555990"><span class="annot"><span class="annottext">[(Script era, Script era)]
+</span><a href="#local-6989586621679555990"><span class="hs-identifier hs-var">scripts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-152"></span><span>  </span><span class="annot"><span class="annottext">[(ScriptHash, (Script era, Script era))]
+-&gt; Map ScriptHash (Script era, Script era)
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Script era, Script era) -&gt; (ScriptHash, (Script era, Script era))
+</span><a href="#local-6989586621679555992"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">((Script era, Script era)
+ -&gt; (ScriptHash, (Script era, Script era)))
+-&gt; [(Script era, Script era)]
+-&gt; [(ScriptHash, (Script era, Script era))]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[(Script era, Script era)]
+</span><a href="#local-6989586621679555990"><span class="hs-identifier hs-var">scripts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-154"></span><span>    </span><span id="local-6989586621679555992"><span class="annot"><span class="annottext">f :: (Script era, Script era) -&gt; (ScriptHash, (Script era, Script era))
+</span><a href="#local-6989586621679555992"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679555994"><span class="annot"><span class="annottext">script :: (Script era, Script era)
+</span><a href="#local-6989586621679555994"><span class="hs-identifier hs-var">script</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679555995"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679555995"><span class="hs-identifier hs-var">pay</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679555996"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679555996"><span class="hs-identifier hs-var">_ssStake</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">hashScript</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555780"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679555995"><span class="hs-identifier hs-var">pay</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Script era, Script era)
+</span><a href="#local-6989586621679555994"><span class="hs-identifier hs-var">script</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="annot"><span class="hs-comment">-- | Generate a mapping from stake script hash to script pair.</span></span><span>
+</span><span id="line-157"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkStakeScriptHashMap"><span class="hs-identifier hs-type">mkStakeScriptHashMap</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555998"><span class="annot"><a href="#local-6989586621679555998"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-159"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555998"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555998"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555998"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555998"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555998"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span id="mkStakeScriptHashMap"><span class="annot"><span class="annottext">mkStakeScriptHashMap :: forall era.
+ScriptClass era =&gt;
+[(Script era, Script era)]
+-&gt; Map ScriptHash (Script era, Script era)
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkStakeScriptHashMap"><span class="hs-identifier hs-var hs-var">mkStakeScriptHashMap</span></a></span></span><span> </span><span id="local-6989586621679556004"><span class="annot"><span class="annottext">[(Script era, Script era)]
+</span><a href="#local-6989586621679556004"><span class="hs-identifier hs-var">scripts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-163"></span><span>  </span><span class="annot"><span class="annottext">[(ScriptHash, (Script era, Script era))]
+-&gt; Map ScriptHash (Script era, Script era)
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Script era, Script era) -&gt; (ScriptHash, (Script era, Script era))
+</span><a href="#local-6989586621679556005"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">((Script era, Script era)
+ -&gt; (ScriptHash, (Script era, Script era)))
+-&gt; [(Script era, Script era)]
+-&gt; [(ScriptHash, (Script era, Script era))]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[(Script era, Script era)]
+</span><a href="#local-6989586621679556004"><span class="hs-identifier hs-var">scripts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-165"></span><span>    </span><span id="local-6989586621679556005"><span class="annot"><span class="annottext">f :: (Script era, Script era) -&gt; (ScriptHash, (Script era, Script era))
+</span><a href="#local-6989586621679556005"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679556006"><span class="annot"><span class="annottext">script :: (Script era, Script era)
+</span><a href="#local-6989586621679556006"><span class="hs-identifier hs-var">script</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679556007"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556007"><span class="hs-identifier hs-var">_pay</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679556008"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556008"><span class="hs-identifier hs-var">stake</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">hashScript</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555998"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556008"><span class="hs-identifier hs-var">stake</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(Script era, Script era)
+</span><a href="#local-6989586621679556006"><span class="hs-identifier hs-var">script</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- | Combine a list of script pairs into hierarchically structured multi-sig</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- scripts, list must have at least length 3. Be careful not to call with too</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- many pairs in order not to create too many of the possible combinations.</span><span>
+</span><span id="line-170"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptCombinations"><span class="hs-identifier hs-type">mkScriptCombinations</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555791"><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-172"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-173"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-174"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-175"></span><span id="mkScriptCombinations"><span class="annot"><span class="annottext">mkScriptCombinations :: forall era.
+ScriptClass era =&gt;
+[(Script era, Script era)] -&gt; [(Script era, Script era)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptCombinations"><span class="hs-identifier hs-var hs-var">mkScriptCombinations</span></a></span></span><span> </span><span id="local-6989586621679556040"><span class="annot"><span class="annottext">[(Script era, Script era)]
+</span><a href="#local-6989586621679556040"><span class="hs-identifier hs-var">msigs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[(Script era, Script era)] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[(Script era, Script era)]
+</span><a href="#local-6989586621679556040"><span class="hs-identifier hs-var">msigs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [(Script era, Script era)]
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;length of input msigs must be at least 3&quot;</span></span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-keyword">else</span><span>
+</span><span id="line-179"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">([(Script era, Script era)]
+ -&gt; [(Script era, Script era)] -&gt; [(Script era, Script era)])
+-&gt; [(Script era, Script era)]
+-&gt; [[(Script era, Script era)]]
+-&gt; [(Script era, Script era)]
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">List.foldl'</span></span><span> </span><span class="annot"><span class="annottext">[(Script era, Script era)]
+-&gt; [(Script era, Script era)] -&gt; [(Script era, Script era)]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">(++)</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">([[(Script era, Script era)]] -&gt; [(Script era, Script era)])
+-&gt; [[(Script era, Script era)]] -&gt; [(Script era, Script era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-180"></span><span>          </span><span class="hs-keyword">do</span><span>
+</span><span id="line-181"></span><span>            </span><span class="hs-special">(</span><span id="local-6989586621679556045"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556045"><span class="hs-identifier hs-var">k1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679556046"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556046"><span class="hs-identifier hs-var">k2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Script era, Script era)]
+</span><a href="#local-6989586621679556040"><span class="hs-identifier hs-var">msigs</span></a></span><span>
+</span><span id="line-182"></span><span>            </span><span class="hs-special">(</span><span id="local-6989586621679556047"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556047"><span class="hs-identifier hs-var">k3</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679556048"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556048"><span class="hs-identifier hs-var">k4</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Script era, Script era)]
+</span><a href="#local-6989586621679556040"><span class="hs-identifier hs-var">msigs</span></a></span><span> </span><span class="annot"><span class="annottext">[(Script era, Script era)]
+-&gt; [(Script era, Script era)] -&gt; [(Script era, Script era)]
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">List.\\</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556045"><span class="hs-identifier hs-var">k1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556046"><span class="hs-identifier hs-var">k2</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-183"></span><span>            </span><span class="hs-special">(</span><span id="local-6989586621679556050"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556050"><span class="hs-identifier hs-var">k5</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679556051"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556051"><span class="hs-identifier hs-var">k6</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(Script era, Script era)]
+</span><a href="#local-6989586621679556040"><span class="hs-identifier hs-var">msigs</span></a></span><span> </span><span class="annot"><span class="annottext">[(Script era, Script era)]
+-&gt; [(Script era, Script era)] -&gt; [(Script era, Script era)]
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; [a]
+</span><span class="hs-operator hs-var">List.\\</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556045"><span class="hs-identifier hs-var">k1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556046"><span class="hs-identifier hs-var">k2</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556047"><span class="hs-identifier hs-var">k3</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556048"><span class="hs-identifier hs-var">k4</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span>            </span><span class="annot"><span class="annottext">[(Script era, Script era)] -&gt; [[(Script era, Script era)]]
+forall a. a -&gt; [a]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span>
+</span><span id="line-186"></span><span>              </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556052"><span class="hs-identifier hs-var">pay</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556053"><span class="hs-identifier hs-var">stake</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>              </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679556052"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556052"><span class="hs-identifier hs-var">pay</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-188"></span><span>                  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; [Script era] -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#anyOf"><span class="hs-identifier hs-var">anyOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556045"><span class="hs-identifier hs-var">k1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556047"><span class="hs-identifier hs-var">k3</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556050"><span class="hs-identifier hs-var">k5</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-189"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; [Script era] -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#allOf"><span class="hs-identifier hs-var">allOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556045"><span class="hs-identifier hs-var">k1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556047"><span class="hs-identifier hs-var">k3</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556050"><span class="hs-identifier hs-var">k5</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-190"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mOf"><span class="hs-identifier hs-var">mOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556045"><span class="hs-identifier hs-var">k1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556047"><span class="hs-identifier hs-var">k3</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556050"><span class="hs-identifier hs-var">k5</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-191"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mOf"><span class="hs-identifier hs-var">mOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556045"><span class="hs-identifier hs-var">k1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556047"><span class="hs-identifier hs-var">k3</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556050"><span class="hs-identifier hs-var">k5</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-192"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mOf"><span class="hs-identifier hs-var">mOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556045"><span class="hs-identifier hs-var">k1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556047"><span class="hs-identifier hs-var">k3</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556050"><span class="hs-identifier hs-var">k5</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-193"></span><span>                  </span><span class="hs-special">]</span><span>
+</span><span id="line-194"></span><span>              </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679556053"><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556053"><span class="hs-identifier hs-var">stake</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-195"></span><span>                  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; [Script era] -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#anyOf"><span class="hs-identifier hs-var">anyOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556046"><span class="hs-identifier hs-var">k2</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556048"><span class="hs-identifier hs-var">k4</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556051"><span class="hs-identifier hs-var">k6</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-196"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; [Script era] -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#allOf"><span class="hs-identifier hs-var">allOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556046"><span class="hs-identifier hs-var">k2</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556048"><span class="hs-identifier hs-var">k4</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556051"><span class="hs-identifier hs-var">k6</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-197"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mOf"><span class="hs-identifier hs-var">mOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556046"><span class="hs-identifier hs-var">k2</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556048"><span class="hs-identifier hs-var">k4</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556051"><span class="hs-identifier hs-var">k6</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-198"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mOf"><span class="hs-identifier hs-var">mOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556046"><span class="hs-identifier hs-var">k2</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556048"><span class="hs-identifier hs-var">k4</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556051"><span class="hs-identifier hs-var">k6</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-199"></span><span>                  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+forall era.
+ScriptClass era =&gt;
+Proxy era -&gt; Int -&gt; [Script era] -&gt; Script era
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mOf"><span class="hs-identifier hs-var">mOf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall t. Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556046"><span class="hs-identifier hs-var">k2</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556048"><span class="hs-identifier hs-var">k4</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script era
+</span><a href="#local-6989586621679556051"><span class="hs-identifier hs-var">k6</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-200"></span><span>                  </span><span class="hs-special">]</span><span>
+</span><span id="line-201"></span><span>              </span><span class="hs-special">]</span><span>
+</span><span id="line-202"></span><span>      </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-203"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555791"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-204"></span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- | Make list of script pairs (payment,staking). These are non-combined scripts</span><span>
+</span><span id="line-206"></span><span class="hs-comment">--   Ie NO quantifer like All, Any, MofN, etc.) scripts.</span><span>
+</span><span id="line-207"></span><span class="hs-comment">--   In post Shelley Eras, either Keylock or Require Start-Finish scripts.</span><span>
+</span><span id="line-208"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#baseScripts"><span class="hs-identifier hs-type">baseScripts</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679555806"><span class="annot"><a href="#local-6989586621679555806"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-210"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555806"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-211"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-212"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555806"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555806"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-213"></span><span id="baseScripts"><span class="annot"><span class="annottext">baseScripts :: forall era.
+ScriptClass era =&gt;
+Constants -&gt; [(Script era, Script era)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#baseScripts"><span class="hs-identifier hs-var hs-var">baseScripts</span></a></span></span><span> </span><span id="local-6989586621679556056"><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679556056"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era.
+ScriptClass era =&gt;
+KeyPairs -&gt; [(Script era, Script era)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScripts"><span class="hs-identifier hs-var">mkScripts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679555806"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Constants -&gt; KeyPairs
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#keyPairs"><span class="hs-identifier hs-var">keyPairs</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679556056"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-214"></span><span>
+</span><span id="line-215"></span><span class="hs-comment">-- | Make a list of script pairs (payment,staking). Each of these are combined scripts.</span><span>
+</span><span id="line-216"></span><span class="hs-comment">--   I.e.  All, Any, MofN, etc. These come from combining the the first N (numBaseScripts) baseScripts</span><span>
+</span><span id="line-217"></span><span class="hs-comment">--   When N==3, we get about 150 combined scripts.</span><span>
+</span><span id="line-218"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#combinedScripts"><span class="hs-identifier hs-type">combinedScripts</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-219"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679556057"><span class="annot"><a href="#local-6989586621679556057"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-220"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#ScriptClass"><span class="hs-identifier hs-type">ScriptClass</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679556057"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-221"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-222"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679556057"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679556057"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-223"></span><span id="combinedScripts"><span class="annot"><span class="annottext">combinedScripts :: forall era.
+ScriptClass era =&gt;
+Constants -&gt; [(Script era, Script era)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#combinedScripts"><span class="hs-identifier hs-var hs-var">combinedScripts</span></a></span></span><span> </span><span id="local-6989586621679556061"><span class="annot"><span class="annottext">c :: Constants
+</span><a href="#local-6989586621679556061"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679556063"><span class="annot"><span class="annottext">Int
+numBaseScripts :: Int
+numBaseScripts :: Constants -&gt; Int
+</span><a href="#local-6989586621679556063"><span class="hs-identifier hs-var hs-var">numBaseScripts</span></a></span></span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-224"></span><span>  </span><span class="annot"><span class="annottext">forall era.
+ScriptClass era =&gt;
+[(Script era, Script era)] -&gt; [(Script era, Script era)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkScriptCombinations"><span class="hs-identifier hs-var">mkScriptCombinations</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679556057"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">([(Script era, Script era)] -&gt; [(Script era, Script era)])
+-&gt; ([(Script era, Script era)] -&gt; [(Script era, Script era)])
+-&gt; [(Script era, Script era)]
+-&gt; [(Script era, Script era)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; [(Script era, Script era)] -&gt; [(Script era, Script era)]
+forall a. Int -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">take</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679556063"><span class="hs-identifier hs-var">numBaseScripts</span></a></span><span> </span><span class="annot"><span class="annottext">([(Script era, Script era)] -&gt; [(Script era, Script era)])
+-&gt; [(Script era, Script era)] -&gt; [(Script era, Script era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall era.
+ScriptClass era =&gt;
+Constants -&gt; [(Script era, Script era)]
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#baseScripts"><span class="hs-identifier hs-var">baseScripts</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679556057"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">Constants
+</span><a href="#local-6989586621679556061"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-225"></span><span>
+</span><span id="line-226"></span><span class="annot"><span class="hs-comment">-- | Constant list of KeyPairs intended to be used in the generators.</span></span><span>
+</span><span id="line-227"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#keyPairs"><span class="hs-identifier hs-type">keyPairs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPairs"><span class="hs-identifier hs-type">KeyPairs</span></a></span><span>
+</span><span id="line-228"></span><span id="keyPairs"><span class="annot"><span class="annottext">keyPairs :: Constants -&gt; KeyPairs
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#keyPairs"><span class="hs-identifier hs-var hs-var">keyPairs</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Constants.html#Constants"><span class="hs-identifier hs-type">Constants</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679556065"><span class="annot"><span class="annottext">Word64
+numKeyPairs :: Word64
+numKeyPairs :: Constants -&gt; Word64
+</span><a href="#local-6989586621679556065"><span class="hs-identifier hs-var hs-var">numKeyPairs</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; (KeyPair 'Payment, KeyPair 'Staking)
+forall (kr :: KeyRole) (kr' :: KeyRole).
+Word64 -&gt; (KeyPair kr, KeyPair kr')
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkKeyPairs"><span class="hs-identifier hs-var">mkKeyPairs</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; (KeyPair 'Payment, KeyPair 'Staking))
+-&gt; [Word64] -&gt; KeyPairs
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679556065"><span class="hs-identifier hs-var">numKeyPairs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-229"></span><span>
+</span><span id="line-230"></span><span id="local-6989586621679555810"><span id="local-6989586621679555811"><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkKeyPairs"><span class="hs-identifier hs-type">mkKeyPairs</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-231"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-232"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555810"><span class="hs-identifier hs-type">kr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679555811"><span class="hs-identifier hs-type">kr'</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-233"></span><span id="mkKeyPairs"><span class="annot"><span class="annottext">mkKeyPairs :: forall (kr :: KeyRole) (kr' :: KeyRole).
+Word64 -&gt; (KeyPair kr, KeyPair kr')
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#mkKeyPairs"><span class="hs-identifier hs-var hs-var">mkKeyPairs</span></a></span></span><span> </span><span id="local-6989586621679556073"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679556073"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-234"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; KeyPair kr
+forall {kd :: KeyRole}. Word64 -&gt; KeyPair kd
+</span><a href="#local-6989586621679556074"><span class="hs-identifier hs-var">mkKeyPair_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679556073"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; KeyPair kr'
+forall {kd :: KeyRole}. Word64 -&gt; KeyPair kd
+</span><a href="#local-6989586621679556074"><span class="hs-identifier hs-var">mkKeyPair_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679556073"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-235"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-236"></span><span>    </span><span id="local-6989586621679556074"><span class="annot"><span class="annottext">mkKeyPair_ :: Word64 -&gt; KeyPair kd
+</span><a href="#local-6989586621679556074"><span class="hs-identifier hs-var hs-var">mkKeyPair_</span></a></span></span><span> </span><span id="local-6989586621679556077"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679556077"><span class="hs-identifier hs-var">n_</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-237"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(VKey kd -&gt; SignKeyDSIGN DSIGN -&gt; KeyPair kd)
+-&gt; (VKey kd, SignKeyDSIGN DSIGN) -&gt; KeyPair kd
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><span class="hs-identifier hs-var">uncurry</span></span><span> </span><span class="annot"><span class="annottext">VKey kd -&gt; SignKeyDSIGN DSIGN -&gt; KeyPair kd
+forall (kd :: KeyRole). VKey kd -&gt; SignKeyDSIGN DSIGN -&gt; KeyPair kd
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.KeyPair.html#KeyPair"><span class="hs-identifier hs-var">KeyPair</span></a></span><span> </span><span class="annot"><span class="annottext">((VKey kd, SignKeyDSIGN DSIGN) -&gt; KeyPair kd)
+-&gt; ((SignKeyDSIGN DSIGN, VKey kd) -&gt; (VKey kd, SignKeyDSIGN DSIGN))
+-&gt; (SignKeyDSIGN DSIGN, VKey kd)
+-&gt; KeyPair kd
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(SignKeyDSIGN DSIGN, VKey kd) -&gt; (VKey kd, SignKeyDSIGN DSIGN)
+forall a b. (a, b) -&gt; (b, a)
+</span><span class="hs-identifier hs-var">swap</span></span><span class="hs-special">)</span><span>
+</span><span id="line-238"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RawSeed -&gt; (SignKeyDSIGN DSIGN, VKey kd)
+forall (kd :: KeyRole). RawSeed -&gt; (SignKeyDSIGN DSIGN, VKey kd)
+</span><a href="Test.Cardano.Ledger.Shelley.Utils.html#mkKeyPair"><span class="hs-identifier hs-var">mkKeyPair</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64 -&gt; Word64 -&gt; Word64 -&gt; RawSeed
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/l/testlib/doc/html/cardano-ledger-shelley/src/Test.Cardano.Ledger.Shelley.Arbitrary.html#RawSeed"><span class="hs-identifier hs-var">RawSeed</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679556077"><span class="hs-identifier hs-var">n_</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679556077"><span class="hs-identifier hs-var">n_</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679556077"><span class="hs-identifier hs-var">n_</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679556077"><span class="hs-identifier hs-var">n_</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679556077"><span class="hs-identifier hs-var">n_</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span>
+</span><span id="line-240"></span><span class="hs-comment">{------------------------------------------------------------------------------
+  How to be a Generic Value
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-243"></span><span>
+</span><span id="line-244"></span><span class="annot"><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#exponential"><span class="hs-identifier hs-type">exponential</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#Gen"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-245"></span><span id="exponential"><span class="annot"><span class="annottext">exponential :: Integer -&gt; Integer -&gt; Gen Integer
+</span><a href="Test.Cardano.Ledger.Shelley.Generator.ScriptClass.html#exponential"><span class="hs-identifier hs-var hs-var">exponential</span></a></span></span><span> </span><span id="local-6989586621679556081"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556081"><span class="hs-identifier hs-var">minc</span></a></span></span><span> </span><span id="local-6989586621679556082"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556082"><span class="hs-identifier hs-var">maxc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Int, Gen Integer)] -&gt; Gen Integer
+forall a. HasCallStack =&gt; [(Int, Gen a)] -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#frequency"><span class="hs-identifier hs-var">QC.frequency</span></a></span><span> </span><span class="annot"><span class="annottext">[(Int, Gen Integer)]
+</span><a href="#local-6989586621679556084"><span class="hs-identifier hs-var">spread</span></a></span><span>
+</span><span id="line-246"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-247"></span><span>    </span><span id="local-6989586621679556085"><span class="annot"><span class="annottext">width :: Integer
+</span><a href="#local-6989586621679556085"><span class="hs-identifier hs-var hs-var">width</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556082"><span class="hs-identifier hs-var">maxc</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556081"><span class="hs-identifier hs-var">minc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">`div`</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556087"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-248"></span><span>    </span><span id="local-6989586621679556088"><span class="annot"><span class="annottext">deltas :: [Gen Integer]
+</span><a href="#local-6989586621679556088"><span class="hs-identifier hs-var hs-var">deltas</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">(Integer, Integer) -&gt; Gen Integer
+forall a. Random a =&gt; (a, a) -&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Gen.html#choose"><span class="hs-identifier hs-var">QC.choose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556081"><span class="hs-identifier hs-var">minc</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556090"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556085"><span class="hs-identifier hs-var">width</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556081"><span class="hs-identifier hs-var">minc</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556090"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556085"><span class="hs-identifier hs-var">width</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679556090"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556090"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679556087"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-249"></span><span>    </span><span id="local-6989586621679556098"><span class="annot"><span class="annottext">scales :: [Int]
+</span><a href="#local-6989586621679556098"><span class="hs-identifier hs-var hs-var">scales</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">]</span><span>
+</span><span id="line-250"></span><span>    </span><span id="local-6989586621679556087"><span class="annot"><span class="annottext">n :: Integer
+</span><a href="#local-6989586621679556087"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Integer
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Int] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679556098"><span class="hs-identifier hs-var">scales</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-251"></span><span>    </span><span id="local-6989586621679556084"><span class="annot"><span class="annottext">spread :: [(Int, Gen Integer)]
+</span><a href="#local-6989586621679556084"><span class="hs-identifier hs-var hs-var">spread</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; [Gen Integer] -&gt; [(Int, Gen Integer)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><span class="hs-identifier hs-var">zip</span></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679556098"><span class="hs-identifier hs-var">scales</span></a></span><span> </span><span class="annot"><span class="annottext">[Gen Integer]
+</span><a href="#local-6989586621679556088"><span class="hs-identifier hs-var">deltas</span></a></span><span>
+</span><span id="line-252"></span></pre></body></html>

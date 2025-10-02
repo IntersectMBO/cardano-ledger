@@ -1,0 +1,197 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE StandaloneKindSignatures #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Crypto.Signing.Redeem.SigningKey</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#RedeemSigningKey"><span class="hs-identifier">RedeemSigningKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#redeemToVerification"><span class="hs-identifier">redeemToVerification</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.VerificationKey.html"><span class="hs-identifier">Cardano.Crypto.Signing.Redeem.VerificationKey</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.VerificationKey.html#RedeemVerificationKey"><span class="hs-identifier">RedeemVerificationKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.VerificationKey.html#redeemVKB64F"><span class="hs-identifier">redeemVKB64F</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/crypton-1.0.4-6d8da134291e3c38ab08dee953b9b9d9240edace87270ef586c55600af13252e/share/doc/html/src/Crypto.PubKey.Ed25519.html"><span class="hs-identifier">Crypto.PubKey.Ed25519</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ed25519</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.html"><span class="hs-identifier">Formatting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier">bprint</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#InspectHeap"><span class="hs-identifier">InspectHeap</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><span class="hs-comment">-- | Wrapper around 'Ed25519.SecretKey'.</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#RedeemSigningKey"><span class="hs-identifier hs-type">RedeemSigningKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">newtype</span><span> </span><span id="RedeemSigningKey"><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#RedeemSigningKey"><span class="hs-identifier hs-var">RedeemSigningKey</span></a></span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="RedeemSigningKey"><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#RedeemSigningKey"><span class="hs-identifier hs-var">RedeemSigningKey</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/crypton-1.0.4-6d8da134291e3c38ab08dee953b9b9d9240edace87270ef586c55600af13252e/share/doc/html/src/Crypto.PubKey.Ed25519.html#SecretKey"><span class="hs-identifier hs-type">Ed25519.SecretKey</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679278888"><span id="local-6989586621679278893"><span class="annot"><span class="annottext">RedeemSigningKey -&gt; RedeemSigningKey -&gt; Bool
+(RedeemSigningKey -&gt; RedeemSigningKey -&gt; Bool)
+-&gt; (RedeemSigningKey -&gt; RedeemSigningKey -&gt; Bool)
+-&gt; Eq RedeemSigningKey
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: RedeemSigningKey -&gt; RedeemSigningKey -&gt; Bool
+== :: RedeemSigningKey -&gt; RedeemSigningKey -&gt; Bool
+$c/= :: RedeemSigningKey -&gt; RedeemSigningKey -&gt; Bool
+/= :: RedeemSigningKey -&gt; RedeemSigningKey -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679278899"><span id="local-6989586621679278905"><span id="local-6989586621679278909"><span class="annot"><span class="annottext">Int -&gt; RedeemSigningKey -&gt; ShowS
+[RedeemSigningKey] -&gt; ShowS
+RedeemSigningKey -&gt; String
+(Int -&gt; RedeemSigningKey -&gt; ShowS)
+-&gt; (RedeemSigningKey -&gt; String)
+-&gt; ([RedeemSigningKey] -&gt; ShowS)
+-&gt; Show RedeemSigningKey
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; RedeemSigningKey -&gt; ShowS
+showsPrec :: Int -&gt; RedeemSigningKey -&gt; ShowS
+$cshow :: RedeemSigningKey -&gt; String
+show :: RedeemSigningKey -&gt; String
+$cshowList :: [RedeemSigningKey] -&gt; ShowS
+showList :: [RedeemSigningKey] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679278913"><span id="local-6989586621679278915"><span class="annot"><span class="annottext">(forall x. RedeemSigningKey -&gt; Rep RedeemSigningKey x)
+-&gt; (forall x. Rep RedeemSigningKey x -&gt; RedeemSigningKey)
+-&gt; Generic RedeemSigningKey
+forall x. Rep RedeemSigningKey x -&gt; RedeemSigningKey
+forall x. RedeemSigningKey -&gt; Rep RedeemSigningKey x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. RedeemSigningKey -&gt; Rep RedeemSigningKey x
+from :: forall x. RedeemSigningKey -&gt; Rep RedeemSigningKey x
+$cto :: forall x. Rep RedeemSigningKey x -&gt; RedeemSigningKey
+to :: forall x. Rep RedeemSigningKey x -&gt; RedeemSigningKey
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679278919"><span class="annot"><span class="annottext">RedeemSigningKey -&gt; ()
+(RedeemSigningKey -&gt; ()) -&gt; NFData RedeemSigningKey
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: RedeemSigningKey -&gt; ()
+rnf :: RedeemSigningKey -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679278928"><span id="local-6989586621679278933"><span id="local-6989586621679278937"><span class="annot"><span class="annottext">Typeable RedeemSigningKey
+Typeable RedeemSigningKey =&gt;
+(forall s. Decoder s RedeemSigningKey)
+-&gt; (forall s. Proxy RedeemSigningKey -&gt; Decoder s ())
+-&gt; (Proxy RedeemSigningKey -&gt; Text)
+-&gt; DecCBOR RedeemSigningKey
+Proxy RedeemSigningKey -&gt; Text
+forall s. Decoder s RedeemSigningKey
+forall a.
+Typeable a =&gt;
+(forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy RedeemSigningKey -&gt; Decoder s ()
+$cdecCBOR :: forall s. Decoder s RedeemSigningKey
+decCBOR :: forall s. Decoder s RedeemSigningKey
+$cdropCBOR :: forall s. Proxy RedeemSigningKey -&gt; Decoder s ()
+dropCBOR :: forall s. Proxy RedeemSigningKey -&gt; Decoder s ()
+$clabel :: Proxy RedeemSigningKey -&gt; Text
+label :: Proxy RedeemSigningKey -&gt; Text
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679278945"><span id="local-6989586621679278952"><span id="local-6989586621679278958"><span class="annot"><span class="annottext">Typeable RedeemSigningKey
+Typeable RedeemSigningKey =&gt;
+(RedeemSigningKey -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy RedeemSigningKey -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [RedeemSigningKey] -&gt; Size)
+-&gt; EncCBOR RedeemSigningKey
+RedeemSigningKey -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [RedeemSigningKey] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy RedeemSigningKey -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+$cencCBOR :: RedeemSigningKey -&gt; Encoding
+encCBOR :: RedeemSigningKey -&gt; Encoding
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy RedeemSigningKey -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy RedeemSigningKey -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [RedeemSigningKey] -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [RedeemSigningKey] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679278964"><span id="local-6989586621679278970"><span id="local-6989586621679278975"><span class="annot"><span class="annottext">Context -&gt; RedeemSigningKey -&gt; IO (Maybe ThunkInfo)
+Proxy RedeemSigningKey -&gt; String
+(Context -&gt; RedeemSigningKey -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; RedeemSigningKey -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy RedeemSigningKey -&gt; String)
+-&gt; NoThunks RedeemSigningKey
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; RedeemSigningKey -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; RedeemSigningKey -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; RedeemSigningKey -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; RedeemSigningKey -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy RedeemSigningKey -&gt; String
+showTypeOf :: Proxy RedeemSigningKey -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#InspectHeap"><span class="hs-identifier hs-type">InspectHeap</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#RedeemSigningKey"><span class="hs-identifier hs-type">RedeemSigningKey</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679278985"><span id="local-6989586621679278989"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#RedeemSigningKey"><span class="hs-identifier hs-type">RedeemSigningKey</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679278993"><span class="annot"><span class="annottext">toCBOR :: RedeemSigningKey -&gt; Encoding
+</span><a href="#local-6989586621679278993"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RedeemSigningKey -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679278999"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#RedeemSigningKey"><span class="hs-identifier hs-type">RedeemSigningKey</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679279004"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s RedeemSigningKey
+</span><a href="#local-6989586621679279004"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s RedeemSigningKey
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- Note that there is deliberately no Ord instance. The crypto libraries</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- encourage using key /hashes/ not keys for things like sets, map etc.</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier hs-type">B.Buildable</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#RedeemSigningKey"><span class="hs-identifier hs-type">RedeemSigningKey</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679279016"><span class="annot"><span class="annottext">build :: RedeemSigningKey -&gt; Builder
+</span><a href="#local-6989586621679279016"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Format Builder (RedeemVerificationKey -&gt; Builder)
+-&gt; RedeemVerificationKey -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier hs-var">bprint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format
+  (RedeemVerificationKey -&gt; Builder)
+  (RedeemVerificationKey -&gt; Builder)
+</span><span class="hs-string">&quot;redeem_sec_of_vk:&quot;</span></span><span> </span><span class="annot"><span class="annottext">Format
+  (RedeemVerificationKey -&gt; Builder)
+  (RedeemVerificationKey -&gt; Builder)
+-&gt; Format Builder (RedeemVerificationKey -&gt; Builder)
+-&gt; Format Builder (RedeemVerificationKey -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format Builder (RedeemVerificationKey -&gt; Builder)
+forall r. Format r (RedeemVerificationKey -&gt; r)
+</span><a href="Cardano.Crypto.Signing.Redeem.VerificationKey.html#redeemVKB64F"><span class="hs-identifier hs-var">redeemVKB64F</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(RedeemVerificationKey -&gt; Builder)
+-&gt; (RedeemSigningKey -&gt; RedeemVerificationKey)
+-&gt; RedeemSigningKey
+-&gt; Builder
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">RedeemSigningKey -&gt; RedeemVerificationKey
+</span><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#redeemToVerification"><span class="hs-identifier hs-var">redeemToVerification</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><span class="hs-comment">-- | Verification key derivation function.</span></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#redeemToVerification"><span class="hs-identifier hs-type">redeemToVerification</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#RedeemSigningKey"><span class="hs-identifier hs-type">RedeemSigningKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.VerificationKey.html#RedeemVerificationKey"><span class="hs-identifier hs-type">RedeemVerificationKey</span></a></span><span>
+</span><span id="line-51"></span><span id="redeemToVerification"><span class="annot"><span class="annottext">redeemToVerification :: RedeemSigningKey -&gt; RedeemVerificationKey
+</span><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#redeemToVerification"><span class="hs-identifier hs-var hs-var">redeemToVerification</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Crypto.Signing.Redeem.SigningKey.html#RedeemSigningKey"><span class="hs-identifier hs-type">RedeemSigningKey</span></a></span><span> </span><span id="local-6989586621679279019"><span class="annot"><span class="annottext">SecretKey
+</span><a href="#local-6989586621679279019"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PublicKey -&gt; RedeemVerificationKey
+</span><a href="Cardano.Crypto.Signing.Redeem.VerificationKey.html#RedeemVerificationKey"><span class="hs-identifier hs-var">RedeemVerificationKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SecretKey -&gt; PublicKey
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/crypton-1.0.4-6d8da134291e3c38ab08dee953b9b9d9240edace87270ef586c55600af13252e/share/doc/html/src/Crypto.PubKey.Ed25519.html#toPublic"><span class="hs-identifier hs-var">Ed25519.toPublic</span></a></span><span> </span><span class="annot"><span class="annottext">SecretKey
+</span><a href="#local-6989586621679279019"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span></pre></body></html>

@@ -1,0 +1,910 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Shelley.Rules.Ppup</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html#ShelleyPPUP"><span class="hs-identifier">ShelleyPPUP</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PpupEnv"><span class="hs-identifier">PpupEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier">ShelleyPpupPredFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Governance.html#ShelleyGovState"><span class="hs-identifier">ShelleyGovState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PpupEvent"><span class="hs-identifier">PpupEvent</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier">PredicateFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VotingPeriod"><span class="hs-identifier">VotingPeriod</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#votedFuturePParams"><span class="hs-identifier">votedFuturePParams</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Globals"><span class="hs-identifier">Globals</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#quorum"><span class="hs-identifier">quorum</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Mismatch"><span class="hs-identifier">Mismatch</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier">ProtVer</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Relation"><span class="hs-identifier">Relation</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier">ShelleyBase</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier">StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeWord"><span class="hs-identifier">decodeWord</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Coders.html"><span class="hs-identifier">Cardano.Ledger.Binary.Coders</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#GenDelegs"><span class="hs-identifier">GenDelegs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier">ShelleyEra</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html#ShelleyPPUP"><span class="hs-identifier">ShelleyPPUP</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Governance.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Governance</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html"><span class="hs-identifier">Cardano.Ledger.Shelley.PParams</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#ProposedPPUpdates"><span class="hs-identifier">ProposedPPUpdates</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#ProposedPPUpdates"><span class="hs-identifier">ProposedPPUpdates</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#Update"><span class="hs-identifier">Update</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#hasLegalProtVerUpdate"><span class="hs-identifier">hasLegalProtVerUpdate</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html"><span class="hs-identifier">Cardano.Ledger.Slot</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier">EpochNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier">SlotNo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html#getTheSlotOfNoReturn"><span class="hs-identifier">getTheSlotOfNoReturn</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">guard</span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Reader</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">asks</span></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.SetAlgebra.html"><span class="hs-identifier">Control.SetAlgebra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#dom"><span class="hs-identifier">dom</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.SetAlgebra.html#eval"><span class="hs-identifier">eval</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#%2286"><span class="hs-operator">(&#8838;)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#%2A03"><span class="hs-operator">(&#10755;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">find</span></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Word8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">data</span><span> </span><span id="PpupEnv"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PpupEnv"><span class="hs-identifier hs-var">PpupEnv</span></a></span></span><span> </span><span id="local-6989586621679501251"><span class="annot"><a href="#local-6989586621679501251"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PPUPEnv"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PPUPEnv"><span class="hs-identifier hs-var">PPUPEnv</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501251"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#GenDelegs"><span class="hs-identifier hs-type">GenDelegs</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">data</span><span> </span><span id="VotingPeriod"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VotingPeriod"><span class="hs-identifier hs-var">VotingPeriod</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VoteForThisEpoch"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VoteForThisEpoch"><span class="hs-identifier hs-var">VoteForThisEpoch</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="VoteForNextEpoch"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VoteForNextEpoch"><span class="hs-identifier hs-var">VoteForNextEpoch</span></a></span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679501256"><span id="local-6989586621679501258"><span id="local-6989586621679501262"><span class="annot"><span class="annottext">Int -&gt; VotingPeriod -&gt; ShowS
+[VotingPeriod] -&gt; ShowS
+VotingPeriod -&gt; String
+(Int -&gt; VotingPeriod -&gt; ShowS)
+-&gt; (VotingPeriod -&gt; String)
+-&gt; ([VotingPeriod] -&gt; ShowS)
+-&gt; Show VotingPeriod
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; VotingPeriod -&gt; ShowS
+showsPrec :: Int -&gt; VotingPeriod -&gt; ShowS
+$cshow :: VotingPeriod -&gt; String
+show :: VotingPeriod -&gt; String
+$cshowList :: [VotingPeriod] -&gt; ShowS
+showList :: [VotingPeriod] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501266"><span id="local-6989586621679501268"><span class="annot"><span class="annottext">VotingPeriod -&gt; VotingPeriod -&gt; Bool
+(VotingPeriod -&gt; VotingPeriod -&gt; Bool)
+-&gt; (VotingPeriod -&gt; VotingPeriod -&gt; Bool) -&gt; Eq VotingPeriod
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: VotingPeriod -&gt; VotingPeriod -&gt; Bool
+== :: VotingPeriod -&gt; VotingPeriod -&gt; Bool
+$c/= :: VotingPeriod -&gt; VotingPeriod -&gt; Bool
+/= :: VotingPeriod -&gt; VotingPeriod -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501273"><span id="local-6989586621679501275"><span class="annot"><span class="annottext">(forall x. VotingPeriod -&gt; Rep VotingPeriod x)
+-&gt; (forall x. Rep VotingPeriod x -&gt; VotingPeriod)
+-&gt; Generic VotingPeriod
+forall x. Rep VotingPeriod x -&gt; VotingPeriod
+forall x. VotingPeriod -&gt; Rep VotingPeriod x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. VotingPeriod -&gt; Rep VotingPeriod x
+from :: forall x. VotingPeriod -&gt; Rep VotingPeriod x
+$cto :: forall x. Rep VotingPeriod x -&gt; VotingPeriod
+to :: forall x. Rep VotingPeriod x -&gt; VotingPeriod
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679501279"><span id="local-6989586621679501283"><span id="local-6989586621679501289"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VotingPeriod"><span class="hs-identifier hs-type">VotingPeriod</span></a></span></span></span></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679501312"><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VotingPeriod"><span class="hs-identifier hs-type">VotingPeriod</span></a></span></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679501330"><span id="local-6989586621679501334"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VotingPeriod"><span class="hs-identifier hs-type">VotingPeriod</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679501343"><span class="annot"><span class="annottext">encCBOR :: VotingPeriod -&gt; Encoding
+</span><a href="#local-6989586621679501343"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="annot"><span class="annottext">VotingPeriod
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VoteForThisEpoch"><span class="hs-identifier hs-var">VoteForThisEpoch</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">VotingPeriod
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VoteForNextEpoch"><span class="hs-identifier hs-var">VoteForNextEpoch</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679501349"><span id="local-6989586621679501353"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VotingPeriod"><span class="hs-identifier hs-type">VotingPeriod</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679501370"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s VotingPeriod
+</span><a href="#local-6989586621679501370"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="annottext">Decoder s Word
+forall s. Decoder s Word
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeWord"><span class="hs-identifier hs-var">decodeWord</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s Word
+-&gt; (Word -&gt; Decoder s VotingPeriod) -&gt; Decoder s VotingPeriod
+forall a b. Decoder s a -&gt; (a -&gt; Decoder s b) -&gt; Decoder s b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-83"></span><span>      </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">VotingPeriod -&gt; Decoder s VotingPeriod
+forall a. a -&gt; Decoder s a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">VotingPeriod
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VoteForThisEpoch"><span class="hs-identifier hs-var">VoteForThisEpoch</span></a></span><span>
+</span><span id="line-84"></span><span>      </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">VotingPeriod -&gt; Decoder s VotingPeriod
+forall a. a -&gt; Decoder s a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">VotingPeriod
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VoteForNextEpoch"><span class="hs-identifier hs-var">VoteForNextEpoch</span></a></span><span>
+</span><span id="line-85"></span><span>      </span><span id="local-6989586621679501372"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679501372"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Decoder s VotingPeriod
+forall a (m :: * -&gt; *). (Typeable a, MonadFail m) =&gt; Word -&gt; m a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html#invalidKey"><span class="hs-identifier hs-var">invalidKey</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679501372"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">data</span><span> </span><span id="ShelleyPpupPredFailure"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier hs-var">ShelleyPpupPredFailure</span></a></span></span><span> </span><span id="local-6989586621679501094"><span class="annot"><a href="#local-6989586621679501094"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- | An update was proposed by a key hash that is not one of the genesis keys.</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-comment">--  `mismatchSupplied` ~ key hashes which were a part of the update.</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-comment">--  `mismatchExpected` ~ key hashes of the genesis keys.</span><span>
+</span><span id="line-91"></span><span>    </span><span id="NonGenesisUpdatePPUP"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#NonGenesisUpdatePPUP"><span class="hs-identifier hs-var">NonGenesisUpdatePPUP</span></a></span></span><span>
+</span><span id="line-92"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Mismatch"><span class="hs-identifier hs-type">Mismatch</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#RelSubset"><span class="hs-identifier hs-type">RelSubset</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | An update was proposed for the wrong epoch.</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">--  The first 'EpochNo' is the current epoch.</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-comment">--  The second 'EpochNo' is the epoch listed in the update.</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-comment">--  The last parameter indicates if the update was intended</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">--  for the current or the next epoch.</span><span>
+</span><span id="line-98"></span><span>    </span><span id="PPUpdateWrongEpoch"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PPUpdateWrongEpoch"><span class="hs-identifier hs-var">PPUpdateWrongEpoch</span></a></span></span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VotingPeriod"><span class="hs-identifier hs-type">VotingPeriod</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | An update was proposed which contains an invalid protocol version.</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-comment">--  New protocol versions must either increase the major</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-comment">--  number by exactly one and set the minor version to zero,</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-comment">--  or keep the major version the same and increase the minor</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">--  version by exactly one.</span><span>
+</span><span id="line-107"></span><span>    </span><span id="PVCannotFollowPPUP"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PVCannotFollowPPUP"><span class="hs-identifier hs-var">PVCannotFollowPPUP</span></a></span></span><span>
+</span><span id="line-108"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ProtVer"><span class="hs-identifier hs-type">ProtVer</span></a></span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679501381"><span id="local-6989586621679501396"><span id="local-6989586621679501400"><span class="annot"><span class="annottext">Int -&gt; ShelleyPpupPredFailure era -&gt; ShowS
+[ShelleyPpupPredFailure era] -&gt; ShowS
+ShelleyPpupPredFailure era -&gt; String
+(Int -&gt; ShelleyPpupPredFailure era -&gt; ShowS)
+-&gt; (ShelleyPpupPredFailure era -&gt; String)
+-&gt; ([ShelleyPpupPredFailure era] -&gt; ShowS)
+-&gt; Show (ShelleyPpupPredFailure era)
+forall era. Int -&gt; ShelleyPpupPredFailure era -&gt; ShowS
+forall era. [ShelleyPpupPredFailure era] -&gt; ShowS
+forall era. ShelleyPpupPredFailure era -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall era. Int -&gt; ShelleyPpupPredFailure era -&gt; ShowS
+showsPrec :: Int -&gt; ShelleyPpupPredFailure era -&gt; ShowS
+$cshow :: forall era. ShelleyPpupPredFailure era -&gt; String
+show :: ShelleyPpupPredFailure era -&gt; String
+$cshowList :: forall era. [ShelleyPpupPredFailure era] -&gt; ShowS
+showList :: [ShelleyPpupPredFailure era] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501406"><span id="local-6989586621679501417"><span class="annot"><span class="annottext">ShelleyPpupPredFailure era -&gt; ShelleyPpupPredFailure era -&gt; Bool
+(ShelleyPpupPredFailure era -&gt; ShelleyPpupPredFailure era -&gt; Bool)
+-&gt; (ShelleyPpupPredFailure era
+    -&gt; ShelleyPpupPredFailure era -&gt; Bool)
+-&gt; Eq (ShelleyPpupPredFailure era)
+forall era.
+ShelleyPpupPredFailure era -&gt; ShelleyPpupPredFailure era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era.
+ShelleyPpupPredFailure era -&gt; ShelleyPpupPredFailure era -&gt; Bool
+== :: ShelleyPpupPredFailure era -&gt; ShelleyPpupPredFailure era -&gt; Bool
+$c/= :: forall era.
+ShelleyPpupPredFailure era -&gt; ShelleyPpupPredFailure era -&gt; Bool
+/= :: ShelleyPpupPredFailure era -&gt; ShelleyPpupPredFailure era -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501424"><span id="local-6989586621679501426"><span class="annot"><span class="annottext">(forall x.
+ ShelleyPpupPredFailure era -&gt; Rep (ShelleyPpupPredFailure era) x)
+-&gt; (forall x.
+    Rep (ShelleyPpupPredFailure era) x -&gt; ShelleyPpupPredFailure era)
+-&gt; Generic (ShelleyPpupPredFailure era)
+forall x.
+Rep (ShelleyPpupPredFailure era) x -&gt; ShelleyPpupPredFailure era
+forall x.
+ShelleyPpupPredFailure era -&gt; Rep (ShelleyPpupPredFailure era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x.
+Rep (ShelleyPpupPredFailure era) x -&gt; ShelleyPpupPredFailure era
+forall era x.
+ShelleyPpupPredFailure era -&gt; Rep (ShelleyPpupPredFailure era) x
+$cfrom :: forall era x.
+ShelleyPpupPredFailure era -&gt; Rep (ShelleyPpupPredFailure era) x
+from :: forall x.
+ShelleyPpupPredFailure era -&gt; Rep (ShelleyPpupPredFailure era) x
+$cto :: forall era x.
+Rep (ShelleyPpupPredFailure era) x -&gt; ShelleyPpupPredFailure era
+to :: forall x.
+Rep (ShelleyPpupPredFailure era) x -&gt; ShelleyPpupPredFailure era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="EraRuleFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#EraRuleFailure"><span class="hs-identifier hs-var">EraRuleFailure</span></a></span></span><span> </span><span class="annot"><span class="hs-string">&quot;PPUP&quot;</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier hs-type">ShelleyPpupPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679501432"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#InjectRuleFailure"><span class="hs-identifier hs-type">InjectRuleFailure</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;PPUP&quot;</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier hs-type">ShelleyPpupPredFailure</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679501031"><span id="local-6989586621679501439"><span id="local-6989586621679501443"><span id="local-6989586621679501449"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier hs-type">ShelleyPpupPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501031"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679501043"><span id="local-6989586621679501489"><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier hs-type">ShelleyPpupPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501043"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-keyword">newtype</span><span> </span><span id="PpupEvent"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PpupEvent"><span class="hs-identifier hs-var">PpupEvent</span></a></span></span><span> </span><span id="local-6989586621679501193"><span class="annot"><a href="#local-6989586621679501193"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PpupNewEpoch"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PpupNewEpoch"><span class="hs-identifier hs-var">PpupNewEpoch</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679501525"><span id="local-6989586621679501527"><span class="annot"><span class="annottext">(forall x. PpupEvent era -&gt; Rep (PpupEvent era) x)
+-&gt; (forall x. Rep (PpupEvent era) x -&gt; PpupEvent era)
+-&gt; Generic (PpupEvent era)
+forall x. Rep (PpupEvent era) x -&gt; PpupEvent era
+forall x. PpupEvent era -&gt; Rep (PpupEvent era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x. Rep (PpupEvent era) x -&gt; PpupEvent era
+forall era x. PpupEvent era -&gt; Rep (PpupEvent era) x
+$cfrom :: forall era x. PpupEvent era -&gt; Rep (PpupEvent era) x
+from :: forall x. PpupEvent era -&gt; Rep (PpupEvent era) x
+$cto :: forall era x. Rep (PpupEvent era) x -&gt; PpupEvent era
+to :: forall x. Rep (PpupEvent era) x -&gt; PpupEvent era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501530"><span id="local-6989586621679501534"><span class="annot"><span class="annottext">PpupEvent era -&gt; PpupEvent era -&gt; Bool
+(PpupEvent era -&gt; PpupEvent era -&gt; Bool)
+-&gt; (PpupEvent era -&gt; PpupEvent era -&gt; Bool) -&gt; Eq (PpupEvent era)
+forall era. PpupEvent era -&gt; PpupEvent era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era. PpupEvent era -&gt; PpupEvent era -&gt; Bool
+== :: PpupEvent era -&gt; PpupEvent era -&gt; Bool
+$c/= :: forall era. PpupEvent era -&gt; PpupEvent era -&gt; Bool
+/= :: PpupEvent era -&gt; PpupEvent era -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679501050"><span id="local-6989586621679501539"><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PpupEvent"><span class="hs-identifier hs-type">PpupEvent</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501050"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679501073"><span id="local-6989586621679501567"><span id="local-6989586621679501572"><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#EraPParams"><span class="hs-identifier hs-type">EraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#AtMostEra"><span class="hs-identifier hs-type">AtMostEra</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;Babbage&quot;</span></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html#ShelleyPPUP"><span class="hs-identifier hs-type">ShelleyPPUP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="State"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html#ShelleyPPUP"><span class="hs-identifier hs-type">ShelleyPPUP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Governance.html#ShelleyGovState"><span class="hs-identifier hs-type">ShelleyGovState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signal"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-var">Signal</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html#ShelleyPPUP"><span class="hs-identifier hs-type">ShelleyPPUP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#Update"><span class="hs-identifier hs-type">Update</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Environment"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html#ShelleyPPUP"><span class="hs-identifier hs-type">ShelleyPPUP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PpupEnv"><span class="hs-identifier hs-type">PpupEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="BaseM"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#BaseM"><span class="hs-identifier hs-var">BaseM</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html#ShelleyPPUP"><span class="hs-identifier hs-type">ShelleyPPUP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier hs-type">ShelleyBase</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="PredicateFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-var">PredicateFailure</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html#ShelleyPPUP"><span class="hs-identifier hs-type">ShelleyPPUP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier hs-type">ShelleyPpupPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Event"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Event"><span class="hs-identifier hs-var">Event</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html#ShelleyPPUP"><span class="hs-identifier hs-type">ShelleyPPUP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PpupEvent"><span class="hs-identifier hs-type">PpupEvent</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501073"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span>  </span><span id="local-6989586621679501585"><span class="annot"><span class="annottext">initialRules :: [InitialRule (ShelleyPPUP era)]
+</span><a href="#local-6989586621679501585"><span class="hs-identifier hs-var hs-var hs-var hs-var">initialRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621679501590"><span class="annot"><span class="annottext">transitionRules :: [TransitionRule (ShelleyPPUP era)]
+</span><a href="#local-6989586621679501590"><span class="hs-identifier hs-var hs-var hs-var hs-var">transitionRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TransitionRule (ShelleyPPUP era)
+forall era.
+(EraPParams era, AtMostEra &quot;Babbage&quot; era) =&gt;
+TransitionRule (ShelleyPPUP era)
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ppupTransitionNonEmpty"><span class="hs-identifier hs-var">ppupTransitionNonEmpty</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679501079"><span id="local-6989586621679501600"><span id="local-6989586621679501604"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501079"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier hs-type">ShelleyPpupPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501079"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621679501622"><span class="annot"><span class="annottext">encCBOR :: ShelleyPpupPredFailure era -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><span class="annottext">forall (w :: Wrapped) t. Encode w t -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier hs-type">ShelleyPpupPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501079"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Encode 'Open (ShelleyPpupPredFailure era) -&gt; Encoding)
+-&gt; (ShelleyPpupPredFailure era
+    -&gt; Encode 'Open (ShelleyPpupPredFailure era))
+-&gt; ShelleyPpupPredFailure era
+-&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-139"></span><span>      </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#NonGenesisUpdatePPUP"><span class="hs-identifier hs-type">NonGenesisUpdatePPUP</span></a></span><span> </span><span id="local-6989586621679501625"><span class="annot"><span class="annottext">Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+</span><a href="#local-6989586621679501625"><span class="hs-identifier hs-var">mm</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+ -&gt; ShelleyPpupPredFailure era)
+-&gt; Word
+-&gt; Encode
+     'Open
+     (Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+      -&gt; ShelleyPpupPredFailure era)
+forall t. t -&gt; Word -&gt; Encode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Sum"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+-&gt; ShelleyPpupPredFailure era
+forall era.
+Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+-&gt; ShelleyPpupPredFailure era
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#NonGenesisUpdatePPUP"><span class="hs-identifier hs-var">NonGenesisUpdatePPUP</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Encode
+  'Open
+  (Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+   -&gt; ShelleyPpupPredFailure era)
+-&gt; Encode
+     ('Closed 'Dense) (Mismatch 'RelSubset (Set (KeyHash 'Genesis)))
+-&gt; Encode 'Open (ShelleyPpupPredFailure era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+-&gt; Encode
+     ('Closed 'Dense) (Mismatch 'RelSubset (Set (KeyHash 'Genesis)))
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+</span><a href="#local-6989586621679501625"><span class="hs-identifier hs-var">mm</span></a></span><span>
+</span><span id="line-140"></span><span>      </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PPUpdateWrongEpoch"><span class="hs-identifier hs-type">PPUpdateWrongEpoch</span></a></span><span> </span><span id="local-6989586621679501629"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501629"><span class="hs-identifier hs-var">ce</span></a></span></span><span> </span><span id="local-6989586621679501630"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501630"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span id="local-6989586621679501631"><span class="annot"><span class="annottext">VotingPeriod
+</span><a href="#local-6989586621679501631"><span class="hs-identifier hs-var">vp</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era)
+-&gt; Word
+-&gt; Encode
+     'Open
+     (EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era)
+forall t. t -&gt; Word -&gt; Encode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Sum"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era
+forall era.
+EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PPUpdateWrongEpoch"><span class="hs-identifier hs-var">PPUpdateWrongEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Encode
+  'Open
+  (EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era)
+-&gt; Encode ('Closed 'Dense) EpochNo
+-&gt; Encode
+     'Open (EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; Encode ('Closed 'Dense) EpochNo
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501629"><span class="hs-identifier hs-var">ce</span></a></span><span> </span><span class="annot"><span class="annottext">Encode
+  'Open (EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era)
+-&gt; Encode ('Closed 'Dense) EpochNo
+-&gt; Encode 'Open (VotingPeriod -&gt; ShelleyPpupPredFailure era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; Encode ('Closed 'Dense) EpochNo
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501630"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Encode 'Open (VotingPeriod -&gt; ShelleyPpupPredFailure era)
+-&gt; Encode ('Closed 'Dense) VotingPeriod
+-&gt; Encode 'Open (ShelleyPpupPredFailure era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">VotingPeriod -&gt; Encode ('Closed 'Dense) VotingPeriod
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">VotingPeriod
+</span><a href="#local-6989586621679501631"><span class="hs-identifier hs-var">vp</span></a></span><span>
+</span><span id="line-141"></span><span>      </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PVCannotFollowPPUP"><span class="hs-identifier hs-type">PVCannotFollowPPUP</span></a></span><span> </span><span id="local-6989586621679501632"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679501632"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(ProtVer -&gt; ShelleyPpupPredFailure era)
+-&gt; Word -&gt; Encode 'Open (ProtVer -&gt; ShelleyPpupPredFailure era)
+forall t. t -&gt; Word -&gt; Encode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Sum"><span class="hs-identifier hs-var">Sum</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; ShelleyPpupPredFailure era
+forall era. ProtVer -&gt; ShelleyPpupPredFailure era
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PVCannotFollowPPUP"><span class="hs-identifier hs-var">PVCannotFollowPPUP</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Encode 'Open (ProtVer -&gt; ShelleyPpupPredFailure era)
+-&gt; Encode ('Closed 'Dense) ProtVer
+-&gt; Encode 'Open (ShelleyPpupPredFailure era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; Encode ('Closed 'Dense) ProtVer
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679501632"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679501103"><span id="local-6989586621679501640"><span id="local-6989586621679501644"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501103"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ShelleyPpupPredFailure"><span class="hs-identifier hs-type">ShelleyPpupPredFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501103"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-144"></span><span>  </span><span id="local-6989586621679501682"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (ShelleyPpupPredFailure era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decode ('Closed 'Dense) (ShelleyPpupPredFailure era)
+-&gt; Decoder s (ShelleyPpupPredFailure era)
+forall t (w :: Wrapped) s. Typeable t =&gt; Decode w t -&gt; Decoder s t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#decode"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">(Decode ('Closed 'Dense) (ShelleyPpupPredFailure era)
+ -&gt; Decoder s (ShelleyPpupPredFailure era))
+-&gt; ((Word -&gt; Decode 'Open (ShelleyPpupPredFailure era))
+    -&gt; Decode ('Closed 'Dense) (ShelleyPpupPredFailure era))
+-&gt; (Word -&gt; Decode 'Open (ShelleyPpupPredFailure era))
+-&gt; Decoder s (ShelleyPpupPredFailure era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Text
+-&gt; (Word -&gt; Decode 'Open (ShelleyPpupPredFailure era))
+-&gt; Decode ('Closed 'Dense) (ShelleyPpupPredFailure era)
+forall t.
+Text -&gt; (Word -&gt; Decode 'Open t) -&gt; Decode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#Summands"><span class="hs-identifier hs-var">Summands</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ShelleyPpupPredFailure&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Word -&gt; Decode 'Open (ShelleyPpupPredFailure era))
+ -&gt; Decoder s (ShelleyPpupPredFailure era))
+-&gt; (Word -&gt; Decode 'Open (ShelleyPpupPredFailure era))
+-&gt; Decoder s (ShelleyPpupPredFailure era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+ -&gt; ShelleyPpupPredFailure era)
+-&gt; Decode
+     'Open
+     (Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+      -&gt; ShelleyPpupPredFailure era)
+forall t. t -&gt; Decode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#SumD"><span class="hs-identifier hs-var">SumD</span></a></span><span> </span><span class="annot"><span class="annottext">Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+-&gt; ShelleyPpupPredFailure era
+forall era.
+Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+-&gt; ShelleyPpupPredFailure era
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#NonGenesisUpdatePPUP"><span class="hs-identifier hs-var">NonGenesisUpdatePPUP</span></a></span><span> </span><span class="annot"><span class="annottext">Decode
+  'Open
+  (Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+   -&gt; ShelleyPpupPredFailure era)
+-&gt; Decode
+     ('Closed Any) (Mismatch 'RelSubset (Set (KeyHash 'Genesis)))
+-&gt; Decode 'Open (ShelleyPpupPredFailure era)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) (Mismatch 'RelSubset (Set (KeyHash 'Genesis)))
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-146"></span><span>    </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era)
+-&gt; Decode
+     'Open
+     (EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era)
+forall t. t -&gt; Decode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#SumD"><span class="hs-identifier hs-var">SumD</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era
+forall era.
+EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PPUpdateWrongEpoch"><span class="hs-identifier hs-var">PPUpdateWrongEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">Decode
+  'Open
+  (EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era)
+-&gt; Decode ('Closed Any) EpochNo
+-&gt; Decode
+     'Open (EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) EpochNo
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span> </span><span class="annot"><span class="annottext">Decode
+  'Open (EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era)
+-&gt; Decode ('Closed Any) EpochNo
+-&gt; Decode 'Open (VotingPeriod -&gt; ShelleyPpupPredFailure era)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) EpochNo
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span> </span><span class="annot"><span class="annottext">Decode 'Open (VotingPeriod -&gt; ShelleyPpupPredFailure era)
+-&gt; Decode ('Closed Any) VotingPeriod
+-&gt; Decode 'Open (ShelleyPpupPredFailure era)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) VotingPeriod
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-147"></span><span>    </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(ProtVer -&gt; ShelleyPpupPredFailure era)
+-&gt; Decode 'Open (ProtVer -&gt; ShelleyPpupPredFailure era)
+forall t. t -&gt; Decode 'Open t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#SumD"><span class="hs-identifier hs-var">SumD</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; ShelleyPpupPredFailure era
+forall era. ProtVer -&gt; ShelleyPpupPredFailure era
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PVCannotFollowPPUP"><span class="hs-identifier hs-var">PVCannotFollowPPUP</span></a></span><span> </span><span class="annot"><span class="annottext">Decode 'Open (ProtVer -&gt; ShelleyPpupPredFailure era)
+-&gt; Decode ('Closed Any) ProtVer
+-&gt; Decode 'Open (ShelleyPpupPredFailure era)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) ProtVer
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-148"></span><span>    </span><span id="local-6989586621679501688"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679501688"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Decode 'Open (ShelleyPpupPredFailure era)
+forall (w :: Wrapped) t. Word -&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#Invalid"><span class="hs-identifier hs-var">Invalid</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679501688"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span id="local-6989586621679501077"><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ppupTransitionNonEmpty"><span class="hs-identifier hs-type">ppupTransitionNonEmpty</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#EraPParams"><span class="hs-identifier hs-type">EraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501077"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#AtMostEra"><span class="hs-identifier hs-type">AtMostEra</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;Babbage&quot;</span></span><span> </span><span class="annot"><a href="#local-6989586621679501077"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TransitionRule"><span class="hs-identifier hs-type">TransitionRule</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html#ShelleyPPUP"><span class="hs-identifier hs-type">ShelleyPPUP</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501077"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-152"></span><span id="ppupTransitionNonEmpty"><span class="annot"><span class="annottext">ppupTransitionNonEmpty :: forall era.
+(EraPParams era, AtMostEra &quot;Babbage&quot; era) =&gt;
+TransitionRule (ShelleyPPUP era)
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#ppupTransitionNonEmpty"><span class="hs-identifier hs-var hs-var">ppupTransitionNonEmpty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-153"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PPUPEnv"><span class="hs-identifier hs-type">PPUPEnv</span></a></span><span> </span><span id="local-6989586621679501766"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679501766"><span class="hs-identifier hs-var">slot</span></a></span></span><span> </span><span id="local-6989586621679501767"><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679501767"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#GenDelegs"><span class="hs-identifier hs-type">GenDelegs</span></a></span><span> </span><span id="local-6989586621679501769"><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="#local-6989586621679501769"><span class="hs-identifier hs-var">genDelegs</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501770"><span class="annot"><span class="annottext">pps :: State (ShelleyPPUP era)
+</span><a href="#local-6989586621679501770"><span class="hs-identifier hs-var">pps</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Governance.html#ShelleyGovState"><span class="hs-identifier hs-type">ShelleyGovState</span></a></span><span>
+</span><span id="line-156"></span><span>                </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">sgsCurProposals :: forall era. ShelleyGovState era -&gt; ProposedPPUpdates era
+</span><a href="Cardano.Ledger.Shelley.Governance.html#sgsCurProposals"><span class="hs-identifier hs-var">sgsCurProposals</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#ProposedPPUpdates"><span class="hs-identifier hs-type">ProposedPPUpdates</span></a></span><span> </span><span id="local-6989586621679501773"><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+</span><a href="#local-6989586621679501773"><span class="hs-identifier hs-var">pupS</span></a></span></span><span>
+</span><span id="line-157"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">sgsFutureProposals :: forall era. ShelleyGovState era -&gt; ProposedPPUpdates era
+</span><a href="Cardano.Ledger.Shelley.Governance.html#sgsFutureProposals"><span class="hs-identifier hs-var">sgsFutureProposals</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#ProposedPPUpdates"><span class="hs-identifier hs-type">ProposedPPUpdates</span></a></span><span> </span><span id="local-6989586621679501775"><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+</span><a href="#local-6989586621679501775"><span class="hs-identifier hs-var">fpupS</span></a></span></span><span>
+</span><span id="line-158"></span><span>                </span><span class="hs-special">}</span><span>
+</span><span id="line-159"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501776"><span class="annot"><span class="annottext">Signal (ShelleyPPUP era)
+</span><a href="#local-6989586621679501776"><span class="hs-identifier hs-var">update</span></a></span></span><span>
+</span><span id="line-161"></span><span>      </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-162"></span><span>    </span><span class="annot"><span class="annottext">Rule
+  (ShelleyPPUP era)
+  'Transition
+  (RuleContext 'Transition (ShelleyPPUP era))
+F (Clause (ShelleyPPUP era) 'Transition) (TRC (ShelleyPPUP era))
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Signal (ShelleyPPUP era)
+</span><a href="#local-6989586621679501776"><span class="hs-identifier hs-var">update</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-165"></span><span>    </span><span class="annot"><span class="annottext">StrictMaybe (Update era)
+Signal (ShelleyPPUP era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyGovState era
+-&gt; F (Clause (ShelleyPPUP era) 'Transition) (ShelleyGovState era)
+forall a. a -&gt; F (Clause (ShelleyPPUP era) 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">State (ShelleyPPUP era)
+ShelleyGovState era
+</span><a href="#local-6989586621679501770"><span class="hs-identifier hs-var">pps</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-type">SJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#Update"><span class="hs-identifier hs-type">Update</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#ProposedPPUpdates"><span class="hs-identifier hs-type">ProposedPPUpdates</span></a></span><span> </span><span id="local-6989586621679501781"><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+</span><a href="#local-6989586621679501781"><span class="hs-identifier hs-var">pup</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679501782"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501782"><span class="hs-identifier hs-var">targetEpochNo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-167"></span><span>      </span><span class="annot"><span class="annottext">Exp Bool -&gt; Bool
+forall s t. Embed s t =&gt; Exp t -&gt; s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.SetAlgebra.html#eval"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+-&gt; Exp (Sett (KeyHash 'Genesis) ())
+forall k s (f :: * -&gt; * -&gt; *) v.
+(Ord k, HasExp s (f k v)) =&gt;
+s -&gt; Exp (Sett k ())
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#dom"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+</span><a href="#local-6989586621679501781"><span class="hs-identifier hs-var">pup</span></a></span><span> </span><span class="annot"><span class="annottext">Exp (Sett (KeyHash 'Genesis) ())
+-&gt; Exp (Sett (KeyHash 'Genesis) ()) -&gt; Exp Bool
+forall k (f :: * -&gt; * -&gt; *) (g :: * -&gt; * -&gt; *) s1 v s2 u.
+(Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) =&gt;
+s1 -&gt; s2 -&gt; Exp Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#%2286"><span class="hs-operator hs-var">&#8838;</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+-&gt; Exp (Sett (KeyHash 'Genesis) ())
+forall k s (f :: * -&gt; * -&gt; *) v.
+(Ord k, HasExp s (f k v)) =&gt;
+s -&gt; Exp (Sett k ())
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#dom"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="#local-6989586621679501769"><span class="hs-identifier hs-var">genDelegs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>        </span><span class="annot"><span class="annottext">Bool
+-&gt; PredicateFailure (ShelleyPPUP era)
+-&gt; Rule (ShelleyPPUP era) 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+-&gt; ShelleyPpupPredFailure era
+forall era.
+Mismatch 'RelSubset (Set (KeyHash 'Genesis))
+-&gt; ShelleyPpupPredFailure era
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#NonGenesisUpdatePPUP"><span class="hs-identifier hs-var">NonGenesisUpdatePPUP</span></a></span><span>
+</span><span id="line-169"></span><span>          </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Mismatch"><span class="hs-identifier hs-type">Mismatch</span></a></span><span>
+</span><span id="line-170"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">mismatchSupplied :: Set (KeyHash 'Genesis)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mismatchSupplied"><span class="hs-identifier hs-var">mismatchSupplied</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Exp (Sett (KeyHash 'Genesis) ()) -&gt; Set (KeyHash 'Genesis)
+forall s t. Embed s t =&gt; Exp t -&gt; s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.SetAlgebra.html#eval"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="annot"><span class="annottext">(Exp (Sett (KeyHash 'Genesis) ()) -&gt; Set (KeyHash 'Genesis))
+-&gt; Exp (Sett (KeyHash 'Genesis) ()) -&gt; Set (KeyHash 'Genesis)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+-&gt; Exp (Sett (KeyHash 'Genesis) ())
+forall k s (f :: * -&gt; * -&gt; *) v.
+(Ord k, HasExp s (f k v)) =&gt;
+s -&gt; Exp (Sett k ())
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#dom"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+</span><a href="#local-6989586621679501781"><span class="hs-identifier hs-var">pup</span></a></span><span>
+</span><span id="line-171"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">mismatchExpected :: Set (KeyHash 'Genesis)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#mismatchExpected"><span class="hs-identifier hs-var">mismatchExpected</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Exp (Sett (KeyHash 'Genesis) ()) -&gt; Set (KeyHash 'Genesis)
+forall s t. Embed s t =&gt; Exp t -&gt; s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.SetAlgebra.html#eval"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="annot"><span class="annottext">(Exp (Sett (KeyHash 'Genesis) ()) -&gt; Set (KeyHash 'Genesis))
+-&gt; Exp (Sett (KeyHash 'Genesis) ()) -&gt; Set (KeyHash 'Genesis)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+-&gt; Exp (Sett (KeyHash 'Genesis) ())
+forall k s (f :: * -&gt; * -&gt; *) v.
+(Ord k, HasExp s (f k v)) =&gt;
+s -&gt; Exp (Sett k ())
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#dom"><span class="hs-identifier hs-var">dom</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="#local-6989586621679501769"><span class="hs-identifier hs-var">genDelegs</span></a></span><span>
+</span><span id="line-172"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679501785"><span class="annot"><span class="annottext">firstIllegalProtVerUpdate :: Maybe ProtVer
+</span><a href="#local-6989586621679501785"><span class="hs-identifier hs-var hs-var">firstIllegalProtVerUpdate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-175"></span><span>            </span><span id="local-6989586621679501786"><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621679501786"><span class="hs-identifier hs-var">ppu</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(PParamsUpdate era -&gt; Bool)
+-&gt; Map (KeyHash 'Genesis) (PParamsUpdate era)
+-&gt; Maybe (PParamsUpdate era)
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">F.find</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><span class="hs-identifier hs-var">not</span></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool)
+-&gt; (PParamsUpdate era -&gt; Bool) -&gt; PParamsUpdate era -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; PParamsUpdate era -&gt; Bool
+forall era.
+(AtMostEra &quot;Babbage&quot; era, EraPParams era) =&gt;
+PParams era -&gt; PParamsUpdate era -&gt; Bool
+</span><a href="Cardano.Ledger.Shelley.PParams.html#hasLegalProtVerUpdate"><span class="hs-identifier hs-var">hasLegalProtVerUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679501767"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+</span><a href="#local-6989586621679501781"><span class="hs-identifier hs-var">pup</span></a></span><span>
+</span><span id="line-176"></span><span>            </span><span class="hs-comment">-- SNothing is considered legal</span><span>
+</span><span id="line-177"></span><span>            </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-strict-containers-0.1.5.0-d2741b9ef9564f4a1a3151d17a0f69b9663f5795dd47dab0bbd6117738fcce96/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-type">SJust</span></a></span><span> </span><span id="local-6989586621679501788"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679501788"><span class="hs-identifier hs-var">newBadProtVer</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">StrictMaybe ProtVer -&gt; Maybe (StrictMaybe ProtVer)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621679501786"><span class="hs-identifier hs-var">ppu</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era
+-&gt; Getting
+     (StrictMaybe ProtVer) (PParamsUpdate era) (StrictMaybe ProtVer)
+-&gt; StrictMaybe ProtVer
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (StrictMaybe ProtVer) (PParamsUpdate era) (StrictMaybe ProtVer)
+forall era.
+(EraPParams era, AtMostEra &quot;Babbage&quot; era) =&gt;
+Lens' (PParamsUpdate era) (StrictMaybe ProtVer)
+Lens' (PParamsUpdate era) (StrictMaybe ProtVer)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppuProtocolVersionL"><span class="hs-identifier hs-var">ppuProtocolVersionL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>            </span><span class="annot"><span class="annottext">ProtVer -&gt; Maybe ProtVer
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679501788"><span class="hs-identifier hs-var">newBadProtVer</span></a></span><span>
+</span><span id="line-179"></span><span>      </span><span class="annot"><span class="annottext">Maybe ProtVer
+-&gt; (ProtVer -&gt; PredicateFailure (ShelleyPPUP era))
+-&gt; Rule (ShelleyPPUP era) 'Transition ()
+forall a sts (ctx :: RuleType).
+Maybe a -&gt; (a -&gt; PredicateFailure sts) -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#failOnJust"><span class="hs-identifier hs-var">failOnJust</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ProtVer
+</span><a href="#local-6989586621679501785"><span class="hs-identifier hs-var">firstIllegalProtVerUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; PredicateFailure (ShelleyPPUP era)
+ProtVer -&gt; ShelleyPpupPredFailure era
+forall era. ProtVer -&gt; ShelleyPpupPredFailure era
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PVCannotFollowPPUP"><span class="hs-identifier hs-var">PVCannotFollowPPUP</span></a></span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679501791"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501791"><span class="hs-identifier hs-var">curEpochNo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501792"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679501792"><span class="hs-identifier hs-var">tooLate</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679501793"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501793"><span class="hs-identifier hs-var">nextEpochNo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BaseM (ShelleyPPUP era) (EpochNo, SlotNo, EpochNo)
+-&gt; Rule (ShelleyPPUP era) 'Transition (EpochNo, SlotNo, EpochNo)
+forall sts a (ctx :: RuleType).
+STS sts =&gt;
+BaseM sts a -&gt; Rule sts ctx a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#liftSTS"><span class="hs-identifier hs-var">liftSTS</span></a></span><span> </span><span class="annot"><span class="annottext">(BaseM (ShelleyPPUP era) (EpochNo, SlotNo, EpochNo)
+ -&gt; Rule (ShelleyPPUP era) 'Transition (EpochNo, SlotNo, EpochNo))
+-&gt; BaseM (ShelleyPPUP era) (EpochNo, SlotNo, EpochNo)
+-&gt; Rule (ShelleyPPUP era) 'Transition (EpochNo, SlotNo, EpochNo)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; SlotNo -&gt; ShelleyBase (EpochNo, SlotNo, EpochNo)
+SlotNo -&gt; ShelleyBase (EpochNo, SlotNo, EpochNo)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Slot.html#getTheSlotOfNoReturn"><span class="hs-identifier hs-var">getTheSlotOfNoReturn</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679501766"><span class="hs-identifier hs-var">slot</span></a></span><span>
+</span><span id="line-182"></span><span>      </span><span class="annot"><span class="annottext">Event (ShelleyPPUP era) -&gt; Rule (ShelleyPPUP era) 'Transition ()
+forall sts (ctx :: RuleType). Event sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#tellEvent"><span class="hs-identifier hs-var">tellEvent</span></a></span><span> </span><span class="annot"><span class="annottext">(Event (ShelleyPPUP era) -&gt; Rule (ShelleyPPUP era) 'Transition ())
+-&gt; Event (ShelleyPPUP era) -&gt; Rule (ShelleyPPUP era) 'Transition ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; PpupEvent era
+forall era. EpochNo -&gt; PpupEvent era
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PpupNewEpoch"><span class="hs-identifier hs-var">PpupNewEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501793"><span class="hs-identifier hs-var">nextEpochNo</span></a></span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679501766"><span class="hs-identifier hs-var">slot</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; SlotNo -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679501792"><span class="hs-identifier hs-var">tooLate</span></a></span><span>
+</span><span id="line-185"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-186"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501791"><span class="hs-identifier hs-var">curEpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501782"><span class="hs-identifier hs-var">targetEpochNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-187"></span><span>            </span><span class="annot"><span class="annottext">Bool
+-&gt; PredicateFailure (ShelleyPPUP era)
+-&gt; Rule (ShelleyPPUP era) 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era
+forall era.
+EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PPUpdateWrongEpoch"><span class="hs-identifier hs-var">PPUpdateWrongEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501791"><span class="hs-identifier hs-var">curEpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501782"><span class="hs-identifier hs-var">targetEpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">VotingPeriod
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VoteForThisEpoch"><span class="hs-identifier hs-var">VoteForThisEpoch</span></a></span><span>
+</span><span id="line-188"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679501797"><span class="annot"><span class="annottext">curProposals :: ProposedPPUpdates era
+</span><a href="#local-6989586621679501797"><span class="hs-identifier hs-var hs-var">curProposals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era) -&gt; ProposedPPUpdates era
+forall era.
+Map (KeyHash 'Genesis) (PParamsUpdate era) -&gt; ProposedPPUpdates era
+</span><a href="Cardano.Ledger.Shelley.PParams.html#ProposedPPUpdates"><span class="hs-identifier hs-var">ProposedPPUpdates</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Exp (Map (KeyHash 'Genesis) (PParamsUpdate era))
+-&gt; Map (KeyHash 'Genesis) (PParamsUpdate era)
+forall s t. Embed s t =&gt; Exp t -&gt; s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.SetAlgebra.html#eval"><span class="hs-identifier hs-var">eval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+</span><a href="#local-6989586621679501773"><span class="hs-identifier hs-var">pupS</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+-&gt; Map (KeyHash 'Genesis) (PParamsUpdate era)
+-&gt; Exp (Map (KeyHash 'Genesis) (PParamsUpdate era))
+forall k s1 (f :: * -&gt; * -&gt; *) v s2 (g :: * -&gt; * -&gt; *).
+(Ord k, HasExp s1 (f k v), HasExp s2 (g k v)) =&gt;
+s1 -&gt; s2 -&gt; Exp (f k v)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#%2A03"><span class="hs-operator hs-var">&#10755;</span></a></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+</span><a href="#local-6989586621679501781"><span class="hs-identifier hs-var">pup</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span>          </span><span class="hs-glyph">!</span><span id="local-6989586621679501798"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679501798"><span class="hs-identifier hs-var">coreNodeQuorum</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">BaseM (ShelleyPPUP era) Word64
+-&gt; Rule (ShelleyPPUP era) 'Transition Word64
+forall sts a (ctx :: RuleType).
+STS sts =&gt;
+BaseM sts a -&gt; Rule sts ctx a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#liftSTS"><span class="hs-identifier hs-var">liftSTS</span></a></span><span> </span><span class="annot"><span class="annottext">(BaseM (ShelleyPPUP era) Word64
+ -&gt; Rule (ShelleyPPUP era) 'Transition Word64)
+-&gt; BaseM (ShelleyPPUP era) Word64
+-&gt; Rule (ShelleyPPUP era) 'Transition Word64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Globals -&gt; Word64) -&gt; ReaderT Globals Identity Word64
+forall (m :: * -&gt; *) r a. Monad m =&gt; (r -&gt; a) -&gt; ReaderT r m a
+</span><span class="hs-identifier hs-var">asks</span></span><span> </span><span class="annot"><span class="annottext">Globals -&gt; Word64
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#quorum"><span class="hs-identifier hs-var">quorum</span></a></span><span>
+</span><span id="line-190"></span><span>          </span><span class="annot"><span class="annottext">ShelleyGovState era
+-&gt; F (Clause (ShelleyPPUP era) 'Transition) (ShelleyGovState era)
+forall a. a -&gt; F (Clause (ShelleyPPUP era) 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(ShelleyGovState era
+ -&gt; F (Clause (ShelleyPPUP era) 'Transition) (ShelleyGovState era))
+-&gt; ShelleyGovState era
+-&gt; F (Clause (ShelleyPPUP era) 'Transition) (ShelleyGovState era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-191"></span><span>            </span><span class="annot"><span class="annottext">State (ShelleyPPUP era)
+</span><a href="#local-6989586621679501770"><span class="hs-identifier hs-var">pps</span></a></span><span>
+</span><span id="line-192"></span><span>              </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Governance.html#sgsCurProposals"><span class="hs-identifier hs-var">sgsCurProposals</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679501797"><span class="hs-identifier hs-type">curProposals</span></a></span><span>
+</span><span id="line-193"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Governance.html#sgsFutureProposals"><span class="hs-identifier hs-var">sgsFutureProposals</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#ProposedPPUpdates"><span class="hs-identifier hs-type">ProposedPPUpdates</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501775"><span class="hs-identifier hs-type">fpupS</span></a></span><span>
+</span><span id="line-194"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Governance.html#sgsFuturePParams"><span class="hs-identifier hs-var">sgsFuturePParams</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-195"></span><span>                  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Governance.html#PotentialPParamsUpdate"><span class="hs-identifier hs-type">PotentialPParamsUpdate</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">$</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#votedFuturePParams"><span class="hs-identifier hs-type">votedFuturePParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501797"><span class="hs-identifier hs-type">curProposals</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501767"><span class="hs-identifier hs-type">pp</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501798"><span class="hs-identifier hs-type">coreNodeQuorum</span></a></span><span>
+</span><span id="line-196"></span><span>              </span><span class="hs-special">}</span><span>
+</span><span id="line-197"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-198"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo
+forall a. Enum a =&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">succ</span></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501791"><span class="hs-identifier hs-var">curEpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501782"><span class="hs-identifier hs-var">targetEpochNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-199"></span><span>            </span><span class="annot"><span class="annottext">Bool
+-&gt; PredicateFailure (ShelleyPPUP era)
+-&gt; Rule (ShelleyPPUP era) 'Transition ()
+forall sts (ctx :: RuleType).
+Bool -&gt; PredicateFailure sts -&gt; Rule sts ctx ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#%3F%21"><span class="hs-operator hs-var">?!</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era
+forall era.
+EpochNo -&gt; EpochNo -&gt; VotingPeriod -&gt; ShelleyPpupPredFailure era
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#PPUpdateWrongEpoch"><span class="hs-identifier hs-var">PPUpdateWrongEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501791"><span class="hs-identifier hs-var">curEpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679501782"><span class="hs-identifier hs-var">targetEpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">VotingPeriod
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#VoteForNextEpoch"><span class="hs-identifier hs-var">VoteForNextEpoch</span></a></span><span>
+</span><span id="line-200"></span><span>          </span><span class="annot"><span class="annottext">ShelleyGovState era
+-&gt; F (Clause (ShelleyPPUP era) 'Transition) (ShelleyGovState era)
+forall a. a -&gt; F (Clause (ShelleyPPUP era) 'Transition) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(ShelleyGovState era
+ -&gt; F (Clause (ShelleyPPUP era) 'Transition) (ShelleyGovState era))
+-&gt; ShelleyGovState era
+-&gt; F (Clause (ShelleyPPUP era) 'Transition) (ShelleyGovState era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-201"></span><span>            </span><span class="annot"><span class="annottext">State (ShelleyPPUP era)
+</span><a href="#local-6989586621679501770"><span class="hs-identifier hs-var">pps</span></a></span><span>
+</span><span id="line-202"></span><span>              </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Governance.html#sgsCurProposals"><span class="hs-identifier hs-var">sgsCurProposals</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#ProposedPPUpdates"><span class="hs-identifier hs-type">ProposedPPUpdates</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501773"><span class="hs-identifier hs-type">pupS</span></a></span><span>
+</span><span id="line-203"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Governance.html#sgsFutureProposals"><span class="hs-identifier hs-var">sgsFutureProposals</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#ProposedPPUpdates"><span class="hs-identifier hs-type">ProposedPPUpdates</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.SetAlgebra.html#eval"><span class="hs-identifier hs-type">eval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679501775"><span class="hs-identifier hs-type">fpupS</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/set-algebra-1.1.0.4/doc/html/set-algebra/src/Control.Iterate.Exp.html#%2A03"><span class="hs-operator hs-type">&#10755;</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501781"><span class="hs-identifier hs-type">pup</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-204"></span><span>              </span><span class="hs-special">}</span><span>
+</span><span id="line-205"></span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- | If at least @n@ nodes voted to change __the same__ protocol parameters to</span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- __the same__ values, return the given protocol parameters updated to these</span><span>
+</span><span id="line-208"></span><span class="hs-comment">-- values. Here @n@ is the quorum needed.</span><span>
+</span><span id="line-209"></span><span class="annot"><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#votedFuturePParams"><span class="hs-identifier hs-type">votedFuturePParams</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-210"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679501208"><span class="annot"><a href="#local-6989586621679501208"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-211"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#EraPParams"><span class="hs-identifier hs-type">EraPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501208"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-212"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#ProposedPPUpdates"><span class="hs-identifier hs-type">ProposedPPUpdates</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501208"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-213"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Protocol parameters to which the change will be applied.</span></span><span>
+</span><span id="line-214"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501208"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-215"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Quorum needed to change the protocol parameters.</span></span><span>
+</span><span id="line-216"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-217"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParams"><span class="hs-identifier hs-type">PParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501208"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-218"></span><span id="votedFuturePParams"><span class="annot"><span class="annottext">votedFuturePParams :: forall era.
+EraPParams era =&gt;
+ProposedPPUpdates era
+-&gt; PParams era -&gt; Word64 -&gt; Maybe (PParams era)
+</span><a href="Cardano.Ledger.Shelley.Rules.Ppup.html#votedFuturePParams"><span class="hs-identifier hs-var hs-var">votedFuturePParams</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.PParams.html#ProposedPPUpdates"><span class="hs-identifier hs-type">ProposedPPUpdates</span></a></span><span> </span><span id="local-6989586621679501835"><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+</span><a href="#local-6989586621679501835"><span class="hs-identifier hs-var">pppu</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679501836"><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679501836"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679501837"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679501837"><span class="hs-identifier hs-var">quorumN</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-219"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679501838"><span class="annot"><span class="annottext">votes :: Map (PParamsUpdate era) Word64
+</span><a href="#local-6989586621679501838"><span class="hs-identifier hs-var hs-var">votes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-220"></span><span>        </span><span class="annot"><span class="annottext">(PParamsUpdate era
+ -&gt; Map (PParamsUpdate era) Word64
+ -&gt; Map (PParamsUpdate era) Word64)
+-&gt; Map (PParamsUpdate era) Word64
+-&gt; Map (KeyHash 'Genesis) (PParamsUpdate era)
+-&gt; Map (PParamsUpdate era) Word64
+forall a b k. (a -&gt; b -&gt; b) -&gt; b -&gt; Map k a -&gt; b
+</span><span class="hs-identifier hs-var">Map.foldr</span></span><span>
+</span><span id="line-221"></span><span>          </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679501840"><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621679501840"><span class="hs-identifier hs-var">vote</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; Word64 -&gt; Word64)
+-&gt; PParamsUpdate era
+-&gt; Word64
+-&gt; Map (PParamsUpdate era) Word64
+-&gt; Map (PParamsUpdate era) Word64
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.insertWith</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">(+)</span></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621679501840"><span class="hs-identifier hs-var">vote</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (PParamsUpdate era) Word64
+forall k a. Map k a
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#PParamsUpdate"><span class="hs-identifier hs-type">PParamsUpdate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679501208"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-223"></span><span>          </span><span class="annot"><span class="annottext">Map (KeyHash 'Genesis) (PParamsUpdate era)
+</span><a href="#local-6989586621679501835"><span class="hs-identifier hs-var">pppu</span></a></span><span>
+</span><span id="line-224"></span><span>      </span><span id="local-6989586621679501844"><span class="annot"><span class="annottext">consensus :: Map (PParamsUpdate era) Word64
+</span><a href="#local-6989586621679501844"><span class="hs-identifier hs-var hs-var">consensus</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; Bool)
+-&gt; Map (PParamsUpdate era) Word64 -&gt; Map (PParamsUpdate era) Word64
+forall a k. (a -&gt; Bool) -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.filter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679501837"><span class="hs-identifier hs-var">quorumN</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map (PParamsUpdate era) Word64
+</span><a href="#local-6989586621679501838"><span class="hs-identifier hs-var">votes</span></a></span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-comment">-- NOTE that `quorumN` is a global constant, and that we require</span><span>
+</span><span id="line-226"></span><span>  </span><span class="hs-comment">-- it to be strictly greater than half the number of genesis nodes.</span><span>
+</span><span id="line-227"></span><span>  </span><span class="hs-comment">-- The keys in the `pup` correspond to the genesis nodes,</span><span>
+</span><span id="line-228"></span><span>  </span><span class="hs-comment">-- and therefore either:</span><span>
+</span><span id="line-229"></span><span>  </span><span class="hs-comment">--   1) `consensus` is empty, or</span><span>
+</span><span id="line-230"></span><span>  </span><span class="hs-comment">--   2) `consensus` has exactly one element.</span><span>
+</span><span id="line-231"></span><span>  </span><span class="hs-special">[</span><span id="local-6989586621679501846"><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621679501846"><span class="hs-identifier hs-var">ppu</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[PParamsUpdate era] -&gt; Maybe [PParamsUpdate era]
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">([PParamsUpdate era] -&gt; Maybe [PParamsUpdate era])
+-&gt; [PParamsUpdate era] -&gt; Maybe [PParamsUpdate era]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Map (PParamsUpdate era) Word64 -&gt; [PParamsUpdate era]
+forall k a. Map k a -&gt; [k]
+</span><span class="hs-identifier hs-var">Map.keys</span></span><span> </span><span class="annot"><span class="annottext">Map (PParamsUpdate era) Word64
+</span><a href="#local-6989586621679501844"><span class="hs-identifier hs-var">consensus</span></a></span><span>
+</span><span id="line-232"></span><span>  </span><span class="hs-comment">-- NOTE that `applyPPUpdates` corresponds to the union override right</span><span>
+</span><span id="line-233"></span><span>  </span><span class="hs-comment">-- operation in the formal spec.</span><span>
+</span><span id="line-234"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679501848"><span class="annot"><span class="annottext">ppNew :: PParams era
+</span><a href="#local-6989586621679501848"><span class="hs-identifier hs-var hs-var">ppNew</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; PParamsUpdate era -&gt; PParams era
+forall era.
+EraPParams era =&gt;
+PParams era -&gt; PParamsUpdate era -&gt; PParams era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#applyPPUpdates"><span class="hs-identifier hs-var">applyPPUpdates</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679501836"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">PParamsUpdate era
+</span><a href="#local-6989586621679501846"><span class="hs-identifier hs-var">ppu</span></a></span><span>
+</span><span id="line-235"></span><span>  </span><span class="hs-comment">-- TODO: Remove this incorrect check from the code and the spec. It is incorrect because</span><span>
+</span><span id="line-236"></span><span>  </span><span class="hs-comment">-- block header size is not part of the block body size, therefore this relation makes</span><span>
+</span><span id="line-237"></span><span>  </span><span class="hs-comment">-- no sense. My hypothesis is that at initial design phase there was a block size that</span><span>
+</span><span id="line-238"></span><span>  </span><span class="hs-comment">-- included the block header size, which later got changed to block body size. See</span><span>
+</span><span id="line-239"></span><span>  </span><span class="hs-comment">-- relevant spec ticket: https://github.com/IntersectMBO/cardano-ledger/issues/4251</span><span>
+</span><span id="line-240"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; Maybe ()
+forall (f :: * -&gt; *). Alternative f =&gt; Bool -&gt; f ()
+</span><span class="hs-identifier hs-var">guard</span></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Maybe ()) -&gt; Bool -&gt; Maybe ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-241"></span><span>    </span><span class="annot"><span class="annottext">Word32 -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679501848"><span class="hs-identifier hs-var">ppNew</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; Getting Word32 (PParams era) Word32 -&gt; Word32
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Word32 (PParams era) Word32
+forall era. EraPParams era =&gt; Lens' (PParams era) Word32
+Lens' (PParams era) Word32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMaxTxSizeL"><span class="hs-identifier hs-var">ppMaxTxSizeL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679501848"><span class="hs-identifier hs-var">ppNew</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; Getting Word16 (PParams era) Word16 -&gt; Word16
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Word16 (PParams era) Word16
+forall era. EraPParams era =&gt; Lens' (PParams era) Word16
+Lens' (PParams era) Word16
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMaxBHSizeL"><span class="hs-identifier hs-var">ppMaxBHSizeL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>      </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679501848"><span class="hs-identifier hs-var">ppNew</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; Getting Word32 (PParams era) Word32 -&gt; Word32
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Word32 (PParams era) Word32
+forall era. EraPParams era =&gt; Lens' (PParams era) Word32
+Lens' (PParams era) Word32
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMaxBBSizeL"><span class="hs-identifier hs-var">ppMaxBBSizeL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-243"></span><span>  </span><span class="annot"><span class="annottext">PParams era -&gt; Maybe (PParams era)
+forall a. a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621679501848"><span class="hs-identifier hs-var">ppNew</span></a></span><span>
+</span><span id="line-244"></span></pre></body></html>

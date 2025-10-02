@@ -1,0 +1,845 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE PatternGuards #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- | Fake implementation of VRF, where the random value isn't random but given</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- by the creator.</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Protocol.Crypto.VRF.Fake</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#NatNonce"><span class="hs-identifier">NatNonce</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier">FakeVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#VerKeyVRF"><span class="hs-identifier">VerKeyVRF</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#SignKeyVRF"><span class="hs-identifier">SignKeyVRF</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#WithResult"><span class="hs-identifier">WithResult</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.html"><span class="hs-identifier">Cardano.Crypto.Hash</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Seed.html"><span class="hs-identifier">Cardano.Crypto.Seed</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Seed.html#runMonadRandomWithSeed"><span class="hs-identifier">runMonadRandomWithSeed</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html"><span class="hs-identifier">Cardano.Crypto.Util</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html"><span class="hs-identifier">Cardano.Crypto.VRF.Class</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#decodeCertVRF"><span class="hs-identifier">decodeCertVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#decodeSignKeyVRF"><span class="hs-identifier">decodeSignKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#decodeVerKeyVRF"><span class="hs-identifier">decodeVerKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#encodeCertVRF"><span class="hs-identifier">encodeCertVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#encodeSignKeyVRF"><span class="hs-identifier">encodeSignKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#encodeVerKeyVRF"><span class="hs-identifier">encodeVerKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Seed"><span class="hs-identifier">Seed</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#shelleyProtVer"><span class="hs-identifier">shelleyProtVer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#hashWithEncoder"><span class="hs-identifier">hashWithEncoder</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html"><span class="hs-identifier">Cardano.Ledger.Binary.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#decodeCertVRF"><span class="hs-identifier">decodeCertVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#decodeSignKeyVRF"><span class="hs-identifier">decodeSignKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#decodeVerKeyVRF"><span class="hs-identifier">decodeVerKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#encodeCertVRF"><span class="hs-identifier">encodeCertVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#encodeSignKeyVRF"><span class="hs-identifier">encodeSignKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#encodeVerKeyVRF"><span class="hs-identifier">encodeVerKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Bits</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Builder</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word16</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Numeric.Natural</span></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- | We provide our own nonces to 'mkBlock', which we then wish to recover as</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- the output of the VRF functions. In general, however, we just derive them</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- from a natural. Since the nonce is a hash, we do not want to recover it to</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- find a preimage. In testing, therefore, we just wrap the raw natural, which</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- we then encode into the fake VRF implementation.</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">newtype</span><span> </span><span id="NatNonce"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#NatNonce"><span class="hs-identifier hs-var">NatNonce</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NatNonce"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#NatNonce"><span class="hs-identifier hs-var">NatNonce</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">data</span><span> </span><span id="FakeVRF"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-var">FakeVRF</span></a></span></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- | A class for seeds which sneakily contain the certified output we wish to</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- &quot;randomly&quot; derive from them.</span><span>
+</span><span id="line-64"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#Payload"><span class="hs-identifier hs-type">Payload</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679329945"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="SneakilyContainResult"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SneakilyContainResult"><span class="hs-identifier hs-var">SneakilyContainResult</span></a></span></span><span> </span><span id="local-6989586621679329945"><span class="annot"><a href="#local-6989586621679329945"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Payload"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#Payload"><span class="hs-identifier hs-var">Payload</span></a></span></span><span> </span><span id="local-6989586621679329945"><span class="annot"><a href="#local-6989586621679329945"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-66"></span><span>  </span><span id="sneakilyExtractResult"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#sneakilyExtractResult"><span class="hs-identifier hs-type">sneakilyExtractResult</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679329945"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#SignKeyVRF"><span class="hs-identifier hs-type">SignKeyVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#OutputVRF"><span class="hs-identifier hs-type">OutputVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span id="unsneakilyExtractPayload"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#unsneakilyExtractPayload"><span class="hs-identifier hs-type">unsneakilyExtractPayload</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679329945"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#Payload"><span class="hs-identifier hs-type">Payload</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679329945"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">data</span><span> </span><span id="WithResult"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#WithResult"><span class="hs-identifier hs-var">WithResult</span></a></span></span><span> </span><span id="local-6989586621679330138"><span class="annot"><a href="#local-6989586621679330138"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="WithResult"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#WithResult"><span class="hs-identifier hs-var">WithResult</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621679330138"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679330142"><span id="local-6989586621679330147"><span class="annot"><span class="annottext">WithResult a -&gt; WithResult a -&gt; Bool
+(WithResult a -&gt; WithResult a -&gt; Bool)
+-&gt; (WithResult a -&gt; WithResult a -&gt; Bool) -&gt; Eq (WithResult a)
+forall a. Eq a =&gt; WithResult a -&gt; WithResult a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; WithResult a -&gt; WithResult a -&gt; Bool
+== :: WithResult a -&gt; WithResult a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; WithResult a -&gt; WithResult a -&gt; Bool
+/= :: WithResult a -&gt; WithResult a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330153"><span id="local-6989586621679330160"><span id="local-6989586621679330164"><span class="annot"><span class="annottext">Int -&gt; WithResult a -&gt; ShowS
+[WithResult a] -&gt; ShowS
+WithResult a -&gt; String
+(Int -&gt; WithResult a -&gt; ShowS)
+-&gt; (WithResult a -&gt; String)
+-&gt; ([WithResult a] -&gt; ShowS)
+-&gt; Show (WithResult a)
+forall a. Show a =&gt; Int -&gt; WithResult a -&gt; ShowS
+forall a. Show a =&gt; [WithResult a] -&gt; ShowS
+forall a. Show a =&gt; WithResult a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; WithResult a -&gt; ShowS
+showsPrec :: Int -&gt; WithResult a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; WithResult a -&gt; String
+show :: WithResult a -&gt; String
+$cshowList :: forall a. Show a =&gt; [WithResult a] -&gt; ShowS
+showList :: [WithResult a] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679329960"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679329960"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SneakilyContainResult"><span class="hs-identifier hs-type">SneakilyContainResult</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#WithResult"><span class="hs-identifier hs-type">WithResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679329960"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Payload"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#Payload"><span class="hs-identifier hs-var">Payload</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#WithResult"><span class="hs-identifier hs-type">WithResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679329960"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679329960"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-comment">-- Note that this instance completely ignores the key.</span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679330178"><span class="annot"><span class="annottext">sneakilyExtractResult :: WithResult a -&gt; SignKeyVRF FakeVRF -&gt; OutputVRF FakeVRF
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#sneakilyExtractResult"><span class="hs-identifier hs-var hs-var hs-var hs-var">sneakilyExtractResult</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#WithResult"><span class="hs-identifier hs-type">WithResult</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679330179"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330179"><span class="hs-identifier hs-var">nat</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SignKeyVRF FakeVRF
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- Fill in the word64 as the low 8 bytes of a 16 byte string</span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="annottext">ByteString -&gt; OutputVRF FakeVRF
+forall v. ByteString -&gt; OutputVRF v
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#OutputVRF"><span class="hs-identifier hs-var">OutputVRF</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Builder -&gt; ByteString
+</span><a href="#local-6989586621679330181"><span class="hs-identifier hs-var">toBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Builder
+</span><span class="hs-identifier hs-var">BS.word64BE</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Builder
+</span><span class="hs-identifier hs-var">BS.word64BE</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330179"><span class="hs-identifier hs-var">nat</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>      </span><span id="local-6989586621679330181"><span class="annot"><span class="annottext">toBytes :: Builder -&gt; ByteString
+</span><a href="#local-6989586621679330181"><span class="hs-identifier hs-var hs-var">toBytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">LBS.toStrict</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; (Builder -&gt; ByteString) -&gt; Builder -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; ByteString
+</span><span class="hs-identifier hs-var">BS.toLazyByteString</span></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679330186"><span class="annot"><span class="annottext">unsneakilyExtractPayload :: WithResult a -&gt; Payload (WithResult a)
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#unsneakilyExtractPayload"><span class="hs-identifier hs-var hs-var hs-var hs-var">unsneakilyExtractPayload</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#WithResult"><span class="hs-identifier hs-type">WithResult</span></a></span><span> </span><span id="local-6989586621679330187"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679330187"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+Payload (WithResult a)
+</span><a href="#local-6989586621679330187"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- | An instance to allow this to be used in the way of `Mock` where no result</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- has been provided.</span><span>
+</span><span id="line-86"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SneakilyContainResult"><span class="hs-identifier hs-type">SneakilyContainResult</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Seed"><span class="hs-identifier hs-type">Seed</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Payload"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#Payload"><span class="hs-identifier hs-var">Payload</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Seed"><span class="hs-identifier hs-type">Seed</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Seed"><span class="hs-identifier hs-type">Seed</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621679330202"><span class="annot"><span class="annottext">sneakilyExtractResult :: Seed -&gt; SignKeyVRF FakeVRF -&gt; OutputVRF FakeVRF
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#sneakilyExtractResult"><span class="hs-identifier hs-var hs-var hs-var hs-var">sneakilyExtractResult</span></a></span></span><span> </span><span id="local-6989586621679330203"><span class="annot"><span class="annottext">Seed
+</span><a href="#local-6989586621679330203"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679330204"><span class="annot"><span class="annottext">SignKeyVRF FakeVRF
+</span><a href="#local-6989586621679330204"><span class="hs-identifier hs-var">sk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><span class="annottext">ByteString -&gt; OutputVRF FakeVRF
+forall v. ByteString -&gt; OutputVRF v
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#OutputVRF"><span class="hs-identifier hs-var">OutputVRF</span></a></span><span>
+</span><span id="line-90"></span><span>      </span><span class="annot"><span class="annottext">(ByteString -&gt; OutputVRF FakeVRF)
+-&gt; (Encoding -&gt; ByteString) -&gt; Encoding -&gt; OutputVRF FakeVRF
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hash Blake2b_224 Encoding -&gt; ByteString
+forall h a. Hash h a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashToBytes"><span class="hs-identifier hs-var">hashToBytes</span></a></span><span>
+</span><span id="line-91"></span><span>      </span><span class="annot"><span class="annottext">(Hash Blake2b_224 Encoding -&gt; ByteString)
+-&gt; (Encoding -&gt; Hash Blake2b_224 Encoding)
+-&gt; Encoding
+-&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">forall h a.
+HashAlgorithm h =&gt;
+Version -&gt; (a -&gt; Encoding) -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#hashWithEncoder"><span class="hs-identifier hs-var">hashWithEncoder</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Blake2b.html#Blake2b_224"><span class="hs-identifier hs-type">Blake2b_224</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#shelleyProtVer"><span class="hs-identifier hs-var">shelleyProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span>
+</span><span id="line-92"></span><span>      </span><span class="annot"><span class="annottext">(Encoding -&gt; OutputVRF FakeVRF) -&gt; Encoding -&gt; OutputVRF FakeVRF
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Seed -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Seed
+</span><a href="#local-6989586621679330203"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">SignKeyVRF FakeVRF -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">SignKeyVRF FakeVRF
+</span><a href="#local-6989586621679330204"><span class="hs-identifier hs-var">sk</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679330208"><span class="annot"><span class="annottext">unsneakilyExtractPayload :: Seed -&gt; Payload Seed
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#unsneakilyExtractPayload"><span class="hs-identifier hs-var hs-var hs-var hs-var">unsneakilyExtractPayload</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seed -&gt; Seed
+Seed -&gt; Payload Seed
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679330238"><span id="local-6989586621679330247"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#VRFAlgorithm"><span class="hs-identifier hs-type">VRFAlgorithm</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679330261"><span class="annot"><span class="annottext">algorithmNameVRF :: forall (proxy :: * -&gt; *). proxy FakeVRF -&gt; String
+</span><a href="#local-6989586621679330261"><span class="hs-identifier hs-var hs-var hs-var hs-var">algorithmNameVRF</span></a></span></span><span> </span><span class="annot"><span class="annottext">proxy FakeVRF
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fakeVRF&quot;</span></span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679330263"><span class="annot"><span class="annottext">seedSizeVRF :: forall (proxy :: * -&gt; *). proxy FakeVRF -&gt; Word
+</span><a href="#local-6989586621679330263"><span class="hs-identifier hs-var hs-var hs-var hs-var">seedSizeVRF</span></a></span></span><span> </span><span class="annot"><span class="annottext">proxy FakeVRF
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">8</span></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signable"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#Signable"><span class="hs-identifier hs-var">Signable</span></a></span></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SneakilyContainResult"><span class="hs-identifier hs-type">SneakilyContainResult</span></a></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-keyword">newtype</span><span> </span><span id="VerKeyVRF"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#VerKeyVRF"><span class="hs-identifier hs-var">VerKeyVRF</span></a></span></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VerKeyFakeVRF"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#VerKeyFakeVRF"><span class="hs-identifier hs-var">VerKeyFakeVRF</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679330267"><span id="local-6989586621679330271"><span id="local-6989586621679330274"><span class="annot"><span class="annottext">Int -&gt; VerKeyVRF FakeVRF -&gt; ShowS
+[VerKeyVRF FakeVRF] -&gt; ShowS
+VerKeyVRF FakeVRF -&gt; String
+(Int -&gt; VerKeyVRF FakeVRF -&gt; ShowS)
+-&gt; (VerKeyVRF FakeVRF -&gt; String)
+-&gt; ([VerKeyVRF FakeVRF] -&gt; ShowS)
+-&gt; Show (VerKeyVRF FakeVRF)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; VerKeyVRF FakeVRF -&gt; ShowS
+showsPrec :: Int -&gt; VerKeyVRF FakeVRF -&gt; ShowS
+$cshow :: VerKeyVRF FakeVRF -&gt; String
+show :: VerKeyVRF FakeVRF -&gt; String
+$cshowList :: [VerKeyVRF FakeVRF] -&gt; ShowS
+showList :: [VerKeyVRF FakeVRF] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330277"><span id="local-6989586621679330279"><span class="annot"><span class="annottext">(forall x. VerKeyVRF FakeVRF -&gt; Rep (VerKeyVRF FakeVRF) x)
+-&gt; (forall x. Rep (VerKeyVRF FakeVRF) x -&gt; VerKeyVRF FakeVRF)
+-&gt; Generic (VerKeyVRF FakeVRF)
+forall x. Rep (VerKeyVRF FakeVRF) x -&gt; VerKeyVRF FakeVRF
+forall x. VerKeyVRF FakeVRF -&gt; Rep (VerKeyVRF FakeVRF) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. VerKeyVRF FakeVRF -&gt; Rep (VerKeyVRF FakeVRF) x
+from :: forall x. VerKeyVRF FakeVRF -&gt; Rep (VerKeyVRF FakeVRF) x
+$cto :: forall x. Rep (VerKeyVRF FakeVRF) x -&gt; VerKeyVRF FakeVRF
+to :: forall x. Rep (VerKeyVRF FakeVRF) x -&gt; VerKeyVRF FakeVRF
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679330283"><span id="local-6989586621679330287"><span class="annot"><span class="annottext">VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+(VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool)
+-&gt; (VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool)
+-&gt; Eq (VerKeyVRF FakeVRF)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+== :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+$c/= :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+/= :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330293"><span id="local-6989586621679330298"><span id="local-6989586621679330302"><span id="local-6989586621679330306"><span id="local-6989586621679330310"><span id="local-6989586621679330314"><span id="local-6989586621679330318"><span class="annot"><span class="annottext">Eq (VerKeyVRF FakeVRF)
+Eq (VerKeyVRF FakeVRF) =&gt;
+(VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Ordering)
+-&gt; (VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool)
+-&gt; (VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool)
+-&gt; (VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool)
+-&gt; (VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool)
+-&gt; (VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF)
+-&gt; (VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF)
+-&gt; Ord (VerKeyVRF FakeVRF)
+VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Ordering
+VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Ordering
+compare :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Ordering
+$c&lt; :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+&lt; :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+$c&lt;= :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+&lt;= :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+$c&gt; :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+&gt; :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+$c&gt;= :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+&gt;= :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; Bool
+$cmax :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF
+max :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF
+$cmin :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF
+min :: VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330324"><span id="local-6989586621679330329"><span id="local-6989586621679330333"><span class="annot"><span class="annottext">Context -&gt; VerKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+Proxy (VerKeyVRF FakeVRF) -&gt; String
+(Context -&gt; VerKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; VerKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (VerKeyVRF FakeVRF) -&gt; String)
+-&gt; NoThunks (VerKeyVRF FakeVRF)
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; VerKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; VerKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; VerKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; VerKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy (VerKeyVRF FakeVRF) -&gt; String
+showTypeOf :: Proxy (VerKeyVRF FakeVRF) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-keyword">newtype</span><span> </span><span id="SignKeyVRF"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#SignKeyVRF"><span class="hs-identifier hs-var">SignKeyVRF</span></a></span></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SignKeyFakeVRF"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SignKeyFakeVRF"><span class="hs-identifier hs-var">SignKeyFakeVRF</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679330339"><span id="local-6989586621679330343"><span id="local-6989586621679330346"><span class="annot"><span class="annottext">Int -&gt; SignKeyVRF FakeVRF -&gt; ShowS
+[SignKeyVRF FakeVRF] -&gt; ShowS
+SignKeyVRF FakeVRF -&gt; String
+(Int -&gt; SignKeyVRF FakeVRF -&gt; ShowS)
+-&gt; (SignKeyVRF FakeVRF -&gt; String)
+-&gt; ([SignKeyVRF FakeVRF] -&gt; ShowS)
+-&gt; Show (SignKeyVRF FakeVRF)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SignKeyVRF FakeVRF -&gt; ShowS
+showsPrec :: Int -&gt; SignKeyVRF FakeVRF -&gt; ShowS
+$cshow :: SignKeyVRF FakeVRF -&gt; String
+show :: SignKeyVRF FakeVRF -&gt; String
+$cshowList :: [SignKeyVRF FakeVRF] -&gt; ShowS
+showList :: [SignKeyVRF FakeVRF] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330349"><span id="local-6989586621679330351"><span class="annot"><span class="annottext">(forall x. SignKeyVRF FakeVRF -&gt; Rep (SignKeyVRF FakeVRF) x)
+-&gt; (forall x. Rep (SignKeyVRF FakeVRF) x -&gt; SignKeyVRF FakeVRF)
+-&gt; Generic (SignKeyVRF FakeVRF)
+forall x. Rep (SignKeyVRF FakeVRF) x -&gt; SignKeyVRF FakeVRF
+forall x. SignKeyVRF FakeVRF -&gt; Rep (SignKeyVRF FakeVRF) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. SignKeyVRF FakeVRF -&gt; Rep (SignKeyVRF FakeVRF) x
+from :: forall x. SignKeyVRF FakeVRF -&gt; Rep (SignKeyVRF FakeVRF) x
+$cto :: forall x. Rep (SignKeyVRF FakeVRF) x -&gt; SignKeyVRF FakeVRF
+to :: forall x. Rep (SignKeyVRF FakeVRF) x -&gt; SignKeyVRF FakeVRF
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679330354"><span id="local-6989586621679330358"><span class="annot"><span class="annottext">SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+(SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool)
+-&gt; (SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool)
+-&gt; Eq (SignKeyVRF FakeVRF)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+== :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+$c/= :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+/= :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330365"><span id="local-6989586621679330369"><span id="local-6989586621679330373"><span id="local-6989586621679330377"><span id="local-6989586621679330381"><span id="local-6989586621679330385"><span id="local-6989586621679330389"><span class="annot"><span class="annottext">Eq (SignKeyVRF FakeVRF)
+Eq (SignKeyVRF FakeVRF) =&gt;
+(SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Ordering)
+-&gt; (SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool)
+-&gt; (SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool)
+-&gt; (SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool)
+-&gt; (SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool)
+-&gt; (SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF)
+-&gt; (SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF)
+-&gt; Ord (SignKeyVRF FakeVRF)
+SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Ordering
+SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Ordering
+compare :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Ordering
+$c&lt; :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+&lt; :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+$c&lt;= :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+&lt;= :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+$c&gt; :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+&gt; :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+$c&gt;= :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+&gt;= :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; Bool
+$cmax :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF
+max :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF
+$cmin :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF
+min :: SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF -&gt; SignKeyVRF FakeVRF
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330394"><span id="local-6989586621679330398"><span id="local-6989586621679330402"><span class="annot"><span class="annottext">Context -&gt; SignKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+Proxy (SignKeyVRF FakeVRF) -&gt; String
+(Context -&gt; SignKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; SignKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (SignKeyVRF FakeVRF) -&gt; String)
+-&gt; NoThunks (SignKeyVRF FakeVRF)
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; SignKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; SignKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; SignKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; SignKeyVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy (SignKeyVRF FakeVRF) -&gt; String
+showTypeOf :: Proxy (SignKeyVRF FakeVRF) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="CertVRF"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#CertVRF"><span class="hs-identifier hs-var">CertVRF</span></a></span></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CertFakeVRF"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#CertFakeVRF"><span class="hs-identifier hs-var">CertFakeVRF</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#OutputVRF"><span class="hs-identifier hs-type">OutputVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679330407"><span id="local-6989586621679330415"><span id="local-6989586621679330418"><span class="annot"><span class="annottext">Int -&gt; CertVRF FakeVRF -&gt; ShowS
+[CertVRF FakeVRF] -&gt; ShowS
+CertVRF FakeVRF -&gt; String
+(Int -&gt; CertVRF FakeVRF -&gt; ShowS)
+-&gt; (CertVRF FakeVRF -&gt; String)
+-&gt; ([CertVRF FakeVRF] -&gt; ShowS)
+-&gt; Show (CertVRF FakeVRF)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; CertVRF FakeVRF -&gt; ShowS
+showsPrec :: Int -&gt; CertVRF FakeVRF -&gt; ShowS
+$cshow :: CertVRF FakeVRF -&gt; String
+show :: CertVRF FakeVRF -&gt; String
+$cshowList :: [CertVRF FakeVRF] -&gt; ShowS
+showList :: [CertVRF FakeVRF] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330421"><span id="local-6989586621679330428"><span class="annot"><span class="annottext">CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+(CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool)
+-&gt; (CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool)
+-&gt; Eq (CertVRF FakeVRF)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+== :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+$c/= :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+/= :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330433"><span id="local-6989586621679330440"><span id="local-6989586621679330445"><span id="local-6989586621679330449"><span id="local-6989586621679330452"><span id="local-6989586621679330455"><span id="local-6989586621679330458"><span class="annot"><span class="annottext">Eq (CertVRF FakeVRF)
+Eq (CertVRF FakeVRF) =&gt;
+(CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Ordering)
+-&gt; (CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool)
+-&gt; (CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool)
+-&gt; (CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool)
+-&gt; (CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool)
+-&gt; (CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; CertVRF FakeVRF)
+-&gt; (CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; CertVRF FakeVRF)
+-&gt; Ord (CertVRF FakeVRF)
+CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Ordering
+CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; CertVRF FakeVRF
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Ordering
+compare :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Ordering
+$c&lt; :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+&lt; :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+$c&lt;= :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+&lt;= :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+$c&gt; :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+&gt; :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+$c&gt;= :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+&gt;= :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; Bool
+$cmax :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; CertVRF FakeVRF
+max :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; CertVRF FakeVRF
+$cmin :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; CertVRF FakeVRF
+min :: CertVRF FakeVRF -&gt; CertVRF FakeVRF -&gt; CertVRF FakeVRF
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330461"><span id="local-6989586621679330463"><span class="annot"><span class="annottext">(forall x. CertVRF FakeVRF -&gt; Rep (CertVRF FakeVRF) x)
+-&gt; (forall x. Rep (CertVRF FakeVRF) x -&gt; CertVRF FakeVRF)
+-&gt; Generic (CertVRF FakeVRF)
+forall x. Rep (CertVRF FakeVRF) x -&gt; CertVRF FakeVRF
+forall x. CertVRF FakeVRF -&gt; Rep (CertVRF FakeVRF) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. CertVRF FakeVRF -&gt; Rep (CertVRF FakeVRF) x
+from :: forall x. CertVRF FakeVRF -&gt; Rep (CertVRF FakeVRF) x
+$cto :: forall x. Rep (CertVRF FakeVRF) x -&gt; CertVRF FakeVRF
+to :: forall x. Rep (CertVRF FakeVRF) x -&gt; CertVRF FakeVRF
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679330466"><span id="local-6989586621679330469"><span id="local-6989586621679330475"><span class="annot"><span class="annottext">Context -&gt; CertVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+Proxy (CertVRF FakeVRF) -&gt; String
+(Context -&gt; CertVRF FakeVRF -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; CertVRF FakeVRF -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (CertVRF FakeVRF) -&gt; String)
+-&gt; NoThunks (CertVRF FakeVRF)
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; CertVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; CertVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; CertVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; CertVRF FakeVRF -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy (CertVRF FakeVRF) -&gt; String
+showTypeOf :: Proxy (CertVRF FakeVRF) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span>  </span><span id="local-6989586621679330507"><span class="annot"><span class="annottext">genKeyVRF :: Seed -&gt; SignKeyVRF FakeVRF
+</span><a href="#local-6989586621679330507"><span class="hs-identifier hs-var hs-var hs-var hs-var">genKeyVRF</span></a></span></span><span> </span><span id="local-6989586621679330509"><span class="annot"><span class="annottext">Seed
+</span><a href="#local-6989586621679330509"><span class="hs-identifier hs-var">seed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; SignKeyVRF FakeVRF
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SignKeyFakeVRF"><span class="hs-identifier hs-var">SignKeyFakeVRF</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; SignKeyVRF FakeVRF) -&gt; Word64 -&gt; SignKeyVRF FakeVRF
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Seed -&gt; (forall (m :: * -&gt; *). MonadRandom m =&gt; m Word64) -&gt; Word64
+forall a. Seed -&gt; (forall (m :: * -&gt; *). MonadRandom m =&gt; m a) -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Seed.html#runMonadRandomWithSeed"><span class="hs-identifier hs-var">runMonadRandomWithSeed</span></a></span><span> </span><span class="annot"><span class="annottext">Seed
+</span><a href="#local-6989586621679330509"><span class="hs-identifier hs-var">seed</span></a></span><span> </span><span class="annot"><span class="annottext">m Word64
+forall (m :: * -&gt; *). MonadRandom m =&gt; m Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#getRandomWord64"><span class="hs-identifier hs-var">getRandomWord64</span></a></span><span>
+</span><span id="line-113"></span><span>  </span><span id="local-6989586621679330513"><span class="annot"><span class="annottext">deriveVerKeyVRF :: SignKeyVRF FakeVRF -&gt; VerKeyVRF FakeVRF
+</span><a href="#local-6989586621679330513"><span class="hs-identifier hs-var hs-var hs-var hs-var">deriveVerKeyVRF</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SignKeyFakeVRF"><span class="hs-identifier hs-type">SignKeyFakeVRF</span></a></span><span> </span><span id="local-6989586621679330515"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330515"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; VerKeyVRF FakeVRF
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#VerKeyFakeVRF"><span class="hs-identifier hs-var">VerKeyFakeVRF</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330515"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span id="local-6989586621679330520"><span class="annot"><span class="annottext">evalVRF :: forall a.
+(HasCallStack, Signable FakeVRF a) =&gt;
+ContextVRF FakeVRF
+-&gt; a -&gt; SignKeyVRF FakeVRF -&gt; (OutputVRF FakeVRF, CertVRF FakeVRF)
+</span><a href="#local-6989586621679330520"><span class="hs-identifier hs-var hs-var hs-var hs-var">evalVRF</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span id="local-6989586621679330522"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679330522"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679330523"><span class="annot"><span class="annottext">SignKeyVRF FakeVRF
+</span><a href="#local-6989586621679330523"><span class="hs-identifier hs-var">sk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; SignKeyVRF FakeVRF -&gt; (OutputVRF FakeVRF, CertVRF FakeVRF)
+forall a.
+SneakilyContainResult a =&gt;
+a -&gt; SignKeyVRF FakeVRF -&gt; (OutputVRF FakeVRF, CertVRF FakeVRF)
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#evalFakeVRF"><span class="hs-identifier hs-var">evalFakeVRF</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679330522"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">SignKeyVRF FakeVRF
+</span><a href="#local-6989586621679330523"><span class="hs-identifier hs-var">sk</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-comment">-- This implementation of 'verifyVRF' checks the real proof, which is contained</span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-comment">-- in the certificate, but ignores the produced value, and insteads returns</span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-comment">-- the output which is stored in the 'CertFakeVRF'.</span><span>
+</span><span id="line-119"></span><span>  </span><span id="local-6989586621679330533"><span class="annot"><span class="annottext">verifyVRF :: forall a.
+(HasCallStack, Signable FakeVRF a) =&gt;
+ContextVRF FakeVRF
+-&gt; VerKeyVRF FakeVRF
+-&gt; a
+-&gt; CertVRF FakeVRF
+-&gt; Maybe (OutputVRF FakeVRF)
+</span><a href="#local-6989586621679330533"><span class="hs-identifier hs-var hs-var hs-var hs-var">verifyVRF</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#VerKeyFakeVRF"><span class="hs-identifier hs-type">VerKeyFakeVRF</span></a></span><span> </span><span id="local-6989586621679330535"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330535"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679330536"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679330536"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#CertFakeVRF"><span class="hs-identifier hs-type">CertFakeVRF</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679330537"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330537"><span class="hs-identifier hs-var">proof</span></a></span></span><span> </span><span id="local-6989586621679330538"><span class="annot"><span class="annottext">OutputVRF FakeVRF
+</span><a href="#local-6989586621679330538"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330537"><span class="hs-identifier hs-var">proof</span></a></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Word16 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330539"><span class="hs-identifier hs-var">recomputedProof</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OutputVRF FakeVRF -&gt; Maybe (OutputVRF FakeVRF)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">OutputVRF FakeVRF
+</span><a href="#local-6989586621679330538"><span class="hs-identifier hs-var">o</span></a></span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (OutputVRF FakeVRF)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-123"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#OutputVRF"><span class="hs-identifier hs-type">OutputVRF</span></a></span><span> </span><span id="local-6989586621679330540"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330540"><span class="hs-identifier hs-var">recomputedProofBytes</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CertVRF FakeVRF
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; SignKeyVRF FakeVRF -&gt; (OutputVRF FakeVRF, CertVRF FakeVRF)
+forall a.
+SneakilyContainResult a =&gt;
+a -&gt; SignKeyVRF FakeVRF -&gt; (OutputVRF FakeVRF, CertVRF FakeVRF)
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#evalFakeVRF"><span class="hs-identifier hs-var">evalFakeVRF</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679330536"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; SignKeyVRF FakeVRF
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SignKeyFakeVRF"><span class="hs-identifier hs-var">SignKeyFakeVRF</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330535"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>      </span><span id="local-6989586621679330539"><span class="annot"><span class="annottext">recomputedProof :: Word16
+</span><a href="#local-6989586621679330539"><span class="hs-identifier hs-var hs-var">recomputedProof</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Word16
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">(Natural -&gt; Word16)
+-&gt; (ByteString -&gt; Natural) -&gt; ByteString -&gt; Word16
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#bytesToNatural"><span class="hs-identifier hs-var">bytesToNatural</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Word16) -&gt; ByteString -&gt; Word16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330540"><span class="hs-identifier hs-var">recomputedProofBytes</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621679330542"><span class="annot"><span class="annottext">sizeVerKeyVRF :: forall (proxy :: * -&gt; *). proxy FakeVRF -&gt; Word
+</span><a href="#local-6989586621679330542"><span class="hs-identifier hs-var hs-var hs-var hs-var">sizeVerKeyVRF</span></a></span></span><span> </span><span class="annot"><span class="annottext">proxy FakeVRF
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">8</span></span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679330544"><span class="annot"><span class="annottext">sizeSignKeyVRF :: forall (proxy :: * -&gt; *). proxy FakeVRF -&gt; Word
+</span><a href="#local-6989586621679330544"><span class="hs-identifier hs-var hs-var hs-var hs-var">sizeSignKeyVRF</span></a></span></span><span> </span><span class="annot"><span class="annottext">proxy FakeVRF
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">8</span></span><span>
+</span><span id="line-128"></span><span>  </span><span id="local-6989586621679330546"><span class="annot"><span class="annottext">sizeCertVRF :: forall (proxy :: * -&gt; *). proxy FakeVRF -&gt; Word
+</span><a href="#local-6989586621679330546"><span class="hs-identifier hs-var hs-var hs-var hs-var">sizeCertVRF</span></a></span></span><span> </span><span class="annot"><span class="annottext">proxy FakeVRF
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">26</span></span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621679330549"><span class="annot"><span class="annottext">sizeOutputVRF :: forall (proxy :: * -&gt; *). proxy FakeVRF -&gt; Word
+</span><a href="#local-6989586621679330549"><span class="hs-identifier hs-var hs-var hs-var hs-var">sizeOutputVRF</span></a></span></span><span> </span><span class="annot"><span class="annottext">proxy FakeVRF
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy Blake2b_224 -&gt; Word
+forall h (proxy :: * -&gt; *). HashAlgorithm h =&gt; proxy h -&gt; Word
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#sizeHash"><span class="hs-identifier hs-var">sizeHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy Blake2b_224
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Blake2b.html#Blake2b_224"><span class="hs-identifier hs-type">Blake2b_224</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621679330553"><span class="annot"><span class="annottext">rawSerialiseVerKeyVRF :: VerKeyVRF FakeVRF -&gt; ByteString
+</span><a href="#local-6989586621679330553"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawSerialiseVerKeyVRF</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#VerKeyFakeVRF"><span class="hs-identifier hs-type">VerKeyFakeVRF</span></a></span><span> </span><span id="local-6989586621679330555"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330555"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#writeBinaryWord64"><span class="hs-identifier hs-var">writeBinaryWord64</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330555"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-132"></span><span>  </span><span id="local-6989586621679330557"><span class="annot"><span class="annottext">rawSerialiseSignKeyVRF :: SignKeyVRF FakeVRF -&gt; ByteString
+</span><a href="#local-6989586621679330557"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawSerialiseSignKeyVRF</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SignKeyFakeVRF"><span class="hs-identifier hs-type">SignKeyFakeVRF</span></a></span><span> </span><span id="local-6989586621679330559"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330559"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#writeBinaryWord64"><span class="hs-identifier hs-var">writeBinaryWord64</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330559"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-133"></span><span>  </span><span id="local-6989586621679330563"><span class="annot"><span class="annottext">rawSerialiseCertVRF :: CertVRF FakeVRF -&gt; ByteString
+</span><a href="#local-6989586621679330563"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawSerialiseCertVRF</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#CertFakeVRF"><span class="hs-identifier hs-type">CertFakeVRF</span></a></span><span> </span><span id="local-6989586621679330565"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330565"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679330566"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330566"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#OutputVRF"><span class="hs-identifier hs-type">OutputVRF</span></a></span><span> </span><span id="local-6989586621679330567"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330567"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#writeBinaryWord64"><span class="hs-identifier hs-var">writeBinaryWord64</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330565"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; ByteString
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#writeBinaryWord16"><span class="hs-identifier hs-var">writeBinaryWord16</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330566"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330567"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span>  </span><span id="local-6989586621679330569"><span class="annot"><span class="annottext">rawDeserialiseVerKeyVRF :: ByteString -&gt; Maybe (VerKeyVRF FakeVRF)
+</span><a href="#local-6989586621679330569"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawDeserialiseVerKeyVRF</span></a></span></span><span> </span><span id="local-6989586621679330571"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330571"><span class="hs-identifier hs-var">bs</span></a></span></span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">[</span><span id="local-6989586621679330572"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330572"><span class="hs-identifier hs-var">kb</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; ByteString -&gt; [ByteString]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#splitsAt"><span class="hs-identifier hs-var">splitsAt</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330571"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679330574"><span class="annot"><span class="annottext">k :: Word64
+</span><a href="#local-6989586621679330574"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#readBinaryWord64"><span class="hs-identifier hs-var">readBinaryWord64</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330572"><span class="hs-identifier hs-var">kb</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-139"></span><span>        </span><span class="annot"><span class="annottext">VerKeyVRF FakeVRF -&gt; Maybe (VerKeyVRF FakeVRF)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(VerKeyVRF FakeVRF -&gt; Maybe (VerKeyVRF FakeVRF))
+-&gt; VerKeyVRF FakeVRF -&gt; Maybe (VerKeyVRF FakeVRF)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; VerKeyVRF FakeVRF
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#VerKeyFakeVRF"><span class="hs-identifier hs-var">VerKeyFakeVRF</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330574"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-141"></span><span>        </span><span class="annot"><span class="annottext">Maybe (VerKeyVRF FakeVRF)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span>  </span><span id="local-6989586621679330577"><span class="annot"><span class="annottext">rawDeserialiseSignKeyVRF :: ByteString -&gt; Maybe (SignKeyVRF FakeVRF)
+</span><a href="#local-6989586621679330577"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawDeserialiseSignKeyVRF</span></a></span></span><span> </span><span id="local-6989586621679330579"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330579"><span class="hs-identifier hs-var">bs</span></a></span></span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">[</span><span id="local-6989586621679330580"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330580"><span class="hs-identifier hs-var">kb</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; ByteString -&gt; [ByteString]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#splitsAt"><span class="hs-identifier hs-var">splitsAt</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330579"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679330581"><span class="annot"><span class="annottext">k :: Word64
+</span><a href="#local-6989586621679330581"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#readBinaryWord64"><span class="hs-identifier hs-var">readBinaryWord64</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330580"><span class="hs-identifier hs-var">kb</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><span class="annottext">SignKeyVRF FakeVRF -&gt; Maybe (SignKeyVRF FakeVRF)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(SignKeyVRF FakeVRF -&gt; Maybe (SignKeyVRF FakeVRF))
+-&gt; SignKeyVRF FakeVRF -&gt; Maybe (SignKeyVRF FakeVRF)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; SignKeyVRF FakeVRF
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SignKeyFakeVRF"><span class="hs-identifier hs-var">SignKeyFakeVRF</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330581"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-148"></span><span>        </span><span class="annot"><span class="annottext">Maybe (SignKeyVRF FakeVRF)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>  </span><span id="local-6989586621679330582"><span class="annot"><span class="annottext">rawDeserialiseCertVRF :: ByteString -&gt; Maybe (CertVRF FakeVRF)
+</span><a href="#local-6989586621679330582"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawDeserialiseCertVRF</span></a></span></span><span> </span><span id="local-6989586621679330584"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330584"><span class="hs-identifier hs-var">bs</span></a></span></span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">[</span><span id="local-6989586621679330585"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330585"><span class="hs-identifier hs-var">kb</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330586"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330586"><span class="hs-identifier hs-var">smb</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679330587"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330587"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; ByteString -&gt; [ByteString]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#splitsAt"><span class="hs-identifier hs-var">splitsAt</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">16</span></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330584"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679330588"><span class="annot"><span class="annottext">k :: Word64
+</span><a href="#local-6989586621679330588"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Word64
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#readBinaryWord64"><span class="hs-identifier hs-var">readBinaryWord64</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330585"><span class="hs-identifier hs-var">kb</span></a></span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679330589"><span class="annot"><span class="annottext">s :: Word16
+</span><a href="#local-6989586621679330589"><span class="hs-identifier hs-var hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Word16
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#readBinaryWord16"><span class="hs-identifier hs-var">readBinaryWord16</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330586"><span class="hs-identifier hs-var">smb</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-154"></span><span>        </span><span class="annot"><span class="annottext">CertVRF FakeVRF -&gt; Maybe (CertVRF FakeVRF)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(CertVRF FakeVRF -&gt; Maybe (CertVRF FakeVRF))
+-&gt; CertVRF FakeVRF -&gt; Maybe (CertVRF FakeVRF)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word16 -&gt; OutputVRF FakeVRF -&gt; CertVRF FakeVRF
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#CertFakeVRF"><span class="hs-identifier hs-var">CertFakeVRF</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330588"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330589"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; OutputVRF FakeVRF
+forall v. ByteString -&gt; OutputVRF v
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#OutputVRF"><span class="hs-identifier hs-var">OutputVRF</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679330587"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-156"></span><span>        </span><span class="annot"><span class="annottext">Maybe (CertVRF FakeVRF)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span id="local-6989586621679330052"><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#evalFakeVRF"><span class="hs-identifier hs-type">evalFakeVRF</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-159"></span><span>  </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SneakilyContainResult"><span class="hs-identifier hs-type">SneakilyContainResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679330052"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-160"></span><span>  </span><span class="annot"><a href="#local-6989586621679330052"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#SignKeyVRF"><span class="hs-identifier hs-type">SignKeyVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#OutputVRF"><span class="hs-identifier hs-type">OutputVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#CertVRF"><span class="hs-identifier hs-type">CertVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-163"></span><span id="evalFakeVRF"><span class="annot"><span class="annottext">evalFakeVRF :: forall a.
+SneakilyContainResult a =&gt;
+a -&gt; SignKeyVRF FakeVRF -&gt; (OutputVRF FakeVRF, CertVRF FakeVRF)
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#evalFakeVRF"><span class="hs-identifier hs-var hs-var">evalFakeVRF</span></a></span></span><span> </span><span id="local-6989586621679330601"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679330601"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679330602"><span class="annot"><span class="annottext">sk :: SignKeyVRF FakeVRF
+</span><a href="#local-6989586621679330602"><span class="hs-identifier hs-var">sk</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#SignKeyFakeVRF"><span class="hs-identifier hs-type">SignKeyFakeVRF</span></a></span><span> </span><span id="local-6989586621679330603"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330603"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679330604"><span class="annot"><span class="annottext">y :: OutputVRF FakeVRF
+</span><a href="#local-6989586621679330604"><span class="hs-identifier hs-var hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; SignKeyVRF FakeVRF -&gt; OutputVRF FakeVRF
+forall a.
+SneakilyContainResult a =&gt;
+a -&gt; SignKeyVRF FakeVRF -&gt; OutputVRF FakeVRF
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#sneakilyExtractResult"><span class="hs-identifier hs-var">sneakilyExtractResult</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679330601"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">SignKeyVRF FakeVRF
+</span><a href="#local-6989586621679330602"><span class="hs-identifier hs-var">sk</span></a></span><span>
+</span><span id="line-165"></span><span>      </span><span id="local-6989586621679330605"><span class="annot"><span class="annottext">p :: Payload a
+</span><a href="#local-6989586621679330605"><span class="hs-identifier hs-var hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Payload a
+forall a. SneakilyContainResult a =&gt; a -&gt; Payload a
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#unsneakilyExtractPayload"><span class="hs-identifier hs-var">unsneakilyExtractPayload</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679330601"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-166"></span><span>      </span><span id="local-6989586621679330606"><span class="annot"><span class="annottext">proof :: Word16
+</span><a href="#local-6989586621679330606"><span class="hs-identifier hs-var hs-var">proof</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-167"></span><span>        </span><span class="annot"><span class="annottext">Natural -&gt; Word16
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span>
+</span><span id="line-168"></span><span>          </span><span class="annot"><span class="annottext">(Natural -&gt; Word16) -&gt; (Encoding -&gt; Natural) -&gt; Encoding -&gt; Word16
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Util.html#bytesToNatural"><span class="hs-identifier hs-var">bytesToNatural</span></a></span><span>
+</span><span id="line-169"></span><span>          </span><span class="annot"><span class="annottext">(ByteString -&gt; Natural)
+-&gt; (Encoding -&gt; ByteString) -&gt; Encoding -&gt; Natural
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hash Blake2b_224 Encoding -&gt; ByteString
+forall h a. Hash h a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashToBytes"><span class="hs-identifier hs-var">hashToBytes</span></a></span><span>
+</span><span id="line-170"></span><span>          </span><span class="annot"><span class="annottext">(Hash Blake2b_224 Encoding -&gt; ByteString)
+-&gt; (Encoding -&gt; Hash Blake2b_224 Encoding)
+-&gt; Encoding
+-&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">forall h a.
+HashAlgorithm h =&gt;
+Version -&gt; (a -&gt; Encoding) -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#hashWithEncoder"><span class="hs-identifier hs-var">hashWithEncoder</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Blake2b.html#Blake2b_224"><span class="hs-identifier hs-type">Blake2b_224</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#shelleyProtVer"><span class="hs-identifier hs-var">shelleyProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span>
+</span><span id="line-171"></span><span>          </span><span class="annot"><span class="annottext">(Encoding -&gt; Word16) -&gt; Encoding -&gt; Word16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Payload a -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Payload a
+</span><a href="#local-6989586621679330605"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">SignKeyVRF FakeVRF -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">SignKeyVRF FakeVRF
+</span><a href="#local-6989586621679330602"><span class="hs-identifier hs-var">sk</span></a></span><span>
+</span><span id="line-172"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OutputVRF FakeVRF
+</span><a href="#local-6989586621679330604"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word16 -&gt; OutputVRF FakeVRF -&gt; CertVRF FakeVRF
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#CertFakeVRF"><span class="hs-identifier hs-var">CertFakeVRF</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679330603"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330606"><span class="hs-identifier hs-var">proof</span></a></span><span> </span><span class="annot"><span class="annottext">OutputVRF FakeVRF
+</span><a href="#local-6989586621679330604"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679330613"><span id="local-6989586621679330617"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#VerKeyVRF"><span class="hs-identifier hs-type">VerKeyVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-175"></span><span>  </span><span id="local-6989586621679330621"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (VerKeyVRF FakeVRF)
+</span><a href="#local-6989586621679330621"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s (VerKeyVRF FakeVRF)
+forall v s. VRFAlgorithm v =&gt; Decoder s (VerKeyVRF v)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#decodeVerKeyVRF"><span class="hs-identifier hs-var">decodeVerKeyVRF</span></a></span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679330629"><span id="local-6989586621679330633"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#VerKeyVRF"><span class="hs-identifier hs-type">VerKeyVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-178"></span><span>  </span><span id="local-6989586621679330637"><span class="annot"><span class="annottext">encCBOR :: VerKeyVRF FakeVRF -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VerKeyVRF FakeVRF -&gt; Encoding
+forall v. VRFAlgorithm v =&gt; VerKeyVRF v -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#encodeVerKeyVRF"><span class="hs-identifier hs-var">encodeVerKeyVRF</span></a></span><span>
+</span><span id="line-179"></span><span>
+</span><span id="line-180"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679330644"><span id="local-6989586621679330648"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#SignKeyVRF"><span class="hs-identifier hs-type">SignKeyVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-181"></span><span>  </span><span id="local-6989586621679330651"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (SignKeyVRF FakeVRF)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s (SignKeyVRF FakeVRF)
+forall v s. VRFAlgorithm v =&gt; Decoder s (SignKeyVRF v)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#decodeSignKeyVRF"><span class="hs-identifier hs-var">decodeSignKeyVRF</span></a></span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679330658"><span id="local-6989586621679330661"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#SignKeyVRF"><span class="hs-identifier hs-type">SignKeyVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-184"></span><span>  </span><span id="local-6989586621679330664"><span class="annot"><span class="annottext">encCBOR :: SignKeyVRF FakeVRF -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SignKeyVRF FakeVRF -&gt; Encoding
+forall v. VRFAlgorithm v =&gt; SignKeyVRF v -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#encodeSignKeyVRF"><span class="hs-identifier hs-var">encodeSignKeyVRF</span></a></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679330671"><span id="local-6989586621679330675"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#CertVRF"><span class="hs-identifier hs-type">CertVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-187"></span><span>  </span><span id="local-6989586621679330678"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (CertVRF FakeVRF)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s (CertVRF FakeVRF)
+forall v s. VRFAlgorithm v =&gt; Decoder s (CertVRF v)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#decodeCertVRF"><span class="hs-identifier hs-var">decodeCertVRF</span></a></span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679330685"><span id="local-6989586621679330689"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.VRF.Class.html#CertVRF"><span class="hs-identifier hs-type">CertVRF</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#FakeVRF"><span class="hs-identifier hs-type">FakeVRF</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-190"></span><span>  </span><span id="local-6989586621679330692"><span class="annot"><span class="annottext">encCBOR :: CertVRF FakeVRF -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CertVRF FakeVRF -&gt; Encoding
+forall v. VRFAlgorithm v =&gt; CertVRF v -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Crypto.html#encodeCertVRF"><span class="hs-identifier hs-var">encodeCertVRF</span></a></span><span>
+</span><span id="line-191"></span><span>
+</span><span id="line-192"></span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#readBinaryWord16"><span class="hs-identifier hs-type">readBinaryWord16</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span>
+</span><span id="line-193"></span><span id="readBinaryWord16"><span class="annot"><span class="annottext">readBinaryWord16 :: ByteString -&gt; Word16
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#readBinaryWord16"><span class="hs-identifier hs-var hs-var">readBinaryWord16</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-194"></span><span>  </span><span class="annot"><span class="annottext">(Word16 -&gt; Word8 -&gt; Word16) -&gt; Word16 -&gt; ByteString -&gt; Word16
+forall a. (a -&gt; Word8 -&gt; a) -&gt; a -&gt; ByteString -&gt; a
+</span><span class="hs-identifier hs-var">BS.foldl'</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679330694"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330694"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span id="local-6989586621679330695"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679330695"><span class="hs-identifier hs-var">w8</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Int -&gt; Word16
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-identifier hs-var">unsafeShiftL</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330694"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Word16 -&gt; Word16
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word16
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679330695"><span class="hs-identifier hs-var">w8</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span class="annot"><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#writeBinaryWord16"><span class="hs-identifier hs-type">writeBinaryWord16</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-197"></span><span id="writeBinaryWord16"><span class="annot"><span class="annottext">writeBinaryWord16 :: Word16 -&gt; ByteString
+</span><a href="Test.Cardano.Protocol.Crypto.VRF.Fake.html#writeBinaryWord16"><span class="hs-identifier hs-var hs-var">writeBinaryWord16</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-198"></span><span>  </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">BS.reverse</span></span><span>
+</span><span id="line-199"></span><span>    </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; (Word16 -&gt; ByteString) -&gt; Word16 -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(ByteString, Maybe Word16) -&gt; ByteString
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span>
+</span><span id="line-200"></span><span>    </span><span class="annot"><span class="annottext">((ByteString, Maybe Word16) -&gt; ByteString)
+-&gt; (Word16 -&gt; (ByteString, Maybe Word16)) -&gt; Word16 -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; (Word16 -&gt; Maybe (Word8, Word16))
+-&gt; Word16
+-&gt; (ByteString, Maybe Word16)
+forall a.
+Int -&gt; (a -&gt; Maybe (Word8, a)) -&gt; a -&gt; (ByteString, Maybe a)
+</span><span class="hs-identifier hs-var">BS.unfoldrN</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679330701"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330701"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Word8, Word16) -&gt; Maybe (Word8, Word16)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word16 -&gt; Word8
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330701"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Int -&gt; Word16
+forall a. Bits a =&gt; a -&gt; Int -&gt; a
+</span><span class="hs-identifier hs-var">unsafeShiftR</span></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679330701"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-201"></span></pre></body></html>

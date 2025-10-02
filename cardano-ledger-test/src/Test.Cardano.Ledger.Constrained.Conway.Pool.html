@@ -1,0 +1,526 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ImportQualifiedPost #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- | Specs necessary to generate, environment, state, and signal</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- for the POOL rule</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Pool</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html"><span class="hs-identifier">Cardano.Crypto.Hash.Class</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Hash</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.Core.html"><span class="hs-identifier">Cardano.Ledger.Conway.Core</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.API.Types.html"><span class="hs-identifier">Cardano.Ledger.Shelley.API.Types</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.html"><span class="hs-identifier">Cardano.Slotting.EpochInfo</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">EI</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.API.html"><span class="hs-identifier">Constrained.API</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Identity</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.PParams.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.PParams.html#pparamsSpec"><span class="hs-identifier">pparamsSpec</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Utils.html"><span class="hs-identifier">Test.Cardano.Ledger.Core.Utils</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-l-testlib-19de88297209d951ba64f90e0ca040d80a228f9bb6bb64c3a3f507c1a30868e8/share/doc/html/src/Test.Cardano.Slotting.Numeric.html"><span class="hs-identifier">Test.Cardano.Slotting.Numeric</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Pool.html#currentEpoch"><span class="hs-identifier hs-type">currentEpoch</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-29"></span><span id="currentEpoch"><span class="annot"><span class="annottext">currentEpoch :: SlotNo -&gt; EpochNo
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Pool.html#currentEpoch"><span class="hs-identifier hs-var hs-var">currentEpoch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Identity EpochNo -&gt; EpochNo
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span> </span><span class="annot"><span class="annottext">(Identity EpochNo -&gt; EpochNo)
+-&gt; (SlotNo -&gt; Identity EpochNo) -&gt; SlotNo -&gt; EpochNo
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity -&gt; SlotNo -&gt; Identity EpochNo
+forall (m :: * -&gt; *).
+HasCallStack =&gt;
+EpochInfo m -&gt; SlotNo -&gt; m EpochNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.API.html#epochInfoEpoch"><span class="hs-identifier hs-var">EI.epochInfoEpoch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Globals -&gt; EpochInfo Identity
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#epochInfoPure"><span class="hs-identifier hs-var">epochInfoPure</span></a></span><span> </span><span class="annot"><span class="annottext">Globals
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/testlib/doc/html/cardano-ledger-core/src/Test.Cardano.Ledger.Core.Utils.html#testGlobals"><span class="hs-identifier hs-var">testGlobals</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Pool.html#poolEnvSpec"><span class="hs-identifier hs-type">poolEnvSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682697865"><span class="annot"><a href="#local-6989586621682697865"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Basic.html#EraSpecPParams"><span class="hs-identifier hs-type">EraSpecPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682697865"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682697865"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Pool.html#PoolEnv"><span class="hs-identifier hs-type">PoolEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682697865"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span id="poolEnvSpec"><span class="annot"><span class="annottext">poolEnvSpec :: forall era.
+EraSpecPParams era =&gt;
+WitUniv era -&gt; Specification (PoolEnv era)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Pool.html#poolEnvSpec"><span class="hs-identifier hs-var hs-var">poolEnvSpec</span></a></span></span><span> </span><span id="local-6989586621682698112"><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682698112"><span class="hs-identifier hs-var">_univ</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><span class="annottext">(Term (PoolEnv era) -&gt; Pred) -&gt; Specification (PoolEnv era)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (PoolEnv era) -&gt; Pred) -&gt; Specification (PoolEnv era))
+-&gt; (Term (PoolEnv era) -&gt; Pred) -&gt; Specification (PoolEnv era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682698114"><span class="annot"><span class="annottext">Term (PoolEnv era)
+</span><a href="#local-6989586621682698114"><span class="hs-identifier hs-var">pe</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="annottext">Term (PoolEnv era)
+-&gt; FunTy (MapList Term (ProductAsList (PoolEnv era))) Pred -&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (PoolEnv era)
+</span><a href="#local-6989586621682698114"><span class="hs-identifier hs-var">pe</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (PoolEnv era))) Pred -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList (PoolEnv era))) Pred -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps EpochNo
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682698116"><span class="annot"><span class="annottext">Term (PParams era)
+</span><a href="#local-6989586621682698116"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="annottext">Term (PParams era) -&gt; Specification (PParams era) -&gt; Pred
+forall a. HasSpec a =&gt; Term a -&gt; Specification a -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Conformance.html#satisfies"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term (PParams era)
+</span><a href="#local-6989586621682698116"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. EraSpecPParams era =&gt; Specification (PParams era)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.PParams.html#pparamsSpec"><span class="hs-identifier hs-var">pparamsSpec</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621682697865"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Pool.html#pStateSpec"><span class="hs-identifier hs-type">pStateSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682697922"><span class="annot"><a href="#local-6989586621682697922"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682697922"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682697922"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#PState"><span class="hs-identifier hs-type">PState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682697922"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span id="pStateSpec"><span class="annot"><span class="annottext">pStateSpec :: forall era. Era era =&gt; WitUniv era -&gt; Specification (PState era)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Pool.html#pStateSpec"><span class="hs-identifier hs-var hs-var">pStateSpec</span></a></span></span><span> </span><span id="local-6989586621682698410"><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682698410"><span class="hs-identifier hs-var">univ</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Term (PState era) -&gt; Pred) -&gt; Specification (PState era)
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term (PState era) -&gt; Pred) -&gt; Specification (PState era))
+-&gt; (Term (PState era) -&gt; Pred) -&gt; Specification (PState era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682698411"><span class="annot"><span class="annottext">Term (PState era)
+</span><a href="#local-6989586621682698411"><span class="hs-identifier hs-var">ps</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">Term (PState era)
+-&gt; FunTy (MapList Term (ProductAsList (PState era))) [Pred] -&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term (PState era)
+</span><a href="#local-6989586621682698411"><span class="hs-identifier hs-var">ps</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList (PState era))) [Pred] -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList (PState era))) [Pred] -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps (Map (VRFVerKeyHash 'StakePoolVRF) (NonZero Word64))
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682698412"><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+</span><a href="#local-6989586621682698412"><span class="hs-identifier hs-var">stakePools</span></a></span></span><span> </span><span id="local-6989586621682698413"><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+</span><a href="#local-6989586621682698413"><span class="hs-identifier hs-var">futureStakePools</span></a></span></span><span> </span><span id="local-6989586621682698414"><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) EpochNo)
+</span><a href="#local-6989586621682698414"><span class="hs-identifier hs-var">retiring</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Set (KeyHash 'StakePool)) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682698410"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+-&gt; Term (Set (KeyHash 'StakePool))
+forall k v.
+(HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k,
+ IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term (Set k)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+</span><a href="#local-6989586621682698412"><span class="hs-identifier hs-var">stakePools</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term [StakePoolState] -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682698410"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+-&gt; Term [StakePoolState]
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term [v]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+</span><a href="#local-6989586621682698412"><span class="hs-identifier hs-var">stakePools</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Set (KeyHash 'StakePool)) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682698410"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+-&gt; Term (Set (KeyHash 'StakePool))
+forall k v.
+(HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k,
+ IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term (Set k)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+</span><a href="#local-6989586621682698413"><span class="hs-identifier hs-var">futureStakePools</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term [StakePoolState] -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682698410"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+-&gt; Term [StakePoolState]
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term [v]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+</span><a href="#local-6989586621682698413"><span class="hs-identifier hs-var">futureStakePools</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term (Set (KeyHash 'StakePool)) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682698410"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) EpochNo)
+-&gt; Term (Set (KeyHash 'StakePool))
+forall k v.
+(HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k,
+ IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term (Set k)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) EpochNo)
+</span><a href="#local-6989586621682698414"><span class="hs-identifier hs-var">retiring</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; Term Bool -&gt; Pred
+forall p. IsPred p =&gt; [String] -&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assertExplain"><span class="hs-identifier hs-var">assertExplain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; [String]
+forall a. a -&gt; [a]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dom of retiring is a subset of dom of stakePoolParams&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-54"></span><span>        </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) EpochNo)
+-&gt; Term (Set (KeyHash 'StakePool))
+forall k v.
+(HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k,
+ IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term (Set k)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) EpochNo)
+</span><a href="#local-6989586621682698414"><span class="hs-identifier hs-var">retiring</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (KeyHash 'StakePool))
+-&gt; Term (Set (KeyHash 'StakePool)) -&gt; Term Bool
+forall a.
+(Ord a, HasSpec a) =&gt;
+Term (Set a) -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Set.html#subset_"><span class="hs-operator hs-var">`subset_`</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+-&gt; Term (Set (KeyHash 'StakePool))
+forall k v.
+(HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k,
+ IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term (Set k)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+</span><a href="#local-6989586621682698412"><span class="hs-identifier hs-var">stakePools</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term [StakePoolState]
+-&gt; FunTy (MapList Term (Args (SimpleRep StakePoolState))) Pred
+-&gt; Pred
+forall t a p.
+(Forallable t a, Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec a ~ TypeSpec (SimpleRep a), HasSpec t,
+ HasSpec (SimpleRep a), HasSimpleRep a,
+ All HasSpec (Args (SimpleRep a)), IsPred p, IsProd (SimpleRep a),
+ IsProductType a, HasSpec a, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term t -&gt; FunTy (MapList Term (Args (SimpleRep a))) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#forAll%27"><span class="hs-identifier hs-var">forAll'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+-&gt; Term [StakePoolState]
+forall k v.
+(HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term [v]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+</span><a href="#local-6989586621682698412"><span class="hs-identifier hs-var">stakePools</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args (SimpleRep StakePoolState))) Pred
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (Args (SimpleRep StakePoolState))) Pred
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps (VRFVerKeyHash 'StakePoolVRF)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps UnitInterval
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps RewardAccount
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (Set (KeyHash 'Staking))
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (StrictSeq StakePoolRelay)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (StrictMaybe PoolMetadata)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Term (CompactForm Coin)
+</span><span class="">[var|d|]</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-56"></span><span>        </span><span class="annot"><span class="annottext">[String] -&gt; Term Bool -&gt; Pred
+forall p. IsPred p =&gt; [String] -&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assertExplain"><span class="hs-identifier hs-var">assertExplain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; [String]
+forall a. a -&gt; [a]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;all deposits are greater then (Coin 0)&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Term (CompactForm Coin)
+</span><a href="#local-6989586621682698421"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">Term (CompactForm Coin) -&gt; Term (CompactForm Coin) -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3E%3D."><span class="hs-operator hs-var">&gt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin -&gt; Term (CompactForm Coin)
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[String] -&gt; Term Bool -&gt; Pred
+forall p. IsPred p =&gt; [String] -&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assertExplain"><span class="hs-identifier hs-var">assertExplain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; [String]
+forall a. a -&gt; [a]
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dom of stakePoolParams is disjoint from futureStakePoolParams&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+-&gt; Term (Set (KeyHash 'StakePool))
+forall k v.
+(HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k,
+ IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term (Set k)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+</span><a href="#local-6989586621682698412"><span class="hs-identifier hs-var">stakePools</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Set (KeyHash 'StakePool))
+-&gt; Term (Set (KeyHash 'StakePool)) -&gt; Term Bool
+forall a.
+(Ord a, HasSpec a) =&gt;
+Term (Set a) -&gt; Term (Set a) -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Set.html#disjoint_"><span class="hs-operator hs-var">`disjoint_`</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+-&gt; Term (Set (KeyHash 'StakePool))
+forall k v.
+(HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k,
+ IsNormalType v) =&gt;
+Term (Map k v) -&gt; Term (Set k)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term (Map (KeyHash 'StakePool) StakePoolState)
+</span><a href="#local-6989586621682698413"><span class="hs-identifier hs-var">futureStakePools</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Pool.html#poolCertSpec"><span class="hs-identifier hs-type">poolCertSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621682697995"><span class="annot"><a href="#local-6989586621682697995"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Basic.html#EraSpecPParams"><span class="hs-identifier hs-type">EraSpecPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682697995"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#WitUniv"><span class="hs-identifier hs-type">WitUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682697995"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Pool.html#PoolEnv"><span class="hs-identifier hs-type">PoolEnv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682697995"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#PState"><span class="hs-identifier hs-type">PState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621682697995"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#PoolCert"><span class="hs-identifier hs-type">PoolCert</span></a></span><span>
+</span><span id="line-68"></span><span id="poolCertSpec"><span class="annot"><span class="annottext">poolCertSpec :: forall era.
+EraSpecPParams era =&gt;
+WitUniv era -&gt; PoolEnv era -&gt; PState era -&gt; Specification PoolCert
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Pool.html#poolCertSpec"><span class="hs-identifier hs-var hs-var">poolCertSpec</span></a></span></span><span> </span><span id="local-6989586621682698670"><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682698670"><span class="hs-identifier hs-var">univ</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Rules.Pool.html#PoolEnv"><span class="hs-identifier hs-type">PoolEnv</span></a></span><span> </span><span id="local-6989586621682698672"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621682698672"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span id="local-6989586621682698673"><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621682698673"><span class="hs-identifier hs-var">pp</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621682698674"><span class="annot"><span class="annottext">PState era
+</span><a href="#local-6989586621682698674"><span class="hs-identifier hs-var">ps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">(Term PoolCert -&gt; Pred) -&gt; Specification PoolCert
+forall a p.
+(IsPred p, HasSpec a) =&gt;
+(Term a -&gt; p) -&gt; Specification a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">((Term PoolCert -&gt; Pred) -&gt; Specification PoolCert)
+-&gt; (Term PoolCert -&gt; Pred) -&gt; Specification PoolCert
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682698675"><span class="annot"><span class="annottext">Term PoolCert
+</span><a href="#local-6989586621682698675"><span class="hs-identifier hs-var">pc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term PoolCert
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep PoolCert)))
+     Pred
+forall a.
+(GenericRequires a, SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term a
+-&gt; FunTy
+     (MapList (Weighted (BinderD Deps)) (Cases (SimpleRep a))) Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term PoolCert
+</span><a href="#local-6989586621682698675"><span class="hs-identifier hs-var">pc</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>      </span><span class="hs-comment">-- RegPool !(PoolParams c)</span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; FunTy (MapList Term (Args PoolParams)) Pred
+-&gt; Weighted (BinderD Deps) PoolParams
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (Args PoolParams)) Pred
+ -&gt; Weighted (BinderD Deps) PoolParams)
+-&gt; FunTy (MapList Term (Args PoolParams)) Pred
+-&gt; Weighted (BinderD Deps) PoolParams
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682698678"><span class="annot"><span class="annottext">Term PoolParams
+</span><a href="#local-6989586621682698678"><span class="hs-identifier hs-var">poolParams</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-73"></span><span>          </span><span class="annot"><span class="annottext">Term PoolParams
+-&gt; FunTy (MapList Term (ProductAsList PoolParams)) [Pred] -&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term PoolParams
+</span><a href="#local-6989586621682698678"><span class="hs-identifier hs-var">poolParams</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList PoolParams)) [Pred] -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList PoolParams)) [Pred] -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps (KeyHash 'StakePool)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (VRFVerKeyHash 'StakePoolVRF)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682698679"><span class="annot"><span class="annottext">TermD Deps Coin
+</span><a href="#local-6989586621682698679"><span class="hs-identifier hs-var">cost</span></a></span></span><span> </span><span class="annot"><span class="annottext">TermD Deps UnitInterval
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682698680"><span class="annot"><span class="annottext">TermD Deps RewardAccount
+</span><a href="#local-6989586621682698680"><span class="hs-identifier hs-var">rewAccnt</span></a></span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (Set (KeyHash 'Staking))
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (StrictSeq StakePoolRelay)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682698681"><span class="annot"><span class="annottext">TermD Deps (StrictMaybe PoolMetadata)
+</span><a href="#local-6989586621682698681"><span class="hs-identifier hs-var">mMetadata</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; Term PoolParams -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682698670"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">Term PoolParams
+</span><a href="#local-6989586621682698678"><span class="hs-identifier hs-var">poolParams</span></a></span><span>
+</span><span id="line-75"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TermD Deps RewardAccount
+-&gt; FunTy (MapList Term (ProductAsList RewardAccount)) (Term Bool)
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">TermD Deps RewardAccount
+</span><a href="#local-6989586621682698680"><span class="hs-identifier hs-var">rewAccnt</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList RewardAccount)) (Term Bool)
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList RewardAccount)) (Term Bool)
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682698682"><span class="annot"><span class="annottext">Term Network
+</span><a href="#local-6989586621682698682"><span class="hs-identifier hs-var">net'</span></a></span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (Credential 'Staking)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-76"></span><span>                </span><span class="annot"><span class="annottext">Term Network
+</span><a href="#local-6989586621682698682"><span class="hs-identifier hs-var">net'</span></a></span><span> </span><span class="annot"><span class="annottext">Term Network -&gt; Term Network -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Generation.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Network -&gt; Term Network
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Network
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#Testnet"><span class="hs-identifier hs-var">Testnet</span></a></span><span>
+</span><span id="line-77"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TermD Deps (StrictMaybe PoolMetadata)
+-&gt; (Term PoolMetadata -&gt; Pred) -&gt; Pred
+forall a p.
+(HasSpec a, IsNormalType a, IsPred p) =&gt;
+Term (StrictMaybe a) -&gt; (Term a -&gt; p) -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#onJust%27"><span class="hs-identifier hs-var">onJust'</span></a></span><span> </span><span class="annot"><span class="annottext">TermD Deps (StrictMaybe PoolMetadata)
+</span><a href="#local-6989586621682698681"><span class="hs-identifier hs-var">mMetadata</span></a></span><span> </span><span class="annot"><span class="annottext">((Term PoolMetadata -&gt; Pred) -&gt; Pred)
+-&gt; (Term PoolMetadata -&gt; Pred) -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682698686"><span class="annot"><span class="annottext">Term PoolMetadata
+</span><a href="#local-6989586621682698686"><span class="hs-identifier hs-var">metadata</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>                </span><span class="annot"><span class="annottext">Term PoolMetadata
+-&gt; FunTy (MapList Term (ProductAsList PoolMetadata)) (Term Bool)
+-&gt; Pred
+forall p a.
+(IsProductType a, IsPred p, GenericRequires a,
+ ProdAsListComputes a) =&gt;
+Term a -&gt; FunTy (MapList Term (ProductAsList a)) p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#match"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term PoolMetadata
+</span><a href="#local-6989586621682698686"><span class="hs-identifier hs-var">metadata</span></a></span><span> </span><span class="annot"><span class="annottext">(FunTy (MapList Term (ProductAsList PoolMetadata)) (Term Bool)
+ -&gt; Pred)
+-&gt; FunTy (MapList Term (ProductAsList PoolMetadata)) (Term Bool)
+-&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TermD Deps Url
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621682698687"><span class="annot"><span class="annottext">Term ByteString
+</span><a href="#local-6989586621682698687"><span class="hs-identifier hs-var">hashstr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term ByteString -&gt; Term Int
+forall s. (HasSpec s, StringLike s) =&gt; Term s -&gt; Term Int
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger.html#strLen_"><span class="hs-identifier hs-var">strLen_</span></a></span><span> </span><span class="annot"><span class="annottext">Term ByteString
+</span><a href="#local-6989586621682698687"><span class="hs-identifier hs-var">hashstr</span></a></span><span> </span><span class="annot"><span class="annottext">Term Int -&gt; Term Int -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Term Int
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621682698690"><span class="hs-identifier hs-var">maxMetaLen</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Coin -&gt; TermD Deps Coin
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621682698673"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era -&gt; Getting Coin (PParams era) Coin -&gt; Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting Coin (PParams era) Coin
+forall era. EraPParams era =&gt; Lens' (PParams era) Coin
+Lens' (PParams era) Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppMinPoolCostL"><span class="hs-identifier hs-var">ppMinPoolCostL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">TermD Deps Coin -&gt; TermD Deps Coin -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">TermD Deps Coin
+</span><a href="#local-6989586621682698679"><span class="hs-identifier hs-var">cost</span></a></span><span>
+</span><span id="line-80"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>      </span><span class="hs-comment">-- RetirePool !(KeyHash 'StakePool c) !EpochNo</span><span>
+</span><span id="line-83"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; FunTy
+     (MapList Term (Args (Prod (KeyHash 'StakePool) EpochNo))) [Pred]
+-&gt; Weighted (BinderD Deps) (Prod (KeyHash 'StakePool) EpochNo)
+forall p a.
+(HasSpec a, All HasSpec (Args a), IsPred p, IsProd a) =&gt;
+Int -&gt; FunTy (MapList Term (Args a)) p -&gt; Weighted (BinderD Deps) a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.SumProd.html#branchW"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(FunTy
+   (MapList Term (Args (Prod (KeyHash 'StakePool) EpochNo))) [Pred]
+ -&gt; Weighted (BinderD Deps) (Prod (KeyHash 'StakePool) EpochNo))
+-&gt; FunTy
+     (MapList Term (Args (Prod (KeyHash 'StakePool) EpochNo))) [Pred]
+-&gt; Weighted (BinderD Deps) (Prod (KeyHash 'StakePool) EpochNo)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621682698694"><span class="annot"><span class="annottext">TermD Deps (KeyHash 'StakePool)
+</span><a href="#local-6989586621682698694"><span class="hs-identifier hs-var">keyHash</span></a></span></span><span> </span><span id="local-6989586621682698695"><span class="annot"><span class="annottext">TermD Deps EpochNo
+</span><a href="#local-6989586621682698695"><span class="hs-identifier hs-var">epochNo</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-84"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">WitUniv era -&gt; TermD Deps (KeyHash 'StakePool) -&gt; Pred
+forall era t. Witnessed era t =&gt; WitUniv era -&gt; Term t -&gt; Pred
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse.html#witness"><span class="hs-identifier hs-var">witness</span></a></span><span> </span><span class="annot"><span class="annottext">WitUniv era
+</span><a href="#local-6989586621682698670"><span class="hs-identifier hs-var">univ</span></a></span><span> </span><span class="annot"><span class="annottext">TermD Deps (KeyHash 'StakePool)
+</span><a href="#local-6989586621682698694"><span class="hs-identifier hs-var">keyHash</span></a></span><span>
+</span><span id="line-85"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps EpochNo
+</span><a href="#local-6989586621682698695"><span class="hs-identifier hs-var">epochNo</span></a></span><span> </span><span class="annot"><span class="annottext">TermD Deps EpochNo -&gt; TermD Deps EpochNo -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; TermD Deps EpochNo
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621682698696"><span class="hs-identifier hs-var">maxEpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo -&gt; EpochNo
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; TermD Deps EpochNo
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621682698672"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">TermD Deps EpochNo -&gt; TermD Deps EpochNo -&gt; Term Bool
+forall a. OrdLike a =&gt; Term a -&gt; Term a -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.NumOrd.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">TermD Deps EpochNo
+</span><a href="#local-6989586621682698695"><span class="hs-identifier hs-var">epochNo</span></a></span><span>
+</span><span id="line-87"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term Bool -&gt; Pred
+forall p. IsPred p =&gt; p -&gt; Pred
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">(Term Bool -&gt; Pred) -&gt; Term Bool -&gt; Pred
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TermD Deps (KeyHash 'StakePool)
+-&gt; Term [KeyHash 'StakePool] -&gt; Term Bool
+forall a. HasSpec a =&gt; Term a -&gt; Term [a] -&gt; Term Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Spec.List.html#elem_"><span class="hs-identifier hs-var">elem_</span></a></span><span> </span><span class="annot"><span class="annottext">TermD Deps (KeyHash 'StakePool)
+</span><a href="#local-6989586621682698694"><span class="hs-identifier hs-var">keyHash</span></a></span><span> </span><span class="annot"><span class="annottext">(Term [KeyHash 'StakePool] -&gt; Term Bool)
+-&gt; Term [KeyHash 'StakePool] -&gt; Term Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[KeyHash 'StakePool] -&gt; Term [KeyHash 'StakePool]
+forall a. HasSpec a =&gt; a -&gt; Term a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/constrained-generators-0.2.0.0-a0c7d75978627f49258699daf8c17a7f49f5b60eeaa417a898754ac71d176649/share/doc/html/src/Constrained.Syntax.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">[KeyHash 'StakePool]
+</span><a href="#local-6989586621682698699"><span class="hs-identifier hs-var">rpools</span></a></span><span>
+</span><span id="line-88"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-89"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochInterval"><span class="hs-identifier hs-type">EpochInterval</span></a></span><span> </span><span id="local-6989586621682698727"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621682698727"><span class="hs-identifier hs-var">maxEp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621682698673"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">PParams era
+-&gt; Getting EpochInterval (PParams era) EpochInterval
+-&gt; EpochInterval
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting EpochInterval (PParams era) EpochInterval
+forall era. EraPParams era =&gt; Lens' (PParams era) EpochInterval
+Lens' (PParams era) EpochInterval
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.PParams.html#ppEMaxL"><span class="hs-identifier hs-var">ppEMaxL</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621682698696"><span class="annot"><span class="annottext">maxEpochNo :: EpochNo
+</span><a href="#local-6989586621682698696"><span class="hs-identifier hs-var hs-var">maxEpochNo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; EpochNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-var">EpochNo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621682698727"><span class="hs-identifier hs-var">maxEp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621682698699"><span class="annot"><span class="annottext">rpools :: [KeyHash 'StakePool]
+</span><a href="#local-6989586621682698699"><span class="hs-identifier hs-var hs-var">rpools</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) StakePoolState -&gt; [KeyHash 'StakePool]
+forall k a. Map k a -&gt; [k]
+</span><span class="hs-identifier hs-var">Map.keys</span></span><span> </span><span class="annot"><span class="annottext">(Map (KeyHash 'StakePool) StakePoolState -&gt; [KeyHash 'StakePool])
+-&gt; Map (KeyHash 'StakePool) StakePoolState -&gt; [KeyHash 'StakePool]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PState era -&gt; Map (KeyHash 'StakePool) StakePoolState
+forall era. PState era -&gt; Map (KeyHash 'StakePool) StakePoolState
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#psStakePools"><span class="hs-identifier hs-var">psStakePools</span></a></span><span> </span><span class="annot"><span class="annottext">PState era
+</span><a href="#local-6989586621682698674"><span class="hs-identifier hs-var">ps</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span id="local-6989586621682698690"><span class="annot"><span class="annottext">maxMetaLen :: Int
+</span><a href="#local-6989586621682698690"><span class="hs-identifier hs-var hs-var">maxMetaLen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[HASH] -&gt; Word
+forall h (proxy :: * -&gt; *). HashAlgorithm h =&gt; proxy h -&gt; Word
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#sizeHash"><span class="hs-identifier hs-var">Hash.sizeHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span></pre></body></html>

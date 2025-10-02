@@ -1,0 +1,189 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- | Simple example of a transition system whose states contain the sum of the</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- integers seen in the signals.</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Control.State.Transition.Examples.Sum</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.html"><span class="hs-identifier">Control.State.Transition</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Gen.html"><span class="hs-identifier">Hedgehog.Gen</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Gen</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Range.html"><span class="hs-identifier">Hedgehog.Range</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Range</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html"><span class="hs-identifier">Test.Control.State.Transition.Generator</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html"><span class="hs-identifier">Test.Control.State.Transition.Trace</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.Generator.QuickCheck.html"><span class="hs-identifier">Test.Control.State.Transition.Trace.Generator.QuickCheck</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STS.Gen</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.html"><span class="hs-identifier">Test.QuickCheck</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier">Property</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier">arbitrary</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#shrink"><span class="hs-identifier">shrink</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#withMaxSuccess"><span class="hs-identifier">withMaxSuccess</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">data</span><span> </span><span id="SUM"><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#SUM"><span class="hs-identifier hs-var">SUM</span></a></span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">data</span><span> </span><span id="NoFailure"><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#NoFailure"><span class="hs-identifier hs-var">NoFailure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NoFailure"><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#NoFailure"><span class="hs-identifier hs-var">NoFailure</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679221538"><span id="local-6989586621679221540"><span class="annot"><span class="annottext">NoFailure -&gt; NoFailure -&gt; Bool
+(NoFailure -&gt; NoFailure -&gt; Bool)
+-&gt; (NoFailure -&gt; NoFailure -&gt; Bool) -&gt; Eq NoFailure
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NoFailure -&gt; NoFailure -&gt; Bool
+== :: NoFailure -&gt; NoFailure -&gt; Bool
+$c/= :: NoFailure -&gt; NoFailure -&gt; Bool
+/= :: NoFailure -&gt; NoFailure -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679221545"><span id="local-6989586621679221547"><span id="local-6989586621679221551"><span class="annot"><span class="annottext">Int -&gt; NoFailure -&gt; ShowS
+[NoFailure] -&gt; ShowS
+NoFailure -&gt; String
+(Int -&gt; NoFailure -&gt; ShowS)
+-&gt; (NoFailure -&gt; String)
+-&gt; ([NoFailure] -&gt; ShowS)
+-&gt; Show NoFailure
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; NoFailure -&gt; ShowS
+showsPrec :: Int -&gt; NoFailure -&gt; ShowS
+$cshow :: NoFailure -&gt; String
+show :: NoFailure -&gt; String
+$cshowList :: [NoFailure] -&gt; ShowS
+showList :: [NoFailure] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679221568"><span id="local-6989586621679221572"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#STS"><span class="hs-identifier hs-type">STS</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#SUM"><span class="hs-identifier hs-type">SUM</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Environment"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#SUM"><span class="hs-identifier hs-type">SUM</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="State"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#SUM"><span class="hs-identifier hs-type">SUM</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signal"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#Signal"><span class="hs-identifier hs-var">Signal</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#SUM"><span class="hs-identifier hs-type">SUM</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">]</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="PredicateFailure"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#PredicateFailure"><span class="hs-identifier hs-var">PredicateFailure</span></a></span></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#SUM"><span class="hs-identifier hs-type">SUM</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#NoFailure"><span class="hs-identifier hs-type">NoFailure</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>  </span><span id="local-6989586621679221579"><span class="annot"><span class="annottext">initialRules :: [InitialRule SUM]
+</span><a href="#local-6989586621679221579"><span class="hs-identifier hs-var hs-var hs-var hs-var">initialRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int -&gt; F (Clause SUM 'Initial) Int
+forall a. a -&gt; F (Clause SUM 'Initial) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">]</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679221588"><span class="annot"><span class="annottext">transitionRules :: [TransitionRule SUM]
+</span><a href="#local-6989586621679221588"><span class="hs-identifier hs-var hs-var hs-var hs-var">transitionRules</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-34"></span><span>        </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#TRC"><span class="hs-identifier hs-type">TRC</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span id="local-6989586621679221591"><span class="annot"><span class="annottext">State SUM
+</span><a href="#local-6989586621679221591"><span class="hs-identifier hs-var">st</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679221592"><span class="annot"><span class="annottext">Signal SUM
+</span><a href="#local-6989586621679221592"><span class="hs-identifier hs-var">xs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Rule SUM 'Transition (RuleContext 'Transition SUM)
+F (Clause SUM 'Transition) (TRC SUM)
+forall sts (rtype :: RuleType).
+Rule sts rtype (RuleContext rtype sts)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/doc/html/small-steps/src/Control.State.Transition.Extended.html#judgmentContext"><span class="hs-identifier hs-var">judgmentContext</span></a></span><span>
+</span><span id="line-35"></span><span>        </span><span class="annot"><span class="annottext">Int -&gt; F (Clause SUM 'Transition) Int
+forall a. a -&gt; F (Clause SUM 'Transition) a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; F (Clause SUM 'Transition) Int)
+-&gt; Int -&gt; F (Clause SUM 'Transition) Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="annot"><span class="annottext">Int
+State SUM
+</span><a href="#local-6989586621679221591"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; Int
+forall a. Num a =&gt; [a] -&gt; a
+forall (t :: * -&gt; *) a. (Foldable t, Num a) =&gt; t a -&gt; a
+</span><span class="hs-identifier hs-var">sum</span></span><span> </span><span class="annot"><span class="annottext">[Int]
+Signal SUM
+</span><a href="#local-6989586621679221592"><span class="hs-identifier hs-var">xs</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679221600"><span id="local-6989586621679221608"><span id="local-6989586621679221611"><span id="local-6989586621679221614"><span id="local-6989586621679221617"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#HasTrace"><span class="hs-identifier hs-type">HasTrace</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#SUM"><span class="hs-identifier hs-type">SUM</span></a></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621679221623"><span class="annot"><span class="annottext">envGen :: Word64 -&gt; Gen (Environment SUM)
+</span><a href="#local-6989586621679221623"><span class="hs-identifier hs-var hs-var hs-var hs-var">envGen</span></a></span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; GenT Identity ()
+forall a. a -&gt; GenT Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679221636"><span class="annot"><span class="annottext">sigGen :: SignalGenerator SUM
+</span><a href="#local-6989586621679221636"><span class="hs-identifier hs-var hs-var hs-var hs-var">sigGen</span></a></span></span><span> </span><span class="annot"><span class="annottext">Environment SUM
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">State SUM
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="annottext">Range Int -&gt; GenT Identity Int -&gt; GenT Identity [Int]
+forall (m :: * -&gt; *) a. MonadGen m =&gt; Range Int -&gt; m a -&gt; m [a]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#list"><span class="hs-identifier hs-var">Gen.list</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. a -&gt; a -&gt; Range a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#constant"><span class="hs-identifier hs-var">Range.constant</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">100</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Range Int -&gt; GenT Identity Int
+forall (m :: * -&gt; *) a. (MonadGen m, Integral a) =&gt; Range a -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Gen.html#integral"><span class="hs-identifier hs-var">Gen.integral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. a -&gt; a -&gt; Range a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Range.html#constant"><span class="hs-identifier hs-var">Range.constant</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- | This property is intended to be used to manually inspect the</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- counterexamples that we get.</span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#prop_qc_Bounded"><span class="hs-identifier hs-type">prop_qc_Bounded</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-47"></span><span id="prop_qc_Bounded"><span class="annot"><span class="annottext">prop_qc_Bounded :: Property
+</span><a href="Test.Control.State.Transition.Examples.Sum.html#prop_qc_Bounded"><span class="hs-identifier hs-var hs-var">prop_qc_Bounded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">forall sts traceGenEnv prop.
+(HasTrace sts traceGenEnv, Testable prop,
+ Show (Environment sts)) =&gt;
+BaseEnv sts
+-&gt; Word64 -&gt; traceGenEnv -&gt; (Trace sts -&gt; prop) -&gt; Property
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.Generator.QuickCheck.html#forAllTrace"><span class="hs-identifier hs-var">STS.Gen.forAllTrace</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#SUM"><span class="hs-identifier hs-type">SUM</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">100</span></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Bool) -&gt; (Trace SUM -&gt; Int) -&gt; Trace SUM -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Trace SUM -&gt; Int
+Trace SUM -&gt; State SUM
+forall s. Trace s -&gt; State s
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.html#lastState"><span class="hs-identifier hs-var">lastState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><span class="hs-comment">-- | Property that simply classifies the trace length distribution.</span></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#prop_qc_Classified"><span class="hs-identifier hs-type">prop_qc_Classified</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-56"></span><span id="prop_qc_Classified"><span class="annot"><span class="annottext">prop_qc_Classified :: Property
+</span><a href="Test.Control.State.Transition.Examples.Sum.html#prop_qc_Classified"><span class="hs-identifier hs-var hs-var">prop_qc_Classified</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, Show (Environment sts)) =&gt;
+BaseEnv sts -&gt; Word64 -&gt; Word64 -&gt; traceGenEnv -&gt; Property
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.Generator.QuickCheck.html#traceLengthsAreClassified"><span class="hs-identifier hs-var">STS.Gen.traceLengthsAreClassified</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#SUM"><span class="hs-identifier hs-type">SUM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">100</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">10</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#prop_qc_onlyValidSignalsAreGenerated"><span class="hs-identifier hs-type">prop_qc_onlyValidSignalsAreGenerated</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#Property"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-60"></span><span id="prop_qc_onlyValidSignalsAreGenerated"><span class="annot"><span class="annottext">prop_qc_onlyValidSignalsAreGenerated :: Property
+</span><a href="Test.Control.State.Transition.Examples.Sum.html#prop_qc_onlyValidSignalsAreGenerated"><span class="hs-identifier hs-var hs-var">prop_qc_onlyValidSignalsAreGenerated</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; Property -&gt; Property
+forall prop. Testable prop =&gt; Int -&gt; prop -&gt; Property
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Property.html#withMaxSuccess"><span class="hs-identifier hs-var">withMaxSuccess</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">300</span></span><span> </span><span class="annot"><span class="annottext">(Property -&gt; Property) -&gt; Property -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">forall sts traceGenEnv.
+(HasTrace sts traceGenEnv, Show (Environment sts),
+ Show (Signal sts)) =&gt;
+BaseEnv sts -&gt; Word64 -&gt; traceGenEnv -&gt; Property
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.Generator.QuickCheck.html#onlyValidSignalsAreGenerated"><span class="hs-identifier hs-var">STS.Gen.onlyValidSignalsAreGenerated</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#SUM"><span class="hs-identifier hs-type">SUM</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">100</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679221653"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Trace.Generator.QuickCheck.html#HasTrace"><span class="hs-identifier hs-type">STS.Gen.HasTrace</span></a></span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html#SUM"><span class="hs-identifier hs-type">SUM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621679221665"><span class="annot"><span class="annottext">envGen :: HasCallStack =&gt; () -&gt; Gen (Environment SUM)
+</span><a href="#local-6989586621679221665"><span class="hs-identifier hs-var hs-var hs-var hs-var">envGen</span></a></span></span><span> </span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; Gen ()
+forall a. a -&gt; Gen a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679221672"><span class="annot"><span class="annottext">sigGen :: HasCallStack =&gt;
+() -&gt; Environment SUM -&gt; State SUM -&gt; Gen (Signal SUM)
+</span><a href="#local-6989586621679221672"><span class="hs-identifier hs-var hs-var hs-var hs-var">sigGen</span></a></span></span><span> </span><span id="local-6989586621679221674"><span class="annot"><span class="annottext">()
+</span><a href="#local-6989586621679221674"><span class="hs-identifier hs-var">_traceEnv</span></a></span></span><span> </span><span id="local-6989586621679221675"><span class="annot"><span class="annottext">Environment SUM
+</span><a href="#local-6989586621679221675"><span class="hs-identifier hs-var">_env</span></a></span></span><span> </span><span id="local-6989586621679221676"><span class="annot"><span class="annottext">State SUM
+</span><a href="#local-6989586621679221676"><span class="hs-identifier hs-var">_st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Gen [Int]
+Gen (Signal SUM)
+forall a. Arbitrary a =&gt; Gen a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#arbitrary"><span class="hs-identifier hs-var">arbitrary</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679221680"><span class="annot"><span class="annottext">shrinkSignal :: HasCallStack =&gt; Signal SUM -&gt; [Signal SUM]
+</span><a href="#local-6989586621679221680"><span class="hs-identifier hs-var hs-var hs-var hs-var">shrinkSignal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Int] -&gt; [[Int]]
+Signal SUM -&gt; [Signal SUM]
+forall a. Arbitrary a =&gt; a -&gt; [a]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Arbitrary.html#shrink"><span class="hs-identifier hs-var">shrink</span></a></span><span>
+</span><span id="line-70"></span></pre></body></html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Common.Compact</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier">CompactAddress</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#toCompactAddress"><span class="hs-identifier">toCompactAddress</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#fromCompactAddress"><span class="hs-identifier">fromCompactAddress</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#unsafeGetCompactAddress"><span class="hs-identifier">unsafeGetCompactAddress</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Address.html"><span class="hs-identifier">Cardano.Chain.Common.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier">Address</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/heapwords-0.1.0.2-b6417b7556a8e92d841bb3a7d489e50a628754cd86fcb83441bde6481e83fe38/share/doc/html/src/Cardano.HeapWords.html"><span class="hs-identifier">Cardano.HeapWords</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/heapwords-0.1.0.2-b6417b7556a8e92d841bb3a7d489e50a628754cd86fcb83441bde6481e83fe38/share/doc/html/src/Cardano.HeapWords.html#HeapWords"><span class="hs-identifier">HeapWords</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#byronProtVer"><span class="hs-identifier">byronProtVer</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull%27"><span class="hs-identifier">decodeFull'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize%27"><span class="hs-identifier">serialize'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Short</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ShortByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Short</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSS</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromShort</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">toShort</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- Compact Address</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | A compact in-memory representation for an 'Address'.</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- Convert using 'toCompactAddress' and 'fromCompactAddress'.</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">newtype</span><span> </span><span id="CompactAddress"><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-var">CompactAddress</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CompactAddress"><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-var">CompactAddress</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ShortByteString</span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679564046"><span id="local-6989586621679564051"><span class="annot"><span class="annottext">CompactAddress -&gt; CompactAddress -&gt; Bool
+(CompactAddress -&gt; CompactAddress -&gt; Bool)
+-&gt; (CompactAddress -&gt; CompactAddress -&gt; Bool) -&gt; Eq CompactAddress
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: CompactAddress -&gt; CompactAddress -&gt; Bool
+== :: CompactAddress -&gt; CompactAddress -&gt; Bool
+$c/= :: CompactAddress -&gt; CompactAddress -&gt; Bool
+/= :: CompactAddress -&gt; CompactAddress -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679564059"><span id="local-6989586621679564064"><span id="local-6989586621679564068"><span id="local-6989586621679564072"><span id="local-6989586621679564076"><span id="local-6989586621679564080"><span id="local-6989586621679564084"><span class="annot"><span class="annottext">Eq CompactAddress
+Eq CompactAddress =&gt;
+(CompactAddress -&gt; CompactAddress -&gt; Ordering)
+-&gt; (CompactAddress -&gt; CompactAddress -&gt; Bool)
+-&gt; (CompactAddress -&gt; CompactAddress -&gt; Bool)
+-&gt; (CompactAddress -&gt; CompactAddress -&gt; Bool)
+-&gt; (CompactAddress -&gt; CompactAddress -&gt; Bool)
+-&gt; (CompactAddress -&gt; CompactAddress -&gt; CompactAddress)
+-&gt; (CompactAddress -&gt; CompactAddress -&gt; CompactAddress)
+-&gt; Ord CompactAddress
+CompactAddress -&gt; CompactAddress -&gt; Bool
+CompactAddress -&gt; CompactAddress -&gt; Ordering
+CompactAddress -&gt; CompactAddress -&gt; CompactAddress
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: CompactAddress -&gt; CompactAddress -&gt; Ordering
+compare :: CompactAddress -&gt; CompactAddress -&gt; Ordering
+$c&lt; :: CompactAddress -&gt; CompactAddress -&gt; Bool
+&lt; :: CompactAddress -&gt; CompactAddress -&gt; Bool
+$c&lt;= :: CompactAddress -&gt; CompactAddress -&gt; Bool
+&lt;= :: CompactAddress -&gt; CompactAddress -&gt; Bool
+$c&gt; :: CompactAddress -&gt; CompactAddress -&gt; Bool
+&gt; :: CompactAddress -&gt; CompactAddress -&gt; Bool
+$c&gt;= :: CompactAddress -&gt; CompactAddress -&gt; Bool
+&gt;= :: CompactAddress -&gt; CompactAddress -&gt; Bool
+$cmax :: CompactAddress -&gt; CompactAddress -&gt; CompactAddress
+max :: CompactAddress -&gt; CompactAddress -&gt; CompactAddress
+$cmin :: CompactAddress -&gt; CompactAddress -&gt; CompactAddress
+min :: CompactAddress -&gt; CompactAddress -&gt; CompactAddress
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679564090"><span id="local-6989586621679564092"><span class="annot"><span class="annottext">(forall x. CompactAddress -&gt; Rep CompactAddress x)
+-&gt; (forall x. Rep CompactAddress x -&gt; CompactAddress)
+-&gt; Generic CompactAddress
+forall x. Rep CompactAddress x -&gt; CompactAddress
+forall x. CompactAddress -&gt; Rep CompactAddress x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. CompactAddress -&gt; Rep CompactAddress x
+from :: forall x. CompactAddress -&gt; Rep CompactAddress x
+$cto :: forall x. Rep CompactAddress x -&gt; CompactAddress
+to :: forall x. Rep CompactAddress x -&gt; CompactAddress
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679564096"><span id="local-6989586621679564102"><span id="local-6989586621679564106"><span class="annot"><span class="annottext">Int -&gt; CompactAddress -&gt; ShowS
+[CompactAddress] -&gt; ShowS
+CompactAddress -&gt; String
+(Int -&gt; CompactAddress -&gt; ShowS)
+-&gt; (CompactAddress -&gt; String)
+-&gt; ([CompactAddress] -&gt; ShowS)
+-&gt; Show CompactAddress
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; CompactAddress -&gt; ShowS
+showsPrec :: Int -&gt; CompactAddress -&gt; ShowS
+$cshow :: CompactAddress -&gt; String
+show :: CompactAddress -&gt; String
+$cshowList :: [CompactAddress] -&gt; ShowS
+showList :: [CompactAddress] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679564110"><span class="annot"><span class="annottext">CompactAddress -&gt; Int
+(CompactAddress -&gt; Int) -&gt; HeapWords CompactAddress
+forall a. (a -&gt; Int) -&gt; HeapWords a
+$cheapWords :: CompactAddress -&gt; Int
+heapWords :: CompactAddress -&gt; Int
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/heapwords-0.1.0.2-b6417b7556a8e92d841bb3a7d489e50a628754cd86fcb83441bde6481e83fe38/share/doc/html/src/Cardano.HeapWords.html#HeapWords"><span class="hs-identifier hs-var hs-var hs-var hs-var">HeapWords</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679564117"><span id="local-6989586621679564122"><span id="local-6989586621679564126"><span class="annot"><span class="annottext">Context -&gt; CompactAddress -&gt; IO (Maybe ThunkInfo)
+Proxy CompactAddress -&gt; String
+(Context -&gt; CompactAddress -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; CompactAddress -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy CompactAddress -&gt; String)
+-&gt; NoThunks CompactAddress
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; CompactAddress -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; CompactAddress -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; CompactAddress -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; CompactAddress -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy CompactAddress -&gt; String
+showTypeOf :: Proxy CompactAddress -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679564132"><span class="annot"><span class="annottext">CompactAddress -&gt; ()
+(CompactAddress -&gt; ()) -&gt; NFData CompactAddress
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: CompactAddress -&gt; ()
+rnf :: CompactAddress -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679564150"><span id="local-6989586621679564154"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-type">CompactAddress</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679564159"><span class="annot"><span class="annottext">toCBOR :: CompactAddress -&gt; Encoding
+</span><a href="#local-6989586621679564159"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CompactAddress -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679564165"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-type">CompactAddress</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679564171"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s CompactAddress
+</span><a href="#local-6989586621679564171"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s CompactAddress
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679564177"><span id="local-6989586621679564180"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-type">CompactAddress</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679564189"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s CompactAddress
+</span><a href="#local-6989586621679564189"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; CompactAddress
+</span><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-var">CompactAddress</span></a></span><span> </span><span class="annot"><span class="annottext">(ShortByteString -&gt; CompactAddress)
+-&gt; (ByteString -&gt; ShortByteString) -&gt; ByteString -&gt; CompactAddress
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ShortByteString
+</span><span class="hs-identifier hs-var">BSS.toShort</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; CompactAddress)
+-&gt; Decoder s ByteString -&gt; Decoder s CompactAddress
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s ByteString
+forall s. Decoder s ByteString
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679564197"><span id="local-6989586621679564200"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-type">CompactAddress</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679564205"><span class="annot"><span class="annottext">encCBOR :: CompactAddress -&gt; Encoding
+</span><a href="#local-6989586621679564205"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-type">CompactAddress</span></a></span><span> </span><span id="local-6989586621679564207"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679564207"><span class="hs-identifier hs-var">sbs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShortByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">BSS.fromShort</span></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679564207"><span class="hs-identifier hs-var">sbs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#toCompactAddress"><span class="hs-identifier hs-type">toCompactAddress</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Address</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-type">CompactAddress</span></a></span><span>
+</span><span id="line-57"></span><span id="toCompactAddress"><span class="annot"><span class="annottext">toCompactAddress :: Address -&gt; CompactAddress
+</span><a href="Cardano.Chain.Common.Compact.html#toCompactAddress"><span class="hs-identifier hs-var hs-var">toCompactAddress</span></a></span></span><span> </span><span id="local-6989586621679564208"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621679564208"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><span class="annottext">ShortByteString -&gt; CompactAddress
+</span><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-var">CompactAddress</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ShortByteString
+</span><span class="hs-identifier hs-var">BSS.toShort</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Version -&gt; Address -&gt; ByteString
+forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.html#serialize%27"><span class="hs-identifier hs-var">serialize'</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621679564208"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#fromCompactAddress"><span class="hs-identifier hs-type">fromCompactAddress</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-type">CompactAddress</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Address</span></a></span><span>
+</span><span id="line-61"></span><span id="fromCompactAddress"><span class="annot"><span class="annottext">fromCompactAddress :: CompactAddress -&gt; Address
+</span><a href="Cardano.Chain.Common.Compact.html#fromCompactAddress"><span class="hs-identifier hs-var hs-var">fromCompactAddress</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-type">CompactAddress</span></a></span><span> </span><span id="local-6989586621679564209"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679564209"><span class="hs-identifier hs-var">addr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Version -&gt; ByteString -&gt; Either DecoderError Address
+forall a.
+DecCBOR a =&gt;
+Version -&gt; ByteString -&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFull%27"><span class="hs-identifier hs-var">decodeFull'</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShortByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">BSS.fromShort</span></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679564209"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679564210"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679564210"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Address
+forall a. HasCallStack =&gt; Text -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Panic.html#panic"><span class="hs-identifier hs-var">panic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;fromCompactAddress: impossible: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; Text
+forall a b. (Show a, ConvertText String b) =&gt; a -&gt; b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679564210"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679564213"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621679564213"><span class="hs-identifier hs-var">decAddr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621679564213"><span class="hs-identifier hs-var">decAddr</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#unsafeGetCompactAddress"><span class="hs-identifier hs-type">unsafeGetCompactAddress</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-type">CompactAddress</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ShortByteString</span></span><span>
+</span><span id="line-67"></span><span id="unsafeGetCompactAddress"><span class="annot"><span class="annottext">unsafeGetCompactAddress :: CompactAddress -&gt; ShortByteString
+</span><a href="Cardano.Chain.Common.Compact.html#unsafeGetCompactAddress"><span class="hs-identifier hs-var hs-var">unsafeGetCompactAddress</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-type">CompactAddress</span></a></span><span> </span><span id="local-6989586621679564214"><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679564214"><span class="hs-identifier hs-var">sbs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621679564214"><span class="hs-identifier hs-var">sbs</span></a></span><span>
+</span><span id="line-68"></span></pre></body></html>

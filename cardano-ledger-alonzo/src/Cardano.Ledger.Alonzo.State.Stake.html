@@ -1,0 +1,61 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Alonzo.State.Stake</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Core.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Era.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier">AlonzoEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.State.Account.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.State.Account</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.html"><span class="hs-identifier">Cardano.Ledger.Shelley.State</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Stake.html#EraStake"><span class="hs-identifier">EraStake</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#ShelleyInstantStake"><span class="hs-identifier">ShelleyInstantStake</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#addShelleyInstantStake"><span class="hs-identifier">addShelleyInstantStake</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#deleteShelleyInstantStake"><span class="hs-identifier">deleteShelleyInstantStake</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#resolveShelleyInstantStake"><span class="hs-identifier">resolveShelleyInstantStake</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#shelleyInstantStakeCredentialsL"><span class="hs-identifier">shelleyInstantStakeCredentialsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Stake.html#EraStake"><span class="hs-identifier hs-type">EraStake</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="InstantStake"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-var">InstantStake</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#ShelleyInstantStake"><span class="hs-identifier hs-type">ShelleyInstantStake</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span id="local-6989586621679494283"><span class="annot"><span class="annottext">instantStakeCredentialsL :: Lens'
+  (InstantStake AlonzoEra)
+  (Map (Credential 'Staking) (CompactForm Coin))
+</span><a href="#local-6989586621679494283"><span class="hs-identifier hs-var hs-var hs-var hs-var">instantStakeCredentialsL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'Staking) (CompactForm Coin)
+ -&gt; f (Map (Credential 'Staking) (CompactForm Coin)))
+-&gt; InstantStake AlonzoEra -&gt; f (InstantStake AlonzoEra)
+(Map (Credential 'Staking) (CompactForm Coin)
+ -&gt; f (Map (Credential 'Staking) (CompactForm Coin)))
+-&gt; ShelleyInstantStake AlonzoEra
+-&gt; f (ShelleyInstantStake AlonzoEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(Map (Credential 'Staking) (CompactForm Coin)
+ -&gt; f (Map (Credential 'Staking) (CompactForm Coin)))
+-&gt; ShelleyInstantStake era -&gt; f (ShelleyInstantStake era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#shelleyInstantStakeCredentialsL"><span class="hs-identifier hs-var">shelleyInstantStakeCredentialsL</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span id="local-6989586621679494287"><span class="annot"><span class="annottext">addInstantStake :: UTxO AlonzoEra -&gt; InstantStake AlonzoEra -&gt; InstantStake AlonzoEra
+</span><a href="#local-6989586621679494287"><span class="hs-identifier hs-var hs-var hs-var hs-var">addInstantStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO AlonzoEra -&gt; InstantStake AlonzoEra -&gt; InstantStake AlonzoEra
+UTxO AlonzoEra
+-&gt; ShelleyInstantStake AlonzoEra -&gt; ShelleyInstantStake AlonzoEra
+forall era.
+EraTxOut era =&gt;
+UTxO era -&gt; ShelleyInstantStake era -&gt; ShelleyInstantStake era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#addShelleyInstantStake"><span class="hs-identifier hs-var">addShelleyInstantStake</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span id="local-6989586621679494290"><span class="annot"><span class="annottext">deleteInstantStake :: UTxO AlonzoEra -&gt; InstantStake AlonzoEra -&gt; InstantStake AlonzoEra
+</span><a href="#local-6989586621679494290"><span class="hs-identifier hs-var hs-var hs-var hs-var">deleteInstantStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTxO AlonzoEra -&gt; InstantStake AlonzoEra -&gt; InstantStake AlonzoEra
+UTxO AlonzoEra
+-&gt; ShelleyInstantStake AlonzoEra -&gt; ShelleyInstantStake AlonzoEra
+forall era.
+EraTxOut era =&gt;
+UTxO era -&gt; ShelleyInstantStake era -&gt; ShelleyInstantStake era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#deleteShelleyInstantStake"><span class="hs-identifier hs-var">deleteShelleyInstantStake</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span id="local-6989586621679494296"><span class="annot"><span class="annottext">resolveInstantStake :: InstantStake AlonzoEra -&gt; Accounts AlonzoEra -&gt; Stake
+</span><a href="#local-6989586621679494296"><span class="hs-identifier hs-var hs-var hs-var hs-var">resolveInstantStake</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InstantStake AlonzoEra -&gt; Accounts AlonzoEra -&gt; Stake
+ShelleyInstantStake AlonzoEra -&gt; ShelleyAccounts AlonzoEra -&gt; Stake
+forall era.
+(EraStake era, InstantStake era ~ ShelleyInstantStake era,
+ AccountState era ~ ShelleyAccountState era,
+ Accounts era ~ ShelleyAccounts era) =&gt;
+ShelleyInstantStake era -&gt; ShelleyAccounts era -&gt; Stake
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.State.Stake.html#resolveShelleyInstantStake"><span class="hs-identifier hs-var">resolveShelleyInstantStake</span></a></span><span>
+</span><span id="line-24"></span></pre></body></html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Alonzo.Transition</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier">TransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Transition.html#toAlonzoTransitionConfigPairs"><span class="hs-identifier">toAlonzoTransitionConfigPairs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Era.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Era</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier">AlonzoGenesis</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Translation.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Translation</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#toKeyValuePairs"><span class="hs-identifier">toKeyValuePairs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.html"><span class="hs-identifier">Cardano.Ledger.Mary</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Transition.html"><span class="hs-identifier">Cardano.Ledger.Mary.Transition</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier">TransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-mary-1.9.0.1/doc/html/cardano-ledger-mary/src/Cardano.Ledger.Mary.Transition.html#MaryTransitionConfig"><span class="hs-identifier">MaryTransitionConfig</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Transition</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#KeyValue"><span class="hs-identifier">KeyValue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679495326"><span id="local-6989586621679495334"><span id="local-6989586621679495343"><span id="local-6989586621679495356"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#EraTransition"><span class="hs-identifier hs-type">EraTransition</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="TransitionConfig"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-var">TransitionConfig</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AlonzoTransitionConfig"><span class="annot"><a href="Cardano.Ledger.Alonzo.Transition.html#AlonzoTransitionConfig"><span class="hs-identifier hs-var">AlonzoTransitionConfig</span></a></span></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="atcAlonzoGenesis"><span class="annot"><span class="annottext">TransitionConfig AlonzoEra -&gt; AlonzoGenesis
+</span><a href="Cardano.Ledger.Alonzo.Transition.html#atcAlonzoGenesis"><span class="hs-identifier hs-var hs-var">atcAlonzoGenesis</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="atcMaryTransitionConfig"><span class="annot"><span class="annottext">TransitionConfig AlonzoEra -&gt; TransitionConfig MaryEra
+</span><a href="Cardano.Ledger.Alonzo.Transition.html#atcMaryTransitionConfig"><span class="hs-identifier hs-var hs-var">atcMaryTransitionConfig</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679495375"><span id="local-6989586621679495383"><span id="local-6989586621679495386"><span class="annot"><span class="annottext">Int -&gt; TransitionConfig AlonzoEra -&gt; ShowS
+[TransitionConfig AlonzoEra] -&gt; ShowS
+TransitionConfig AlonzoEra -&gt; String
+(Int -&gt; TransitionConfig AlonzoEra -&gt; ShowS)
+-&gt; (TransitionConfig AlonzoEra -&gt; String)
+-&gt; ([TransitionConfig AlonzoEra] -&gt; ShowS)
+-&gt; Show (TransitionConfig AlonzoEra)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TransitionConfig AlonzoEra -&gt; ShowS
+showsPrec :: Int -&gt; TransitionConfig AlonzoEra -&gt; ShowS
+$cshow :: TransitionConfig AlonzoEra -&gt; String
+show :: TransitionConfig AlonzoEra -&gt; String
+$cshowList :: [TransitionConfig AlonzoEra] -&gt; ShowS
+showList :: [TransitionConfig AlonzoEra] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679495390"><span id="local-6989586621679495396"><span class="annot"><span class="annottext">TransitionConfig AlonzoEra -&gt; TransitionConfig AlonzoEra -&gt; Bool
+(TransitionConfig AlonzoEra -&gt; TransitionConfig AlonzoEra -&gt; Bool)
+-&gt; (TransitionConfig AlonzoEra
+    -&gt; TransitionConfig AlonzoEra -&gt; Bool)
+-&gt; Eq (TransitionConfig AlonzoEra)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TransitionConfig AlonzoEra -&gt; TransitionConfig AlonzoEra -&gt; Bool
+== :: TransitionConfig AlonzoEra -&gt; TransitionConfig AlonzoEra -&gt; Bool
+$c/= :: TransitionConfig AlonzoEra -&gt; TransitionConfig AlonzoEra -&gt; Bool
+/= :: TransitionConfig AlonzoEra -&gt; TransitionConfig AlonzoEra -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679495400"><span id="local-6989586621679495402"><span class="annot"><span class="annottext">(forall x.
+ TransitionConfig AlonzoEra -&gt; Rep (TransitionConfig AlonzoEra) x)
+-&gt; (forall x.
+    Rep (TransitionConfig AlonzoEra) x -&gt; TransitionConfig AlonzoEra)
+-&gt; Generic (TransitionConfig AlonzoEra)
+forall x.
+Rep (TransitionConfig AlonzoEra) x -&gt; TransitionConfig AlonzoEra
+forall x.
+TransitionConfig AlonzoEra -&gt; Rep (TransitionConfig AlonzoEra) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x.
+TransitionConfig AlonzoEra -&gt; Rep (TransitionConfig AlonzoEra) x
+from :: forall x.
+TransitionConfig AlonzoEra -&gt; Rep (TransitionConfig AlonzoEra) x
+$cto :: forall x.
+Rep (TransitionConfig AlonzoEra) x -&gt; TransitionConfig AlonzoEra
+to :: forall x.
+Rep (TransitionConfig AlonzoEra) x -&gt; TransitionConfig AlonzoEra
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679495405"><span class="annot"><span class="annottext">mkTransitionConfig :: TranslationContext AlonzoEra
+-&gt; TransitionConfig (PreviousEra AlonzoEra)
+-&gt; TransitionConfig AlonzoEra
+</span><a href="#local-6989586621679495405"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkTransitionConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TranslationContext AlonzoEra
+-&gt; TransitionConfig (PreviousEra AlonzoEra)
+-&gt; TransitionConfig AlonzoEra
+AlonzoGenesis
+-&gt; TransitionConfig MaryEra -&gt; TransitionConfig AlonzoEra
+</span><a href="Cardano.Ledger.Alonzo.Transition.html#AlonzoTransitionConfig"><span class="hs-identifier hs-var">AlonzoTransitionConfig</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679495410"><span class="annot"><span class="annottext">injectIntoTestState :: TransitionConfig AlonzoEra
+-&gt; NewEpochState AlonzoEra -&gt; NewEpochState AlonzoEra
+</span><a href="#local-6989586621679495410"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectIntoTestState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TransitionConfig AlonzoEra
+-&gt; NewEpochState AlonzoEra -&gt; NewEpochState AlonzoEra
+forall era.
+(EraTransition era, ShelleyEraAccounts era) =&gt;
+TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#shelleyRegisterInitialFundsThenStaking"><span class="hs-identifier hs-var">shelleyRegisterInitialFundsThenStaking</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679495416"><span class="annot"><span class="annottext">tcPreviousEraConfigL :: EraTransition (PreviousEra AlonzoEra) =&gt;
+Lens'
+  (TransitionConfig AlonzoEra)
+  (TransitionConfig (PreviousEra AlonzoEra))
+</span><a href="#local-6989586621679495416"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcPreviousEraConfigL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">(TransitionConfig AlonzoEra -&gt; TransitionConfig MaryEra)
+-&gt; (TransitionConfig AlonzoEra
+    -&gt; TransitionConfig MaryEra -&gt; TransitionConfig AlonzoEra)
+-&gt; Lens
+     (TransitionConfig AlonzoEra)
+     (TransitionConfig AlonzoEra)
+     (TransitionConfig MaryEra)
+     (TransitionConfig MaryEra)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig AlonzoEra -&gt; TransitionConfig MaryEra
+</span><a href="Cardano.Ledger.Alonzo.Transition.html#atcMaryTransitionConfig"><span class="hs-identifier hs-var">atcMaryTransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679495419"><span class="annot"><span class="annottext">TransitionConfig AlonzoEra
+</span><a href="#local-6989586621679495419"><span class="hs-identifier hs-var">atc</span></a></span></span><span> </span><span id="local-6989586621679495420"><span class="annot"><span class="annottext">TransitionConfig MaryEra
+</span><a href="#local-6989586621679495420"><span class="hs-identifier hs-var">pc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TransitionConfig AlonzoEra
+</span><a href="#local-6989586621679495419"><span class="hs-identifier hs-var">atc</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Alonzo.Transition.html#atcMaryTransitionConfig"><span class="hs-identifier hs-var">atcMaryTransitionConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679495420"><span class="hs-identifier hs-type">pc</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679495423"><span class="annot"><span class="annottext">tcTranslationContextL :: Lens' (TransitionConfig AlonzoEra) (TranslationContext AlonzoEra)
+</span><a href="#local-6989586621679495423"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcTranslationContextL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><span class="annottext">(TransitionConfig AlonzoEra -&gt; AlonzoGenesis)
+-&gt; (TransitionConfig AlonzoEra
+    -&gt; AlonzoGenesis -&gt; TransitionConfig AlonzoEra)
+-&gt; Lens
+     (TransitionConfig AlonzoEra)
+     (TransitionConfig AlonzoEra)
+     AlonzoGenesis
+     AlonzoGenesis
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">TransitionConfig AlonzoEra -&gt; AlonzoGenesis
+</span><a href="Cardano.Ledger.Alonzo.Transition.html#atcAlonzoGenesis"><span class="hs-identifier hs-var">atcAlonzoGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679495425"><span class="annot"><span class="annottext">TransitionConfig AlonzoEra
+</span><a href="#local-6989586621679495425"><span class="hs-identifier hs-var">atc</span></a></span></span><span> </span><span id="local-6989586621679495426"><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621679495426"><span class="hs-identifier hs-var">ag</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TransitionConfig AlonzoEra
+</span><a href="#local-6989586621679495425"><span class="hs-identifier hs-var">atc</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Alonzo.Transition.html#atcAlonzoGenesis"><span class="hs-identifier hs-var">atcAlonzoGenesis</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679495426"><span class="hs-identifier hs-type">ag</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679495428"><span id="local-6989586621679495432"><span id="local-6989586621679495438"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span id="local-6989586621679495474"><span id="local-6989586621679495475"><span class="annot"><a href="Cardano.Ledger.Alonzo.Transition.html#toAlonzoTransitionConfigPairs"><span class="hs-identifier hs-type">toAlonzoTransitionConfigPairs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#KeyValue"><span class="hs-identifier hs-type">KeyValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679495474"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679495475"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.Transition.html#TransitionConfig"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679495475"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span></span><span>
+</span><span id="line-44"></span><span id="toAlonzoTransitionConfigPairs"><span class="annot"><span class="annottext">toAlonzoTransitionConfigPairs :: forall e a. KeyValue e a =&gt; TransitionConfig AlonzoEra -&gt; [a]
+</span><a href="Cardano.Ledger.Alonzo.Transition.html#toAlonzoTransitionConfigPairs"><span class="hs-identifier hs-var hs-var">toAlonzoTransitionConfigPairs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TransitionConfig AlonzoEra -&gt; [a]
+forall a e kv. (ToKeyValuePairs a, KeyValue e kv) =&gt; a -&gt; [kv]
+forall e a. KeyValue e a =&gt; TransitionConfig AlonzoEra -&gt; [a]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#toKeyValuePairs"><span class="hs-identifier hs-var">toKeyValuePairs</span></a></span><span>
+</span><span id="line-45"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">toAlonzoTransitionConfigPairs</span><span> </span><span class="hs-pragma">&quot;In favor of `toKeyValuePairs`&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-46"></span></pre></body></html>

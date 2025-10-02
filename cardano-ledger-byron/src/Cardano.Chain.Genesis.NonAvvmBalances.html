@@ -1,0 +1,409 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-missed-specialisations #-}</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Genesis.NonAvvmBalances</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier">GenesisNonAvvmBalances</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#convertNonAvvmDataToBalances"><span class="hs-identifier">convertNonAvvmDataToBalances</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier">Address</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier">Lovelace</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#LovelaceError"><span class="hs-identifier">LovelaceError</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#addLovelace"><span class="hs-identifier">addLovelace</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Address.html#decodeAddressBase58"><span class="hs-identifier">decodeAddressBase58</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#integerToLovelace"><span class="hs-identifier">integerToLovelace</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier">DecoderError</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeListLen"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#enforceSize"><span class="hs-identifier">enforceSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.html"><span class="hs-identifier">Formatting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier">bprint</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Formatters.html#build"><span class="hs-identifier">build</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.html"><span class="hs-identifier">Text.JSON.Canonical</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#FromJSON"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="annot"><span class="hs-comment">-- | Predefined balances of non avvm entries.</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">newtype</span><span> </span><span id="GenesisNonAvvmBalances"><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-var">GenesisNonAvvmBalances</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="GenesisNonAvvmBalances"><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-var">GenesisNonAvvmBalances</span></a></span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unGenesisNonAvvmBalances"><span class="annot"><span class="annottext">GenesisNonAvvmBalances -&gt; Map Address Lovelace
+</span><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#unGenesisNonAvvmBalances"><span class="hs-identifier hs-var hs-var">unGenesisNonAvvmBalances</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Address</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679567399"><span id="local-6989586621679567407"><span id="local-6989586621679567411"><span class="annot"><span class="annottext">Int -&gt; GenesisNonAvvmBalances -&gt; ShowS
+[GenesisNonAvvmBalances] -&gt; ShowS
+GenesisNonAvvmBalances -&gt; String
+(Int -&gt; GenesisNonAvvmBalances -&gt; ShowS)
+-&gt; (GenesisNonAvvmBalances -&gt; String)
+-&gt; ([GenesisNonAvvmBalances] -&gt; ShowS)
+-&gt; Show GenesisNonAvvmBalances
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; GenesisNonAvvmBalances -&gt; ShowS
+showsPrec :: Int -&gt; GenesisNonAvvmBalances -&gt; ShowS
+$cshow :: GenesisNonAvvmBalances -&gt; String
+show :: GenesisNonAvvmBalances -&gt; String
+$cshowList :: [GenesisNonAvvmBalances] -&gt; ShowS
+showList :: [GenesisNonAvvmBalances] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567417"><span id="local-6989586621679567424"><span class="annot"><span class="annottext">GenesisNonAvvmBalances -&gt; GenesisNonAvvmBalances -&gt; Bool
+(GenesisNonAvvmBalances -&gt; GenesisNonAvvmBalances -&gt; Bool)
+-&gt; (GenesisNonAvvmBalances -&gt; GenesisNonAvvmBalances -&gt; Bool)
+-&gt; Eq GenesisNonAvvmBalances
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: GenesisNonAvvmBalances -&gt; GenesisNonAvvmBalances -&gt; Bool
+== :: GenesisNonAvvmBalances -&gt; GenesisNonAvvmBalances -&gt; Bool
+$c/= :: GenesisNonAvvmBalances -&gt; GenesisNonAvvmBalances -&gt; Bool
+/= :: GenesisNonAvvmBalances -&gt; GenesisNonAvvmBalances -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567434"><span id="local-6989586621679567441"><span id="local-6989586621679567447"><span class="annot"><span class="annottext">Context -&gt; GenesisNonAvvmBalances -&gt; IO (Maybe ThunkInfo)
+Proxy GenesisNonAvvmBalances -&gt; String
+(Context -&gt; GenesisNonAvvmBalances -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; GenesisNonAvvmBalances -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy GenesisNonAvvmBalances -&gt; String)
+-&gt; NoThunks GenesisNonAvvmBalances
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; GenesisNonAvvmBalances -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; GenesisNonAvvmBalances -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; GenesisNonAvvmBalances -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; GenesisNonAvvmBalances -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy GenesisNonAvvmBalances -&gt; String
+showTypeOf :: Proxy GenesisNonAvvmBalances -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier hs-type">B.Buildable</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679567473"><span class="annot"><span class="annottext">build :: GenesisNonAvvmBalances -&gt; Builder
+</span><a href="#local-6989586621679567473"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span><span> </span><span id="local-6989586621679567475"><span class="annot"><span class="annottext">Map Address Lovelace
+</span><a href="#local-6989586621679567475"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">Format Builder (Map Address Lovelace -&gt; Builder)
+-&gt; Map Address Lovelace -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier hs-var">bprint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format
+  (Map Address Lovelace -&gt; Builder) (Map Address Lovelace -&gt; Builder)
+</span><span class="hs-string">&quot;GenesisNonAvvmBalances: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format
+  (Map Address Lovelace -&gt; Builder) (Map Address Lovelace -&gt; Builder)
+-&gt; Format Builder (Map Address Lovelace -&gt; Builder)
+-&gt; Format Builder (Map Address Lovelace -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format Builder (Map Address Lovelace -&gt; Builder)
+forall t k v r.
+(IsList t, Item t ~ (k, v), Buildable k, Buildable v) =&gt;
+Format r (t -&gt; r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Formatting.html#mapJson"><span class="hs-identifier hs-var">mapJson</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map Address Lovelace
+</span><a href="#local-6989586621679567475"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span id="local-6989586621679567479"><span id="local-6989586621679567485"><span id="local-6989586621679567492"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Semigroup</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span></span></span></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span id="local-6989586621679567503"><span id="local-6989586621679567509"><span id="local-6989586621679567514"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Monoid</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span></span></span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679567276"><span class="annot"><span class="hs-identifier hs-type">Monad</span></span><span> </span><span class="annot"><a href="#local-6989586621679567276"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679567276"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679567532"><span class="annot"><span class="annottext">toJSON :: GenesisNonAvvmBalances -&gt; m JSValue
+</span><a href="#local-6989586621679567532"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Address Lovelace -&gt; m JSValue
+forall (m :: * -&gt; *) a. ToJSON m a =&gt; a -&gt; m JSValue
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#toJSON"><span class="hs-identifier hs-var">toJSON</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Address Lovelace -&gt; m JSValue)
+-&gt; (GenesisNonAvvmBalances -&gt; Map Address Lovelace)
+-&gt; GenesisNonAvvmBalances
+-&gt; m JSValue
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">GenesisNonAvvmBalances -&gt; Map Address Lovelace
+</span><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#unGenesisNonAvvmBalances"><span class="hs-identifier hs-var">unGenesisNonAvvmBalances</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679567289"><span class="annot"><span class="hs-identifier hs-type">MonadError</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Json.Canonical.html#SchemaError"><span class="hs-identifier hs-type">SchemaError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679567289"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#FromJSON"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679567289"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679567555"><span class="annot"><span class="annottext">fromJSON :: JSValue -&gt; m GenesisNonAvvmBalances
+</span><a href="#local-6989586621679567555"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map Address Lovelace -&gt; GenesisNonAvvmBalances)
+-&gt; m (Map Address Lovelace) -&gt; m GenesisNonAvvmBalances
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">Map Address Lovelace -&gt; GenesisNonAvvmBalances
+</span><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-var">GenesisNonAvvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Map Address Lovelace) -&gt; m GenesisNonAvvmBalances)
+-&gt; (JSValue -&gt; m (Map Address Lovelace))
+-&gt; JSValue
+-&gt; m GenesisNonAvvmBalances
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">JSValue -&gt; m (Map Address Lovelace)
+forall (m :: * -&gt; *) a. FromJSON m a =&gt; JSValue -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/canonical-json-0.6.0.1-3d4b96b5c9b3a695917bf92655c517188dd238ed9f37eeb1212a89f4bdfa6b60/share/doc/html/src/Text.JSON.Canonical.Class.html#fromJSON"><span class="hs-identifier hs-var">fromJSON</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679567561"><span id="local-6989586621679567565"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621679567570"><span class="annot"><span class="annottext">toCBOR :: GenesisNonAvvmBalances -&gt; Encoding
+</span><a href="#local-6989586621679567570"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenesisNonAvvmBalances -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#toByronCBOR"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679567576"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679567582"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s GenesisNonAvvmBalances
+</span><a href="#local-6989586621679567582"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s GenesisNonAvvmBalances
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#fromByronCBOR"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679567588"><span id="local-6989586621679567591"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621679567603"><span class="annot"><span class="annottext">encCBOR :: GenesisNonAvvmBalances -&gt; Encoding
+</span><a href="#local-6989586621679567603"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span><span> </span><span id="local-6989586621679567605"><span class="annot"><span class="annottext">Map Address Lovelace
+</span><a href="#local-6989586621679567605"><span class="hs-identifier hs-var">gnab</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Encoder.html#encodeListLen"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-73"></span><span>      </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Address</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map Address Lovelace
+</span><a href="#local-6989586621679567605"><span class="hs-identifier hs-var">gnab</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679567610"><span id="local-6989586621679567613"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679567629"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s GenesisNonAvvmBalances
+</span><a href="#local-6989586621679567629"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Int -&gt; Decoder s ()
+forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#enforceSize"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;GenesisNonAvvmBalances&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="annottext">Map Address Lovelace -&gt; GenesisNonAvvmBalances
+</span><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-var">GenesisNonAvvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Address Lovelace -&gt; GenesisNonAvvmBalances)
+-&gt; Decoder s (Map Address Lovelace)
+-&gt; Decoder s GenesisNonAvvmBalances
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Address</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">data</span><span> </span><span id="NonAvvmBalancesError"><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#NonAvvmBalancesError"><span class="hs-identifier hs-var">NonAvvmBalancesError</span></a></span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="NonAvvmBalancesLovelaceError"><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#NonAvvmBalancesLovelaceError"><span class="hs-identifier hs-var">NonAvvmBalancesLovelaceError</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#LovelaceError"><span class="hs-identifier hs-type">LovelaceError</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="NonAvvmBalancesDecoderError"><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#NonAvvmBalancesDecoderError"><span class="hs-identifier hs-var">NonAvvmBalancesDecoderError</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#Buildable"><span class="hs-identifier hs-type">B.Buildable</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#NonAvvmBalancesError"><span class="hs-identifier hs-type">NonAvvmBalancesError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621679567646"><span class="annot"><span class="annottext">build :: NonAvvmBalancesError -&gt; Builder
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Buildable.html#build"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#NonAvvmBalancesLovelaceError"><span class="hs-identifier hs-type">NonAvvmBalancesLovelaceError</span></a></span><span> </span><span id="local-6989586621679567647"><span class="annot"><span class="annottext">LovelaceError
+</span><a href="#local-6989586621679567647"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-87"></span><span>      </span><span class="annot"><span class="annottext">Format Builder (LovelaceError -&gt; Builder)
+-&gt; LovelaceError -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier hs-var">bprint</span></a></span><span>
+</span><span id="line-88"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (LovelaceError -&gt; Builder) (LovelaceError -&gt; Builder)
+</span><span class="hs-string">&quot;Failed to construct a lovelace in NonAvvmBalances.\n Error: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (LovelaceError -&gt; Builder) (LovelaceError -&gt; Builder)
+-&gt; Format Builder (LovelaceError -&gt; Builder)
+-&gt; Format Builder (LovelaceError -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format Builder (LovelaceError -&gt; Builder)
+forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Formatters.html#build"><span class="hs-identifier hs-var">build</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>        </span><span class="annot"><span class="annottext">LovelaceError
+</span><a href="#local-6989586621679567647"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#NonAvvmBalancesDecoderError"><span class="hs-identifier hs-type">NonAvvmBalancesDecoderError</span></a></span><span> </span><span id="local-6989586621679567648"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679567648"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>      </span><span class="annot"><span class="annottext">Format Builder (DecoderError -&gt; Builder) -&gt; DecoderError -&gt; Builder
+forall a. Format Builder a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Internal.html#bprint"><span class="hs-identifier hs-var">bprint</span></a></span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (DecoderError -&gt; Builder) (DecoderError -&gt; Builder)
+</span><span class="hs-string">&quot;Failed to decode NonAvvmBalances.\n Error: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Format (DecoderError -&gt; Builder) (DecoderError -&gt; Builder)
+-&gt; Format Builder (DecoderError -&gt; Builder)
+-&gt; Format Builder (DecoderError -&gt; Builder)
+forall b c a. Format b c -&gt; Format a b -&gt; Format a c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Format Builder (DecoderError -&gt; Builder)
+forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/formatting-7.2.0-ab7254b0c777b7703f417bd470ae12dd12f6a2982bb6692fc1dd1a70d31b3958/share/doc/html/src/Formatting.Formatters.html#build"><span class="hs-identifier hs-var">build</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>        </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679567648"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- | Generate genesis address distribution out of avvm parameters. Txdistr of</span><span>
+</span><span id="line-96"></span><span class="hs-comment">--   the utxo is all empty. Redelegate it in calling function.</span><span>
+</span><span id="line-97"></span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#convertNonAvvmDataToBalances"><span class="hs-identifier hs-type">convertNonAvvmDataToBalances</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679567343"><span class="annot"><a href="#local-6989586621679567343"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">MonadError</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#NonAvvmBalancesError"><span class="hs-identifier hs-type">NonAvvmBalancesError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679567343"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><a href="#local-6989586621679567343"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-type">GenesisNonAvvmBalances</span></a></span><span>
+</span><span id="line-102"></span><span id="convertNonAvvmDataToBalances"><span class="annot"><span class="annottext">convertNonAvvmDataToBalances :: forall (m :: * -&gt; *).
+MonadError NonAvvmBalancesError m =&gt;
+Map Text Integer -&gt; m GenesisNonAvvmBalances
+</span><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#convertNonAvvmDataToBalances"><span class="hs-identifier hs-var hs-var">convertNonAvvmDataToBalances</span></a></span></span><span> </span><span id="local-6989586621679567679"><span class="annot"><span class="annottext">Map Text Integer
+</span><a href="#local-6989586621679567679"><span class="hs-identifier hs-var">balances</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map Address Lovelace -&gt; GenesisNonAvvmBalances)
+-&gt; m (Map Address Lovelace) -&gt; m GenesisNonAvvmBalances
+forall a b. (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">Map Address Lovelace -&gt; GenesisNonAvvmBalances
+</span><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#GenesisNonAvvmBalances"><span class="hs-identifier hs-var">GenesisNonAvvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">(m (Map Address Lovelace) -&gt; m GenesisNonAvvmBalances)
+-&gt; m (Map Address Lovelace) -&gt; m GenesisNonAvvmBalances
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-103"></span><span>  </span><span id="local-6989586621679567680"><span class="annot"><span class="annottext">[(Address, Lovelace)]
+</span><a href="#local-6989586621679567680"><span class="hs-identifier hs-var">converted</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">((Text, Integer) -&gt; m (Address, Lovelace))
+-&gt; [(Text, Integer)] -&gt; m [(Address, Lovelace)]
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; [a] -&gt; f [b]
+</span><span class="hs-identifier hs-var">traverse</span></span><span> </span><span class="annot"><span class="annottext">(Text, Integer) -&gt; m (Address, Lovelace)
+</span><a href="#local-6989586621679567682"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Text Integer -&gt; [(Text, Integer)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">M.toList</span></span><span> </span><span class="annot"><span class="annottext">Map Text Integer
+</span><a href="#local-6989586621679567679"><span class="hs-identifier hs-var">balances</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><span class="annottext">[(Address, Lovelace)] -&gt; m (Map Address Lovelace)
+</span><a href="#local-6989586621679567684"><span class="hs-identifier hs-var">mkBalances</span></a></span><span> </span><span class="annot"><span class="annottext">[(Address, Lovelace)]
+</span><a href="#local-6989586621679567680"><span class="hs-identifier hs-var">converted</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><a href="#local-6989586621679567684"><span class="hs-identifier hs-type">mkBalances</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Address</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679567343"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Address</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621679567684"><span class="annot"><span class="annottext">mkBalances :: [(Address, Lovelace)] -&gt; m (Map Address Lovelace)
+</span><a href="#local-6989586621679567684"><span class="hs-identifier hs-var hs-var">mkBalances</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-comment">-- Pull 'LovelaceError's out of the 'Map' and lift them to</span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-comment">-- 'NonAvvmBalancesError's</span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Either LovelaceError (Map Address Lovelace)
+-&gt; (LovelaceError -&gt; NonAvvmBalancesError)
+-&gt; m (Map Address Lovelace)
+forall e' (m :: * -&gt; *) e a.
+MonadError e' m =&gt;
+Either e a -&gt; (e -&gt; e') -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Error.html#wrapError"><span class="hs-operator hs-var">`wrapError`</span></a></span><span> </span><span class="annot"><span class="annottext">LovelaceError -&gt; NonAvvmBalancesError
+</span><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#NonAvvmBalancesLovelaceError"><span class="hs-identifier hs-var">NonAvvmBalancesLovelaceError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>        </span><span class="annot"><span class="annottext">(Either LovelaceError (Map Address Lovelace)
+ -&gt; m (Map Address Lovelace))
+-&gt; ([(Address, Lovelace)]
+    -&gt; Either LovelaceError (Map Address Lovelace))
+-&gt; [(Address, Lovelace)]
+-&gt; m (Map Address Lovelace)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Map Address (Either LovelaceError Lovelace)
+-&gt; Either LovelaceError (Map Address Lovelace)
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Traversable t, Monad m) =&gt;
+t (m a) -&gt; m (t a)
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+Map Address (m a) -&gt; m (Map Address a)
+</span><span class="hs-identifier hs-var">sequence</span></span><span>
+</span><span id="line-112"></span><span>        </span><span class="hs-comment">-- Make map joining duplicate keys with 'addLovelace' lifted from 'Lovelace -&gt;</span><span>
+</span><span id="line-113"></span><span>        </span><span class="hs-comment">-- Lovelace -&gt; Either LovelaceError Lovelace' to 'Either LovelaceError Lovelace -&gt; Either</span><span>
+</span><span id="line-114"></span><span>        </span><span class="hs-comment">-- LovelaceError Lovelace -&gt; Either LovelaceError Lovelace'</span><span>
+</span><span id="line-115"></span><span>        </span><span class="annot"><span class="annottext">(Map Address (Either LovelaceError Lovelace)
+ -&gt; Either LovelaceError (Map Address Lovelace))
+-&gt; ([(Address, Lovelace)]
+    -&gt; Map Address (Either LovelaceError Lovelace))
+-&gt; [(Address, Lovelace)]
+-&gt; Either LovelaceError (Map Address Lovelace)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Either LovelaceError Lovelace
+ -&gt; Either LovelaceError Lovelace -&gt; Either LovelaceError Lovelace)
+-&gt; [(Address, Either LovelaceError Lovelace)]
+-&gt; Map Address (Either LovelaceError Lovelace)
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">M.fromListWith</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679567688"><span class="annot"><span class="annottext">Either LovelaceError Lovelace
+</span><a href="#local-6989586621679567688"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either LovelaceError (Either LovelaceError Lovelace)
+-&gt; Either LovelaceError Lovelace
+forall (m :: * -&gt; *) a. Monad m =&gt; m (m a) -&gt; m a
+</span><span class="hs-identifier hs-var">join</span></span><span> </span><span class="annot"><span class="annottext">(Either LovelaceError (Either LovelaceError Lovelace)
+ -&gt; Either LovelaceError Lovelace)
+-&gt; (Either LovelaceError Lovelace
+    -&gt; Either LovelaceError (Either LovelaceError Lovelace))
+-&gt; Either LovelaceError Lovelace
+-&gt; Either LovelaceError Lovelace
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Lovelace -&gt; Lovelace -&gt; Either LovelaceError Lovelace)
+-&gt; Either LovelaceError Lovelace
+-&gt; Either LovelaceError Lovelace
+-&gt; Either LovelaceError (Either LovelaceError Lovelace)
+forall (m :: * -&gt; *) a1 a2 r.
+Monad m =&gt;
+(a1 -&gt; a2 -&gt; r) -&gt; m a1 -&gt; m a2 -&gt; m r
+</span><span class="hs-identifier hs-var">liftM2</span></span><span> </span><span class="annot"><span class="annottext">Lovelace -&gt; Lovelace -&gt; Either LovelaceError Lovelace
+</span><a href="Cardano.Chain.Common.Lovelace.html#addLovelace"><span class="hs-identifier hs-var">addLovelace</span></a></span><span> </span><span class="annot"><span class="annottext">Either LovelaceError Lovelace
+</span><a href="#local-6989586621679567688"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>        </span><span class="hs-comment">-- Lift the 'Lovelace's to 'Either LovelaceError Lovelace's</span><span>
+</span><span id="line-117"></span><span>        </span><span class="annot"><span class="annottext">([(Address, Either LovelaceError Lovelace)]
+ -&gt; Map Address (Either LovelaceError Lovelace))
+-&gt; ([(Address, Lovelace)]
+    -&gt; [(Address, Either LovelaceError Lovelace)])
+-&gt; [(Address, Lovelace)]
+-&gt; Map Address (Either LovelaceError Lovelace)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">((Address, Lovelace) -&gt; (Address, Either LovelaceError Lovelace))
+-&gt; [(Address, Lovelace)]
+-&gt; [(Address, Either LovelaceError Lovelace)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Lovelace -&gt; Either LovelaceError Lovelace)
+-&gt; (Address, Lovelace) -&gt; (Address, Either LovelaceError Lovelace)
+forall b c a. (b -&gt; c) -&gt; (a, b) -&gt; (a, c)
+forall (p :: * -&gt; * -&gt; *) b c a.
+Bifunctor p =&gt;
+(b -&gt; c) -&gt; p a b -&gt; p a c
+</span><span class="hs-identifier hs-var">second</span></span><span> </span><span class="annot"><span class="annottext">Lovelace -&gt; Either LovelaceError Lovelace
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><a href="#local-6989586621679567682"><span class="hs-identifier hs-type">convert</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679567343"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Address.html#Address"><span class="hs-identifier hs-type">Address</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>    </span><span id="local-6989586621679567682"><span class="annot"><span class="annottext">convert :: (Text, Integer) -&gt; m (Address, Lovelace)
+</span><a href="#local-6989586621679567682"><span class="hs-identifier hs-var hs-var">convert</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679567691"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679567691"><span class="hs-identifier hs-var">txt</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567692"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679567692"><span class="hs-identifier hs-var">i</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-121"></span><span>      </span><span id="local-6989586621679567693"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621679567693"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either DecoderError Address
+</span><a href="Cardano.Chain.Common.Address.html#decodeAddressBase58"><span class="hs-identifier hs-var">decodeAddressBase58</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679567691"><span class="hs-identifier hs-var">txt</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError Address
+-&gt; (DecoderError -&gt; NonAvvmBalancesError) -&gt; m Address
+forall e' (m :: * -&gt; *) e a.
+MonadError e' m =&gt;
+Either e a -&gt; (e -&gt; e') -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Error.html#wrapError"><span class="hs-operator hs-var">`wrapError`</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError -&gt; NonAvvmBalancesError
+</span><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#NonAvvmBalancesDecoderError"><span class="hs-identifier hs-var">NonAvvmBalancesDecoderError</span></a></span><span>
+</span><span id="line-122"></span><span>      </span><span id="local-6989586621679567694"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679567694"><span class="hs-identifier hs-var">lovelace</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Either LovelaceError Lovelace
+</span><a href="Cardano.Chain.Common.Lovelace.html#integerToLovelace"><span class="hs-identifier hs-var">integerToLovelace</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679567692"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Either LovelaceError Lovelace
+-&gt; (LovelaceError -&gt; NonAvvmBalancesError) -&gt; m Lovelace
+forall e' (m :: * -&gt; *) e a.
+MonadError e' m =&gt;
+Either e a -&gt; (e -&gt; e') -&gt; m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Error.html#wrapError"><span class="hs-operator hs-var">`wrapError`</span></a></span><span> </span><span class="annot"><span class="annottext">LovelaceError -&gt; NonAvvmBalancesError
+</span><a href="Cardano.Chain.Genesis.NonAvvmBalances.html#NonAvvmBalancesLovelaceError"><span class="hs-identifier hs-var">NonAvvmBalancesLovelaceError</span></a></span><span>
+</span><span id="line-123"></span><span>      </span><span class="annot"><span class="annottext">(Address, Lovelace) -&gt; m (Address, Lovelace)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621679567693"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679567694"><span class="hs-identifier hs-var">lovelace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span></pre></body></html>

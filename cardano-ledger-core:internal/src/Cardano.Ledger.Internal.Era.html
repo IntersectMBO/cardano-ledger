@@ -1,0 +1,26 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NoImplicitPrelude #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- |</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- WARNING! This module contains types that are meant for internal use only.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- Even when used internally, care must be taken that these types are NOT used</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- prior to their eras.</span><span class="hs-cpp">
+#if __GLASGOW_HASKELL__ &gt;= 908
+</span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Internal.Era</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# WARNING</span><span> </span><span class="hs-pragma">in</span><span> </span><span class="hs-pragma">&quot;x-unsafe-ledger-internal&quot;</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-pragma">[</span><span> </span><span class="hs-pragma">&quot;For Ledger internal use only!&quot;</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-pragma">,</span><span> </span><span class="hs-pragma">&quot;Downstream users must import these era types from&quot;</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-pragma">,</span><span> </span><span class="hs-pragma">&quot;`cardano-ledger-[era]:lib:Cardano.Ledger.[Era]` modules!&quot;</span><span class="hs-pragma">]</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Internal.Definition.Era</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span class="hs-cpp">
+#else
+</span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Internal.Era</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Ledger.Internal.Definition.Era.html"><span class="hs-identifier">Cardano.Ledger.Internal.Definition.Era</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- The Era types are defined in a separate private module, just so they do not get tainted by the</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- WARNING pragma. With a re-export approach only this module is marked with the warning, but not</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- the types that are being exported.</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Internal.Definition.Era.html"><span class="hs-identifier">Cardano.Ledger.Internal.Definition.Era</span></a></span><span>
+</span><span id="line-26"></span></pre></body></html>

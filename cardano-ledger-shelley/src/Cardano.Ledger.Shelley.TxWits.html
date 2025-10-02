@@ -1,0 +1,1023 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-16"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-17"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-18"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-19"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Shelley.TxWits</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier">ShelleyTxWits</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#MkShelleyTxWits"><span class="hs-identifier">MkShelleyTxWits</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier">ShelleyTxWits</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#addrWits"><span class="hs-identifier">addrWits</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#bootWits"><span class="hs-identifier">bootWits</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#scriptWits"><span class="hs-identifier">scriptWits</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier">ShelleyTxWitsRaw</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#scriptShelleyTxWitsL"><span class="hs-identifier">scriptShelleyTxWitsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#addrShelleyTxWitsL"><span class="hs-identifier">addrShelleyTxWitsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#bootAddrShelleyTxWitsL"><span class="hs-identifier">bootAddrShelleyTxWitsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#addrWits%27"><span class="hs-identifier">addrWits'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#shelleyEqTxWitsRaw"><span class="hs-identifier">shelleyEqTxWitsRaw</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#mapTraverseableDecoderA"><span class="hs-identifier">mapTraverseableDecoderA</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier">Annotator</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier">decCBOR</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier">Decoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier">encCBOR</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeList"><span class="hs-identifier">decodeList</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Coders.html"><span class="hs-identifier">Cardano.Ledger.Binary.Coders</span></a></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html"><span class="hs-identifier">Cardano.Ledger.Binary.Plain</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Plain</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier">Era</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier">EraScript</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier">Script</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxWits"><span class="hs-identifier">EraTxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier">ScriptHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier">hashScript</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#SafeToHash"><span class="hs-identifier">SafeToHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier">BootstrapWitness</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier">KeyRole</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier">Witness</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier">WitVKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.html"><span class="hs-identifier">Cardano.Ledger.MemoBytes</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#EqRaw"><span class="hs-identifier">EqRaw</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#Mem"><span class="hs-identifier">Mem</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#MemoBytes"><span class="hs-identifier">MemoBytes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#Memoized"><span class="hs-identifier">Memoized</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#getMemoRawType"><span class="hs-identifier">getMemoRawType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#lensMemoRawType"><span class="hs-identifier">lensMemoRawType</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#mkMemoizedEra"><span class="hs-identifier">mkMemoizedEra</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Era.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier">ShelleyEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxAuxData.html"><span class="hs-identifier">Cardano.Ledger.Shelley.TxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Classes</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Eq1</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">liftEq</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html"><span class="hs-identifier">Data.MapExtras</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html#fromElems"><span class="hs-identifier">fromElems</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Set</span></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Set</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Void</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Void</span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Records</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier">Lens'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">data</span><span> </span><span id="ShelleyTxWitsRaw"><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-var">ShelleyTxWitsRaw</span></a></span></span><span> </span><span id="local-6989586621679513372"><span class="annot"><a href="#local-6989586621679513372"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ShelleyTxWitsRaw"><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-var">ShelleyTxWitsRaw</span></a></span></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="stwrAddrTxWits"><span class="annot"><span class="annottext">forall era. ShelleyTxWitsRaw era -&gt; Set (WitVKey 'Witness)
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#stwrAddrTxWits"><span class="hs-identifier hs-var hs-var">stwrAddrTxWits</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="stwrScriptTxWits"><span class="annot"><span class="annottext">forall era. ShelleyTxWitsRaw era -&gt; Map ScriptHash (Script era)
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#stwrScriptTxWits"><span class="hs-identifier hs-var hs-var">stwrScriptTxWits</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513372"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="stwrBootAddrTxWits"><span class="annot"><span class="annottext">forall era. ShelleyTxWitsRaw era -&gt; Set BootstrapWitness
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#stwrBootAddrTxWits"><span class="hs-identifier hs-var hs-var">stwrBootAddrTxWits</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679513729"><span id="local-6989586621679513731"><span class="annot"><span class="annottext">(forall x. ShelleyTxWitsRaw era -&gt; Rep (ShelleyTxWitsRaw era) x)
+-&gt; (forall x. Rep (ShelleyTxWitsRaw era) x -&gt; ShelleyTxWitsRaw era)
+-&gt; Generic (ShelleyTxWitsRaw era)
+forall x. Rep (ShelleyTxWitsRaw era) x -&gt; ShelleyTxWitsRaw era
+forall x. ShelleyTxWitsRaw era -&gt; Rep (ShelleyTxWitsRaw era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x. Rep (ShelleyTxWitsRaw era) x -&gt; ShelleyTxWitsRaw era
+forall era x. ShelleyTxWitsRaw era -&gt; Rep (ShelleyTxWitsRaw era) x
+$cfrom :: forall era x. ShelleyTxWitsRaw era -&gt; Rep (ShelleyTxWitsRaw era) x
+from :: forall x. ShelleyTxWitsRaw era -&gt; Rep (ShelleyTxWitsRaw era) x
+$cto :: forall era x. Rep (ShelleyTxWitsRaw era) x -&gt; ShelleyTxWitsRaw era
+to :: forall x. Rep (ShelleyTxWitsRaw era) x -&gt; ShelleyTxWitsRaw era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span id="local-6989586621679513734"><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#addrWits%27"><span class="hs-identifier hs-type">addrWits'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513734"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-89"></span><span id="addrWits%27"><span class="annot"><span class="annottext">addrWits' :: forall era. ShelleyTxWitsRaw era -&gt; Set (WitVKey 'Witness)
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#addrWits%27"><span class="hs-identifier hs-var hs-var">addrWits'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyTxWitsRaw era -&gt; Set (WitVKey 'Witness)
+forall era. ShelleyTxWitsRaw era -&gt; Set (WitVKey 'Witness)
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#stwrAddrTxWits"><span class="hs-identifier hs-var">stwrAddrTxWits</span></a></span><span>
+</span><span id="line-90"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">addrWits'</span><span> </span><span class="hs-pragma">&quot;In favor of `stwrAddrTxWits`&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span id="local-6989586621679513397"><span id="local-6989586621679513737"><span id="local-6989586621679513750"><span id="local-6989586621679513754"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513397"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513397"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span id="local-6989586621679513404"><span id="local-6989586621679513763"><span id="local-6989586621679513774"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513404"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513404"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679513424"><span id="local-6989586621679513787"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513424"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513424"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513424"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679513468"><span id="local-6989586621679513815"><span id="local-6989586621679513819"><span id="local-6989586621679513825"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513468"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513468"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-keyword">newtype</span><span> </span><span id="ShelleyTxWits"><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-var">ShelleyTxWits</span></a></span></span><span> </span><span id="local-6989586621679513877"><span class="annot"><a href="#local-6989586621679513877"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkShelleyTxWits"><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#MkShelleyTxWits"><span class="hs-identifier hs-var">MkShelleyTxWits</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#MemoBytes"><span class="hs-identifier hs-type">MemoBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513877"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679513879"><span id="local-6989586621679513881"><span class="annot"><span class="annottext">(forall x. ShelleyTxWits era -&gt; Rep (ShelleyTxWits era) x)
+-&gt; (forall x. Rep (ShelleyTxWits era) x -&gt; ShelleyTxWits era)
+-&gt; Generic (ShelleyTxWits era)
+forall x. Rep (ShelleyTxWits era) x -&gt; ShelleyTxWits era
+forall x. ShelleyTxWits era -&gt; Rep (ShelleyTxWits era) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall era x. Rep (ShelleyTxWits era) x -&gt; ShelleyTxWits era
+forall era x. ShelleyTxWits era -&gt; Rep (ShelleyTxWits era) x
+$cfrom :: forall era x. ShelleyTxWits era -&gt; Rep (ShelleyTxWits era) x
+from :: forall x. ShelleyTxWits era -&gt; Rep (ShelleyTxWits era) x
+$cto :: forall era x. Rep (ShelleyTxWits era) x -&gt; ShelleyTxWits era
+to :: forall x. Rep (ShelleyTxWits era) x -&gt; ShelleyTxWits era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679513884"><span id="local-6989586621679513889"><span id="local-6989586621679513893"><span class="annot"><span class="annottext">ShelleyTxWits era -&gt; Int
+ShelleyTxWits era -&gt; ByteString
+(ShelleyTxWits era -&gt; ByteString)
+-&gt; (ShelleyTxWits era -&gt; Int)
+-&gt; (forall i. Proxy i -&gt; ShelleyTxWits era -&gt; SafeHash i)
+-&gt; SafeToHash (ShelleyTxWits era)
+forall i. Proxy i -&gt; ShelleyTxWits era -&gt; SafeHash i
+forall era. ShelleyTxWits era -&gt; Int
+forall era. ShelleyTxWits era -&gt; ByteString
+forall t.
+(t -&gt; ByteString)
+-&gt; (t -&gt; Int)
+-&gt; (forall i. Proxy i -&gt; t -&gt; SafeHash i)
+-&gt; SafeToHash t
+forall era i. Proxy i -&gt; ShelleyTxWits era -&gt; SafeHash i
+$coriginalBytes :: forall era. ShelleyTxWits era -&gt; ByteString
+originalBytes :: ShelleyTxWits era -&gt; ByteString
+$coriginalBytesSize :: forall era. ShelleyTxWits era -&gt; Int
+originalBytesSize :: ShelleyTxWits era -&gt; Int
+$cmakeHashWithExplicitProxys :: forall era i. Proxy i -&gt; ShelleyTxWits era -&gt; SafeHash i
+makeHashWithExplicitProxys :: forall i. Proxy i -&gt; ShelleyTxWits era -&gt; SafeHash i
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#SafeToHash"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">SafeToHash</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679513903"><span id="local-6989586621679513911"><span id="local-6989586621679513918"><span class="annot"><span class="annottext">Typeable (ShelleyTxWits era)
+Typeable (ShelleyTxWits era) =&gt;
+(ShelleyTxWits era -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy (ShelleyTxWits era) -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [ShelleyTxWits era] -&gt; Size)
+-&gt; ToCBOR (ShelleyTxWits era)
+ShelleyTxWits era -&gt; Encoding
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ShelleyTxWits era] -&gt; Size
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (ShelleyTxWits era) -&gt; Size
+forall era. Typeable era =&gt; Typeable (ShelleyTxWits era)
+forall era. Typeable era =&gt; ShelleyTxWits era -&gt; Encoding
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; ToCBOR a
+forall era.
+Typeable era =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ShelleyTxWits era] -&gt; Size
+forall era.
+Typeable era =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (ShelleyTxWits era) -&gt; Size
+$ctoCBOR :: forall era. Typeable era =&gt; ShelleyTxWits era -&gt; Encoding
+toCBOR :: ShelleyTxWits era -&gt; Encoding
+$cencodedSizeExpr :: forall era.
+Typeable era =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (ShelleyTxWits era) -&gt; Size
+encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (ShelleyTxWits era) -&gt; Size
+$cencodedListSizeExpr :: forall era.
+Typeable era =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ShelleyTxWits era] -&gt; Size
+encodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ShelleyTxWits era] -&gt; Size
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Plain.ToCBOR</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679513495"><span id="local-6989586621679513928"><span id="local-6989586621679513933"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#Memoized"><span class="hs-identifier hs-type">Memoized</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513495"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="RawType"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#RawType"><span class="hs-identifier hs-var">RawType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513495"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513495"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span id="local-6989586621679513945"><span id="local-6989586621679513952"><span id="local-6989586621679513958"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">via</span><span>
+</span><span id="line-114"></span><span>  </span><span id="local-6989586621679513510"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#Mem"><span class="hs-identifier hs-type">Mem</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513510"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-keyword">instance</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513510"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513510"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513510"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span id="local-6989586621679513975"><span id="local-6989586621679513981"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679513513"><span class="annot"><a href="#local-6989586621679513513"><span class="hs-keyword hs-type">newtype</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513513"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513513"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span id="local-6989586621679513988"><span id="local-6989586621679513994"><span id="local-6989586621679513999"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679513516"><span class="annot"><a href="#local-6989586621679513516"><span class="hs-keyword hs-type">newtype</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513516"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513516"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621679513519"><span id="local-6989586621679514009"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513519"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513519"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-131"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513519"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679513527"><span id="local-6989586621679514023"><span id="local-6989586621679514027"><span id="local-6989586621679514033"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513527"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513527"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- =======================================================</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- Accessors</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- =======================================================</span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- | Addresses witness setter and getter for `ShelleyTxWits`. The</span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- setter does update memoized binary representation.</span><span>
+</span><span id="line-141"></span><span id="local-6989586621679513528"><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#addrShelleyTxWitsL"><span class="hs-identifier hs-type">addrShelleyTxWitsL</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-142"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513528"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier hs-type">Lens'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513528"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-143"></span><span id="addrShelleyTxWitsL"><span class="annot"><span class="annottext">addrShelleyTxWitsL :: forall era.
+EraScript era =&gt;
+Lens' (ShelleyTxWits era) (Set (WitVKey 'Witness))
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#addrShelleyTxWitsL"><span class="hs-identifier hs-var hs-var">addrShelleyTxWitsL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-144"></span><span>  </span><span class="annot"><span class="annottext">forall era t a b.
+(Era era, EncCBOR (RawType t), Memoized t) =&gt;
+(RawType t -&gt; a) -&gt; (RawType t -&gt; b -&gt; RawType t) -&gt; Lens t t a b
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#lensMemoRawType"><span class="hs-identifier hs-var">lensMemoRawType</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="annot"><span class="annottext">RawType (ShelleyTxWits era) -&gt; Set (WitVKey 'Witness)
+ShelleyTxWitsRaw era -&gt; Set (WitVKey 'Witness)
+forall era. ShelleyTxWitsRaw era -&gt; Set (WitVKey 'Witness)
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#stwrAddrTxWits"><span class="hs-identifier hs-var">stwrAddrTxWits</span></a></span><span> </span><span class="annot"><span class="annottext">((RawType (ShelleyTxWits era)
+  -&gt; Set (WitVKey 'Witness) -&gt; RawType (ShelleyTxWits era))
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (Set (WitVKey 'Witness) -&gt; f (Set (WitVKey 'Witness)))
+    -&gt; ShelleyTxWits era -&gt; f (ShelleyTxWits era))
+-&gt; (RawType (ShelleyTxWits era)
+    -&gt; Set (WitVKey 'Witness) -&gt; RawType (ShelleyTxWits era))
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (Set (WitVKey 'Witness) -&gt; f (Set (WitVKey 'Witness)))
+   -&gt; ShelleyTxWits era -&gt; f (ShelleyTxWits era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679514065"><span class="annot"><span class="annottext">RawType (ShelleyTxWits era)
+</span><a href="#local-6989586621679514065"><span class="hs-identifier hs-var">witsRaw</span></a></span></span><span> </span><span id="local-6989586621679514066"><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514066"><span class="hs-identifier hs-var">aw</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RawType (ShelleyTxWits era)
+</span><a href="#local-6989586621679514065"><span class="hs-identifier hs-var">witsRaw</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#stwrAddrTxWits"><span class="hs-identifier hs-var">stwrAddrTxWits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679514066"><span class="hs-identifier hs-type">aw</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-145"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#addrShelleyTxWitsL"><span class="hs-pragma hs-type">addrShelleyTxWitsL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- | Bootstrap Addresses witness setter and getter for `ShelleyTxWits`. The</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- setter does update memoized binary representation.</span><span>
+</span><span id="line-149"></span><span id="local-6989586621679513543"><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#bootAddrShelleyTxWitsL"><span class="hs-identifier hs-type">bootAddrShelleyTxWitsL</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513543"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier hs-type">Lens'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513543"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-152"></span><span id="bootAddrShelleyTxWitsL"><span class="annot"><span class="annottext">bootAddrShelleyTxWitsL :: forall era.
+EraScript era =&gt;
+Lens' (ShelleyTxWits era) (Set BootstrapWitness)
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#bootAddrShelleyTxWitsL"><span class="hs-identifier hs-var hs-var">bootAddrShelleyTxWitsL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-153"></span><span>  </span><span class="annot"><span class="annottext">forall era t a b.
+(Era era, EncCBOR (RawType t), Memoized t) =&gt;
+(RawType t -&gt; a) -&gt; (RawType t -&gt; b -&gt; RawType t) -&gt; Lens t t a b
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#lensMemoRawType"><span class="hs-identifier hs-var">lensMemoRawType</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="annot"><span class="annottext">RawType (ShelleyTxWits era) -&gt; Set BootstrapWitness
+ShelleyTxWitsRaw era -&gt; Set BootstrapWitness
+forall era. ShelleyTxWitsRaw era -&gt; Set BootstrapWitness
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#stwrBootAddrTxWits"><span class="hs-identifier hs-var">stwrBootAddrTxWits</span></a></span><span> </span><span class="annot"><span class="annottext">((RawType (ShelleyTxWits era)
+  -&gt; Set BootstrapWitness -&gt; RawType (ShelleyTxWits era))
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (Set BootstrapWitness -&gt; f (Set BootstrapWitness))
+    -&gt; ShelleyTxWits era -&gt; f (ShelleyTxWits era))
+-&gt; (RawType (ShelleyTxWits era)
+    -&gt; Set BootstrapWitness -&gt; RawType (ShelleyTxWits era))
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (Set BootstrapWitness -&gt; f (Set BootstrapWitness))
+   -&gt; ShelleyTxWits era -&gt; f (ShelleyTxWits era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679514076"><span class="annot"><span class="annottext">RawType (ShelleyTxWits era)
+</span><a href="#local-6989586621679514076"><span class="hs-identifier hs-var">witsRaw</span></a></span></span><span> </span><span id="local-6989586621679514077"><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514077"><span class="hs-identifier hs-var">bw</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RawType (ShelleyTxWits era)
+</span><a href="#local-6989586621679514076"><span class="hs-identifier hs-var">witsRaw</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#stwrBootAddrTxWits"><span class="hs-identifier hs-var">stwrBootAddrTxWits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679514077"><span class="hs-identifier hs-type">bw</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-154"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#bootAddrShelleyTxWitsL"><span class="hs-pragma hs-type">bootAddrShelleyTxWitsL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- | Script witness setter and getter for `ShelleyTxWits`. The</span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- setter does update memoized binary representation.</span><span>
+</span><span id="line-158"></span><span id="local-6989586621679513547"><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#scriptShelleyTxWitsL"><span class="hs-identifier hs-type">scriptShelleyTxWitsL</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-159"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513547"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-160"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier hs-type">Lens'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513547"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513547"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-161"></span><span id="scriptShelleyTxWitsL"><span class="annot"><span class="annottext">scriptShelleyTxWitsL :: forall era.
+EraScript era =&gt;
+Lens' (ShelleyTxWits era) (Map ScriptHash (Script era))
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#scriptShelleyTxWitsL"><span class="hs-identifier hs-var hs-var">scriptShelleyTxWitsL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-162"></span><span>  </span><span class="annot"><span class="annottext">forall era t a b.
+(Era era, EncCBOR (RawType t), Memoized t) =&gt;
+(RawType t -&gt; a) -&gt; (RawType t -&gt; b -&gt; RawType t) -&gt; Lens t t a b
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#lensMemoRawType"><span class="hs-identifier hs-var">lensMemoRawType</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="annot"><span class="annottext">RawType (ShelleyTxWits era) -&gt; Map ScriptHash (Script era)
+ShelleyTxWitsRaw era -&gt; Map ScriptHash (Script era)
+forall era. ShelleyTxWitsRaw era -&gt; Map ScriptHash (Script era)
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#stwrScriptTxWits"><span class="hs-identifier hs-var">stwrScriptTxWits</span></a></span><span> </span><span class="annot"><span class="annottext">((RawType (ShelleyTxWits era)
+  -&gt; Map ScriptHash (Script era) -&gt; RawType (ShelleyTxWits era))
+ -&gt; forall {f :: * -&gt; *}.
+    Functor f =&gt;
+    (Map ScriptHash (Script era) -&gt; f (Map ScriptHash (Script era)))
+    -&gt; ShelleyTxWits era -&gt; f (ShelleyTxWits era))
+-&gt; (RawType (ShelleyTxWits era)
+    -&gt; Map ScriptHash (Script era) -&gt; RawType (ShelleyTxWits era))
+-&gt; forall {f :: * -&gt; *}.
+   Functor f =&gt;
+   (Map ScriptHash (Script era) -&gt; f (Map ScriptHash (Script era)))
+   -&gt; ShelleyTxWits era -&gt; f (ShelleyTxWits era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-glyph">\</span><span id="local-6989586621679514087"><span class="annot"><span class="annottext">RawType (ShelleyTxWits era)
+</span><a href="#local-6989586621679514087"><span class="hs-identifier hs-var">witsRaw</span></a></span></span><span> </span><span id="local-6989586621679514088"><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514088"><span class="hs-identifier hs-var">sw</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">RawType (ShelleyTxWits era)
+</span><a href="#local-6989586621679514087"><span class="hs-identifier hs-var">witsRaw</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#stwrScriptTxWits"><span class="hs-identifier hs-var">stwrScriptTxWits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679514088"><span class="hs-identifier hs-type">sw</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-164"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#scriptShelleyTxWitsL"><span class="hs-pragma hs-type">scriptShelleyTxWitsL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxWits"><span class="hs-identifier hs-type">EraTxWits</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TxWits"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-var">TxWits</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span>  </span><span id="local-6989586621679514141"><span class="annot"><span class="annottext">mkBasicTxWits :: TxWits ShelleyEra
+</span><a href="#local-6989586621679514141"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkBasicTxWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxWits ShelleyEra
+ShelleyTxWits ShelleyEra
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span>  </span><span id="local-6989586621679514146"><span class="annot"><span class="annottext">addrTxWitsL :: Lens' (TxWits ShelleyEra) (Set (WitVKey 'Witness))
+</span><a href="#local-6989586621679514146"><span class="hs-identifier hs-var hs-var hs-var hs-var">addrTxWitsL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Set (WitVKey 'Witness) -&gt; f (Set (WitVKey 'Witness)))
+-&gt; TxWits ShelleyEra -&gt; f (TxWits ShelleyEra)
+(Set (WitVKey 'Witness) -&gt; f (Set (WitVKey 'Witness)))
+-&gt; ShelleyTxWits ShelleyEra -&gt; f (ShelleyTxWits ShelleyEra)
+forall era.
+EraScript era =&gt;
+Lens' (ShelleyTxWits era) (Set (WitVKey 'Witness))
+Lens' (ShelleyTxWits ShelleyEra) (Set (WitVKey 'Witness))
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#addrShelleyTxWitsL"><span class="hs-identifier hs-var">addrShelleyTxWitsL</span></a></span><span>
+</span><span id="line-172"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#addrTxWitsL"><span class="hs-pragma hs-type">addrTxWitsL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span>  </span><span id="local-6989586621679514151"><span class="annot"><span class="annottext">bootAddrTxWitsL :: Lens' (TxWits ShelleyEra) (Set BootstrapWitness)
+</span><a href="#local-6989586621679514151"><span class="hs-identifier hs-var hs-var hs-var hs-var">bootAddrTxWitsL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Set BootstrapWitness -&gt; f (Set BootstrapWitness))
+-&gt; TxWits ShelleyEra -&gt; f (TxWits ShelleyEra)
+(Set BootstrapWitness -&gt; f (Set BootstrapWitness))
+-&gt; ShelleyTxWits ShelleyEra -&gt; f (ShelleyTxWits ShelleyEra)
+forall era.
+EraScript era =&gt;
+Lens' (ShelleyTxWits era) (Set BootstrapWitness)
+Lens' (ShelleyTxWits ShelleyEra) (Set BootstrapWitness)
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#bootAddrShelleyTxWitsL"><span class="hs-identifier hs-var">bootAddrShelleyTxWitsL</span></a></span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bootAddrTxWitsL"><span class="hs-pragma hs-type">bootAddrTxWitsL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span>  </span><span id="local-6989586621679514156"><span class="annot"><span class="annottext">scriptTxWitsL :: Lens' (TxWits ShelleyEra) (Map ScriptHash (Script ShelleyEra))
+</span><a href="#local-6989586621679514156"><span class="hs-identifier hs-var hs-var hs-var hs-var">scriptTxWitsL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Map ScriptHash (Script ShelleyEra)
+ -&gt; f (Map ScriptHash (Script ShelleyEra)))
+-&gt; TxWits ShelleyEra -&gt; f (TxWits ShelleyEra)
+(Map ScriptHash (Script ShelleyEra)
+ -&gt; f (Map ScriptHash (Script ShelleyEra)))
+-&gt; ShelleyTxWits ShelleyEra -&gt; f (ShelleyTxWits ShelleyEra)
+forall era.
+EraScript era =&gt;
+Lens' (ShelleyTxWits era) (Map ScriptHash (Script era))
+Lens'
+  (ShelleyTxWits ShelleyEra) (Map ScriptHash (Script ShelleyEra))
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#scriptShelleyTxWitsL"><span class="hs-identifier hs-var">scriptShelleyTxWitsL</span></a></span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#scriptTxWitsL"><span class="hs-pragma hs-type">scriptTxWitsL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-179"></span><span>
+</span><span id="line-180"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679513559"><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-type">TxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513559"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513559"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxWits"><span class="hs-identifier hs-type">EraTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513559"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#EqRaw"><span class="hs-identifier hs-type">EqRaw</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513559"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-181"></span><span>  </span><span id="local-6989586621679514164"><span class="annot"><span class="annottext">eqRaw :: ShelleyTxWits era -&gt; ShelleyTxWits era -&gt; Bool
+</span><a href="#local-6989586621679514164"><span class="hs-identifier hs-var hs-var hs-var hs-var">eqRaw</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era. EraTxWits era =&gt; TxWits era -&gt; TxWits era -&gt; Bool
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#shelleyEqTxWitsRaw"><span class="hs-identifier hs-var">shelleyEqTxWitsRaw</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679513559"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679513533"><span id="local-6989586621679514174"><span id="local-6989586621679514177"><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513533"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513533"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513533"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-184"></span><span>  </span><span id="local-6989586621679514199"><span class="annot"><span class="annottext">encCBOR :: ShelleyTxWitsRaw era -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span id="local-6989586621679514200"><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514200"><span class="hs-identifier hs-var">vkeys</span></a></span></span><span> </span><span id="local-6989586621679514201"><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514201"><span class="hs-identifier hs-var">scripts</span></a></span></span><span> </span><span id="local-6989586621679514202"><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514202"><span class="hs-identifier hs-var">boots</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-185"></span><span>    </span><span class="annot"><span class="annottext">Encode ('Closed 'Sparse) (ShelleyTxWitsRaw era) -&gt; Encoding
+forall (w :: Wrapped) t. Encode w t -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">(Encode ('Closed 'Sparse) (ShelleyTxWitsRaw era) -&gt; Encoding)
+-&gt; Encode ('Closed 'Sparse) (ShelleyTxWitsRaw era) -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-186"></span><span>      </span><span class="annot"><span class="annottext">(Set (WitVKey 'Witness)
+ -&gt; Map ScriptHash (Script era)
+ -&gt; Set BootstrapWitness
+ -&gt; ShelleyTxWitsRaw era)
+-&gt; Encode
+     ('Closed 'Sparse)
+     (Set (WitVKey 'Witness)
+      -&gt; Map ScriptHash (Script era)
+      -&gt; Set BootstrapWitness
+      -&gt; ShelleyTxWitsRaw era)
+forall t. t -&gt; Encode ('Closed 'Sparse) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Keyed"><span class="hs-identifier hs-var">Keyed</span></a></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+-&gt; Map ScriptHash (Script era)
+-&gt; Set BootstrapWitness
+-&gt; ShelleyTxWitsRaw era
+forall era.
+Set (WitVKey 'Witness)
+-&gt; Map ScriptHash (Script era)
+-&gt; Set BootstrapWitness
+-&gt; ShelleyTxWitsRaw era
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-var">ShelleyTxWitsRaw</span></a></span><span>
+</span><span id="line-187"></span><span>        </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Sparse)
+  (Set (WitVKey 'Witness)
+   -&gt; Map ScriptHash (Script era)
+   -&gt; Set BootstrapWitness
+   -&gt; ShelleyTxWitsRaw era)
+-&gt; Encode ('Closed 'Sparse) (Set (WitVKey 'Witness))
+-&gt; Encode
+     ('Closed 'Sparse)
+     (Map ScriptHash (Script era)
+      -&gt; Set BootstrapWitness -&gt; ShelleyTxWitsRaw era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Set (WitVKey 'Witness) -&gt; Bool)
+-&gt; Encode ('Closed 'Sparse) (Set (WitVKey 'Witness))
+-&gt; Encode ('Closed 'Sparse) (Set (WitVKey 'Witness))
+forall t.
+(t -&gt; Bool)
+-&gt; Encode ('Closed 'Sparse) t -&gt; Encode ('Closed 'Sparse) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Omit"><span class="hs-identifier hs-var">Omit</span></a></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness) -&gt; Bool
+forall a. Set a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word
+-&gt; Encode ('Closed 'Dense) (Set (WitVKey 'Witness))
+-&gt; Encode ('Closed 'Sparse) (Set (WitVKey 'Witness))
+forall t.
+Word -&gt; Encode ('Closed 'Dense) t -&gt; Encode ('Closed 'Sparse) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Key"><span class="hs-identifier hs-var">Key</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">(Encode ('Closed 'Dense) (Set (WitVKey 'Witness))
+ -&gt; Encode ('Closed 'Sparse) (Set (WitVKey 'Witness)))
+-&gt; Encode ('Closed 'Dense) (Set (WitVKey 'Witness))
+-&gt; Encode ('Closed 'Sparse) (Set (WitVKey 'Witness))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+-&gt; Encode ('Closed 'Dense) (Set (WitVKey 'Witness))
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514200"><span class="hs-identifier hs-var">vkeys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-188"></span><span>        </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Sparse)
+  (Map ScriptHash (Script era)
+   -&gt; Set BootstrapWitness -&gt; ShelleyTxWitsRaw era)
+-&gt; Encode ('Closed 'Sparse) (Map ScriptHash (Script era))
+-&gt; Encode
+     ('Closed 'Sparse) (Set BootstrapWitness -&gt; ShelleyTxWitsRaw era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Map ScriptHash (Script era) -&gt; Bool)
+-&gt; Encode ('Closed 'Sparse) (Map ScriptHash (Script era))
+-&gt; Encode ('Closed 'Sparse) (Map ScriptHash (Script era))
+forall t.
+(t -&gt; Bool)
+-&gt; Encode ('Closed 'Sparse) t -&gt; Encode ('Closed 'Sparse) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Omit"><span class="hs-identifier hs-var">Omit</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era) -&gt; Bool
+forall a. Map ScriptHash a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word
+-&gt; Encode ('Closed 'Dense) (Map ScriptHash (Script era))
+-&gt; Encode ('Closed 'Sparse) (Map ScriptHash (Script era))
+forall t.
+Word -&gt; Encode ('Closed 'Dense) t -&gt; Encode ('Closed 'Sparse) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Key"><span class="hs-identifier hs-var">Key</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">(Encode ('Closed 'Dense) (Map ScriptHash (Script era))
+ -&gt; Encode ('Closed 'Sparse) (Map ScriptHash (Script era)))
+-&gt; Encode ('Closed 'Dense) (Map ScriptHash (Script era))
+-&gt; Encode ('Closed 'Sparse) (Map ScriptHash (Script era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(Map ScriptHash (Script era) -&gt; Encoding)
+-&gt; Map ScriptHash (Script era)
+-&gt; Encode ('Closed 'Dense) (Map ScriptHash (Script era))
+forall t. (t -&gt; Encoding) -&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#E"><span class="hs-identifier hs-var">E</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Script era] -&gt; Encoding
+forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#encCBOR"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">([Script era] -&gt; Encoding)
+-&gt; (Map ScriptHash (Script era) -&gt; [Script era])
+-&gt; Map ScriptHash (Script era)
+-&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era) -&gt; [Script era]
+forall k a. Map k a -&gt; [a]
+</span><span class="hs-identifier hs-var">Map.elems</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514201"><span class="hs-identifier hs-var">scripts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span>        </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Sparse) (Set BootstrapWitness -&gt; ShelleyTxWitsRaw era)
+-&gt; Encode ('Closed 'Sparse) (Set BootstrapWitness)
+-&gt; Encode ('Closed 'Sparse) (ShelleyTxWitsRaw era)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Set BootstrapWitness -&gt; Bool)
+-&gt; Encode ('Closed 'Sparse) (Set BootstrapWitness)
+-&gt; Encode ('Closed 'Sparse) (Set BootstrapWitness)
+forall t.
+(t -&gt; Bool)
+-&gt; Encode ('Closed 'Sparse) t -&gt; Encode ('Closed 'Sparse) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Omit"><span class="hs-identifier hs-var">Omit</span></a></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness -&gt; Bool
+forall a. Set a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word
+-&gt; Encode ('Closed 'Dense) (Set BootstrapWitness)
+-&gt; Encode ('Closed 'Sparse) (Set BootstrapWitness)
+forall t.
+Word -&gt; Encode ('Closed 'Dense) t -&gt; Encode ('Closed 'Sparse) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Key"><span class="hs-identifier hs-var">Key</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">(Encode ('Closed 'Dense) (Set BootstrapWitness)
+ -&gt; Encode ('Closed 'Sparse) (Set BootstrapWitness))
+-&gt; Encode ('Closed 'Dense) (Set BootstrapWitness)
+-&gt; Encode ('Closed 'Sparse) (Set BootstrapWitness)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness
+-&gt; Encode ('Closed 'Dense) (Set BootstrapWitness)
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514202"><span class="hs-identifier hs-var">boots</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-190"></span><span>
+</span><span id="line-191"></span><span class="annot"><span class="hs-comment">-- | Encodes memoized bytes created upon construction.</span></span><span>
+</span><span id="line-192"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679513558"><span id="local-6989586621679514219"><span id="local-6989586621679514223"><span id="local-6989586621679514226"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513558"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513558"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-193"></span><span>
+</span><span id="line-194"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679513602"><span id="local-6989586621679514231"><span id="local-6989586621679514235"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513602"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Semigroup</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513602"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-195"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span id="local-6989586621679514255"><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514255"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679514256"><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514256"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679514257"><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514257"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679514258"><span class="annot"><span class="annottext">&lt;&gt; :: ShelleyTxWits era -&gt; ShelleyTxWits era -&gt; ShelleyTxWits era
+</span><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></span></span><span> </span><span id="local-6989586621679514259"><span class="annot"><span class="annottext">ShelleyTxWits era
+</span><a href="#local-6989586621679514259"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness) -&gt; Bool
+forall a. Set a -&gt; Bool
+</span><span class="hs-identifier hs-var">Set.null</span></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514255"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era) -&gt; Bool
+forall k a. Map k a -&gt; Bool
+</span><span class="hs-identifier hs-var">Map.null</span></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514256"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness -&gt; Bool
+forall a. Set a -&gt; Bool
+</span><span class="hs-identifier hs-var">Set.null</span></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514257"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyTxWits era
+</span><a href="#local-6989586621679514259"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-196"></span><span>  </span><span id="local-6989586621679514263"><span class="annot"><span class="annottext">ShelleyTxWits era
+</span><a href="#local-6989586621679514263"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="annot"><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span id="local-6989586621679514264"><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514264"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679514265"><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514265"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679514266"><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514266"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness) -&gt; Bool
+forall a. Set a -&gt; Bool
+</span><span class="hs-identifier hs-var">Set.null</span></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514264"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era) -&gt; Bool
+forall k a. Map k a -&gt; Bool
+</span><span class="hs-identifier hs-var">Map.null</span></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514265"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness -&gt; Bool
+forall a. Set a -&gt; Bool
+</span><span class="hs-identifier hs-var">Set.null</span></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514266"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyTxWits era
+</span><a href="#local-6989586621679514263"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-197"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span id="local-6989586621679514267"><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514267"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679514268"><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514268"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679514269"><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514269"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span id="local-6989586621679514270"><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514270"><span class="hs-identifier hs-var">a'</span></a></span></span><span> </span><span id="local-6989586621679514271"><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514271"><span class="hs-identifier hs-var">b'</span></a></span></span><span> </span><span id="local-6989586621679514272"><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514272"><span class="hs-identifier hs-var">c'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+-&gt; Map ScriptHash (Script era)
+-&gt; Set BootstrapWitness
+-&gt; ShelleyTxWits era
+forall era.
+EraScript era =&gt;
+Set (WitVKey 'Witness)
+-&gt; Map ScriptHash (Script era)
+-&gt; Set BootstrapWitness
+-&gt; ShelleyTxWits era
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-var">ShelleyTxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514267"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+-&gt; Set (WitVKey 'Witness) -&gt; Set (WitVKey 'Witness)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514270"><span class="hs-identifier hs-var">a'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514268"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+-&gt; Map ScriptHash (Script era) -&gt; Map ScriptHash (Script era)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514271"><span class="hs-identifier hs-var">b'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514269"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness
+-&gt; Set BootstrapWitness -&gt; Set BootstrapWitness
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514272"><span class="hs-identifier hs-var">c'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-198"></span><span>
+</span><span id="line-199"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679513557"><span id="local-6989586621679514278"><span id="local-6989586621679514281"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513557"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Monoid</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513557"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-200"></span><span>  </span><span id="local-6989586621679514294"><span class="annot"><span class="annottext">mempty :: ShelleyTxWits era
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+-&gt; Map ScriptHash (Script era)
+-&gt; Set BootstrapWitness
+-&gt; ShelleyTxWits era
+forall era.
+EraScript era =&gt;
+Set (WitVKey 'Witness)
+-&gt; Map ScriptHash (Script era)
+-&gt; Set BootstrapWitness
+-&gt; ShelleyTxWits era
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-var">ShelleyTxWits</span></a></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-201"></span><span>
+</span><span id="line-202"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679513355"><span class="annot"><a href="#local-6989586621679513355"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-204"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513355"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-205"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-206"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-type">ScriptHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513355"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-207"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Set</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-208"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-type">ShelleyTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513355"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-209"></span><span class="hs-keyword">pattern</span><span> </span><span id="ShelleyTxWits"><span id="%24mShelleyTxWits"><span id="%24bShelleyTxWits"><span class="annot"><span class="annottext">$mShelleyTxWits :: forall {r} {era}.
+EraScript era =&gt;
+ShelleyTxWits era
+-&gt; (Set (WitVKey 'Witness)
+    -&gt; Map ScriptHash (Script era) -&gt; Set BootstrapWitness -&gt; r)
+-&gt; ((# #) -&gt; r)
+-&gt; r
+$bShelleyTxWits :: forall era.
+EraScript era =&gt;
+Set (WitVKey 'Witness)
+-&gt; Map ScriptHash (Script era)
+-&gt; Set BootstrapWitness
+-&gt; ShelleyTxWits era
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-var hs-var hs-var hs-var">ShelleyTxWits</span></a></span></span></span></span><span> </span><span class="hs-special">{</span><span id="addrWits"><span class="annot"><span class="annottext">forall era.
+EraScript era =&gt;
+ShelleyTxWits era -&gt; Set (WitVKey 'Witness)
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#addrWits"><span class="hs-identifier hs-var hs-var hs-var">addrWits</span></a></span></span><span class="hs-special">,</span><span> </span><span id="scriptWits"><span class="annot"><span class="annottext">forall era.
+EraScript era =&gt;
+ShelleyTxWits era -&gt; Map ScriptHash (Script era)
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#scriptWits"><span class="hs-identifier hs-var hs-var hs-var">scriptWits</span></a></span></span><span class="hs-special">,</span><span> </span><span id="bootWits"><span class="annot"><span class="annottext">forall era.
+EraScript era =&gt;
+ShelleyTxWits era -&gt; Set BootstrapWitness
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#bootWits"><span class="hs-identifier hs-var hs-var hs-var">bootWits</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-210"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#getMemoRawType"><span class="hs-identifier hs-type">getMemoRawType</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span id="local-6989586621679514297"><span class="annot"><a href="#local-6989586621679514297"><span class="hs-identifier hs-var">addrWits</span></a></span></span><span> </span><span id="local-6989586621679514300"><span class="annot"><a href="#local-6989586621679514300"><span class="hs-identifier hs-var">scriptWits</span></a></span></span><span> </span><span id="local-6989586621679514303"><span class="annot"><a href="#local-6989586621679514303"><span class="hs-identifier hs-var">bootWits</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-211"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-212"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-identifier hs-var">ShelleyTxWits</span></a></span><span> </span><span id="local-6989586621679514307"><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514307"><span class="hs-identifier hs-var">awits</span></a></span></span><span> </span><span id="local-6989586621679514308"><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514308"><span class="hs-identifier hs-var">scriptWitMap</span></a></span></span><span> </span><span id="local-6989586621679514309"><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514309"><span class="hs-identifier hs-var">bootstrapWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-213"></span><span>      </span><span class="annot"><span class="annottext">forall era t.
+(Era era, EncCBOR (RawType t), Memoized t) =&gt;
+RawType t -&gt; t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#mkMemoizedEra"><span class="hs-identifier hs-var">mkMemoizedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679513355"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><span class="annottext">(RawType (ShelleyTxWits era) -&gt; ShelleyTxWits era)
+-&gt; RawType (ShelleyTxWits era) -&gt; ShelleyTxWits era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+-&gt; Map ScriptHash (Script era)
+-&gt; Set BootstrapWitness
+-&gt; ShelleyTxWitsRaw era
+forall era.
+Set (WitVKey 'Witness)
+-&gt; Map ScriptHash (Script era)
+-&gt; Set BootstrapWitness
+-&gt; ShelleyTxWitsRaw era
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-var">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514307"><span class="hs-identifier hs-var">awits</span></a></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514308"><span class="hs-identifier hs-var">scriptWitMap</span></a></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514309"><span class="hs-identifier hs-var">bootstrapWits</span></a></span><span>
+</span><span id="line-214"></span><span>
+</span><span id="line-215"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWits"><span class="hs-pragma hs-type">ShelleyTxWits</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-216"></span><span>
+</span><span id="line-217"></span><span id="local-6989586621679513566"><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#shelleyEqTxWitsRaw"><span class="hs-identifier hs-type">shelleyEqTxWitsRaw</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraTxWits"><span class="hs-identifier hs-type">EraTxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513566"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-type">TxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513566"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-type">TxWits</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513566"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-218"></span><span id="shelleyEqTxWitsRaw"><span class="annot"><span class="annottext">shelleyEqTxWitsRaw :: forall era. EraTxWits era =&gt; TxWits era -&gt; TxWits era -&gt; Bool
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#shelleyEqTxWitsRaw"><span class="hs-identifier hs-var hs-var">shelleyEqTxWitsRaw</span></a></span></span><span> </span><span id="local-6989586621679514336"><span class="annot"><span class="annottext">TxWits era
+</span><a href="#local-6989586621679514336"><span class="hs-identifier hs-var">txWits1</span></a></span></span><span> </span><span id="local-6989586621679514337"><span class="annot"><span class="annottext">TxWits era
+</span><a href="#local-6989586621679514337"><span class="hs-identifier hs-var">txWits2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-219"></span><span>  </span><span class="annot"><span class="annottext">TxWits era
+</span><a href="#local-6989586621679514336"><span class="hs-identifier hs-var">txWits1</span></a></span><span> </span><span class="annot"><span class="annottext">TxWits era
+-&gt; Getting
+     (Set (WitVKey 'Witness)) (TxWits era) (Set (WitVKey 'Witness))
+-&gt; Set (WitVKey 'Witness)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Set (WitVKey 'Witness)) (TxWits era) (Set (WitVKey 'Witness))
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Set (WitVKey 'Witness))
+Lens' (TxWits era) (Set (WitVKey 'Witness))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#addrTxWitsL"><span class="hs-identifier hs-var">addrTxWitsL</span></a></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness) -&gt; Set (WitVKey 'Witness) -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">TxWits era
+</span><a href="#local-6989586621679514337"><span class="hs-identifier hs-var">txWits2</span></a></span><span> </span><span class="annot"><span class="annottext">TxWits era
+-&gt; Getting
+     (Set (WitVKey 'Witness)) (TxWits era) (Set (WitVKey 'Witness))
+-&gt; Set (WitVKey 'Witness)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Set (WitVKey 'Witness)) (TxWits era) (Set (WitVKey 'Witness))
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Set (WitVKey 'Witness))
+Lens' (TxWits era) (Set (WitVKey 'Witness))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#addrTxWitsL"><span class="hs-identifier hs-var">addrTxWitsL</span></a></span><span>
+</span><span id="line-220"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">(Script era -&gt; Script era -&gt; Bool)
+-&gt; Map ScriptHash (Script era)
+-&gt; Map ScriptHash (Script era)
+-&gt; Bool
+forall a b.
+(a -&gt; b -&gt; Bool) -&gt; Map ScriptHash a -&gt; Map ScriptHash b -&gt; Bool
+forall (f :: * -&gt; *) a b.
+Eq1 f =&gt;
+(a -&gt; b -&gt; Bool) -&gt; f a -&gt; f b -&gt; Bool
+</span><span class="hs-identifier hs-var">liftEq</span></span><span> </span><span class="annot"><span class="annottext">Script era -&gt; Script era -&gt; Bool
+forall a. EqRaw a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.MemoBytes.Internal.html#eqRaw"><span class="hs-identifier hs-var">eqRaw</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxWits era
+</span><a href="#local-6989586621679514336"><span class="hs-identifier hs-var">txWits1</span></a></span><span> </span><span class="annot"><span class="annottext">TxWits era
+-&gt; Getting
+     (Map ScriptHash (Script era))
+     (TxWits era)
+     (Map ScriptHash (Script era))
+-&gt; Map ScriptHash (Script era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Map ScriptHash (Script era))
+  (TxWits era)
+  (Map ScriptHash (Script era))
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Map ScriptHash (Script era))
+Lens' (TxWits era) (Map ScriptHash (Script era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#scriptTxWitsL"><span class="hs-identifier hs-var">scriptTxWitsL</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxWits era
+</span><a href="#local-6989586621679514337"><span class="hs-identifier hs-var">txWits2</span></a></span><span> </span><span class="annot"><span class="annottext">TxWits era
+-&gt; Getting
+     (Map ScriptHash (Script era))
+     (TxWits era)
+     (Map ScriptHash (Script era))
+-&gt; Map ScriptHash (Script era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Map ScriptHash (Script era))
+  (TxWits era)
+  (Map ScriptHash (Script era))
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Map ScriptHash (Script era))
+Lens' (TxWits era) (Map ScriptHash (Script era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#scriptTxWitsL"><span class="hs-identifier hs-var">scriptTxWitsL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-221"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><span class="hs-operator hs-var">&amp;&amp;</span></span><span> </span><span class="annot"><span class="annottext">TxWits era
+</span><a href="#local-6989586621679514336"><span class="hs-identifier hs-var">txWits1</span></a></span><span> </span><span class="annot"><span class="annottext">TxWits era
+-&gt; Getting
+     (Set BootstrapWitness) (TxWits era) (Set BootstrapWitness)
+-&gt; Set BootstrapWitness
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Set BootstrapWitness) (TxWits era) (Set BootstrapWitness)
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Set BootstrapWitness)
+Lens' (TxWits era) (Set BootstrapWitness)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bootAddrTxWitsL"><span class="hs-identifier hs-var">bootAddrTxWitsL</span></a></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness -&gt; Set BootstrapWitness -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">TxWits era
+</span><a href="#local-6989586621679514337"><span class="hs-identifier hs-var">txWits2</span></a></span><span> </span><span class="annot"><span class="annottext">TxWits era
+-&gt; Getting
+     (Set BootstrapWitness) (TxWits era) (Set BootstrapWitness)
+-&gt; Set BootstrapWitness
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (Set BootstrapWitness) (TxWits era) (Set BootstrapWitness)
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Set BootstrapWitness)
+Lens' (TxWits era) (Set BootstrapWitness)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#bootAddrTxWitsL"><span class="hs-identifier hs-var">bootAddrTxWitsL</span></a></span><span>
+</span><span id="line-222"></span><span>
+</span><span id="line-223"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-224"></span><span>  </span><span id="local-6989586621679513509"><span id="local-6989586621679514346"><span id="local-6989586621679514349"><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#EraScript"><span class="hs-identifier hs-type">EraScript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513509"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#Script"><span class="hs-identifier hs-type">Script</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513509"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-226"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-227"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513509"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-228"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-229"></span><span>  </span><span id="local-6989586621679514392"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (Annotator (ShelleyTxWitsRaw era))
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-230"></span><span>    </span><span class="annot"><span class="annottext">Decode ('Closed 'Dense) (Annotator (ShelleyTxWitsRaw era))
+-&gt; Decoder s (Annotator (ShelleyTxWitsRaw era))
+forall t (w :: Wrapped) s. Typeable t =&gt; Decode w t -&gt; Decoder s t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#decode"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">(Decode ('Closed 'Dense) (Annotator (ShelleyTxWitsRaw era))
+ -&gt; Decoder s (Annotator (ShelleyTxWitsRaw era)))
+-&gt; Decode ('Closed 'Dense) (Annotator (ShelleyTxWitsRaw era))
+-&gt; Decoder s (Annotator (ShelleyTxWitsRaw era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-231"></span><span>      </span><span class="annot"><span class="annottext">String
+-&gt; Annotator (ShelleyTxWitsRaw era)
+-&gt; (Word -&gt; Field (Annotator (ShelleyTxWitsRaw era)))
+-&gt; [(Word, String)]
+-&gt; Decode ('Closed 'Dense) (Annotator (ShelleyTxWitsRaw era))
+forall t.
+Typeable t =&gt;
+String
+-&gt; t
+-&gt; (Word -&gt; Field t)
+-&gt; [(Word, String)]
+-&gt; Decode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#SparseKeyed"><span class="hs-identifier hs-var">SparseKeyed</span></a></span><span>
+</span><span id="line-232"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ShelleyTxWitsRaw&quot;</span></span><span>
+</span><span id="line-233"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyTxWitsRaw era -&gt; Annotator (ShelleyTxWitsRaw era)
+forall a. a -&gt; Annotator a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">ShelleyTxWitsRaw era
+forall {era}. ShelleyTxWitsRaw era
+</span><a href="#local-6989586621679514395"><span class="hs-identifier hs-var">emptyWitnessSet</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-234"></span><span>        </span><span class="annot"><span class="annottext">Word -&gt; Field (Annotator (ShelleyTxWitsRaw era))
+</span><a href="#local-6989586621679514396"><span class="hs-identifier hs-var">witField</span></a></span><span>
+</span><span id="line-235"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-236"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-237"></span><span>      </span><span id="local-6989586621679514395"><span class="annot"><span class="annottext">emptyWitnessSet :: ShelleyTxWitsRaw era
+</span><a href="#local-6989586621679514395"><span class="hs-identifier hs-var hs-var">emptyWitnessSet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+-&gt; Map ScriptHash (Script era)
+-&gt; Set BootstrapWitness
+-&gt; ShelleyTxWitsRaw era
+forall era.
+Set (WitVKey 'Witness)
+-&gt; Map ScriptHash (Script era)
+-&gt; Set BootstrapWitness
+-&gt; ShelleyTxWitsRaw era
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-var">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="annot"><span class="annottext">Set BootstrapWitness
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span>
+</span><span id="line-238"></span><span>      </span><span class="annot"><a href="#local-6989586621679514396"><span class="hs-identifier hs-type">witField</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#ShelleyTxWitsRaw"><span class="hs-identifier hs-type">ShelleyTxWitsRaw</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513509"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span>      </span><span id="local-6989586621679514396"><span class="annot"><span class="annottext">witField :: Word -&gt; Field (Annotator (ShelleyTxWitsRaw era))
+</span><a href="#local-6989586621679514396"><span class="hs-identifier hs-var hs-var">witField</span></a></span></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-240"></span><span>        </span><span class="annot"><span class="annottext">(Set (WitVKey 'Witness)
+ -&gt; ShelleyTxWitsRaw era -&gt; ShelleyTxWitsRaw era)
+-&gt; Decode ('Closed 'Dense) (Annotator (Set (WitVKey 'Witness)))
+-&gt; Field (Annotator (ShelleyTxWitsRaw era))
+forall x (ann :: * -&gt; *) t (d :: Density).
+(Typeable x, Typeable ann, Applicative ann) =&gt;
+(x -&gt; t -&gt; t) -&gt; Decode ('Closed d) (ann x) -&gt; Field (ann t)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#fieldAA"><span class="hs-identifier hs-var">fieldAA</span></a></span><span>
+</span><span id="line-241"></span><span>          </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679514405"><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+</span><a href="#local-6989586621679514405"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679514406"><span class="annot"><span class="annottext">ShelleyTxWitsRaw era
+</span><a href="#local-6989586621679514406"><span class="hs-identifier hs-var">wits</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyTxWitsRaw era
+</span><a href="#local-6989586621679514406"><span class="hs-identifier hs-var">wits</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#stwrAddrTxWits"><span class="hs-identifier hs-var">stwrAddrTxWits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679514405"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(forall s. Decoder s (Annotator (Set (WitVKey 'Witness))))
+-&gt; Decode ('Closed 'Dense) (Annotator (Set (WitVKey 'Witness)))
+forall t. (forall s. Decoder s t) -&gt; Decode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#D"><span class="hs-identifier hs-var">D</span></a></span><span> </span><span class="annot"><span class="annottext">((forall s. Decoder s (Annotator (Set (WitVKey 'Witness))))
+ -&gt; Decode ('Closed 'Dense) (Annotator (Set (WitVKey 'Witness))))
+-&gt; (forall s. Decoder s (Annotator (Set (WitVKey 'Witness))))
+-&gt; Decode ('Closed 'Dense) (Annotator (Set (WitVKey 'Witness)))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Decoder s [Annotator (WitVKey 'Witness)]
+-&gt; ([WitVKey 'Witness] -&gt; Set (WitVKey 'Witness))
+-&gt; Decoder s (Annotator (Set (WitVKey 'Witness)))
+forall (f :: * -&gt; *) s a (m :: * -&gt; *) b.
+Traversable f =&gt;
+Decoder s (f (Annotator a))
+-&gt; (f a -&gt; m b) -&gt; Decoder s (Annotator (m b))
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#mapTraverseableDecoderA"><span class="hs-identifier hs-var">mapTraverseableDecoderA</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Decoder s (Annotator (WitVKey 'Witness))
+-&gt; Decoder s [Annotator (WitVKey 'Witness)]
+forall s a. Decoder s a -&gt; Decoder s [a]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeList"><span class="hs-identifier hs-var">decodeList</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (WitVKey 'Witness))
+forall s. Decoder s (Annotator (WitVKey 'Witness))
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[WitVKey 'Witness] -&gt; Set (WitVKey 'Witness)
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-243"></span><span>      </span><span class="annot"><a href="#local-6989586621679514396"><span class="hs-identifier hs-var">witField</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-244"></span><span>        </span><span class="annot"><span class="annottext">(Map ScriptHash (Script era)
+ -&gt; ShelleyTxWitsRaw era -&gt; ShelleyTxWitsRaw era)
+-&gt; Decode
+     ('Closed 'Dense) (Annotator (Map ScriptHash (Script era)))
+-&gt; Field (Annotator (ShelleyTxWitsRaw era))
+forall x (ann :: * -&gt; *) t (d :: Density).
+(Typeable x, Typeable ann, Applicative ann) =&gt;
+(x -&gt; t -&gt; t) -&gt; Decode ('Closed d) (ann x) -&gt; Field (ann t)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#fieldAA"><span class="hs-identifier hs-var">fieldAA</span></a></span><span>
+</span><span id="line-245"></span><span>          </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679514414"><span class="annot"><span class="annottext">Map ScriptHash (Script era)
+</span><a href="#local-6989586621679514414"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679514415"><span class="annot"><span class="annottext">ShelleyTxWitsRaw era
+</span><a href="#local-6989586621679514415"><span class="hs-identifier hs-var">wits</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyTxWitsRaw era
+</span><a href="#local-6989586621679514415"><span class="hs-identifier hs-var">wits</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#stwrScriptTxWits"><span class="hs-identifier hs-var">stwrScriptTxWits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679514414"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-246"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">(forall s. Decoder s (Annotator (Map ScriptHash (Script era))))
+-&gt; Decode
+     ('Closed 'Dense) (Annotator (Map ScriptHash (Script era)))
+forall t. (forall s. Decoder s t) -&gt; Decode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#D"><span class="hs-identifier hs-var">D</span></a></span><span> </span><span class="annot"><span class="annottext">((forall s. Decoder s (Annotator (Map ScriptHash (Script era))))
+ -&gt; Decode
+      ('Closed 'Dense) (Annotator (Map ScriptHash (Script era))))
+-&gt; (forall s. Decoder s (Annotator (Map ScriptHash (Script era))))
+-&gt; Decode
+     ('Closed 'Dense) (Annotator (Map ScriptHash (Script era)))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-247"></span><span>              </span><span class="annot"><span class="annottext">Decoder s [Annotator (Script era)]
+-&gt; ([Script era] -&gt; Map ScriptHash (Script era))
+-&gt; Decoder s (Annotator (Map ScriptHash (Script era)))
+forall (f :: * -&gt; *) s a (m :: * -&gt; *) b.
+Traversable f =&gt;
+Decoder s (f (Annotator a))
+-&gt; (f a -&gt; m b) -&gt; Decoder s (Annotator (m b))
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#mapTraverseableDecoderA"><span class="hs-identifier hs-var">mapTraverseableDecoderA</span></a></span><span>
+</span><span id="line-248"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Decoder s (Annotator (Script era))
+-&gt; Decoder s [Annotator (Script era)]
+forall s a. Decoder s a -&gt; Decoder s [a]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeList"><span class="hs-identifier hs-var">decodeList</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator (Script era))
+forall s. Decoder s (Annotator (Script era))
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-249"></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Script era -&gt; ScriptHash)
+-&gt; [Script era] -&gt; Map ScriptHash (Script era)
+forall (f :: * -&gt; *) k v.
+(Foldable f, Ord k) =&gt;
+(v -&gt; k) -&gt; f v -&gt; Map k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html#fromElems"><span class="hs-identifier hs-var">Map.fromElems</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">hashScript</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679513509"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-250"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-251"></span><span>      </span><span class="annot"><a href="#local-6989586621679514396"><span class="hs-identifier hs-var">witField</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-252"></span><span>        </span><span class="annot"><span class="annottext">(Set BootstrapWitness
+ -&gt; ShelleyTxWitsRaw era -&gt; ShelleyTxWitsRaw era)
+-&gt; Decode ('Closed 'Dense) (Annotator (Set BootstrapWitness))
+-&gt; Field (Annotator (ShelleyTxWitsRaw era))
+forall x (ann :: * -&gt; *) t (d :: Density).
+(Typeable x, Typeable ann, Applicative ann) =&gt;
+(x -&gt; t -&gt; t) -&gt; Decode ('Closed d) (ann x) -&gt; Field (ann t)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#fieldAA"><span class="hs-identifier hs-var">fieldAA</span></a></span><span>
+</span><span id="line-253"></span><span>          </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679514422"><span class="annot"><span class="annottext">Set BootstrapWitness
+</span><a href="#local-6989586621679514422"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679514423"><span class="annot"><span class="annottext">ShelleyTxWitsRaw era
+</span><a href="#local-6989586621679514423"><span class="hs-identifier hs-var">wits</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyTxWitsRaw era
+</span><a href="#local-6989586621679514423"><span class="hs-identifier hs-var">wits</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#stwrBootAddrTxWits"><span class="hs-identifier hs-var">stwrBootAddrTxWits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679514422"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-254"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(forall s. Decoder s (Annotator (Set BootstrapWitness)))
+-&gt; Decode ('Closed 'Dense) (Annotator (Set BootstrapWitness))
+forall t. (forall s. Decoder s t) -&gt; Decode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#D"><span class="hs-identifier hs-var">D</span></a></span><span> </span><span class="annot"><span class="annottext">((forall s. Decoder s (Annotator (Set BootstrapWitness)))
+ -&gt; Decode ('Closed 'Dense) (Annotator (Set BootstrapWitness)))
+-&gt; (forall s. Decoder s (Annotator (Set BootstrapWitness)))
+-&gt; Decode ('Closed 'Dense) (Annotator (Set BootstrapWitness))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Decoder s [Annotator BootstrapWitness]
+-&gt; ([BootstrapWitness] -&gt; Set BootstrapWitness)
+-&gt; Decoder s (Annotator (Set BootstrapWitness))
+forall (f :: * -&gt; *) s a (m :: * -&gt; *) b.
+Traversable f =&gt;
+Decoder s (f (Annotator a))
+-&gt; (f a -&gt; m b) -&gt; Decoder s (Annotator (m b))
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#mapTraverseableDecoderA"><span class="hs-identifier hs-var">mapTraverseableDecoderA</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Decoder s (Annotator BootstrapWitness)
+-&gt; Decoder s [Annotator BootstrapWitness]
+forall s a. Decoder s a -&gt; Decoder s [a]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#decodeList"><span class="hs-identifier hs-var">decodeList</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (Annotator BootstrapWitness)
+forall s. Decoder s (Annotator BootstrapWitness)
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[BootstrapWitness] -&gt; Set BootstrapWitness
+forall a. Ord a =&gt; [a] -&gt; Set a
+</span><span class="hs-identifier hs-var">Set.fromList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-255"></span><span>      </span><span class="annot"><a href="#local-6989586621679514396"><span class="hs-identifier hs-var">witField</span></a></span><span> </span><span id="local-6989586621679514428"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679514428"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Void -&gt; ShelleyTxWitsRaw era -&gt; ShelleyTxWitsRaw era)
+-&gt; Decode ('Closed Any) (Annotator Void)
+-&gt; Field (Annotator (ShelleyTxWitsRaw era))
+forall x (ann :: * -&gt; *) t (d :: Density).
+(Typeable x, Typeable ann, Applicative ann) =&gt;
+(x -&gt; t -&gt; t) -&gt; Decode ('Closed d) (ann x) -&gt; Field (ann t)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#fieldAA"><span class="hs-identifier hs-var">fieldAA</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Void
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Void</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679514429"><span class="annot"><span class="annottext">ShelleyTxWitsRaw era
+</span><a href="#local-6989586621679514429"><span class="hs-identifier hs-var">wits</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyTxWitsRaw era
+</span><a href="#local-6989586621679514429"><span class="hs-identifier hs-var">wits</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Decode ('Closed Any) (Annotator Void)
+forall (w :: Wrapped) t. Word -&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#Invalid"><span class="hs-identifier hs-var">Invalid</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679514428"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-256"></span><span>
+</span><span id="line-257"></span><span id="local-6989586621679513649"><span id="local-6989586621679513650"><span id="local-6989586621679513651"><span id="local-6989586621679513652"><span id="local-6989586621679513653"><span class="annot"><a href="Cardano.Ledger.Shelley.TxWits.html#mapTraverseableDecoderA"><span class="hs-identifier hs-type">mapTraverseableDecoderA</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-258"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Traversable</span></span><span> </span><span class="annot"><a href="#local-6989586621679513649"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-259"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513650"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679513649"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513651"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-260"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679513649"><span class="hs-identifier hs-type">f</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513651"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679513652"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513653"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-261"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Decoder.html#Decoder"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513650"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679513652"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679513653"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-262"></span><span id="mapTraverseableDecoderA"><span class="annot"><span class="annottext">mapTraverseableDecoderA :: forall (f :: * -&gt; *) s a (m :: * -&gt; *) b.
+Traversable f =&gt;
+Decoder s (f (Annotator a))
+-&gt; (f a -&gt; m b) -&gt; Decoder s (Annotator (m b))
+</span><a href="Cardano.Ledger.Shelley.TxWits.html#mapTraverseableDecoderA"><span class="hs-identifier hs-var hs-var">mapTraverseableDecoderA</span></a></span></span><span> </span><span id="local-6989586621679514439"><span class="annot"><span class="annottext">Decoder s (f (Annotator a))
+</span><a href="#local-6989586621679514439"><span class="hs-identifier hs-var">decList</span></a></span></span><span> </span><span id="local-6989586621679514440"><span class="annot"><span class="annottext">f a -&gt; m b
+</span><a href="#local-6989586621679514440"><span class="hs-identifier hs-var">transformList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(f a -&gt; m b) -&gt; Annotator (f a) -&gt; Annotator (m b)
+forall a b. (a -&gt; b) -&gt; Annotator a -&gt; Annotator b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">f a -&gt; m b
+</span><a href="#local-6989586621679514440"><span class="hs-identifier hs-var">transformList</span></a></span><span> </span><span class="annot"><span class="annottext">(Annotator (f a) -&gt; Annotator (m b))
+-&gt; (f (Annotator a) -&gt; Annotator (f a))
+-&gt; f (Annotator a)
+-&gt; Annotator (m b)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">f (Annotator a) -&gt; Annotator (f a)
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Traversable t, Monad m) =&gt;
+t (m a) -&gt; m (t a)
+forall (m :: * -&gt; *) a. Monad m =&gt; f (m a) -&gt; m (f a)
+</span><span class="hs-identifier hs-var">sequence</span></span><span> </span><span class="annot"><span class="annottext">(f (Annotator a) -&gt; Annotator (m b))
+-&gt; Decoder s (f (Annotator a)) -&gt; Decoder s (Annotator (m b))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (f (Annotator a))
+</span><a href="#local-6989586621679514439"><span class="hs-identifier hs-var">decList</span></a></span><span>
+</span><span id="line-263"></span></pre></body></html>

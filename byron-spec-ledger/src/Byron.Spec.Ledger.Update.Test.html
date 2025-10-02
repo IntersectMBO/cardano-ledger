@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Byron.Spec.Ledger.Update.Test</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Byron.Spec.Ledger.Update.Test.html#coverUpiregFailures"><span class="hs-identifier">coverUpiregFailures</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Byron.Spec.Ledger.Update.Test.html#coverUpivoteFailures"><span class="hs-identifier">coverUpivoteFailures</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Byron.Spec.Ledger.Update.html"><span class="hs-identifier">Byron.Spec.Ledger.Update</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Data</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Data</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Stack</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">HasCallStack</span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier">MonadTest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html"><span class="hs-identifier">Hedgehog.Internal.Property</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#CoverPercentage"><span class="hs-identifier">CoverPercentage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html"><span class="hs-identifier">Test.Control.State.Transition.Generator</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Generator</span></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="annot"><span class="hs-comment">-- | Check that all the relevant predicate failures are covered.</span></span><span>
+</span><span id="line-18"></span><span class="annot"><a href="Byron.Spec.Ledger.Update.Test.html#coverUpiregFailures"><span class="hs-identifier hs-type">coverUpiregFailures</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679677632"><span class="annot"><a href="#local-6989586621679677632"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679677635"><span class="annot"><a href="#local-6989586621679677635"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679677632"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Data</span></span><span> </span><span class="annot"><a href="#local-6989586621679677635"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Minimum percentage that each failure must occur.</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#CoverPercentage"><span class="hs-identifier hs-type">CoverPercentage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Structure containing the failures</span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="#local-6989586621679677635"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="#local-6989586621679677632"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span id="coverUpiregFailures"><span class="annot"><span class="annottext">coverUpiregFailures :: forall (m :: * -&gt; *) a.
+(MonadTest m, HasCallStack, Data a) =&gt;
+CoverPercentage -&gt; a -&gt; m ()
+</span><a href="Byron.Spec.Ledger.Update.Test.html#coverUpiregFailures"><span class="hs-identifier hs-var hs-var">coverUpiregFailures</span></a></span></span><span> </span><span id="local-6989586621679677687"><span class="annot"><span class="annottext">CoverPercentage
+</span><a href="#local-6989586621679677687"><span class="hs-identifier hs-var">coverPercentage</span></a></span></span><span> </span><span id="local-6989586621679677688"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679677688"><span class="hs-identifier hs-var">someData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) s a.
+(MonadTest m, HasCallStack, Data (PredicateFailure s), Data a) =&gt;
+CoverPercentage -&gt; [PredicateFailure s] -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#coverFailures"><span class="hs-identifier hs-var">Generator.coverFailures</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#UPPVV"><span class="hs-identifier hs-type">UPPVV</span></a></span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><span class="annottext">CoverPercentage
+</span><a href="#local-6989586621679677687"><span class="hs-identifier hs-var">coverPercentage</span></a></span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">PredicateFailure UPPVV
+UppvvPredicateFailure
+</span><a href="Byron.Spec.Ledger.Update.html#CannotFollowPv"><span class="hs-identifier hs-var">CannotFollowPv</span></a></span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[UpdateConstraintViolation] -&gt; UppvvPredicateFailure
+</span><a href="Byron.Spec.Ledger.Update.html#CannotUpdatePv"><span class="hs-identifier hs-var">CannotUpdatePv</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PredicateFailure UPPVV
+UppvvPredicateFailure
+</span><a href="Byron.Spec.Ledger.Update.html#AlreadyProposedPv"><span class="hs-identifier hs-var">AlreadyProposedPv</span></a></span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679677688"><span class="hs-identifier hs-var">someData</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) s a.
+(MonadTest m, HasCallStack, Data (PredicateFailure s), Data a) =&gt;
+CoverPercentage -&gt; [PredicateFailure s] -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#coverFailures"><span class="hs-identifier hs-var">Generator.coverFailures</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#UPSVV"><span class="hs-identifier hs-type">UPSVV</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><span class="annottext">CoverPercentage
+</span><a href="#local-6989586621679677687"><span class="hs-identifier hs-var">coverPercentage</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">PredicateFailure UPSVV
+UpsvvPredicateFailure
+</span><a href="Byron.Spec.Ledger.Update.html#AlreadyProposedSv"><span class="hs-identifier hs-var">AlreadyProposedSv</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PredicateFailure UPSVV
+UpsvvPredicateFailure
+</span><a href="Byron.Spec.Ledger.Update.html#CannotFollowSv"><span class="hs-identifier hs-var">CannotFollowSv</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PredicateFailure UPSVV
+UpsvvPredicateFailure
+</span><a href="Byron.Spec.Ledger.Update.html#InvalidApplicationName"><span class="hs-identifier hs-var">InvalidApplicationName</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PredicateFailure UPSVV
+UpsvvPredicateFailure
+</span><a href="Byron.Spec.Ledger.Update.html#InvalidSystemTags"><span class="hs-identifier hs-var">InvalidSystemTags</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679677688"><span class="hs-identifier hs-var">someData</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) s a.
+(MonadTest m, HasCallStack, Data (PredicateFailure s), Data a) =&gt;
+CoverPercentage -&gt; [PredicateFailure s] -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#coverFailures"><span class="hs-identifier hs-var">Generator.coverFailures</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#UPREG"><span class="hs-identifier hs-type">UPREG</span></a></span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><span class="annottext">CoverPercentage
+</span><a href="#local-6989586621679677687"><span class="hs-identifier hs-var">coverPercentage</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">PredicateFailure UPREG
+UpregPredicateFailure
+</span><a href="Byron.Spec.Ledger.Update.html#NotGenesisDelegate"><span class="hs-identifier hs-var">NotGenesisDelegate</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PredicateFailure UPREG
+UpregPredicateFailure
+</span><a href="Byron.Spec.Ledger.Update.html#DoesNotVerify"><span class="hs-identifier hs-var">DoesNotVerify</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679677688"><span class="hs-identifier hs-var">someData</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><span class="hs-comment">-- | See 'coverUpiregFailures'.</span></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Byron.Spec.Ledger.Update.Test.html#coverUpivoteFailures"><span class="hs-identifier hs-type">coverUpivoteFailures</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679677699"><span class="annot"><a href="#local-6989586621679677699"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679677700"><span class="annot"><a href="#local-6989586621679677700"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679677699"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Data</span></span><span> </span><span class="annot"><a href="#local-6989586621679677700"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hedgehog-1.7-491273c491675cc21dc684e9f0d432f387f0f4ec3482f7b96db864fe9e6aa6fd/share/doc/html/src/Hedgehog.Internal.Property.html#CoverPercentage"><span class="hs-identifier hs-type">CoverPercentage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="#local-6989586621679677700"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="#local-6989586621679677699"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span id="coverUpivoteFailures"><span class="annot"><span class="annottext">coverUpivoteFailures :: forall (m :: * -&gt; *) a.
+(MonadTest m, HasCallStack, Data a) =&gt;
+CoverPercentage -&gt; a -&gt; m ()
+</span><a href="Byron.Spec.Ledger.Update.Test.html#coverUpivoteFailures"><span class="hs-identifier hs-var hs-var">coverUpivoteFailures</span></a></span></span><span> </span><span id="local-6989586621679677711"><span class="annot"><span class="annottext">CoverPercentage
+</span><a href="#local-6989586621679677711"><span class="hs-identifier hs-var">coverPercentage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) s a.
+(MonadTest m, HasCallStack, Data (PredicateFailure s), Data a) =&gt;
+CoverPercentage -&gt; [PredicateFailure s] -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/small-steps-1.1.2.0/l/testlib/doc/html/small-steps/src/Test.Control.State.Transition.Generator.html#coverFailures"><span class="hs-identifier hs-var">Generator.coverFailures</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Byron.Spec.Ledger.Update.html#ADDVOTE"><span class="hs-identifier hs-type">ADDVOTE</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><span class="annottext">CoverPercentage
+</span><a href="#local-6989586621679677711"><span class="hs-identifier hs-var">coverPercentage</span></a></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">PredicateFailure ADDVOTE
+AddvotePredicateFailure
+</span><a href="Byron.Spec.Ledger.Update.html#AVSigDoesNotVerify"><span class="hs-identifier hs-var">AVSigDoesNotVerify</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">UpId -&gt; AddvotePredicateFailure
+</span><a href="Byron.Spec.Ledger.Update.html#NoUpdateProposal"><span class="hs-identifier hs-var">NoUpdateProposal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; UpId
+</span><a href="Byron.Spec.Ledger.Update.html#UpId"><span class="hs-identifier hs-var">UpId</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- We need to pass a dummy update id here.</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-70"></span></pre></body></html>

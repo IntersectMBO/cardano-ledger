@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Dijkstra.State.CertState</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.html"><span class="hs-identifier">Cardano.Ledger.Conway.State</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#ConwayCertState"><span class="hs-identifier">ConwayCertState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#ConwayEraCertState"><span class="hs-identifier">ConwayEraCertState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier">EraCertState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayCertDStateL"><span class="hs-identifier">conwayCertDStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayCertPStateL"><span class="hs-identifier">conwayCertPStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayCertVStateL"><span class="hs-identifier">conwayCertVStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayCertsTotalDepositsTxBody"><span class="hs-identifier">conwayCertsTotalDepositsTxBody</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayCertsTotalRefundsTxBody"><span class="hs-identifier">conwayCertsTotalRefundsTxBody</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayObligationCertState"><span class="hs-identifier">conwayObligationCertState</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.Era.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier">DijkstraEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Dijkstra.State.Account.html"><span class="hs-identifier">Cardano.Ledger.Dijkstra.State.Account</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#EraCertState"><span class="hs-identifier hs-type">EraCertState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="CertState"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#CertState"><span class="hs-identifier hs-var">CertState</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#ConwayCertState"><span class="hs-identifier hs-type">ConwayCertState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>  </span><span id="local-6989586621679350564"><span class="annot"><span class="annottext">certDStateL :: Lens' (CertState DijkstraEra) (DState DijkstraEra)
+</span><a href="#local-6989586621679350564"><span class="hs-identifier hs-var hs-var hs-var hs-var">certDStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(DState DijkstraEra -&gt; f (DState DijkstraEra))
+-&gt; CertState DijkstraEra -&gt; f (CertState DijkstraEra)
+(DState DijkstraEra -&gt; f (DState DijkstraEra))
+-&gt; ConwayCertState DijkstraEra -&gt; f (ConwayCertState DijkstraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(DState era -&gt; f (DState era))
+-&gt; ConwayCertState era -&gt; f (ConwayCertState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayCertDStateL"><span class="hs-identifier hs-var">conwayCertDStateL</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#certDStateL"><span class="hs-pragma hs-type">certDStateL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span>  </span><span id="local-6989586621679350568"><span class="annot"><span class="annottext">certPStateL :: Lens' (CertState DijkstraEra) (PState DijkstraEra)
+</span><a href="#local-6989586621679350568"><span class="hs-identifier hs-var hs-var hs-var hs-var">certPStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PState DijkstraEra -&gt; f (PState DijkstraEra))
+-&gt; CertState DijkstraEra -&gt; f (CertState DijkstraEra)
+(PState DijkstraEra -&gt; f (PState DijkstraEra))
+-&gt; ConwayCertState DijkstraEra -&gt; f (ConwayCertState DijkstraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(PState era -&gt; f (PState era))
+-&gt; ConwayCertState era -&gt; f (ConwayCertState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayCertPStateL"><span class="hs-identifier hs-var">conwayCertPStateL</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.State.CertState.html#certPStateL"><span class="hs-pragma hs-type">certPStateL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679350572"><span class="annot"><span class="annottext">obligationCertState :: CertState DijkstraEra -&gt; Obligations
+</span><a href="#local-6989586621679350572"><span class="hs-identifier hs-var hs-var hs-var hs-var">obligationCertState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CertState DijkstraEra -&gt; Obligations
+forall era. ConwayEraCertState era =&gt; CertState era -&gt; Obligations
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayObligationCertState"><span class="hs-identifier hs-var">conwayObligationCertState</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679350576"><span class="annot"><span class="annottext">certsTotalDepositsTxBody :: EraTxBody DijkstraEra =&gt;
+PParams DijkstraEra
+-&gt; CertState DijkstraEra -&gt; TxBody DijkstraEra -&gt; Coin
+</span><a href="#local-6989586621679350576"><span class="hs-identifier hs-var hs-var hs-var hs-var">certsTotalDepositsTxBody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams DijkstraEra
+-&gt; CertState DijkstraEra -&gt; TxBody DijkstraEra -&gt; Coin
+PParams DijkstraEra
+-&gt; ConwayCertState DijkstraEra -&gt; TxBody DijkstraEra -&gt; Coin
+forall era.
+EraTxBody era =&gt;
+PParams era -&gt; ConwayCertState era -&gt; TxBody era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayCertsTotalDepositsTxBody"><span class="hs-identifier hs-var">conwayCertsTotalDepositsTxBody</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679350581"><span class="annot"><span class="annottext">certsTotalRefundsTxBody :: EraTxBody DijkstraEra =&gt;
+PParams DijkstraEra
+-&gt; CertState DijkstraEra -&gt; TxBody DijkstraEra -&gt; Coin
+</span><a href="#local-6989586621679350581"><span class="hs-identifier hs-var hs-var hs-var hs-var">certsTotalRefundsTxBody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams DijkstraEra
+-&gt; CertState DijkstraEra -&gt; TxBody DijkstraEra -&gt; Coin
+PParams DijkstraEra
+-&gt; ConwayCertState DijkstraEra -&gt; TxBody DijkstraEra -&gt; Coin
+forall era.
+(EraTxBody era, EraAccounts era) =&gt;
+PParams era -&gt; ConwayCertState era -&gt; TxBody era -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayCertsTotalRefundsTxBody"><span class="hs-identifier hs-var">conwayCertsTotalRefundsTxBody</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#ConwayEraCertState"><span class="hs-identifier hs-type">ConwayEraCertState</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#DijkstraEra"><span class="hs-identifier hs-type">DijkstraEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679350592"><span class="annot"><span class="annottext">certVStateL :: Lens' (CertState DijkstraEra) (VState DijkstraEra)
+</span><a href="#local-6989586621679350592"><span class="hs-identifier hs-var hs-var hs-var hs-var">certVStateL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(VState DijkstraEra -&gt; f (VState DijkstraEra))
+-&gt; CertState DijkstraEra -&gt; f (CertState DijkstraEra)
+(VState DijkstraEra -&gt; f (VState DijkstraEra))
+-&gt; ConwayCertState DijkstraEra -&gt; f (ConwayCertState DijkstraEra)
+forall era (f :: * -&gt; *).
+Functor f =&gt;
+(VState era -&gt; f (VState era))
+-&gt; ConwayCertState era -&gt; f (ConwayCertState era)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#conwayCertVStateL"><span class="hs-identifier hs-var">conwayCertVStateL</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-conway-1.21.0.0/doc/html/cardano-ledger-conway/src/Cardano.Ledger.Conway.State.CertState.html#certVStateL"><span class="hs-pragma hs-type">certVStateL</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-38"></span></pre></body></html>

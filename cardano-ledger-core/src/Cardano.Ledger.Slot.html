@@ -1,0 +1,451 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Slot</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier">SlotNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Slot.html#getTheSlotOfNoReturn"><span class="hs-identifier">getTheSlotOfNoReturn</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier">Duration</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Slot.html#-%2A"><span class="hs-operator">(-*)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Slot.html#%2B%2A"><span class="hs-operator">(+*)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Slot.html#%2A-"><span class="hs-operator">(*-)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier">EpochNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochSize"><span class="hs-identifier">EpochSize</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.API.html#EpochInfo"><span class="hs-identifier">EpochInfo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-comment">-- Block number</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Block.html#BlockNo"><span class="hs-identifier">BlockNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Slot.html#epochFromSlot"><span class="hs-identifier">epochFromSlot</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Slot.html#epochInfoEpoch"><span class="hs-identifier">epochInfoEpoch</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Slot.html#epochInfoFirst"><span class="hs-identifier">epochInfoFirst</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Slot.html#epochInfoSize"><span class="hs-identifier">epochInfoSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#Globals"><span class="hs-identifier">Globals</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#Globals"><span class="hs-identifier">Globals</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#stabilityWindow"><span class="hs-identifier">stabilityWindow</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier">ShelleyBase</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#epochInfoPure"><span class="hs-identifier">epochInfoPure</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Block.html"><span class="hs-identifier">Cardano.Slotting.Block</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Block.html#BlockNo"><span class="hs-identifier">BlockNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.html"><span class="hs-identifier">Cardano.Slotting.EpochInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.API.html#EpochInfo"><span class="hs-identifier">EpochInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.html"><span class="hs-identifier">Cardano.Slotting.EpochInfo</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">EI</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html"><span class="hs-identifier">Cardano.Slotting.Slot</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier">EpochNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochSize"><span class="hs-identifier">EpochSize</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier">SlotNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Reader</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Reader</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ask</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">asks</span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Identity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Identity</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">runIdentity</span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Stack</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">HasCallStack</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quiet-0.2-9225d7422c325dd8b63f688e0d6ee25919a9c576be361208829377debe40884d/share/doc/html/src/Quiet.html"><span class="hs-identifier">Quiet</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">newtype</span><span> </span><span id="Duration"><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-var">Duration</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Duration"><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-var">Duration</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unDuration"><span class="annot"><span class="annottext">Duration -&gt; Word64
+</span><a href="Cardano.Ledger.Slot.html#unDuration"><span class="hs-identifier hs-var hs-var">unDuration</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span class="hs-special">}</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679456637"><span id="local-6989586621679456642"><span class="annot"><span class="annottext">Duration -&gt; Duration -&gt; Bool
+(Duration -&gt; Duration -&gt; Bool)
+-&gt; (Duration -&gt; Duration -&gt; Bool) -&gt; Eq Duration
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Duration -&gt; Duration -&gt; Bool
+== :: Duration -&gt; Duration -&gt; Bool
+$c/= :: Duration -&gt; Duration -&gt; Bool
+/= :: Duration -&gt; Duration -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679456648"><span id="local-6989586621679456650"><span class="annot"><span class="annottext">(forall x. Duration -&gt; Rep Duration x)
+-&gt; (forall x. Rep Duration x -&gt; Duration) -&gt; Generic Duration
+forall x. Rep Duration x -&gt; Duration
+forall x. Duration -&gt; Rep Duration x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Duration -&gt; Rep Duration x
+from :: forall x. Duration -&gt; Rep Duration x
+$cto :: forall x. Rep Duration x -&gt; Duration
+to :: forall x. Rep Duration x -&gt; Duration
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679456656"><span id="local-6989586621679456660"><span id="local-6989586621679456664"><span id="local-6989586621679456668"><span id="local-6989586621679456672"><span id="local-6989586621679456676"><span id="local-6989586621679456680"><span class="annot"><span class="annottext">Eq Duration
+Eq Duration =&gt;
+(Duration -&gt; Duration -&gt; Ordering)
+-&gt; (Duration -&gt; Duration -&gt; Bool)
+-&gt; (Duration -&gt; Duration -&gt; Bool)
+-&gt; (Duration -&gt; Duration -&gt; Bool)
+-&gt; (Duration -&gt; Duration -&gt; Bool)
+-&gt; (Duration -&gt; Duration -&gt; Duration)
+-&gt; (Duration -&gt; Duration -&gt; Duration)
+-&gt; Ord Duration
+Duration -&gt; Duration -&gt; Bool
+Duration -&gt; Duration -&gt; Ordering
+Duration -&gt; Duration -&gt; Duration
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Duration -&gt; Duration -&gt; Ordering
+compare :: Duration -&gt; Duration -&gt; Ordering
+$c&lt; :: Duration -&gt; Duration -&gt; Bool
+&lt; :: Duration -&gt; Duration -&gt; Bool
+$c&lt;= :: Duration -&gt; Duration -&gt; Bool
+&lt;= :: Duration -&gt; Duration -&gt; Bool
+$c&gt; :: Duration -&gt; Duration -&gt; Bool
+&gt; :: Duration -&gt; Duration -&gt; Bool
+$c&gt;= :: Duration -&gt; Duration -&gt; Bool
+&gt;= :: Duration -&gt; Duration -&gt; Bool
+$cmax :: Duration -&gt; Duration -&gt; Duration
+max :: Duration -&gt; Duration -&gt; Duration
+$cmin :: Duration -&gt; Duration -&gt; Duration
+min :: Duration -&gt; Duration -&gt; Duration
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679456686"><span id="local-6989586621679456691"><span id="local-6989586621679456695"><span class="annot"><span class="annottext">Context -&gt; Duration -&gt; IO (Maybe ThunkInfo)
+Proxy Duration -&gt; String
+(Context -&gt; Duration -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; Duration -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy Duration -&gt; String)
+-&gt; NoThunks Duration
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; Duration -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; Duration -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; Duration -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; Duration -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy Duration -&gt; String
+showTypeOf :: Proxy Duration -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679456701"><span id="local-6989586621679456705"><span id="local-6989586621679456709"><span id="local-6989586621679456713"><span id="local-6989586621679456717"><span id="local-6989586621679456721"><span id="local-6989586621679456725"><span class="annot"><span class="annottext">Integer -&gt; Duration
+Duration -&gt; Duration
+Duration -&gt; Duration -&gt; Duration
+(Duration -&gt; Duration -&gt; Duration)
+-&gt; (Duration -&gt; Duration -&gt; Duration)
+-&gt; (Duration -&gt; Duration -&gt; Duration)
+-&gt; (Duration -&gt; Duration)
+-&gt; (Duration -&gt; Duration)
+-&gt; (Duration -&gt; Duration)
+-&gt; (Integer -&gt; Duration)
+-&gt; Num Duration
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+$c+ :: Duration -&gt; Duration -&gt; Duration
++ :: Duration -&gt; Duration -&gt; Duration
+$c- :: Duration -&gt; Duration -&gt; Duration
+- :: Duration -&gt; Duration -&gt; Duration
+$c* :: Duration -&gt; Duration -&gt; Duration
+* :: Duration -&gt; Duration -&gt; Duration
+$cnegate :: Duration -&gt; Duration
+negate :: Duration -&gt; Duration
+$cabs :: Duration -&gt; Duration
+abs :: Duration -&gt; Duration
+$csignum :: Duration -&gt; Duration
+signum :: Duration -&gt; Duration
+$cfromInteger :: Integer -&gt; Duration
+fromInteger :: Integer -&gt; Duration
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679456737"><span id="local-6989586621679456742"><span id="local-6989586621679456746"><span id="local-6989586621679456750"><span id="local-6989586621679456754"><span id="local-6989586621679456758"><span id="local-6989586621679456762"><span class="annot"><span class="annottext">Enum Duration
+Real Duration
+(Real Duration, Enum Duration) =&gt;
+(Duration -&gt; Duration -&gt; Duration)
+-&gt; (Duration -&gt; Duration -&gt; Duration)
+-&gt; (Duration -&gt; Duration -&gt; Duration)
+-&gt; (Duration -&gt; Duration -&gt; Duration)
+-&gt; (Duration -&gt; Duration -&gt; (Duration, Duration))
+-&gt; (Duration -&gt; Duration -&gt; (Duration, Duration))
+-&gt; (Duration -&gt; Integer)
+-&gt; Integral Duration
+Duration -&gt; Integer
+Duration -&gt; Duration -&gt; (Duration, Duration)
+Duration -&gt; Duration -&gt; Duration
+forall a.
+(Real a, Enum a) =&gt;
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+$cquot :: Duration -&gt; Duration -&gt; Duration
+quot :: Duration -&gt; Duration -&gt; Duration
+$crem :: Duration -&gt; Duration -&gt; Duration
+rem :: Duration -&gt; Duration -&gt; Duration
+$cdiv :: Duration -&gt; Duration -&gt; Duration
+div :: Duration -&gt; Duration -&gt; Duration
+$cmod :: Duration -&gt; Duration -&gt; Duration
+mod :: Duration -&gt; Duration -&gt; Duration
+$cquotRem :: Duration -&gt; Duration -&gt; (Duration, Duration)
+quotRem :: Duration -&gt; Duration -&gt; (Duration, Duration)
+$cdivMod :: Duration -&gt; Duration -&gt; (Duration, Duration)
+divMod :: Duration -&gt; Duration -&gt; (Duration, Duration)
+$ctoInteger :: Duration -&gt; Integer
+toInteger :: Duration -&gt; Integer
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679456772"><span class="annot"><span class="annottext">Num Duration
+Ord Duration
+(Num Duration, Ord Duration) =&gt;
+(Duration -&gt; Rational) -&gt; Real Duration
+Duration -&gt; Rational
+forall a. (Num a, Ord a) =&gt; (a -&gt; Rational) -&gt; Real a
+$ctoRational :: Duration -&gt; Rational
+toRational :: Duration -&gt; Rational
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679456778"><span id="local-6989586621679456783"><span id="local-6989586621679456787"><span id="local-6989586621679456791"><span id="local-6989586621679456795"><span id="local-6989586621679456799"><span id="local-6989586621679456803"><span id="local-6989586621679456807"><span class="annot"><span class="annottext">Int -&gt; Duration
+Duration -&gt; Int
+Duration -&gt; [Duration]
+Duration -&gt; Duration
+Duration -&gt; Duration -&gt; [Duration]
+Duration -&gt; Duration -&gt; Duration -&gt; [Duration]
+(Duration -&gt; Duration)
+-&gt; (Duration -&gt; Duration)
+-&gt; (Int -&gt; Duration)
+-&gt; (Duration -&gt; Int)
+-&gt; (Duration -&gt; [Duration])
+-&gt; (Duration -&gt; Duration -&gt; [Duration])
+-&gt; (Duration -&gt; Duration -&gt; [Duration])
+-&gt; (Duration -&gt; Duration -&gt; Duration -&gt; [Duration])
+-&gt; Enum Duration
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: Duration -&gt; Duration
+succ :: Duration -&gt; Duration
+$cpred :: Duration -&gt; Duration
+pred :: Duration -&gt; Duration
+$ctoEnum :: Int -&gt; Duration
+toEnum :: Int -&gt; Duration
+$cfromEnum :: Duration -&gt; Int
+fromEnum :: Duration -&gt; Int
+$cenumFrom :: Duration -&gt; [Duration]
+enumFrom :: Duration -&gt; [Duration]
+$cenumFromThen :: Duration -&gt; Duration -&gt; [Duration]
+enumFromThen :: Duration -&gt; Duration -&gt; [Duration]
+$cenumFromTo :: Duration -&gt; Duration -&gt; [Duration]
+enumFromTo :: Duration -&gt; Duration -&gt; [Duration]
+$cenumFromThenTo :: Duration -&gt; Duration -&gt; Duration -&gt; [Duration]
+enumFromThenTo :: Duration -&gt; Duration -&gt; Duration -&gt; [Duration]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679456812"><span id="local-6989586621679456819"><span id="local-6989586621679456825"><span class="annot"><span class="annottext">Int -&gt; Duration -&gt; ShowS
+[Duration] -&gt; ShowS
+Duration -&gt; String
+(Int -&gt; Duration -&gt; ShowS)
+-&gt; (Duration -&gt; String) -&gt; ([Duration] -&gt; ShowS) -&gt; Show Duration
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Duration -&gt; ShowS
+showsPrec :: Int -&gt; Duration -&gt; ShowS
+$cshow :: Duration -&gt; String
+show :: Duration -&gt; String
+$cshowList :: [Duration] -&gt; ShowS
+showList :: [Duration] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quiet-0.2-9225d7422c325dd8b63f688e0d6ee25919a9c576be361208829377debe40884d/share/doc/html/src/Quiet.html#Quiet"><span class="hs-identifier hs-type">Quiet</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-type">Duration</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679456869"><span id="local-6989586621679456873"><span class="annot"><span class="hs-identifier hs-type">Semigroup</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-type">Duration</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-type">Duration</span></a></span><span> </span><span id="local-6989586621679456879"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456879"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679456880"><span class="annot"><span class="annottext">&lt;&gt; :: Duration -&gt; Duration -&gt; Duration
+</span><span class="hs-operator hs-var hs-var hs-var hs-var">&lt;&gt;</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-type">Duration</span></a></span><span> </span><span id="local-6989586621679456881"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456881"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Duration
+</span><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-var">Duration</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; Duration) -&gt; Word64 -&gt; Duration
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456879"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456881"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679456887"><span id="local-6989586621679456891"><span class="annot"><span class="hs-identifier hs-type">Monoid</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-type">Duration</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679456895"><span class="annot"><span class="annottext">mempty :: Duration
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">mempty</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Duration
+</span><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-var">Duration</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Cardano.Ledger.Slot.html#-%2A"><span class="hs-operator hs-type">(-*)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-type">Duration</span></a></span><span>
+</span><span id="line-50"></span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span id="local-6989586621679456897"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456897"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span id="-%2A"><span class="annot"><span class="annottext">-* :: SlotNo -&gt; SlotNo -&gt; Duration
+</span><a href="Cardano.Ledger.Slot.html#-%2A"><span class="hs-operator hs-var hs-var">-*</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span id="local-6989586621679456898"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456898"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Duration
+</span><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-var">Duration</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456897"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456898"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456897"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456898"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456898"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456897"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Cardano.Ledger.Slot.html#%2B%2A"><span class="hs-operator hs-type">(+*)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-type">Duration</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span>
+</span><span id="line-53"></span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span id="local-6989586621679456900"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456900"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span id="%2B%2A"><span class="annot"><span class="annottext">+* :: SlotNo -&gt; Duration -&gt; SlotNo
+</span><a href="Cardano.Ledger.Slot.html#%2B%2A"><span class="hs-operator hs-var hs-var">+*</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-type">Duration</span></a></span><span> </span><span id="local-6989586621679456901"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456901"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-var">SlotNo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456900"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456901"><span class="hs-identifier hs-var">d</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><span class="hs-comment">-- | Subtract a duration from a slot</span></span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Cardano.Ledger.Slot.html#%2A-"><span class="hs-operator hs-type">(*-)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-type">Duration</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span>
+</span><span id="line-57"></span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span id="local-6989586621679456902"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456902"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span id="%2A-"><span class="annot"><span class="annottext">*- :: SlotNo -&gt; Duration -&gt; SlotNo
+</span><a href="Cardano.Ledger.Slot.html#%2A-"><span class="hs-operator hs-var hs-var">*-</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-type">Duration</span></a></span><span> </span><span id="local-6989586621679456903"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456903"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-var">SlotNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456902"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456903"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456902"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456903"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Cardano.Ledger.Slot.html#epochFromSlot"><span class="hs-identifier hs-type">epochFromSlot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Reader</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#Globals"><span class="hs-identifier hs-type">Globals</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-60"></span><span id="epochFromSlot"><span class="annot"><span class="annottext">epochFromSlot :: SlotNo -&gt; Reader Globals EpochNo
+</span><a href="Cardano.Ledger.Slot.html#epochFromSlot"><span class="hs-identifier hs-var hs-var">epochFromSlot</span></a></span></span><span> </span><span id="local-6989586621679456904"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679456904"><span class="hs-identifier hs-var">slot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679456905"><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679456905"><span class="hs-identifier hs-var">ei</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Globals -&gt; EpochInfo Identity)
+-&gt; ReaderT Globals Identity (EpochInfo Identity)
+forall r (m :: * -&gt; *) a. MonadReader r m =&gt; (r -&gt; a) -&gt; m a
+</span><span class="hs-identifier hs-var">asks</span></span><span> </span><span class="annot"><span class="annottext">Globals -&gt; EpochInfo Identity
+</span><a href="Cardano.Ledger.BaseTypes.html#epochInfoPure"><span class="hs-identifier hs-var">epochInfoPure</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><span class="annottext">EpochNo -&gt; Reader Globals EpochNo
+forall a. a -&gt; ReaderT Globals Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(EpochNo -&gt; Reader Globals EpochNo)
+-&gt; EpochNo -&gt; Reader Globals EpochNo
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; EpochInfo Identity -&gt; SlotNo -&gt; EpochNo
+EpochInfo Identity -&gt; SlotNo -&gt; EpochNo
+</span><a href="Cardano.Ledger.Slot.html#epochInfoEpoch"><span class="hs-identifier hs-var">epochInfoEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679456905"><span class="hs-identifier hs-var">ei</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679456904"><span class="hs-identifier hs-var">slot</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Cardano.Ledger.Slot.html#epochInfoEpoch"><span class="hs-identifier hs-type">epochInfoEpoch</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.API.html#EpochInfo"><span class="hs-identifier hs-type">EpochInfo</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span>
+</span><span id="line-69"></span><span id="epochInfoEpoch"><span class="annot"><span class="annottext">epochInfoEpoch :: HasCallStack =&gt; EpochInfo Identity -&gt; SlotNo -&gt; EpochNo
+</span><a href="Cardano.Ledger.Slot.html#epochInfoEpoch"><span class="hs-identifier hs-var hs-var">epochInfoEpoch</span></a></span></span><span> </span><span id="local-6989586621679456909"><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679456909"><span class="hs-identifier hs-var">ei</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Identity EpochNo -&gt; EpochNo
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span> </span><span class="annot"><span class="annottext">(Identity EpochNo -&gt; EpochNo)
+-&gt; (SlotNo -&gt; Identity EpochNo) -&gt; SlotNo -&gt; EpochNo
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity -&gt; SlotNo -&gt; Identity EpochNo
+forall (m :: * -&gt; *).
+HasCallStack =&gt;
+EpochInfo m -&gt; SlotNo -&gt; m EpochNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.API.html#epochInfoEpoch"><span class="hs-identifier hs-var">EI.epochInfoEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679456909"><span class="hs-identifier hs-var">ei</span></a></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Cardano.Ledger.Slot.html#epochInfoFirst"><span class="hs-identifier hs-type">epochInfoFirst</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.API.html#EpochInfo"><span class="hs-identifier hs-type">EpochInfo</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span>
+</span><span id="line-76"></span><span id="epochInfoFirst"><span class="annot"><span class="annottext">epochInfoFirst :: HasCallStack =&gt; EpochInfo Identity -&gt; EpochNo -&gt; SlotNo
+</span><a href="Cardano.Ledger.Slot.html#epochInfoFirst"><span class="hs-identifier hs-var hs-var">epochInfoFirst</span></a></span></span><span> </span><span id="local-6989586621679456915"><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679456915"><span class="hs-identifier hs-var">ei</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Identity SlotNo -&gt; SlotNo
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span> </span><span class="annot"><span class="annottext">(Identity SlotNo -&gt; SlotNo)
+-&gt; (EpochNo -&gt; Identity SlotNo) -&gt; EpochNo -&gt; SlotNo
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity -&gt; EpochNo -&gt; Identity SlotNo
+forall (m :: * -&gt; *).
+HasCallStack =&gt;
+EpochInfo m -&gt; EpochNo -&gt; m SlotNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.API.html#epochInfoFirst"><span class="hs-identifier hs-var">EI.epochInfoFirst</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679456915"><span class="hs-identifier hs-var">ei</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Cardano.Ledger.Slot.html#epochInfoSize"><span class="hs-identifier hs-type">epochInfoSize</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.API.html#EpochInfo"><span class="hs-identifier hs-type">EpochInfo</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochSize"><span class="hs-identifier hs-type">EpochSize</span></a></span><span>
+</span><span id="line-83"></span><span id="epochInfoSize"><span class="annot"><span class="annottext">epochInfoSize :: HasCallStack =&gt; EpochInfo Identity -&gt; EpochNo -&gt; EpochSize
+</span><a href="Cardano.Ledger.Slot.html#epochInfoSize"><span class="hs-identifier hs-var hs-var">epochInfoSize</span></a></span></span><span> </span><span id="local-6989586621679456920"><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679456920"><span class="hs-identifier hs-var">ei</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Identity EpochSize -&gt; EpochSize
+forall a. Identity a -&gt; a
+</span><span class="hs-identifier hs-var">runIdentity</span></span><span> </span><span class="annot"><span class="annottext">(Identity EpochSize -&gt; EpochSize)
+-&gt; (EpochNo -&gt; Identity EpochSize) -&gt; EpochNo -&gt; EpochSize
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity -&gt; EpochNo -&gt; Identity EpochSize
+forall (m :: * -&gt; *).
+HasCallStack =&gt;
+EpochInfo m -&gt; EpochNo -&gt; m EpochSize
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.EpochInfo.API.html#epochInfoSize"><span class="hs-identifier hs-var">EI.epochInfoSize</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679456920"><span class="hs-identifier hs-var">ei</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- | Figure out a slot number that is two stability windows before the end of the next</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- epoch. Together with the slot number we also return the current epoch number and the</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- next epoch number.</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- The reason why it is called the point of no return, is because that is the point when</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- HardForkCombinator (HFC) initiates a controlled hard fork, if there is a major protocol</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- version update that forks into a new era.</span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Cardano.Ledger.Slot.html#getTheSlotOfNoReturn"><span class="hs-identifier hs-type">getTheSlotOfNoReturn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#ShelleyBase"><span class="hs-identifier hs-type">ShelleyBase</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#SlotNo"><span class="hs-identifier hs-type">SlotNo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-slotting-0.2.0.1-cbaa0d455a08b054bafb132b87b34221d87bbbacf98d60661b1ed3cfc20b13c4/share/doc/html/src/Cardano.Slotting.Slot.html#EpochNo"><span class="hs-identifier hs-type">EpochNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span id="getTheSlotOfNoReturn"><span class="annot"><span class="annottext">getTheSlotOfNoReturn :: HasCallStack =&gt; SlotNo -&gt; ShelleyBase (EpochNo, SlotNo, EpochNo)
+</span><a href="Cardano.Ledger.Slot.html#getTheSlotOfNoReturn"><span class="hs-identifier hs-var hs-var">getTheSlotOfNoReturn</span></a></span></span><span> </span><span id="local-6989586621679456926"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679456926"><span class="hs-identifier hs-var">slot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621679456927"><span class="annot"><span class="annottext">globals :: Globals
+</span><a href="#local-6989586621679456927"><span class="hs-identifier hs-var">globals</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html#Globals"><span class="hs-identifier hs-type">Globals</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679456928"><span class="annot"><span class="annottext">Word64
+stabilityWindow :: Globals -&gt; Word64
+stabilityWindow :: Word64
+</span><a href="Cardano.Ledger.BaseTypes.html#stabilityWindow"><span class="hs-identifier hs-var hs-var">stabilityWindow</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReaderT Globals Identity Globals
+forall r (m :: * -&gt; *). MonadReader r m =&gt; m r
+</span><span class="hs-identifier hs-var">ask</span></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679456929"><span class="annot"><span class="annottext">epochInfo :: EpochInfo Identity
+</span><a href="#local-6989586621679456929"><span class="hs-identifier hs-var hs-var">epochInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Globals -&gt; EpochInfo Identity
+</span><a href="Cardano.Ledger.BaseTypes.html#epochInfoPure"><span class="hs-identifier hs-var">epochInfoPure</span></a></span><span> </span><span class="annot"><span class="annottext">Globals
+</span><a href="#local-6989586621679456927"><span class="hs-identifier hs-var">globals</span></a></span><span>
+</span><span id="line-96"></span><span>      </span><span id="local-6989586621679456932"><span class="annot"><span class="annottext">epochNo :: EpochNo
+</span><a href="#local-6989586621679456932"><span class="hs-identifier hs-var hs-var">epochNo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; EpochInfo Identity -&gt; SlotNo -&gt; EpochNo
+EpochInfo Identity -&gt; SlotNo -&gt; EpochNo
+</span><a href="Cardano.Ledger.Slot.html#epochInfoEpoch"><span class="hs-identifier hs-var">epochInfoEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679456929"><span class="hs-identifier hs-var">epochInfo</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679456926"><span class="hs-identifier hs-var">slot</span></a></span><span>
+</span><span id="line-97"></span><span>      </span><span id="local-6989586621679456935"><span class="annot"><span class="annottext">nextEpochNo :: EpochNo
+</span><a href="#local-6989586621679456935"><span class="hs-identifier hs-var hs-var">nextEpochNo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochNo -&gt; EpochNo
+forall a. Enum a =&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">succ</span></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679456932"><span class="hs-identifier hs-var">epochNo</span></a></span><span>
+</span><span id="line-98"></span><span>      </span><span id="local-6989586621679456939"><span class="annot"><span class="annottext">firstSlotNextEpoch :: SlotNo
+</span><a href="#local-6989586621679456939"><span class="hs-identifier hs-var hs-var">firstSlotNextEpoch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; EpochInfo Identity -&gt; EpochNo -&gt; SlotNo
+EpochInfo Identity -&gt; EpochNo -&gt; SlotNo
+</span><a href="Cardano.Ledger.Slot.html#epochInfoFirst"><span class="hs-identifier hs-var">epochInfoFirst</span></a></span><span> </span><span class="annot"><span class="annottext">EpochInfo Identity
+</span><a href="#local-6989586621679456929"><span class="hs-identifier hs-var">epochInfo</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679456935"><span class="hs-identifier hs-var">nextEpochNo</span></a></span><span>
+</span><span id="line-99"></span><span>      </span><span id="local-6989586621679456942"><span class="annot"><span class="annottext">pointOfNoReturn :: SlotNo
+</span><a href="#local-6989586621679456942"><span class="hs-identifier hs-var hs-var">pointOfNoReturn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679456939"><span class="hs-identifier hs-var">firstSlotNextEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo -&gt; Duration -&gt; SlotNo
+</span><a href="Cardano.Ledger.Slot.html#%2A-"><span class="hs-operator hs-var">*-</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Duration
+</span><a href="Cardano.Ledger.Slot.html#Duration"><span class="hs-identifier hs-var">Duration</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679456928"><span class="hs-identifier hs-var">stabilityWindow</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="annottext">(EpochNo, SlotNo, EpochNo)
+-&gt; ShelleyBase (EpochNo, SlotNo, EpochNo)
+forall a. a -&gt; ReaderT Globals Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679456932"><span class="hs-identifier hs-var">epochNo</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621679456942"><span class="hs-identifier hs-var">pointOfNoReturn</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679456935"><span class="hs-identifier hs-var">nextEpochNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span></pre></body></html>

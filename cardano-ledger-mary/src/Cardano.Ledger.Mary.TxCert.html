@@ -1,0 +1,264 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Mary.TxCert</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Mary.Era.html"><span class="hs-identifier">Cardano.Ledger.Mary.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier">MaryEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Mary.PParams.html"><span class="hs-identifier">Cardano.Ledger.Mary.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html"><span class="hs-identifier">Cardano.Ledger.Shelley.TxCert</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#EraTxCert"><span class="hs-identifier">EraTxCert</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#PoolCert"><span class="hs-identifier">PoolCert</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyDelegCert"><span class="hs-identifier">ShelleyDelegCert</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyEraTxCert"><span class="hs-identifier">ShelleyEraTxCert</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCert"><span class="hs-identifier">ShelleyTxCert</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#getScriptWitnessShelleyTxCert"><span class="hs-identifier">getScriptWitnessShelleyTxCert</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#getVKeyWitnessShelleyTxCert"><span class="hs-identifier">getVKeyWitnessShelleyTxCert</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#shelleyTotalDepositsTxCerts"><span class="hs-identifier">shelleyTotalDepositsTxCerts</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#shelleyTotalRefundsTxCerts"><span class="hs-identifier">shelleyTotalRefundsTxCerts</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#upgradeShelleyTxCert"><span class="hs-identifier">upgradeShelleyTxCert</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#RegTxCert"><span class="hs-identifier">RegTxCert</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#UnRegTxCert"><span class="hs-identifier">UnRegTxCert</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#EraTxCert"><span class="hs-identifier hs-type">EraTxCert</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="TxCert"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#TxCert"><span class="hs-identifier hs-var">TxCert</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCert"><span class="hs-identifier hs-type">ShelleyTxCert</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>  </span><span id="local-6989586621679282359"><span class="annot"><span class="annottext">upgradeTxCert :: EraTxCert (PreviousEra MaryEra) =&gt;
+TxCert (PreviousEra MaryEra)
+-&gt; Either (TxCertUpgradeError MaryEra) (TxCert MaryEra)
+</span><a href="#local-6989586621679282359"><span class="hs-identifier hs-var hs-var hs-var hs-var">upgradeTxCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyTxCert MaryEra -&gt; Either Void (ShelleyTxCert MaryEra)
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">(ShelleyTxCert MaryEra -&gt; Either Void (ShelleyTxCert MaryEra))
+-&gt; (ShelleyTxCert AllegraEra -&gt; ShelleyTxCert MaryEra)
+-&gt; ShelleyTxCert AllegraEra
+-&gt; Either Void (ShelleyTxCert MaryEra)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ShelleyTxCert AllegraEra -&gt; ShelleyTxCert MaryEra
+forall era1 era2. ShelleyTxCert era1 -&gt; ShelleyTxCert era2
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#upgradeShelleyTxCert"><span class="hs-identifier hs-var">upgradeShelleyTxCert</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>  </span><span id="local-6989586621679282362"><span class="annot"><span class="annottext">getVKeyWitnessTxCert :: TxCert MaryEra -&gt; Maybe (KeyHash 'Witness)
+</span><a href="#local-6989586621679282362"><span class="hs-identifier hs-var hs-var hs-var hs-var">getVKeyWitnessTxCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxCert MaryEra -&gt; Maybe (KeyHash 'Witness)
+ShelleyTxCert MaryEra -&gt; Maybe (KeyHash 'Witness)
+forall era. ShelleyTxCert era -&gt; Maybe (KeyHash 'Witness)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#getVKeyWitnessShelleyTxCert"><span class="hs-identifier hs-var">getVKeyWitnessShelleyTxCert</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679282364"><span class="annot"><span class="annottext">getScriptWitnessTxCert :: TxCert MaryEra -&gt; Maybe ScriptHash
+</span><a href="#local-6989586621679282364"><span class="hs-identifier hs-var hs-var hs-var hs-var">getScriptWitnessTxCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxCert MaryEra -&gt; Maybe ScriptHash
+ShelleyTxCert MaryEra -&gt; Maybe ScriptHash
+forall era. ShelleyTxCert era -&gt; Maybe ScriptHash
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#getScriptWitnessShelleyTxCert"><span class="hs-identifier hs-var">getScriptWitnessShelleyTxCert</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679282366"><span class="annot"><span class="annottext">mkRegPoolTxCert :: PoolParams -&gt; TxCert MaryEra
+</span><a href="#local-6989586621679282366"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkRegPoolTxCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PoolCert -&gt; ShelleyTxCert MaryEra
+forall era. PoolCert -&gt; ShelleyTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertPool"><span class="hs-identifier hs-var">ShelleyTxCertPool</span></a></span><span> </span><span class="annot"><span class="annottext">(PoolCert -&gt; ShelleyTxCert MaryEra)
+-&gt; (PoolParams -&gt; PoolCert) -&gt; PoolParams -&gt; ShelleyTxCert MaryEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PoolParams -&gt; PoolCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#RegPool"><span class="hs-identifier hs-var">RegPool</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679282370"><span class="annot"><span class="annottext">getRegPoolTxCert :: TxCert MaryEra -&gt; Maybe PoolParams
+</span><a href="#local-6989586621679282370"><span class="hs-identifier hs-var hs-var hs-var hs-var">getRegPoolTxCert</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertPool"><span class="hs-identifier hs-type">ShelleyTxCertPool</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#RegPool"><span class="hs-identifier hs-type">RegPool</span></a></span><span> </span><span id="local-6989586621679282372"><span class="annot"><span class="annottext">PoolParams
+</span><a href="#local-6989586621679282372"><span class="hs-identifier hs-var">poolParams</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PoolParams -&gt; Maybe PoolParams
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">PoolParams
+</span><a href="#local-6989586621679282372"><span class="hs-identifier hs-var">poolParams</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#getRegPoolTxCert"><span class="hs-identifier hs-var">getRegPoolTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert MaryEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe PoolParams
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621679282373"><span class="annot"><span class="annottext">mkRetirePoolTxCert :: KeyHash 'StakePool -&gt; EpochNo -&gt; TxCert MaryEra
+</span><a href="#local-6989586621679282373"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkRetirePoolTxCert</span></a></span></span><span> </span><span id="local-6989586621679282375"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679282375"><span class="hs-identifier hs-var">poolId</span></a></span></span><span> </span><span id="local-6989586621679282376"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679282376"><span class="hs-identifier hs-var">epochNo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PoolCert -&gt; ShelleyTxCert MaryEra
+forall era. PoolCert -&gt; ShelleyTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertPool"><span class="hs-identifier hs-var">ShelleyTxCertPool</span></a></span><span> </span><span class="annot"><span class="annottext">(PoolCert -&gt; ShelleyTxCert MaryEra)
+-&gt; PoolCert -&gt; ShelleyTxCert MaryEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool -&gt; EpochNo -&gt; PoolCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#RetirePool"><span class="hs-identifier hs-var">RetirePool</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679282375"><span class="hs-identifier hs-var">poolId</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679282376"><span class="hs-identifier hs-var">epochNo</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679282378"><span class="annot"><span class="annottext">getRetirePoolTxCert :: TxCert MaryEra -&gt; Maybe (KeyHash 'StakePool, EpochNo)
+</span><a href="#local-6989586621679282378"><span class="hs-identifier hs-var hs-var hs-var hs-var">getRetirePoolTxCert</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertPool"><span class="hs-identifier hs-type">ShelleyTxCertPool</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#RetirePool"><span class="hs-identifier hs-type">RetirePool</span></a></span><span> </span><span id="local-6989586621679282380"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679282380"><span class="hs-identifier hs-var">poolId</span></a></span></span><span> </span><span id="local-6989586621679282381"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679282381"><span class="hs-identifier hs-var">epochNo</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(KeyHash 'StakePool, EpochNo)
+-&gt; Maybe (KeyHash 'StakePool, EpochNo)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679282380"><span class="hs-identifier hs-var">poolId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621679282381"><span class="hs-identifier hs-var">epochNo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.TxCert.html#getRetirePoolTxCert"><span class="hs-identifier hs-var">getRetirePoolTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert MaryEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (KeyHash 'StakePool, EpochNo)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679282383"><span class="annot"><span class="annottext">lookupRegStakeTxCert :: TxCert MaryEra -&gt; Maybe (Credential 'Staking)
+</span><a href="#local-6989586621679282383"><span class="hs-identifier hs-var hs-var hs-var hs-var">lookupRegStakeTxCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#RegTxCert"><span class="hs-identifier hs-type">RegTxCert</span></a></span><span> </span><span id="local-6989586621679282385"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282385"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; Maybe (Credential 'Staking)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282385"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">TxCert MaryEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (Credential 'Staking)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679282387"><span class="annot"><span class="annottext">lookupUnRegStakeTxCert :: TxCert MaryEra -&gt; Maybe (Credential 'Staking)
+</span><a href="#local-6989586621679282387"><span class="hs-identifier hs-var hs-var hs-var hs-var">lookupUnRegStakeTxCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#UnRegTxCert"><span class="hs-identifier hs-type">UnRegTxCert</span></a></span><span> </span><span id="local-6989586621679282389"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282389"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; Maybe (Credential 'Staking)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282389"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">TxCert MaryEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (Credential 'Staking)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679282395"><span class="annot"><span class="annottext">getTotalDepositsTxCerts :: forall (f :: * -&gt; *).
+Foldable f =&gt;
+PParams MaryEra
+-&gt; (KeyHash 'StakePool -&gt; Bool) -&gt; f (TxCert MaryEra) -&gt; Coin
+</span><a href="#local-6989586621679282395"><span class="hs-identifier hs-var hs-var hs-var hs-var">getTotalDepositsTxCerts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams MaryEra
+-&gt; (KeyHash 'StakePool -&gt; Bool) -&gt; f (TxCert MaryEra) -&gt; Coin
+forall era (f :: * -&gt; *).
+(EraPParams era, Foldable f, EraTxCert era) =&gt;
+PParams era
+-&gt; (KeyHash 'StakePool -&gt; Bool) -&gt; f (TxCert era) -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#shelleyTotalDepositsTxCerts"><span class="hs-identifier hs-var">shelleyTotalDepositsTxCerts</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679282401"><span class="annot"><span class="annottext">getTotalRefundsTxCerts :: forall (f :: * -&gt; *).
+Foldable f =&gt;
+PParams MaryEra
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; (Credential 'DRepRole -&gt; Maybe Coin)
+-&gt; f (TxCert MaryEra)
+-&gt; Coin
+</span><a href="#local-6989586621679282401"><span class="hs-identifier hs-var hs-var hs-var hs-var">getTotalRefundsTxCerts</span></a></span></span><span> </span><span id="local-6989586621679282403"><span class="annot"><span class="annottext">PParams MaryEra
+</span><a href="#local-6989586621679282403"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621679282404"><span class="annot"><span class="annottext">Credential 'Staking -&gt; Maybe Coin
+</span><a href="#local-6989586621679282404"><span class="hs-identifier hs-var">lookupStakeDeposit</span></a></span></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole -&gt; Maybe Coin
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PParams MaryEra
+-&gt; (Credential 'Staking -&gt; Maybe Coin)
+-&gt; f (TxCert MaryEra)
+-&gt; Coin
+forall era (f :: * -&gt; *).
+(EraPParams era, Foldable f, EraTxCert era) =&gt;
+PParams era
+-&gt; (Credential 'Staking -&gt; Maybe Coin) -&gt; f (TxCert era) -&gt; Coin
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#shelleyTotalRefundsTxCerts"><span class="hs-identifier hs-var">shelleyTotalRefundsTxCerts</span></a></span><span> </span><span class="annot"><span class="annottext">PParams MaryEra
+</span><a href="#local-6989586621679282403"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; Maybe Coin
+</span><a href="#local-6989586621679282404"><span class="hs-identifier hs-var">lookupStakeDeposit</span></a></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyEraTxCert"><span class="hs-identifier hs-type">ShelleyEraTxCert</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679282418"><span class="annot"><span class="annottext">mkRegTxCert :: Credential 'Staking -&gt; TxCert MaryEra
+</span><a href="#local-6989586621679282418"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkRegTxCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyDelegCert -&gt; ShelleyTxCert MaryEra
+forall era. ShelleyDelegCert -&gt; ShelleyTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertDelegCert"><span class="hs-identifier hs-var">ShelleyTxCertDelegCert</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyDelegCert -&gt; ShelleyTxCert MaryEra)
+-&gt; (Credential 'Staking -&gt; ShelleyDelegCert)
+-&gt; Credential 'Staking
+-&gt; ShelleyTxCert MaryEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; ShelleyDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyRegCert"><span class="hs-identifier hs-var">ShelleyRegCert</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679282422"><span class="annot"><span class="annottext">getRegTxCert :: TxCert MaryEra -&gt; Maybe (Credential 'Staking)
+</span><a href="#local-6989586621679282422"><span class="hs-identifier hs-var hs-var hs-var hs-var">getRegTxCert</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertDelegCert"><span class="hs-identifier hs-type">ShelleyTxCertDelegCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyRegCert"><span class="hs-identifier hs-type">ShelleyRegCert</span></a></span><span> </span><span id="local-6989586621679282424"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282424"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; Maybe (Credential 'Staking)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282424"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#getRegTxCert"><span class="hs-identifier hs-var">getRegTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert MaryEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Credential 'Staking)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679282425"><span class="annot"><span class="annottext">mkUnRegTxCert :: Credential 'Staking -&gt; TxCert MaryEra
+</span><a href="#local-6989586621679282425"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkUnRegTxCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyDelegCert -&gt; ShelleyTxCert MaryEra
+forall era. ShelleyDelegCert -&gt; ShelleyTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertDelegCert"><span class="hs-identifier hs-var">ShelleyTxCertDelegCert</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyDelegCert -&gt; ShelleyTxCert MaryEra)
+-&gt; (Credential 'Staking -&gt; ShelleyDelegCert)
+-&gt; Credential 'Staking
+-&gt; ShelleyTxCert MaryEra
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; ShelleyDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyUnRegCert"><span class="hs-identifier hs-var">ShelleyUnRegCert</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679282428"><span class="annot"><span class="annottext">getUnRegTxCert :: TxCert MaryEra -&gt; Maybe (Credential 'Staking)
+</span><a href="#local-6989586621679282428"><span class="hs-identifier hs-var hs-var hs-var hs-var">getUnRegTxCert</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertDelegCert"><span class="hs-identifier hs-type">ShelleyTxCertDelegCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyUnRegCert"><span class="hs-identifier hs-type">ShelleyUnRegCert</span></a></span><span> </span><span id="local-6989586621679282430"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282430"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; Maybe (Credential 'Staking)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282430"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#getUnRegTxCert"><span class="hs-identifier hs-var">getUnRegTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert MaryEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Credential 'Staking)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621679282431"><span class="annot"><span class="annottext">mkDelegStakeTxCert :: Credential 'Staking -&gt; KeyHash 'StakePool -&gt; TxCert MaryEra
+</span><a href="#local-6989586621679282431"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkDelegStakeTxCert</span></a></span></span><span> </span><span id="local-6989586621679282433"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282433"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679282434"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679282434"><span class="hs-identifier hs-var">kh</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyDelegCert -&gt; ShelleyTxCert MaryEra
+forall era. ShelleyDelegCert -&gt; ShelleyTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertDelegCert"><span class="hs-identifier hs-var">ShelleyTxCertDelegCert</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyDelegCert -&gt; ShelleyTxCert MaryEra)
+-&gt; ShelleyDelegCert -&gt; ShelleyTxCert MaryEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking -&gt; KeyHash 'StakePool -&gt; ShelleyDelegCert
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyDelegCert"><span class="hs-identifier hs-var">ShelleyDelegCert</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282433"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679282434"><span class="hs-identifier hs-var">kh</span></a></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679282436"><span class="annot"><span class="annottext">getDelegStakeTxCert :: TxCert MaryEra -&gt; Maybe (Credential 'Staking, KeyHash 'StakePool)
+</span><a href="#local-6989586621679282436"><span class="hs-identifier hs-var hs-var hs-var hs-var">getDelegStakeTxCert</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertDelegCert"><span class="hs-identifier hs-type">ShelleyTxCertDelegCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyDelegCert"><span class="hs-identifier hs-type">ShelleyDelegCert</span></a></span><span> </span><span id="local-6989586621679282438"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282438"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679282439"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679282439"><span class="hs-identifier hs-var">kh</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Credential 'Staking, KeyHash 'StakePool)
+-&gt; Maybe (Credential 'Staking, KeyHash 'StakePool)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679282438"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679282439"><span class="hs-identifier hs-var">kh</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#getDelegStakeTxCert"><span class="hs-identifier hs-var">getDelegStakeTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert MaryEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Credential 'Staking, KeyHash 'StakePool)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621679282441"><span class="annot"><span class="annottext">mkGenesisDelegTxCert :: AtMostEra &quot;Babbage&quot; MaryEra =&gt; GenesisDelegCert -&gt; TxCert MaryEra
+</span><a href="#local-6989586621679282441"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkGenesisDelegTxCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenesisDelegCert -&gt; TxCert MaryEra
+GenesisDelegCert -&gt; ShelleyTxCert MaryEra
+forall era. GenesisDelegCert -&gt; ShelleyTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertGenesisDeleg"><span class="hs-identifier hs-var">ShelleyTxCertGenesisDeleg</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621679282445"><span class="annot"><span class="annottext">getGenesisDelegTxCert :: AtMostEra &quot;Babbage&quot; MaryEra =&gt;
+TxCert MaryEra -&gt; Maybe GenesisDelegCert
+</span><a href="#local-6989586621679282445"><span class="hs-identifier hs-var hs-var hs-var hs-var">getGenesisDelegTxCert</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertGenesisDeleg"><span class="hs-identifier hs-type">ShelleyTxCertGenesisDeleg</span></a></span><span> </span><span id="local-6989586621679282447"><span class="annot"><span class="annottext">GenesisDelegCert
+</span><a href="#local-6989586621679282447"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">GenesisDelegCert -&gt; Maybe GenesisDelegCert
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">GenesisDelegCert
+</span><a href="#local-6989586621679282447"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#getGenesisDelegTxCert"><span class="hs-identifier hs-var">getGenesisDelegTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert MaryEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe GenesisDelegCert
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679282449"><span class="annot"><span class="annottext">mkMirTxCert :: AtMostEra &quot;Babbage&quot; MaryEra =&gt; MIRCert -&gt; TxCert MaryEra
+</span><a href="#local-6989586621679282449"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkMirTxCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MIRCert -&gt; TxCert MaryEra
+MIRCert -&gt; ShelleyTxCert MaryEra
+forall era. MIRCert -&gt; ShelleyTxCert era
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertMir"><span class="hs-identifier hs-var">ShelleyTxCertMir</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>  </span><span id="local-6989586621679282453"><span class="annot"><span class="annottext">getMirTxCert :: AtMostEra &quot;Babbage&quot; MaryEra =&gt; TxCert MaryEra -&gt; Maybe MIRCert
+</span><a href="#local-6989586621679282453"><span class="hs-identifier hs-var hs-var hs-var hs-var">getMirTxCert</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#ShelleyTxCertMir"><span class="hs-identifier hs-type">ShelleyTxCertMir</span></a></span><span> </span><span id="local-6989586621679282455"><span class="annot"><span class="annottext">MIRCert
+</span><a href="#local-6989586621679282455"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MIRCert -&gt; Maybe MIRCert
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">MIRCert
+</span><a href="#local-6989586621679282455"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-shelley-1.17.2.0/doc/html/cardano-ledger-shelley/src/Cardano.Ledger.Shelley.TxCert.html#getMirTxCert"><span class="hs-identifier hs-var">getMirTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert MaryEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe MIRCert
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-80"></span></pre></body></html>

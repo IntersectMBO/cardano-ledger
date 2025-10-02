@@ -1,0 +1,626 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE DefaultSignatures #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-redundant-constraints #-}</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.BaseTypes.NonZero</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#KnownBounds"><span class="hs-identifier">KnownBounds</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier">HasZero</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#WithinBounds"><span class="hs-identifier">WithinBounds</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier">NonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#unNonZero"><span class="hs-identifier">unNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZero"><span class="hs-identifier">nonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#knownNonZero"><span class="hs-identifier">knownNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#knownNonZeroBounded"><span class="hs-identifier">knownNonZeroBounded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#%25."><span class="hs-operator">(%.)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#bindNonZero"><span class="hs-identifier">bindNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#mapNonZero"><span class="hs-identifier">mapNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#unsafeNonZero"><span class="hs-identifier">unsafeNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#toIntegerNonZero"><span class="hs-identifier">toIntegerNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#%2F."><span class="hs-operator">(/.)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZeroOr"><span class="hs-identifier">nonZeroOr</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#recipNonZero"><span class="hs-identifier">recipNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#negateNonZero"><span class="hs-identifier">negateNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#mulNonZero"><span class="hs-identifier">mulNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#mulNonZeroNat"><span class="hs-identifier">mulNonZeroNat</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#toRatioNonZero"><span class="hs-identifier">toRatioNonZero</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#%25%3F"><span class="hs-operator">(%?)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromMaybe</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Ratio</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Ratio</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">numerator</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(%)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Typeable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Typeable</span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Word</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Word16</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Word32</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Word64</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Word8</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.TypeLits</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">class</span><span> </span><span id="KnownBounds"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#KnownBounds"><span class="hs-identifier hs-var">KnownBounds</span></a></span></span><span> </span><span id="local-6989586621679427588"><span class="annot"><a href="#local-6989586621679427588"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="MinBound"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MinBound"><span class="hs-identifier hs-var">MinBound</span></a></span></span><span> </span><span id="local-6989586621679427588"><span class="annot"><a href="#local-6989586621679427588"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Nat</span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="MaxBound"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MaxBound"><span class="hs-identifier hs-var">MaxBound</span></a></span></span><span> </span><span id="local-6989586621679427588"><span class="annot"><a href="#local-6989586621679427588"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Nat</span></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#KnownBounds"><span class="hs-identifier hs-type">KnownBounds</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="MinBound"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MinBound"><span class="hs-identifier hs-var">MinBound</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0</span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="MaxBound"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MaxBound"><span class="hs-identifier hs-var">MaxBound</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0xFF</span></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#KnownBounds"><span class="hs-identifier hs-type">KnownBounds</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="MinBound"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MinBound"><span class="hs-identifier hs-var">MinBound</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="MaxBound"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MaxBound"><span class="hs-identifier hs-var">MaxBound</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0xFFFF</span></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#KnownBounds"><span class="hs-identifier hs-type">KnownBounds</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="MinBound"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MinBound"><span class="hs-identifier hs-var">MinBound</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0</span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="MaxBound"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MaxBound"><span class="hs-identifier hs-var">MaxBound</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0xFFFFFFFF</span></span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#KnownBounds"><span class="hs-identifier hs-type">KnownBounds</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="MinBound"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MinBound"><span class="hs-identifier hs-var">MinBound</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0</span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="MaxBound"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MaxBound"><span class="hs-identifier hs-var">MaxBound</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0xFFFFFFFFFFFFFFFF</span></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">type</span><span> </span><span id="WithinBounds"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#WithinBounds"><span class="hs-identifier hs-var">WithinBounds</span></a></span></span><span> </span><span id="local-6989586621679427778"><span class="annot"><a href="#local-6989586621679427778"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span id="local-6989586621679427779"><span class="annot"><a href="#local-6989586621679427779"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MinBound"><span class="hs-identifier hs-type">MinBound</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427779"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;=</span></span><span> </span><span class="annot"><a href="#local-6989586621679427778"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679427778"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;=</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#MaxBound"><span class="hs-identifier hs-type">MaxBound</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427779"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">newtype</span><span> </span><span id="NonZero"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span></span><span> </span><span id="local-6989586621679427589"><span class="annot"><a href="#local-6989586621679427589"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NonZero"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unNonZero"><span class="annot"><span class="annottext">forall a. NonZero a -&gt; a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#unNonZero"><span class="hs-identifier hs-var hs-var">unNonZero</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679427589"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679427783"><span id="local-6989586621679427787"><span class="annot"><span class="annottext">NonZero a -&gt; NonZero a -&gt; Bool
+(NonZero a -&gt; NonZero a -&gt; Bool)
+-&gt; (NonZero a -&gt; NonZero a -&gt; Bool) -&gt; Eq (NonZero a)
+forall a. Eq a =&gt; NonZero a -&gt; NonZero a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. Eq a =&gt; NonZero a -&gt; NonZero a -&gt; Bool
+== :: NonZero a -&gt; NonZero a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; NonZero a -&gt; NonZero a -&gt; Bool
+/= :: NonZero a -&gt; NonZero a -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679427797"><span id="local-6989586621679427801"><span id="local-6989586621679427805"><span id="local-6989586621679427809"><span id="local-6989586621679427813"><span id="local-6989586621679427817"><span id="local-6989586621679427821"><span class="annot"><span class="annottext">Eq (NonZero a)
+Eq (NonZero a) =&gt;
+(NonZero a -&gt; NonZero a -&gt; Ordering)
+-&gt; (NonZero a -&gt; NonZero a -&gt; Bool)
+-&gt; (NonZero a -&gt; NonZero a -&gt; Bool)
+-&gt; (NonZero a -&gt; NonZero a -&gt; Bool)
+-&gt; (NonZero a -&gt; NonZero a -&gt; Bool)
+-&gt; (NonZero a -&gt; NonZero a -&gt; NonZero a)
+-&gt; (NonZero a -&gt; NonZero a -&gt; NonZero a)
+-&gt; Ord (NonZero a)
+NonZero a -&gt; NonZero a -&gt; Bool
+NonZero a -&gt; NonZero a -&gt; Ordering
+NonZero a -&gt; NonZero a -&gt; NonZero a
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. Ord a =&gt; Eq (NonZero a)
+forall a. Ord a =&gt; NonZero a -&gt; NonZero a -&gt; Bool
+forall a. Ord a =&gt; NonZero a -&gt; NonZero a -&gt; Ordering
+forall a. Ord a =&gt; NonZero a -&gt; NonZero a -&gt; NonZero a
+$ccompare :: forall a. Ord a =&gt; NonZero a -&gt; NonZero a -&gt; Ordering
+compare :: NonZero a -&gt; NonZero a -&gt; Ordering
+$c&lt; :: forall a. Ord a =&gt; NonZero a -&gt; NonZero a -&gt; Bool
+&lt; :: NonZero a -&gt; NonZero a -&gt; Bool
+$c&lt;= :: forall a. Ord a =&gt; NonZero a -&gt; NonZero a -&gt; Bool
+&lt;= :: NonZero a -&gt; NonZero a -&gt; Bool
+$c&gt; :: forall a. Ord a =&gt; NonZero a -&gt; NonZero a -&gt; Bool
+&gt; :: NonZero a -&gt; NonZero a -&gt; Bool
+$c&gt;= :: forall a. Ord a =&gt; NonZero a -&gt; NonZero a -&gt; Bool
+&gt;= :: NonZero a -&gt; NonZero a -&gt; Bool
+$cmax :: forall a. Ord a =&gt; NonZero a -&gt; NonZero a -&gt; NonZero a
+max :: NonZero a -&gt; NonZero a -&gt; NonZero a
+$cmin :: forall a. Ord a =&gt; NonZero a -&gt; NonZero a -&gt; NonZero a
+min :: NonZero a -&gt; NonZero a -&gt; NonZero a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679427829"><span id="local-6989586621679427834"><span id="local-6989586621679427838"><span class="annot"><span class="annottext">Int -&gt; NonZero a -&gt; ShowS
+[NonZero a] -&gt; ShowS
+NonZero a -&gt; String
+(Int -&gt; NonZero a -&gt; ShowS)
+-&gt; (NonZero a -&gt; String)
+-&gt; ([NonZero a] -&gt; ShowS)
+-&gt; Show (NonZero a)
+forall a. Show a =&gt; Int -&gt; NonZero a -&gt; ShowS
+forall a. Show a =&gt; [NonZero a] -&gt; ShowS
+forall a. Show a =&gt; NonZero a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; NonZero a -&gt; ShowS
+showsPrec :: Int -&gt; NonZero a -&gt; ShowS
+$cshow :: forall a. Show a =&gt; NonZero a -&gt; String
+show :: NonZero a -&gt; String
+$cshowList :: forall a. Show a =&gt; [NonZero a] -&gt; ShowS
+showList :: [NonZero a] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679427843"><span id="local-6989586621679427847"><span id="local-6989586621679427851"><span class="annot"><span class="annottext">Context -&gt; NonZero a -&gt; IO (Maybe ThunkInfo)
+Proxy (NonZero a) -&gt; String
+(Context -&gt; NonZero a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; NonZero a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (NonZero a) -&gt; String)
+-&gt; NoThunks (NonZero a)
+forall a.
+NoThunks a =&gt;
+Context -&gt; NonZero a -&gt; IO (Maybe ThunkInfo)
+forall a. NoThunks a =&gt; Proxy (NonZero a) -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: forall a.
+NoThunks a =&gt;
+Context -&gt; NonZero a -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; NonZero a -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall a.
+NoThunks a =&gt;
+Context -&gt; NonZero a -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; NonZero a -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: forall a. NoThunks a =&gt; Proxy (NonZero a) -&gt; String
+showTypeOf :: Proxy (NonZero a) -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679427858"><span class="annot"><span class="annottext">NonZero a -&gt; ()
+(NonZero a -&gt; ()) -&gt; NFData (NonZero a)
+forall a. NFData a =&gt; NonZero a -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: forall a. NFData a =&gt; NonZero a -&gt; ()
+rnf :: NonZero a -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679427869"><span id="local-6989586621679427875"><span id="local-6989586621679427881"><span class="annot"><span class="annottext">Typeable (NonZero a)
+Typeable (NonZero a) =&gt;
+(NonZero a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy (NonZero a) -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [NonZero a] -&gt; Size)
+-&gt; EncCBOR (NonZero a)
+NonZero a -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [NonZero a] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (NonZero a) -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+forall a. EncCBOR a =&gt; Typeable (NonZero a)
+forall a. EncCBOR a =&gt; NonZero a -&gt; Encoding
+forall a.
+EncCBOR a =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [NonZero a] -&gt; Size
+forall a.
+EncCBOR a =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (NonZero a) -&gt; Size
+$cencCBOR :: forall a. EncCBOR a =&gt; NonZero a -&gt; Encoding
+encCBOR :: NonZero a -&gt; Encoding
+$cencodedSizeExpr :: forall a.
+EncCBOR a =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (NonZero a) -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (NonZero a) -&gt; Size
+$cencodedListSizeExpr :: forall a.
+EncCBOR a =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [NonZero a] -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [NonZero a] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679427893"><span id="local-6989586621679427899"><span id="local-6989586621679427905"><span class="annot"><span class="annottext">Typeable (NonZero a)
+Typeable (NonZero a) =&gt;
+(NonZero a -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy (NonZero a) -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [NonZero a] -&gt; Size)
+-&gt; ToCBOR (NonZero a)
+NonZero a -&gt; Encoding
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [NonZero a] -&gt; Size
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (NonZero a) -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; ToCBOR a
+forall a. ToCBOR a =&gt; Typeable (NonZero a)
+forall a. ToCBOR a =&gt; NonZero a -&gt; Encoding
+forall a.
+ToCBOR a =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [NonZero a] -&gt; Size
+forall a.
+ToCBOR a =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (NonZero a) -&gt; Size
+$ctoCBOR :: forall a. ToCBOR a =&gt; NonZero a -&gt; Encoding
+toCBOR :: NonZero a -&gt; Encoding
+$cencodedSizeExpr :: forall a.
+ToCBOR a =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (NonZero a) -&gt; Size
+encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (NonZero a) -&gt; Size
+$cencodedListSizeExpr :: forall a.
+ToCBOR a =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [NonZero a] -&gt; Size
+encodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [NonZero a] -&gt; Size
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679427913"><span id="local-6989586621679427917"><span id="local-6989586621679427921"><span id="local-6989586621679427925"><span id="local-6989586621679427929"><span class="annot"><span class="annottext">[NonZero a] -&gt; Value
+[NonZero a] -&gt; Encoding
+NonZero a -&gt; Bool
+NonZero a -&gt; Value
+NonZero a -&gt; Encoding
+(NonZero a -&gt; Value)
+-&gt; (NonZero a -&gt; Encoding)
+-&gt; ([NonZero a] -&gt; Value)
+-&gt; ([NonZero a] -&gt; Encoding)
+-&gt; (NonZero a -&gt; Bool)
+-&gt; ToJSON (NonZero a)
+forall a. ToJSON a =&gt; [NonZero a] -&gt; Value
+forall a. ToJSON a =&gt; [NonZero a] -&gt; Encoding
+forall a. ToJSON a =&gt; NonZero a -&gt; Bool
+forall a. ToJSON a =&gt; NonZero a -&gt; Value
+forall a. ToJSON a =&gt; NonZero a -&gt; Encoding
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: forall a. ToJSON a =&gt; NonZero a -&gt; Value
+toJSON :: NonZero a -&gt; Value
+$ctoEncoding :: forall a. ToJSON a =&gt; NonZero a -&gt; Encoding
+toEncoding :: NonZero a -&gt; Encoding
+$ctoJSONList :: forall a. ToJSON a =&gt; [NonZero a] -&gt; Value
+toJSONList :: [NonZero a] -&gt; Value
+$ctoEncodingList :: forall a. ToJSON a =&gt; [NonZero a] -&gt; Encoding
+toEncodingList :: [NonZero a] -&gt; Encoding
+$comitField :: forall a. ToJSON a =&gt; NonZero a -&gt; Bool
+omitField :: NonZero a -&gt; Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">class</span><span> </span><span id="HasZero"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-var">HasZero</span></a></span></span><span> </span><span id="local-6989586621679427638"><span class="annot"><a href="#local-6989586621679427638"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>  </span><span id="isZero"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#isZero"><span class="hs-identifier hs-type">isZero</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679427638"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="isZero"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#isZero"><span class="hs-identifier hs-type">isZero</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679427638"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Num</span></span><span> </span><span class="annot"><a href="#local-6989586621679427638"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679427638"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679427936"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#isZero"><span class="hs-identifier hs-var hs-var">isZero</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427942"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word8</span></span></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427951"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word16</span></span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427959"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word32</span></span></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427967"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word64</span></span></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427975"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427982"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427990"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427641"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427641"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><a href="#local-6989586621679427641"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679428001"><span class="annot"><span class="annottext">isZero :: Ratio a -&gt; Bool
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#isZero"><span class="hs-identifier hs-var hs-var hs-var hs-var">isZero</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool
+forall a. HasZero a =&gt; a -&gt; Bool
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#isZero"><span class="hs-identifier hs-var">isZero</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Bool) -&gt; (Ratio a -&gt; a) -&gt; Ratio a -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Ratio a -&gt; a
+forall a. Ratio a -&gt; a
+</span><span class="hs-identifier hs-var">numerator</span></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427653"><span id="local-6989586621679428011"><span id="local-6989586621679428015"><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679427653"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427653"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427653"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427653"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679428024"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (NonZero a)
+</span><a href="#local-6989586621679428024"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s a
+forall s. Decoder s a
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s a
+-&gt; (a -&gt; Decoder s (NonZero a)) -&gt; Decoder s (NonZero a)
+forall a b. Decoder s a -&gt; (a -&gt; Decoder s b) -&gt; Decoder s b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Decoder s (NonZero a)
+forall a (m :: * -&gt; *).
+(HasZero a, MonadFail m) =&gt;
+a -&gt; m (NonZero a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZeroM"><span class="hs-identifier hs-var">nonZeroM</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427667"><span id="local-6989586621679428035"><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427667"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427667"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427667"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>  </span><span id="local-6989586621679428046"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (NonZero a)
+</span><a href="#local-6989586621679428046"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Decoder s (NonZero a)
+forall a (m :: * -&gt; *).
+(HasZero a, MonadFail m) =&gt;
+a -&gt; m (NonZero a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZeroM"><span class="hs-identifier hs-var">nonZeroM</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Decoder s (NonZero a))
+-&gt; Decoder s a -&gt; Decoder s (NonZero a)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><span class="hs-operator hs-var">=&lt;&lt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s a
+forall s. Decoder s a
+forall a s. FromCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var">fromCBOR</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679427678"><span id="local-6989586621679428053"><span id="local-6989586621679428057"><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427678"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427678"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427678"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-107"></span><span>  </span><span id="local-6989586621679428066"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser (NonZero a)
+</span><a href="#local-6989586621679428066"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span id="local-6989586621679428068"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679428068"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser a
+forall a. FromJSON a =&gt; Value -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#parseJSON"><span class="hs-identifier hs-var">parseJSON</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679428068"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a -&gt; (a -&gt; Parser (NonZero a)) -&gt; Parser (NonZero a)
+forall a b. Parser a -&gt; (a -&gt; Parser b) -&gt; Parser b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Parser (NonZero a)
+forall a (m :: * -&gt; *).
+(HasZero a, MonadFail m) =&gt;
+a -&gt; m (NonZero a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZeroM"><span class="hs-identifier hs-var">nonZeroM</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#knownNonZero"><span class="hs-identifier hs-type">knownNonZero</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679427679"><span class="annot"><a href="#local-6989586621679427679"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Nat</span></span><span class="hs-special">)</span><span class="hs-operator">.</span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679427679"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;=</span></span><span> </span><span class="annot"><a href="#local-6989586621679427679"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-113"></span><span id="knownNonZero"><span class="annot"><span class="annottext">knownNonZero :: forall (n :: Natural). (KnownNat n, 1 &lt;= n) =&gt; NonZero Integer
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#knownNonZero"><span class="hs-identifier hs-var hs-var">knownNonZero</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; NonZero Integer
+forall a. a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy n -&gt; Integer
+forall (n :: Natural) (proxy :: Natural -&gt; *).
+KnownNat n =&gt;
+proxy n -&gt; Integer
+</span><span class="hs-identifier hs-var">natVal</span></span><span> </span><span class="annot"><span class="annottext">(Proxy n -&gt; Integer) -&gt; Proxy n -&gt; Integer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall (t :: Natural). Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679427679"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#knownNonZeroBounded"><span class="hs-identifier hs-type">knownNonZeroBounded</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679427689"><span class="annot"><a href="#local-6989586621679427689"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Nat</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679427690"><span class="annot"><a href="#local-6989586621679427690"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679427689"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;=</span></span><span> </span><span class="annot"><a href="#local-6989586621679427689"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#WithinBounds"><span class="hs-identifier hs-type">WithinBounds</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427689"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427690"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Num</span></span><span> </span><span class="annot"><a href="#local-6989586621679427690"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427690"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-119"></span><span id="knownNonZeroBounded"><span class="annot"><span class="annottext">knownNonZeroBounded :: forall (n :: Natural) a.
+(KnownNat n, 1 &lt;= n, WithinBounds n a, Num a) =&gt;
+NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#knownNonZeroBounded"><span class="hs-identifier hs-var hs-var">knownNonZeroBounded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; NonZero a
+forall a. a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; a
+forall a. Num a =&gt; Integer -&gt; a
+</span><span class="hs-identifier hs-var">fromInteger</span></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; a) -&gt; (Proxy n -&gt; Integer) -&gt; Proxy n -&gt; a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Proxy n -&gt; Integer
+forall (n :: Natural) (proxy :: Natural -&gt; *).
+KnownNat n =&gt;
+proxy n -&gt; Integer
+</span><span class="hs-identifier hs-var">natVal</span></span><span> </span><span class="annot"><span class="annottext">(Proxy n -&gt; a) -&gt; Proxy n -&gt; a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall (t :: Natural). Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679427689"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span id="local-6989586621679427695"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZero"><span class="hs-identifier hs-type">nonZero</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427695"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679427695"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427695"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-122"></span><span id="nonZero"><span class="annot"><span class="annottext">nonZero :: forall a. HasZero a =&gt; a -&gt; Maybe (NonZero a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZero"><span class="hs-identifier hs-var hs-var">nonZero</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe (NonZero a)
+forall a (m :: * -&gt; *).
+(HasZero a, MonadFail m) =&gt;
+a -&gt; m (NonZero a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZeroM"><span class="hs-identifier hs-var">nonZeroM</span></a></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span id="local-6989586621679427660"><span id="local-6989586621679427661"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZeroM"><span class="hs-identifier hs-type">nonZeroM</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427660"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadFail</span></span><span> </span><span class="annot"><a href="#local-6989586621679427661"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679427660"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679427661"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427660"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-125"></span><span id="nonZeroM"><span class="annot"><span class="annottext">nonZeroM :: forall a (m :: * -&gt; *).
+(HasZero a, MonadFail m) =&gt;
+a -&gt; m (NonZero a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZeroM"><span class="hs-identifier hs-var hs-var">nonZeroM</span></a></span></span><span> </span><span id="local-6989586621679428093"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428093"><span class="hs-identifier hs-var">x</span></a></span></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">a -&gt; Bool
+forall a. HasZero a =&gt; a -&gt; Bool
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#isZero"><span class="hs-identifier hs-var">isZero</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428093"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; m (NonZero a)
+forall a. String -&gt; m a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Encountered zero while trying to construct a NonZero value&quot;</span></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonZero a -&gt; m (NonZero a)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(NonZero a -&gt; m (NonZero a)) -&gt; NonZero a -&gt; m (NonZero a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; NonZero a
+forall a. a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428093"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span id="local-6989586621679427703"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZeroOr"><span class="hs-identifier hs-type">nonZeroOr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427703"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679427703"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427703"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427703"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-130"></span><span id="nonZeroOr"><span class="annot"><span class="annottext">nonZeroOr :: forall a. HasZero a =&gt; a -&gt; NonZero a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZeroOr"><span class="hs-identifier hs-var hs-var">nonZeroOr</span></a></span></span><span> </span><span id="local-6989586621679428096"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428096"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679428097"><span class="annot"><span class="annottext">NonZero a
+</span><a href="#local-6989586621679428097"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonZero a -&gt; Maybe (NonZero a) -&gt; NonZero a
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span> </span><span class="annot"><span class="annottext">NonZero a
+</span><a href="#local-6989586621679428097"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (NonZero a) -&gt; NonZero a) -&gt; Maybe (NonZero a) -&gt; NonZero a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe (NonZero a)
+forall a. HasZero a =&gt; a -&gt; Maybe (NonZero a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZero"><span class="hs-identifier hs-var">nonZero</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428096"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span id="local-6989586621679427706"><span id="local-6989586621679427707"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#mapNonZero"><span class="hs-identifier hs-type">mapNonZero</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="annot"><a href="#local-6989586621679427706"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#HasZero"><span class="hs-identifier hs-type">HasZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427706"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679427707"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679427706"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427707"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427706"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-133"></span><span id="mapNonZero"><span class="annot"><span class="annottext">mapNonZero :: forall b a.
+(Eq b, HasZero b) =&gt;
+(a -&gt; b) -&gt; NonZero a -&gt; Maybe (NonZero b)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#mapNonZero"><span class="hs-identifier hs-var hs-var">mapNonZero</span></a></span></span><span> </span><span id="local-6989586621679428101"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679428101"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span id="local-6989586621679428102"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428102"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">b -&gt; Maybe (NonZero b)
+forall a. HasZero a =&gt; a -&gt; Maybe (NonZero a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#nonZero"><span class="hs-identifier hs-var">nonZero</span></a></span><span> </span><span class="annot"><span class="annottext">(b -&gt; Maybe (NonZero b)) -&gt; b -&gt; Maybe (NonZero b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679428101"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428102"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span id="local-6989586621679427710"><span id="local-6989586621679427711"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#bindNonZero"><span class="hs-identifier hs-type">bindNonZero</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679427710"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427711"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427710"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427711"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-136"></span><span id="bindNonZero"><span class="annot"><span class="annottext">bindNonZero :: forall a b. (a -&gt; NonZero b) -&gt; NonZero a -&gt; NonZero b
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#bindNonZero"><span class="hs-identifier hs-var hs-var">bindNonZero</span></a></span></span><span> </span><span id="local-6989586621679428103"><span class="annot"><span class="annottext">a -&gt; NonZero b
+</span><a href="#local-6989586621679428103"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span id="local-6989586621679428104"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428104"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; NonZero b
+</span><a href="#local-6989586621679428103"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428104"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span id="local-6989586621679428105"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#unsafeNonZero"><span class="hs-identifier hs-type">unsafeNonZero</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679428105"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679428105"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-139"></span><span id="unsafeNonZero"><span class="annot"><span class="annottext">unsafeNonZero :: forall a. a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#unsafeNonZero"><span class="hs-identifier hs-var hs-var">unsafeNonZero</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; NonZero a
+forall a. a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">7</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#%25."><span class="hs-operator hs-type">%.</span></a></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span id="local-6989586621679427715"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#%25."><span class="hs-operator hs-type">(%.)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679427715"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679427715"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427715"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><a href="#local-6989586621679427715"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-144"></span><span id="local-6989586621679428108"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428108"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="%25."><span class="annot"><span class="annottext">%. :: forall a. Integral a =&gt; a -&gt; NonZero a -&gt; Ratio a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#%25."><span class="hs-operator hs-var hs-var">%.</span></a></span></span><span> </span><span id="local-6989586621679428109"><span class="annot"><span class="annottext">NonZero a
+</span><a href="#local-6989586621679428109"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428108"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Ratio a
+forall a. Integral a =&gt; a -&gt; a -&gt; Ratio a
+</span><span class="hs-operator hs-var">%</span></span><span> </span><span class="annot"><span class="annottext">NonZero a -&gt; a
+forall a. NonZero a -&gt; a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#unNonZero"><span class="hs-identifier hs-var">unNonZero</span></a></span><span> </span><span class="annot"><span class="annottext">NonZero a
+</span><a href="#local-6989586621679428109"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">7</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#%25%3F"><span class="hs-operator hs-type">%?</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span id="local-6989586621679428110"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#%25%3F"><span class="hs-operator hs-type">(%?)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679428110"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679428110"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679428110"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><a href="#local-6989586621679428110"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-149"></span><span id="local-6989586621679428124"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428124"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="%25%3F"><span class="annot"><span class="annottext">%? :: forall a. Integral a =&gt; a -&gt; a -&gt; Ratio a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#%25%3F"><span class="hs-operator hs-var hs-var">%?</span></a></span></span><span> </span><span id="local-6989586621679428125"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428125"><span class="hs-identifier hs-var">y</span></a></span></span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428125"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ratio a
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428124"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Ratio a
+forall a. Integral a =&gt; a -&gt; a -&gt; Ratio a
+</span><span class="hs-operator hs-var">%</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428125"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span id="local-6989586621679427722"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#toIntegerNonZero"><span class="hs-identifier hs-type">toIntegerNonZero</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679427722"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427722"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span></span><span>
+</span><span id="line-154"></span><span id="toIntegerNonZero"><span class="annot"><span class="annottext">toIntegerNonZero :: forall a. Integral a =&gt; NonZero a -&gt; NonZero Integer
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#toIntegerNonZero"><span class="hs-identifier hs-var hs-var">toIntegerNonZero</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span id="local-6989586621679428128"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428128"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; NonZero Integer
+forall a. a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; NonZero Integer) -&gt; Integer -&gt; NonZero Integer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428128"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">7</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#%2F."><span class="hs-operator hs-type">/.</span></a></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span id="local-6989586621679427724"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#%2F."><span class="hs-operator hs-type">(/.)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Fractional</span></span><span> </span><span class="annot"><a href="#local-6989586621679427724"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679427724"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427724"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679427724"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-159"></span><span id="local-6989586621679428131"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428131"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="%2F."><span class="annot"><span class="annottext">/. :: forall a. Fractional a =&gt; a -&gt; NonZero a -&gt; a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#%2F."><span class="hs-operator hs-var hs-var">/.</span></a></span></span><span> </span><span id="local-6989586621679428132"><span class="annot"><span class="annottext">NonZero a
+</span><a href="#local-6989586621679428132"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428131"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">/</span></span><span> </span><span class="annot"><span class="annottext">NonZero a -&gt; a
+forall a. NonZero a -&gt; a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#unNonZero"><span class="hs-identifier hs-var">unNonZero</span></a></span><span> </span><span class="annot"><span class="annottext">NonZero a
+</span><a href="#local-6989586621679428132"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- Common safe functions</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span id="local-6989586621679427727"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#toRatioNonZero"><span class="hs-identifier hs-type">toRatioNonZero</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679427727"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427727"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><a href="#local-6989586621679427727"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-164"></span><span id="toRatioNonZero"><span class="annot"><span class="annottext">toRatioNonZero :: forall a. Integral a =&gt; NonZero a -&gt; NonZero (Ratio a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#toRatioNonZero"><span class="hs-identifier hs-var hs-var">toRatioNonZero</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span id="local-6989586621679428139"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428139"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ratio a -&gt; NonZero (Ratio a)
+forall a. a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span><span> </span><span class="annot"><span class="annottext">(Ratio a -&gt; NonZero (Ratio a)) -&gt; Ratio a -&gt; NonZero (Ratio a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428139"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Ratio a
+forall a. Integral a =&gt; a -&gt; a -&gt; Ratio a
+</span><span class="hs-operator hs-var">%</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span id="local-6989586621679427729"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#recipNonZero"><span class="hs-identifier hs-type">recipNonZero</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679427729"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><a href="#local-6989586621679427729"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ratio</span></span><span> </span><span class="annot"><a href="#local-6989586621679427729"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-167"></span><span id="recipNonZero"><span class="annot"><span class="annottext">recipNonZero :: forall a. Integral a =&gt; NonZero (Ratio a) -&gt; NonZero (Ratio a)
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#recipNonZero"><span class="hs-identifier hs-var hs-var">recipNonZero</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span id="local-6989586621679428143"><span class="annot"><span class="annottext">Ratio a
+</span><a href="#local-6989586621679428143"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ratio a -&gt; NonZero (Ratio a)
+forall a. a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span><span> </span><span class="annot"><span class="annottext">(Ratio a -&gt; NonZero (Ratio a)) -&gt; Ratio a -&gt; NonZero (Ratio a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Ratio a -&gt; Ratio a
+forall a. Fractional a =&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">recip</span></span><span> </span><span class="annot"><span class="annottext">Ratio a
+</span><a href="#local-6989586621679428143"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#negateNonZero"><span class="hs-identifier hs-type">negateNonZero</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-170"></span><span id="negateNonZero"><span class="annot"><span class="annottext">negateNonZero :: NonZero Integer -&gt; NonZero Integer
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#negateNonZero"><span class="hs-identifier hs-var hs-var">negateNonZero</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span id="local-6989586621679428145"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679428145"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; NonZero Integer
+forall a. a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; NonZero Integer) -&gt; Integer -&gt; NonZero Integer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">negate</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679428145"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span id="local-6989586621679427732"><span id="local-6989586621679427733"><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#mulNonZero"><span class="hs-identifier hs-type">mulNonZero</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679427732"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679427733"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427732"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427733"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span></span></span><span>
+</span><span id="line-173"></span><span id="mulNonZero"><span class="annot"><span class="annottext">mulNonZero :: forall a b.
+(Integral a, Integral b) =&gt;
+NonZero a -&gt; NonZero b -&gt; NonZero Integer
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#mulNonZero"><span class="hs-identifier hs-var hs-var">mulNonZero</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span id="local-6989586621679428151"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428151"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span id="local-6989586621679428152"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679428152"><span class="hs-identifier hs-var">y</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; NonZero Integer
+forall a. a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; NonZero Integer) -&gt; Integer -&gt; NonZero Integer
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428151"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">b -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679428152"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#mulNonZeroNat"><span class="hs-identifier hs-type">mulNonZeroNat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679427736"><span class="annot"><a href="#local-6989586621679427736"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span id="local-6989586621679427737"><span class="annot"><a href="#local-6989586621679427737"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679427736"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="hs-operator hs-type">&lt;=</span></span><span> </span><span class="annot"><a href="#local-6989586621679427736"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integral</span></span><span> </span><span class="annot"><a href="#local-6989586621679427737"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679427737"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span>
+</span><span id="line-176"></span><span id="mulNonZeroNat"><span class="annot"><span class="annottext">mulNonZeroNat :: forall (n :: Natural) a.
+(KnownNat n, 1 &lt;= n, Integral a) =&gt;
+NonZero a -&gt; NonZero Integer
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#mulNonZeroNat"><span class="hs-identifier hs-var hs-var">mulNonZeroNat</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-type">NonZero</span></a></span><span> </span><span id="local-6989586621679428160"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428160"><span class="hs-identifier hs-var">x</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; NonZero Integer
+forall a. a -&gt; NonZero a
+</span><a href="Cardano.Ledger.BaseTypes.NonZero.html#NonZero"><span class="hs-identifier hs-var">NonZero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><span class="hs-identifier hs-var">toInteger</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679428160"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Proxy n -&gt; Integer
+forall (n :: Natural) (proxy :: Natural -&gt; *).
+KnownNat n =&gt;
+proxy n -&gt; Integer
+</span><span class="hs-identifier hs-var">natVal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (t :: Natural). Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679427736"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span></pre></body></html>

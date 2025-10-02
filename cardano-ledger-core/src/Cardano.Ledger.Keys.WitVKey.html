@@ -1,0 +1,298 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Keys.WitVKey</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier">WitVKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier">WitVKey</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#witVKeyHash"><span class="hs-identifier">witVKeyHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#wvkSig"><span class="hs-identifier">wvkSig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html"><span class="hs-identifier">Cardano.Crypto.DSIGN.Class</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignedDSIGN"><span class="hs-identifier">SignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#decodeSignedDSIGN"><span class="hs-identifier">decodeSignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#encodeSignedDSIGN"><span class="hs-identifier">encodeSignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier">Annotator</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html"><span class="hs-identifier">Cardano.Ledger.Binary.Plain</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Plain</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier">EraIndependentTxBody</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier">HASH</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier">Hash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier">KeyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#hashKey"><span class="hs-identifier">hashKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#hashTxBodySignature"><span class="hs-identifier">hashTxBodySignature</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html"><span class="hs-identifier">Cardano.Ledger.Keys.Internal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier">DSIGN</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier">KeyRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier">VKey</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier">asWitness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Ord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">comparing</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Typeable</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Typeable</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#AllowThunksIn"><span class="hs-identifier">AllowThunksIn</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | Proof/Witness that a transaction is authorized by the given key holder.</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">data</span><span> </span><span id="WitVKey"><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-var">WitVKey</span></a></span></span><span> </span><span id="local-6989586621679433305"><span class="annot"><a href="#local-6989586621679433305"><span class="hs-identifier hs-type">kr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="WitVKeyInternal"><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKeyInternal"><span class="hs-identifier hs-var">WitVKeyInternal</span></a></span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="wvkKey"><span class="annot"><span class="annottext">forall (kr :: KeyRole). WitVKey kr -&gt; VKey kr
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#wvkKey"><span class="hs-identifier hs-var hs-var">wvkKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433305"><span class="hs-identifier hs-type">kr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="wvkSignature"><span class="annot"><span class="annottext">forall (kr :: KeyRole).
+WitVKey kr -&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#wvkSignature"><span class="hs-identifier hs-var hs-var">wvkSignature</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignedDSIGN"><span class="hs-identifier hs-type">SignedDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-type">EraIndependentTxBody</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="wvkKeyHash"><span class="annot"><span class="annottext">forall (kr :: KeyRole). WitVKey kr -&gt; KeyHash 'Witness
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#wvkKeyHash"><span class="hs-identifier hs-var hs-var">wvkKeyHash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-comment">-- ^ Hash of the witness vkey. We store this here to avoid repeated hashing</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-comment">--   when used in ordering.</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679433492"><span id="local-6989586621679433494"><span class="annot"><span class="annottext">(forall x. WitVKey kr -&gt; Rep (WitVKey kr) x)
+-&gt; (forall x. Rep (WitVKey kr) x -&gt; WitVKey kr)
+-&gt; Generic (WitVKey kr)
+forall x. Rep (WitVKey kr) x -&gt; WitVKey kr
+forall x. WitVKey kr -&gt; Rep (WitVKey kr) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall (kr :: KeyRole) x. Rep (WitVKey kr) x -&gt; WitVKey kr
+forall (kr :: KeyRole) x. WitVKey kr -&gt; Rep (WitVKey kr) x
+$cfrom :: forall (kr :: KeyRole) x. WitVKey kr -&gt; Rep (WitVKey kr) x
+from :: forall x. WitVKey kr -&gt; Rep (WitVKey kr) x
+$cto :: forall (kr :: KeyRole) x. Rep (WitVKey kr) x -&gt; WitVKey kr
+to :: forall x. Rep (WitVKey kr) x -&gt; WitVKey kr
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679433498"><span id="local-6989586621679433509"><span id="local-6989586621679433513"><span class="annot"><span class="annottext">Int -&gt; WitVKey kr -&gt; ShowS
+[WitVKey kr] -&gt; ShowS
+WitVKey kr -&gt; String
+(Int -&gt; WitVKey kr -&gt; ShowS)
+-&gt; (WitVKey kr -&gt; String)
+-&gt; ([WitVKey kr] -&gt; ShowS)
+-&gt; Show (WitVKey kr)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall (kr :: KeyRole). Int -&gt; WitVKey kr -&gt; ShowS
+forall (kr :: KeyRole). [WitVKey kr] -&gt; ShowS
+forall (kr :: KeyRole). WitVKey kr -&gt; String
+$cshowsPrec :: forall (kr :: KeyRole). Int -&gt; WitVKey kr -&gt; ShowS
+showsPrec :: Int -&gt; WitVKey kr -&gt; ShowS
+$cshow :: forall (kr :: KeyRole). WitVKey kr -&gt; String
+show :: WitVKey kr -&gt; String
+$cshowList :: forall (kr :: KeyRole). [WitVKey kr] -&gt; ShowS
+showList :: [WitVKey kr] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679433518"><span id="local-6989586621679433527"><span class="annot"><span class="annottext">WitVKey kr -&gt; WitVKey kr -&gt; Bool
+(WitVKey kr -&gt; WitVKey kr -&gt; Bool)
+-&gt; (WitVKey kr -&gt; WitVKey kr -&gt; Bool) -&gt; Eq (WitVKey kr)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall (kr :: KeyRole). WitVKey kr -&gt; WitVKey kr -&gt; Bool
+$c== :: forall (kr :: KeyRole). WitVKey kr -&gt; WitVKey kr -&gt; Bool
+== :: WitVKey kr -&gt; WitVKey kr -&gt; Bool
+$c/= :: forall (kr :: KeyRole). WitVKey kr -&gt; WitVKey kr -&gt; Bool
+/= :: WitVKey kr -&gt; WitVKey kr -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span id="local-6989586621679433531"><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#wvkSig"><span class="hs-identifier hs-type">wvkSig</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433531"><span class="hs-identifier hs-type">kr</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignedDSIGN"><span class="hs-identifier hs-type">SignedDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-type">EraIndependentTxBody</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-50"></span><span id="wvkSig"><span class="annot"><span class="annottext">wvkSig :: forall (kr :: KeyRole).
+WitVKey kr -&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#wvkSig"><span class="hs-identifier hs-var hs-var">wvkSig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WitVKey kr -&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+forall (kr :: KeyRole).
+WitVKey kr -&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#wvkSignature"><span class="hs-identifier hs-var">wvkSignature</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">wvkSig</span><span> </span><span class="hs-pragma">&quot;In favor of `wvkSignature`&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span id="local-6989586621679433534"><span id="local-6989586621679433543"><span id="local-6989586621679433551"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">via</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679433388"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#AllowThunksIn"><span class="hs-identifier hs-type">AllowThunksIn</span></a></span><span> </span><span class="hs-special">'</span><span class="hs-special">[</span><span class="annot"><span class="hs-string">&quot;wvkKeyHash&quot;</span></span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433388"><span class="hs-identifier hs-type">kr</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-keyword">instance</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679433388"><span class="hs-identifier hs-type">kr</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433388"><span class="hs-identifier hs-type">kr</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679433392"><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433392"><span class="hs-identifier hs-type">kr</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span id="local-6989586621679433646"><span class="annot"><span class="annottext">rnf :: WitVKey kr -&gt; ()
+</span><a href="#local-6989586621679433646"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKeyInternal"><span class="hs-identifier hs-type">WitVKeyInternal</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679433648"><span class="annot"><span class="annottext">KeyHash 'Witness
+wvkKeyHash :: forall (kr :: KeyRole). WitVKey kr -&gt; KeyHash 'Witness
+wvkKeyHash :: KeyHash 'Witness
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#wvkKeyHash"><span class="hs-identifier hs-var hs-var">wvkKeyHash</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KeyHash 'Witness
+</span><a href="#local-6989586621679433648"><span class="hs-identifier hs-var">wvkKeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'Witness -&gt; () -&gt; ()
+forall a b. a -&gt; b -&gt; b
+</span><span class="hs-operator hs-var">`seq`</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679433396"><span id="local-6989586621679433654"><span id="local-6989586621679433658"><span id="local-6989586621679433661"><span id="local-6989586621679433664"><span id="local-6989586621679433667"><span id="local-6989586621679433670"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679433396"><span class="hs-identifier hs-type">kr</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433396"><span class="hs-identifier hs-type">kr</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679433679"><span class="annot"><span class="annottext">compare :: WitVKey kr -&gt; WitVKey kr -&gt; Ordering
+</span><a href="#local-6989586621679433679"><span class="hs-identifier hs-var hs-var hs-var hs-var">compare</span></a></span></span><span> </span><span id="local-6989586621679433681"><span class="annot"><span class="annottext">WitVKey kr
+</span><a href="#local-6989586621679433681"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679433682"><span class="annot"><span class="annottext">WitVKey kr
+</span><a href="#local-6989586621679433682"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">-- It is advised against comparison on keys and signatures directly,</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- therefore we use hashes of verification keys and signatures for</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-comment">-- implementing this Ord instance. Note that we do not need to memoize the</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">-- hash of a signature, like it is done with the hash of a key, because Ord</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-comment">-- instance is only used for Sets of WitVKeys and it would be a mistake to</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-comment">-- have two WitVKeys in a same Set for different transactions. Therefore</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-comment">-- comparison on signatures is unlikely to happen and is only needed for</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">-- compliance with Ord laws.</span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">(WitVKey kr -&gt; KeyHash 'Witness)
+-&gt; WitVKey kr -&gt; WitVKey kr -&gt; Ordering
+forall a b. Ord a =&gt; (b -&gt; a) -&gt; b -&gt; b -&gt; Ordering
+</span><span class="hs-identifier hs-var">comparing</span></span><span> </span><span class="annot"><span class="annottext">WitVKey kr -&gt; KeyHash 'Witness
+forall (kr :: KeyRole). WitVKey kr -&gt; KeyHash 'Witness
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#wvkKeyHash"><span class="hs-identifier hs-var">wvkKeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">WitVKey kr
+</span><a href="#local-6989586621679433681"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">WitVKey kr
+</span><a href="#local-6989586621679433682"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="annot"><span class="annottext">Ordering -&gt; Ordering -&gt; Ordering
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">(WitVKey kr
+ -&gt; Hash HASH (SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)))
+-&gt; WitVKey kr -&gt; WitVKey kr -&gt; Ordering
+forall a b. Ord a =&gt; (b -&gt; a) -&gt; b -&gt; b -&gt; Ordering
+</span><span class="hs-identifier hs-var">comparing</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+-&gt; Hash HASH (SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
+</span><a href="Cardano.Ledger.Hashes.html#hashTxBodySignature"><span class="hs-identifier hs-var">hashTxBodySignature</span></a></span><span> </span><span class="annot"><span class="annottext">(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+ -&gt; Hash HASH (SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)))
+-&gt; (WitVKey kr
+    -&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
+-&gt; WitVKey kr
+-&gt; Hash HASH (SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">WitVKey kr -&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+forall (kr :: KeyRole).
+WitVKey kr -&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#wvkSignature"><span class="hs-identifier hs-var">wvkSignature</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">WitVKey kr
+</span><a href="#local-6989586621679433681"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">WitVKey kr
+</span><a href="#local-6989586621679433682"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679433411"><span id="local-6989586621679433690"><span id="local-6989586621679433694"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679433411"><span class="hs-identifier hs-type">kr</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">Plain.ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433411"><span class="hs-identifier hs-type">kr</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679433703"><span class="annot"><span class="annottext">toCBOR :: WitVKey kr -&gt; Encoding
+</span><a href="#local-6989586621679433703"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKeyInternal"><span class="hs-identifier hs-type">WitVKeyInternal</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679433705"><span class="annot"><span class="annottext">VKey kr
+wvkKey :: forall (kr :: KeyRole). WitVKey kr -&gt; VKey kr
+wvkKey :: VKey kr
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#wvkKey"><span class="hs-identifier hs-var hs-var">wvkKey</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679433706"><span class="annot"><span class="annottext">SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+wvkSignature :: forall (kr :: KeyRole).
+WitVKey kr -&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+wvkSignature :: SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#wvkSignature"><span class="hs-identifier hs-var hs-var">wvkSignature</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#encodeListLen"><span class="hs-identifier hs-var">Plain.encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">VKey kr -&gt; Encoding
+forall a. ToCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#toCBOR"><span class="hs-identifier hs-var">Plain.toCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">VKey kr
+</span><a href="#local-6989586621679433705"><span class="hs-identifier hs-var">wvkKey</span></a></span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody) -&gt; Encoding
+forall v a. DSIGNAlgorithm v =&gt; SignedDSIGN v a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#encodeSignedDSIGN"><span class="hs-identifier hs-var">encodeSignedDSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="#local-6989586621679433706"><span class="hs-identifier hs-var">wvkSignature</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679433421"><span id="local-6989586621679433714"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679433421"><span class="hs-identifier hs-type">kr</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">Plain.FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433421"><span class="hs-identifier hs-type">kr</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679433729"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (WitVKey kr)
+</span><a href="#local-6989586621679433729"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="annottext">Text
+-&gt; (WitVKey kr -&gt; Int)
+-&gt; Decoder s (WitVKey kr)
+-&gt; Decoder s (WitVKey kr)
+forall a s. Text -&gt; (a -&gt; Int) -&gt; Decoder s a -&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html#decodeRecordNamed"><span class="hs-identifier hs-var">Plain.decodeRecordNamed</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;WitVKey&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; WitVKey kr -&gt; Int
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Decoder s (WitVKey kr) -&gt; Decoder s (WitVKey kr))
+-&gt; Decoder s (WitVKey kr) -&gt; Decoder s (WitVKey kr)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">VKey kr
+-&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody) -&gt; WitVKey kr
+forall (kr :: KeyRole).
+VKey kr
+-&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody) -&gt; WitVKey kr
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-var">WitVKey</span></a></span><span> </span><span class="annot"><span class="annottext">(VKey kr
+ -&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+ -&gt; WitVKey kr)
+-&gt; Decoder s (VKey kr)
+-&gt; Decoder
+     s
+     (SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody) -&gt; WitVKey kr)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (VKey kr)
+forall s. Decoder s (VKey kr)
+forall a s. FromCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var">Plain.fromCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder
+  s
+  (SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody) -&gt; WitVKey kr)
+-&gt; Decoder s (SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
+-&gt; Decoder s (WitVKey kr)
+forall a b. Decoder s (a -&gt; b) -&gt; Decoder s a -&gt; Decoder s b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
+forall v s a. DSIGNAlgorithm v =&gt; Decoder s (SignedDSIGN v a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#decodeSignedDSIGN"><span class="hs-identifier hs-var">decodeSignedDSIGN</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679433448"><span id="local-6989586621679433739"><span id="local-6989586621679433744"><span id="local-6989586621679433747"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679433448"><span class="hs-identifier hs-type">kr</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433448"><span class="hs-identifier hs-type">kr</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679433455"><span id="local-6989586621679433755"><span id="local-6989586621679433760"><span id="local-6989586621679433763"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679433455"><span class="hs-identifier hs-type">kr</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433455"><span class="hs-identifier hs-type">kr</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679433458"><span id="local-6989586621679433773"><span id="local-6989586621679433777"><span class="annot"><span class="hs-identifier hs-type">Typeable</span></span><span> </span><span class="annot"><a href="#local-6989586621679433458"><span class="hs-identifier hs-type">kr</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433458"><span class="hs-identifier hs-type">kr</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679433785"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (Annotator (WitVKey kr))
+</span><a href="#local-6989586621679433785"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WitVKey kr -&gt; Annotator (WitVKey kr)
+forall a. a -&gt; Annotator a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(WitVKey kr -&gt; Annotator (WitVKey kr))
+-&gt; Decoder s (WitVKey kr) -&gt; Decoder s (Annotator (WitVKey kr))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (WitVKey kr)
+forall s. Decoder s (WitVKey kr)
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-pragma hs-type">decCBOR</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679433433"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433433"><span class="hs-identifier hs-type">kr</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignedDSIGN"><span class="hs-identifier hs-type">SignedDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-type">EraIndependentTxBody</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433433"><span class="hs-identifier hs-type">kr</span></a></span></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">pattern</span><span> </span><span id="WitVKey"><span id="%24mWitVKey"><span id="%24bWitVKey"><span class="annot"><span class="annottext">$mWitVKey :: forall {r} {kr :: KeyRole}.
+WitVKey kr
+-&gt; (VKey kr
+    -&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody) -&gt; r)
+-&gt; ((# #) -&gt; r)
+-&gt; r
+$bWitVKey :: forall (kr :: KeyRole).
+VKey kr
+-&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody) -&gt; WitVKey kr
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-var hs-var hs-var hs-var">WitVKey</span></a></span></span></span></span><span> </span><span class="annot"><a href="#local-6989586621679433789"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433790"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKeyInternal"><span class="hs-identifier hs-type">WitVKeyInternal</span></a></span><span> </span><span id="local-6989586621679433789"><span class="annot"><a href="#local-6989586621679433789"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679433790"><span class="annot"><a href="#local-6989586621679433790"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier">_</span></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-var">WitVKey</span></a></span><span> </span><span id="local-6989586621679433791"><span class="annot"><span class="annottext">VKey kr
+</span><a href="#local-6989586621679433791"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679433792"><span class="annot"><span class="annottext">SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="#local-6989586621679433792"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-100"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679433795"><span class="annot"><span class="annottext">hash :: KeyHash 'Witness
+</span><a href="#local-6989586621679433795"><span class="hs-identifier hs-var hs-var">hash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">KeyHash kr -&gt; KeyHash 'Witness
+forall (a :: KeyRole -&gt; *) (r :: KeyRole).
+HasKeyRole a =&gt;
+a r -&gt; a 'Witness
+</span><a href="Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier hs-var">asWitness</span></a></span><span> </span><span class="annot"><span class="annottext">(KeyHash kr -&gt; KeyHash 'Witness) -&gt; KeyHash kr -&gt; KeyHash 'Witness
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">VKey kr -&gt; KeyHash kr
+forall (kd :: KeyRole). VKey kd -&gt; KeyHash kd
+</span><a href="Cardano.Ledger.Hashes.html#hashKey"><span class="hs-identifier hs-var">hashKey</span></a></span><span> </span><span class="annot"><span class="annottext">VKey kr
+</span><a href="#local-6989586621679433791"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-101"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">VKey kr
+-&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+-&gt; KeyHash 'Witness
+-&gt; WitVKey kr
+forall (kr :: KeyRole).
+VKey kr
+-&gt; SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+-&gt; KeyHash 'Witness
+-&gt; WitVKey kr
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKeyInternal"><span class="hs-identifier hs-var">WitVKeyInternal</span></a></span><span> </span><span class="annot"><span class="annottext">VKey kr
+</span><a href="#local-6989586621679433791"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="#local-6989586621679433792"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'Witness
+</span><a href="#local-6989586621679433795"><span class="hs-identifier hs-var">hash</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-pragma hs-type">WitVKey</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="annot"><span class="hs-comment">-- | Access computed hash. Evaluated lazily</span></span><span>
+</span><span id="line-106"></span><span id="local-6989586621679433796"><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#witVKeyHash"><span class="hs-identifier hs-type">witVKeyHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.WitVKey.html#WitVKey"><span class="hs-identifier hs-type">WitVKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433796"><span class="hs-identifier hs-type">kr</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span></span><span>
+</span><span id="line-107"></span><span id="witVKeyHash"><span class="annot"><span class="annottext">witVKeyHash :: forall (kr :: KeyRole). WitVKey kr -&gt; KeyHash 'Witness
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#witVKeyHash"><span class="hs-identifier hs-var hs-var">witVKeyHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">WitVKey kr -&gt; KeyHash 'Witness
+forall (kr :: KeyRole). WitVKey kr -&gt; KeyHash 'Witness
+</span><a href="Cardano.Ledger.Keys.WitVKey.html#wvkKeyHash"><span class="hs-identifier hs-var">wvkKeyHash</span></a></span><span>
+</span><span id="line-108"></span></pre></body></html>

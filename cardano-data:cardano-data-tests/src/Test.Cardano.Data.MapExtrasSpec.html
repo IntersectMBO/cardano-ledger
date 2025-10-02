@@ -1,0 +1,252 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Data.MapExtrasSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Data.MapExtrasSpec.html#mapExtrasSpec"><span class="hs-identifier">mapExtrasSpec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html"><span class="hs-identifier">Data.MapExtras</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.html"><span class="hs-identifier">Test.Cardano.Data</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.html"><span class="hs-identifier">Test.Hspec</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html"><span class="hs-identifier">Test.Hspec.QuickCheck</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.html"><span class="hs-identifier">Test.QuickCheck</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="annot"><a href="Test.Cardano.Data.MapExtrasSpec.html#mapExtrasSpec"><span class="hs-identifier hs-type">mapExtrasSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.Monad.html#Spec"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-15"></span><span id="mapExtrasSpec"><span class="annot"><span class="annottext">mapExtrasSpec :: Spec
+</span><a href="Test.Cardano.Data.MapExtrasSpec.html#mapExtrasSpec"><span class="hs-identifier hs-var hs-var">mapExtrasSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; Spec -&gt; Spec
+forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-core-2.11.13-707e7990f927091784a53f26b416ab321bc8328c835764c4a4c0a3c59ebc02a5/share/doc/html/src/Test.Hspec.Core.Spec.html#describe"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;MapExtras&quot;</span></span><span> </span><span class="annot"><span class="annottext">(Spec -&gt; Spec) -&gt; Spec -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; (Map Int Float -&gt; Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;extract k m === (lookup k m, delete k m)&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Map Int Float -&gt; Int -&gt; IO ()) -&gt; Spec)
+-&gt; (Map Int Float -&gt; Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679217903"><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217903"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Float</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679217904"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679217904"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-18"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679217906"><span class="annot"><span class="annottext">Maybe Float
+</span><a href="#local-6989586621679217906"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679217907"><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217907"><span class="hs-identifier hs-var">ma</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Map Int Float -&gt; (Maybe Float, Map Int Float)
+forall k b. Ord k =&gt; k -&gt; Map k b -&gt; (Maybe b, Map k b)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html#extract"><span class="hs-identifier hs-var">extract</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679217904"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217903"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-19"></span><span>      </span><span class="annot"><span class="annottext">Map Int Float -&gt; IO ()
+forall k a.
+(HasCallStack, Ord k, Show k, Show a) =&gt;
+Map k a -&gt; IO ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.html#expectValidMap"><span class="hs-identifier hs-var">expectValidMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217907"><span class="hs-identifier hs-var">ma</span></a></span><span>
+</span><span id="line-20"></span><span>      </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217907"><span class="hs-identifier hs-var">ma</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float -&gt; Map Int Float -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Map Int Float -&gt; Map Int Float
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.delete</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679217904"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217903"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-21"></span><span>      </span><span class="annot"><span class="annottext">Maybe Float
+</span><a href="#local-6989586621679217906"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Float -&gt; Maybe Float -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Map Int Float -&gt; Maybe Float
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679217904"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217903"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; (Map Int Float -&gt; Set Int -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;extractKeys m s === (withoutKeys m s, restrictKeys m s)&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Map Int Float -&gt; Set Int -&gt; IO ()) -&gt; Spec)
+-&gt; (Map Int Float -&gt; Set Int -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679217913"><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217913"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Float</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679217914"><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679217914"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-23"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679217916"><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217916"><span class="hs-identifier hs-var">wk</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679217917"><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217917"><span class="hs-identifier hs-var">rk</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Int Float -&gt; Set Int -&gt; (Map Int Float, Map Int Float)
+forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; (Map k a, Map k a)
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html#extractKeys"><span class="hs-identifier hs-var">extractKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217913"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679217914"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-24"></span><span>      </span><span class="annot"><span class="annottext">Map Int Float -&gt; IO ()
+forall k a.
+(HasCallStack, Ord k, Show k, Show a) =&gt;
+Map k a -&gt; IO ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.html#expectValidMap"><span class="hs-identifier hs-var">expectValidMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217916"><span class="hs-identifier hs-var">wk</span></a></span><span>
+</span><span id="line-25"></span><span>      </span><span class="annot"><span class="annottext">Map Int Float -&gt; IO ()
+forall k a.
+(HasCallStack, Ord k, Show k, Show a) =&gt;
+Map k a -&gt; IO ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.html#expectValidMap"><span class="hs-identifier hs-var">expectValidMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217917"><span class="hs-identifier hs-var">rk</span></a></span><span>
+</span><span id="line-26"></span><span>      </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217916"><span class="hs-identifier hs-var">wk</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float -&gt; Map Int Float -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float -&gt; Set Int -&gt; Map Int Float
+forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.withoutKeys</span></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217913"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679217914"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-27"></span><span>      </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217917"><span class="hs-identifier hs-var">rk</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float -&gt; Map Int Float -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float -&gt; Set Int -&gt; Map Int Float
+forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.restrictKeys</span></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217913"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">Set Int
+</span><a href="#local-6989586621679217914"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; (Map Int Float -&gt; Map Int Char -&gt; IO ()) -&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;noKeys == withoutKeys&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Map Int Float -&gt; Map Int Char -&gt; IO ()) -&gt; Spec)
+-&gt; (Map Int Float -&gt; Map Int Char -&gt; IO ()) -&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679217921"><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217921"><span class="hs-identifier hs-var">m1</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Float</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679217922"><span class="annot"><span class="annottext">Map Int Char
+</span><a href="#local-6989586621679217922"><span class="hs-identifier hs-var">m2</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-29"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679217924"><span class="annot"><span class="annottext">nk :: Map Int Float
+</span><a href="#local-6989586621679217924"><span class="hs-identifier hs-var hs-var">nk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Int Float -&gt; Map Int Char -&gt; Map Int Float
+forall k a b. Ord k =&gt; Map k a -&gt; Map k b -&gt; Map k a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html#noKeys"><span class="hs-identifier hs-var">noKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217921"><span class="hs-identifier hs-var">m1</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Char
+</span><a href="#local-6989586621679217922"><span class="hs-identifier hs-var">m2</span></a></span><span>
+</span><span id="line-30"></span><span>      </span><span class="annot"><span class="annottext">Map Int Float -&gt; IO ()
+forall k a.
+(HasCallStack, Ord k, Show k, Show a) =&gt;
+Map k a -&gt; IO ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.html#expectValidMap"><span class="hs-identifier hs-var">expectValidMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217924"><span class="hs-identifier hs-var">nk</span></a></span><span>
+</span><span id="line-31"></span><span>      </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217924"><span class="hs-identifier hs-var">nk</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float -&gt; Map Int Float -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Float -&gt; Set Int -&gt; Map Int Float
+forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.withoutKeys</span></span><span> </span><span class="annot"><span class="annottext">Map Int Float
+</span><a href="#local-6989586621679217921"><span class="hs-identifier hs-var">m1</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Int Char -&gt; Set Int
+forall k a. Map k a -&gt; Set k
+</span><span class="hs-identifier hs-var">Map.keysSet</span></span><span> </span><span class="annot"><span class="annottext">Map Int Char
+</span><a href="#local-6989586621679217922"><span class="hs-identifier hs-var">m2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><span class="annottext">String
+-&gt; (Fun (Int, Word) Bool -&gt; Map Int Char -&gt; Map Int Word -&gt; IO ())
+-&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;intersectDomP&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Fun (Int, Word) Bool -&gt; Map Int Char -&gt; Map Int Word -&gt; IO ())
+ -&gt; Spec)
+-&gt; (Fun (Int, Word) Bool -&gt; Map Int Char -&gt; Map Int Word -&gt; IO ())
+-&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679217927"><span class="annot"><span class="annottext">Fun (Int, Word) Bool
+</span><a href="#local-6989586621679217927"><span class="hs-identifier hs-var">fun</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679217928"><span class="annot"><span class="annottext">Map Int Char
+</span><a href="#local-6989586621679217928"><span class="hs-identifier hs-var">m1</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679217929"><span class="annot"><span class="annottext">Map Int Word
+</span><a href="#local-6989586621679217929"><span class="hs-identifier hs-var">m2</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-33"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679217930"><span class="annot"><span class="annottext">f :: Int -&gt; Word -&gt; Bool
+</span><a href="#local-6989586621679217930"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Fun (Int, Word) Bool -&gt; Int -&gt; Word -&gt; Bool
+forall a b c. Fun (a, b) c -&gt; a -&gt; b -&gt; c
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Function.html#applyFun2"><span class="hs-identifier hs-var">applyFun2</span></a></span><span> </span><span class="annot"><span class="annottext">Fun (Int, Word) Bool
+</span><a href="#local-6989586621679217927"><span class="hs-identifier hs-var">fun</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-34"></span><span>          </span><span id="local-6989586621679217933"><span class="annot"><span class="annottext">ma :: Map Int Word
+</span><a href="#local-6989586621679217933"><span class="hs-identifier hs-var hs-var">ma</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word -&gt; Bool)
+-&gt; Map Int Char -&gt; Map Int Word -&gt; Map Int Word
+forall k v2 v1.
+Ord k =&gt;
+(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v2
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html#intersectDomP"><span class="hs-identifier hs-var">intersectDomP</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word -&gt; Bool
+</span><a href="#local-6989586621679217930"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Char
+</span><a href="#local-6989586621679217928"><span class="hs-identifier hs-var">m1</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Word
+</span><a href="#local-6989586621679217929"><span class="hs-identifier hs-var">m2</span></a></span><span>
+</span><span id="line-35"></span><span>      </span><span class="annot"><span class="annottext">Map Int Word -&gt; IO ()
+forall k a.
+(HasCallStack, Ord k, Show k, Show a) =&gt;
+Map k a -&gt; IO ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.html#expectValidMap"><span class="hs-identifier hs-var">expectValidMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Word
+</span><a href="#local-6989586621679217933"><span class="hs-identifier hs-var">ma</span></a></span><span>
+</span><span id="line-36"></span><span>      </span><span class="annot"><span class="annottext">Map Int Word
+</span><a href="#local-6989586621679217933"><span class="hs-identifier hs-var">ma</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Word -&gt; Map Int Word -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word -&gt; Bool) -&gt; Map Int Word -&gt; Map Int Word
+forall k a. (k -&gt; a -&gt; Bool) -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.filterWithKey</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word -&gt; Bool
+</span><a href="#local-6989586621679217930"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Int Word -&gt; Map Int Char -&gt; Map Int Word
+forall k a b. Ord k =&gt; Map k a -&gt; Map k b -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.intersection</span></span><span> </span><span class="annot"><span class="annottext">Map Int Word
+</span><a href="#local-6989586621679217929"><span class="hs-identifier hs-var">m2</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Char
+</span><a href="#local-6989586621679217928"><span class="hs-identifier hs-var">m1</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">String
+-&gt; (Fun (Int, Word) Bool -&gt; Map Int Char -&gt; Map Int Word -&gt; IO ())
+-&gt; Spec
+forall prop.
+(HasCallStack, Testable prop) =&gt;
+String -&gt; prop -&gt; Spec
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-2.11.13-9c3b235a66c4833958c1e584ebb61c2df8b2ee0401136c2810995c1b6a4bd0c5/share/doc/html/src/Test.Hspec.QuickCheck.html#prop"><span class="hs-identifier hs-var">prop</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;intersectDomPLeft&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Fun (Int, Word) Bool -&gt; Map Int Char -&gt; Map Int Word -&gt; IO ())
+ -&gt; Spec)
+-&gt; (Fun (Int, Word) Bool -&gt; Map Int Char -&gt; Map Int Word -&gt; IO ())
+-&gt; Spec
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679217937"><span class="annot"><span class="annottext">Fun (Int, Word) Bool
+</span><a href="#local-6989586621679217937"><span class="hs-identifier hs-var">fun</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679217938"><span class="annot"><span class="annottext">Map Int Char
+</span><a href="#local-6989586621679217938"><span class="hs-identifier hs-var">m1</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Char</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679217939"><span class="annot"><span class="annottext">Map Int Word
+</span><a href="#local-6989586621679217939"><span class="hs-identifier hs-var">m2</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679217940"><span class="annot"><span class="annottext">f :: Int -&gt; Word -&gt; Bool
+</span><a href="#local-6989586621679217940"><span class="hs-identifier hs-var hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Fun (Int, Word) Bool -&gt; Int -&gt; Word -&gt; Bool
+forall a b c. Fun (a, b) c -&gt; a -&gt; b -&gt; c
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/QuickCheck-2.15.0.1-db6b992e5543937dfb08677d3de2c6cdff04a2cc45767828f7dbc5be2917a404/share/doc/html/src/Test.QuickCheck.Function.html#applyFun2"><span class="hs-identifier hs-var">applyFun2</span></a></span><span> </span><span class="annot"><span class="annottext">Fun (Int, Word) Bool
+</span><a href="#local-6989586621679217937"><span class="hs-identifier hs-var">fun</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-39"></span><span>          </span><span id="local-6989586621679217942"><span class="annot"><span class="annottext">ma :: Map Int Char
+</span><a href="#local-6989586621679217942"><span class="hs-identifier hs-var hs-var">ma</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word -&gt; Bool)
+-&gt; Map Int Char -&gt; Map Int Word -&gt; Map Int Char
+forall k v2 v1.
+Ord k =&gt;
+(k -&gt; v2 -&gt; Bool) -&gt; Map k v1 -&gt; Map k v2 -&gt; Map k v1
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/doc/html/cardano-data/src/Data.MapExtras.html#intersectDomPLeft"><span class="hs-identifier hs-var">intersectDomPLeft</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word -&gt; Bool
+</span><a href="#local-6989586621679217940"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Char
+</span><a href="#local-6989586621679217938"><span class="hs-identifier hs-var">m1</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Word
+</span><a href="#local-6989586621679217939"><span class="hs-identifier hs-var">m2</span></a></span><span>
+</span><span id="line-40"></span><span>      </span><span class="annot"><span class="annottext">Map Int Char -&gt; IO ()
+forall k a.
+(HasCallStack, Ord k, Show k, Show a) =&gt;
+Map k a -&gt; IO ()
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-data-1.2.4.1/l/testlib/doc/html/cardano-data/src/Test.Cardano.Data.html#expectValidMap"><span class="hs-identifier hs-var">expectValidMap</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Char
+</span><a href="#local-6989586621679217942"><span class="hs-identifier hs-var">ma</span></a></span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="annottext">Map Int Char
+</span><a href="#local-6989586621679217942"><span class="hs-identifier hs-var">ma</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Char -&gt; Map Int Char -&gt; IO ()
+forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/hspec-expectations-0.8.4-803bfab44be1d57de46c2fd729766b4529923f957d0248f7f06e545b69067993/share/doc/html/src/Test.Hspec.Expectations.html#shouldBe"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Char -&gt; Maybe Char) -&gt; Map Int Char -&gt; Map Int Char
+forall k a b. (k -&gt; a -&gt; Maybe b) -&gt; Map k a -&gt; Map k b
+</span><span class="hs-identifier hs-var">Map.mapMaybeWithKey</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679217945"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679217945"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679217946"><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679217946"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Char
+</span><a href="#local-6989586621679217946"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Maybe () -&gt; Maybe Char
+forall a b. a -&gt; Maybe b -&gt; Maybe a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><span class="hs-operator hs-var">&lt;$</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Maybe ()
+forall (f :: * -&gt; *). Alternative f =&gt; Bool -&gt; f ()
+</span><span class="hs-identifier hs-var">guard</span></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Maybe ()) -&gt; (Word -&gt; Bool) -&gt; Word -&gt; Maybe ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word -&gt; Bool
+</span><a href="#local-6989586621679217940"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679217945"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">(Word -&gt; Maybe ()) -&gt; Maybe Word -&gt; Maybe ()
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><span class="hs-operator hs-var">=&lt;&lt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Map Int Word -&gt; Maybe Word
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Map.lookup</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679217945"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Map Int Word
+</span><a href="#local-6989586621679217939"><span class="hs-identifier hs-var">m2</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map Int Char
+</span><a href="#local-6989586621679217938"><span class="hs-identifier hs-var">m1</span></a></span><span>
+</span><span id="line-42"></span></pre></body></html>

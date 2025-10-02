@@ -1,0 +1,642 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Keys.Bootstrap</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier">BootstrapWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#ChainCode"><span class="hs-identifier">ChainCode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#bootstrapWitKeyHash"><span class="hs-identifier">bootstrapWitKeyHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#unpackByronVKey"><span class="hs-identifier">unpackByronVKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#makeBootstrapWitness"><span class="hs-identifier">makeBootstrapWitness</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#verifyBootstrapWit"><span class="hs-identifier">verifyBootstrapWit</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.html"><span class="hs-identifier">Cardano.Crypto.DSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignedDSIGN"><span class="hs-identifier">SignedDSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.html"><span class="hs-identifier">Cardano.Crypto.DSIGN</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">DSIGN</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html"><span class="hs-identifier">Cardano.Crypto.DSIGN.Class</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">C</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.html"><span class="hs-identifier">Cardano.Crypto.Hash</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Hash</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.html"><span class="hs-identifier">Cardano.Crypto.Signing</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html"><span class="hs-identifier">Cardano.Crypto.Wallet</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">WC</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier">Annotator</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html"><span class="hs-identifier">Cardano.Ledger.Binary.Plain</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html#decodeRecordNamed"><span class="hs-identifier">decodeRecordNamed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#encodeListLen"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.Serialize.html#serialize%27"><span class="hs-identifier">serialize'</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Hashes.html#ADDRHASH"><span class="hs-identifier">ADDRHASH</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier">EraIndependentTxBody</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier">HASH</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier">Hash</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier">KeyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html"><span class="hs-identifier">Cardano.Ledger.Keys.Internal</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier">DSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier">KeyRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier">VKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#verifySignedDSIGN"><span class="hs-identifier">verifySignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">rwhnf</span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Coerce</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">coerce</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">fromMaybe</span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Ord</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">comparing</span></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Proxy</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quiet-0.2-9225d7422c325dd8b63f688e0d6ee25919a9c576be361208829377debe40884d/share/doc/html/src/Quiet.html"><span class="hs-identifier">Quiet</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">newtype</span><span> </span><span id="ChainCode"><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#ChainCode"><span class="hs-identifier hs-var">ChainCode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ChainCode"><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#ChainCode"><span class="hs-identifier hs-var">ChainCode</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unChainCode"><span class="annot"><span class="annottext">ChainCode -&gt; ByteString
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#unChainCode"><span class="hs-identifier hs-var hs-var">unChainCode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">}</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679434060"><span id="local-6989586621679434065"><span class="annot"><span class="annottext">ChainCode -&gt; ChainCode -&gt; Bool
+(ChainCode -&gt; ChainCode -&gt; Bool)
+-&gt; (ChainCode -&gt; ChainCode -&gt; Bool) -&gt; Eq ChainCode
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ChainCode -&gt; ChainCode -&gt; Bool
+== :: ChainCode -&gt; ChainCode -&gt; Bool
+$c/= :: ChainCode -&gt; ChainCode -&gt; Bool
+/= :: ChainCode -&gt; ChainCode -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679434071"><span id="local-6989586621679434073"><span class="annot"><span class="annottext">(forall x. ChainCode -&gt; Rep ChainCode x)
+-&gt; (forall x. Rep ChainCode x -&gt; ChainCode) -&gt; Generic ChainCode
+forall x. Rep ChainCode x -&gt; ChainCode
+forall x. ChainCode -&gt; Rep ChainCode x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ChainCode -&gt; Rep ChainCode x
+from :: forall x. ChainCode -&gt; Rep ChainCode x
+$cto :: forall x. Rep ChainCode x -&gt; ChainCode
+to :: forall x. Rep ChainCode x -&gt; ChainCode
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679434077"><span id="local-6989586621679434084"><span id="local-6989586621679434090"><span class="annot"><span class="annottext">Int -&gt; ChainCode -&gt; ShowS
+[ChainCode] -&gt; ShowS
+ChainCode -&gt; String
+(Int -&gt; ChainCode -&gt; ShowS)
+-&gt; (ChainCode -&gt; String)
+-&gt; ([ChainCode] -&gt; ShowS)
+-&gt; Show ChainCode
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ChainCode -&gt; ShowS
+showsPrec :: Int -&gt; ChainCode -&gt; ShowS
+$cshow :: ChainCode -&gt; String
+show :: ChainCode -&gt; String
+$cshowList :: [ChainCode] -&gt; ShowS
+showList :: [ChainCode] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/quiet-0.2-9225d7422c325dd8b63f688e0d6ee25919a9c576be361208829377debe40884d/share/doc/html/src/Quiet.html#Quiet"><span class="hs-identifier hs-type">Quiet</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#ChainCode"><span class="hs-identifier hs-type">ChainCode</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679434133"><span id="local-6989586621679434138"><span id="local-6989586621679434142"><span class="annot"><span class="annottext">Context -&gt; ChainCode -&gt; IO (Maybe ThunkInfo)
+Proxy ChainCode -&gt; String
+(Context -&gt; ChainCode -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; ChainCode -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy ChainCode -&gt; String)
+-&gt; NoThunks ChainCode
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; ChainCode -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; ChainCode -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; ChainCode -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; ChainCode -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy ChainCode -&gt; String
+showTypeOf :: Proxy ChainCode -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679434150"><span id="local-6989586621679434157"><span id="local-6989586621679434163"><span class="annot"><span class="annottext">Typeable ChainCode
+Typeable ChainCode =&gt;
+(ChainCode -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy ChainCode -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [ChainCode] -&gt; Size)
+-&gt; ToCBOR ChainCode
+ChainCode -&gt; Encoding
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ChainCode] -&gt; Size
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy ChainCode -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; ToCBOR a
+$ctoCBOR :: ChainCode -&gt; Encoding
+toCBOR :: ChainCode -&gt; Encoding
+$cencodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy ChainCode -&gt; Size
+encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy ChainCode -&gt; Size
+$cencodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ChainCode] -&gt; Size
+encodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ChainCode] -&gt; Size
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679434171"><span id="local-6989586621679434176"><span class="annot"><span class="annottext">Typeable ChainCode
+Typeable ChainCode =&gt;
+(forall s. Decoder s ChainCode)
+-&gt; (Proxy ChainCode -&gt; Text) -&gt; FromCBOR ChainCode
+Proxy ChainCode -&gt; Text
+forall s. Decoder s ChainCode
+forall a.
+Typeable a =&gt;
+(forall s. Decoder s a) -&gt; (Proxy a -&gt; Text) -&gt; FromCBOR a
+$cfromCBOR :: forall s. Decoder s ChainCode
+fromCBOR :: forall s. Decoder s ChainCode
+$clabel :: Proxy ChainCode -&gt; Text
+label :: Proxy ChainCode -&gt; Text
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromCBOR</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679434184"><span id="local-6989586621679434191"><span id="local-6989586621679434197"><span class="annot"><span class="annottext">Typeable ChainCode
+Typeable ChainCode =&gt;
+(ChainCode -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy ChainCode -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+    -&gt; Proxy [ChainCode] -&gt; Size)
+-&gt; EncCBOR ChainCode
+ChainCode -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ChainCode] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy ChainCode -&gt; Size
+forall a.
+Typeable a =&gt;
+(a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+$cencCBOR :: ChainCode -&gt; Encoding
+encCBOR :: ChainCode -&gt; Encoding
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy ChainCode -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy ChainCode -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ChainCode] -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ChainCode] -&gt; Size
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679434205"><span id="local-6989586621679434210"><span id="local-6989586621679434214"><span class="annot"><span class="annottext">Typeable ChainCode
+Typeable ChainCode =&gt;
+(forall s. Decoder s ChainCode)
+-&gt; (forall s. Proxy ChainCode -&gt; Decoder s ())
+-&gt; (Proxy ChainCode -&gt; Text)
+-&gt; DecCBOR ChainCode
+Proxy ChainCode -&gt; Text
+forall s. Decoder s ChainCode
+forall a.
+Typeable a =&gt;
+(forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy ChainCode -&gt; Decoder s ()
+$cdecCBOR :: forall s. Decoder s ChainCode
+decCBOR :: forall s. Decoder s ChainCode
+$cdropCBOR :: forall s. Proxy ChainCode -&gt; Decoder s ()
+dropCBOR :: forall s. Proxy ChainCode -&gt; Decoder s ()
+$clabel :: Proxy ChainCode -&gt; Text
+label :: Proxy ChainCode -&gt; Text
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679434220"><span class="annot"><span class="annottext">ChainCode -&gt; ()
+(ChainCode -&gt; ()) -&gt; NFData ChainCode
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: ChainCode -&gt; ()
+rnf :: ChainCode -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">data</span><span> </span><span id="BootstrapWitness"><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-var">BootstrapWitness</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BootstrapWitness"><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-var">BootstrapWitness</span></a></span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="bwKey"><span class="annot"><span class="annottext">BootstrapWitness -&gt; VKey 'Witness
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#bwKey"><span class="hs-identifier hs-var hs-var">bwKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="bwSignature"><span class="annot"><span class="annottext">BootstrapWitness
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#bwSignature"><span class="hs-identifier hs-var hs-var">bwSignature</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignedDSIGN"><span class="hs-identifier hs-type">SignedDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-type">EraIndependentTxBody</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="bwChainCode"><span class="annot"><span class="annottext">BootstrapWitness -&gt; ChainCode
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#bwChainCode"><span class="hs-identifier hs-var hs-var">bwChainCode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#ChainCode"><span class="hs-identifier hs-type">ChainCode</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="bwAttributes"><span class="annot"><span class="annottext">BootstrapWitness -&gt; ByteString
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#bwAttributes"><span class="hs-identifier hs-var hs-var">bwAttributes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679434232"><span id="local-6989586621679434234"><span class="annot"><span class="annottext">(forall x. BootstrapWitness -&gt; Rep BootstrapWitness x)
+-&gt; (forall x. Rep BootstrapWitness x -&gt; BootstrapWitness)
+-&gt; Generic BootstrapWitness
+forall x. Rep BootstrapWitness x -&gt; BootstrapWitness
+forall x. BootstrapWitness -&gt; Rep BootstrapWitness x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. BootstrapWitness -&gt; Rep BootstrapWitness x
+from :: forall x. BootstrapWitness -&gt; Rep BootstrapWitness x
+$cto :: forall x. Rep BootstrapWitness x -&gt; BootstrapWitness
+to :: forall x. Rep BootstrapWitness x -&gt; BootstrapWitness
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679434237"><span id="local-6989586621679434247"><span id="local-6989586621679434251"><span class="annot"><span class="annottext">Int -&gt; BootstrapWitness -&gt; ShowS
+[BootstrapWitness] -&gt; ShowS
+BootstrapWitness -&gt; String
+(Int -&gt; BootstrapWitness -&gt; ShowS)
+-&gt; (BootstrapWitness -&gt; String)
+-&gt; ([BootstrapWitness] -&gt; ShowS)
+-&gt; Show BootstrapWitness
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BootstrapWitness -&gt; ShowS
+showsPrec :: Int -&gt; BootstrapWitness -&gt; ShowS
+$cshow :: BootstrapWitness -&gt; String
+show :: BootstrapWitness -&gt; String
+$cshowList :: [BootstrapWitness] -&gt; ShowS
+showList :: [BootstrapWitness] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679434254"><span id="local-6989586621679434262"><span class="annot"><span class="annottext">BootstrapWitness -&gt; BootstrapWitness -&gt; Bool
+(BootstrapWitness -&gt; BootstrapWitness -&gt; Bool)
+-&gt; (BootstrapWitness -&gt; BootstrapWitness -&gt; Bool)
+-&gt; Eq BootstrapWitness
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: BootstrapWitness -&gt; BootstrapWitness -&gt; Bool
+== :: BootstrapWitness -&gt; BootstrapWitness -&gt; Bool
+$c/= :: BootstrapWitness -&gt; BootstrapWitness -&gt; Bool
+/= :: BootstrapWitness -&gt; BootstrapWitness -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679434267"><span class="annot"><span class="annottext">rnf :: BootstrapWitness -&gt; ()
+</span><a href="#local-6989586621679434267"><span class="hs-identifier hs-var hs-var hs-var hs-var">rnf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BootstrapWitness -&gt; ()
+forall a. a -&gt; ()
+</span><span class="hs-identifier hs-var">rwhnf</span></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679434270"><span id="local-6989586621679434274"><span id="local-6989586621679434280"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span></span></span></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679434333"><span id="local-6989586621679434337"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679434350"><span class="annot"><span class="annottext">toCBOR :: BootstrapWitness -&gt; Encoding
+</span><a href="#local-6989586621679434350"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span id="local-6989586621679434352"><span class="annot"><span class="annottext">cwr :: BootstrapWitness
+</span><a href="#local-6989586621679434352"><span class="hs-identifier hs-var">cwr</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'Witness
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ChainCode
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679434353"><span id="local-6989586621679434354"><span id="local-6989586621679434355"><span id="local-6989586621679434356"><span class="annot"><span class="annottext">ByteString
+SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+VKey 'Witness
+ChainCode
+bwKey :: BootstrapWitness -&gt; VKey 'Witness
+bwSignature :: BootstrapWitness
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+bwChainCode :: BootstrapWitness -&gt; ChainCode
+bwAttributes :: BootstrapWitness -&gt; ByteString
+bwKey :: VKey 'Witness
+bwSignature :: SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+bwChainCode :: ChainCode
+bwAttributes :: ByteString
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#bwKey"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BootstrapWitness
+</span><a href="#local-6989586621679434352"><span class="hs-identifier hs-var">cwr</span></a></span><span>
+</span><span id="line-77"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cborg-0.2.10.0-3e31f6cf34ff469fb38d9399ae33f1b7220bc22b21ee079efc2a64b820f9d556/share/doc/html/src/Codec.CBOR.Encoding.html#encodeListLen"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-78"></span><span>          </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">VKey 'Witness -&gt; Encoding
+forall a. ToCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#toCBOR"><span class="hs-identifier hs-var">toCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'Witness
+</span><a href="#local-6989586621679434353"><span class="hs-identifier hs-var">bwKey</span></a></span><span>
+</span><span id="line-79"></span><span>          </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+-&gt; Encoding
+forall v a. DSIGNAlgorithm v =&gt; SignedDSIGN v a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#encodeSignedDSIGN"><span class="hs-identifier hs-var">C.encodeSignedDSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="#local-6989586621679434354"><span class="hs-identifier hs-var">bwSignature</span></a></span><span>
+</span><span id="line-80"></span><span>          </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ChainCode -&gt; Encoding
+forall a. ToCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#toCBOR"><span class="hs-identifier hs-var">toCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">ChainCode
+</span><a href="#local-6989586621679434355"><span class="hs-identifier hs-var">bwChainCode</span></a></span><span>
+</span><span id="line-81"></span><span>          </span><span class="annot"><span class="annottext">Encoding -&gt; Encoding -&gt; Encoding
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Encoding
+forall a. ToCBOR a =&gt; a -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#toCBOR"><span class="hs-identifier hs-var">toCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434356"><span class="hs-identifier hs-var">bwAttributes</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679434361"><span id="local-6989586621679434366"><span id="local-6989586621679434369"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span></span></span></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679434375"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679434394"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s BootstrapWitness
+</span><a href="#local-6989586621679434394"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><span class="annottext">Text
+-&gt; (BootstrapWitness -&gt; Int)
+-&gt; Decoder s BootstrapWitness
+-&gt; Decoder s BootstrapWitness
+forall a s. Text -&gt; (a -&gt; Int) -&gt; Decoder s a -&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Plain.html#decodeRecordNamed"><span class="hs-identifier hs-var">decodeRecordNamed</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;BootstrapWitness&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; BootstrapWitness -&gt; Int
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Decoder s BootstrapWitness -&gt; Decoder s BootstrapWitness)
+-&gt; Decoder s BootstrapWitness -&gt; Decoder s BootstrapWitness
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-88"></span><span>      </span><span class="annot"><span class="annottext">VKey 'Witness
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+-&gt; ChainCode
+-&gt; ByteString
+-&gt; BootstrapWitness
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-var">BootstrapWitness</span></a></span><span> </span><span class="annot"><span class="annottext">(VKey 'Witness
+ -&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+ -&gt; ChainCode
+ -&gt; ByteString
+ -&gt; BootstrapWitness)
+-&gt; Decoder s (VKey 'Witness)
+-&gt; Decoder
+     s
+     (SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+      -&gt; ChainCode -&gt; ByteString -&gt; BootstrapWitness)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s (VKey 'Witness)
+forall s. Decoder s (VKey 'Witness)
+forall a s. FromCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var">fromCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder
+  s
+  (SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+   -&gt; ChainCode -&gt; ByteString -&gt; BootstrapWitness)
+-&gt; Decoder
+     s (SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody))
+-&gt; Decoder s (ChainCode -&gt; ByteString -&gt; BootstrapWitness)
+forall a b. Decoder s (a -&gt; b) -&gt; Decoder s a -&gt; Decoder s b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder
+  s (SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody))
+forall v s a. DSIGNAlgorithm v =&gt; Decoder s (SignedDSIGN v a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#decodeSignedDSIGN"><span class="hs-identifier hs-var">C.decodeSignedDSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (ChainCode -&gt; ByteString -&gt; BootstrapWitness)
+-&gt; Decoder s ChainCode
+-&gt; Decoder s (ByteString -&gt; BootstrapWitness)
+forall a b. Decoder s (a -&gt; b) -&gt; Decoder s a -&gt; Decoder s b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s ChainCode
+forall s. Decoder s ChainCode
+forall a s. FromCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var">fromCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder s (ByteString -&gt; BootstrapWitness)
+-&gt; Decoder s ByteString -&gt; Decoder s BootstrapWitness
+forall a b. Decoder s (a -&gt; b) -&gt; Decoder s a -&gt; Decoder s b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s ByteString
+forall s. Decoder s ByteString
+forall a s. FromCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var">fromCBOR</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679434402"><span id="local-6989586621679434407"><span id="local-6989586621679434410"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span></span></span></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679434418"><span id="local-6989586621679434422"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#Annotator"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679434429"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (Annotator BootstrapWitness)
+</span><a href="#local-6989586621679434429"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BootstrapWitness -&gt; Annotator BootstrapWitness
+forall a. a -&gt; Annotator a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(BootstrapWitness -&gt; Annotator BootstrapWitness)
+-&gt; Decoder s BootstrapWitness
+-&gt; Decoder s (Annotator BootstrapWitness)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder s BootstrapWitness
+forall s. Decoder s BootstrapWitness
+forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#decCBOR"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679434435"><span id="local-6989586621679434439"><span id="local-6989586621679434442"><span id="local-6989586621679434445"><span id="local-6989586621679434448"><span id="local-6989586621679434451"><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679434456"><span class="annot"><span class="annottext">compare :: BootstrapWitness -&gt; BootstrapWitness -&gt; Ordering
+</span><a href="#local-6989586621679434456"><span class="hs-identifier hs-var hs-var hs-var hs-var">compare</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(BootstrapWitness -&gt; KeyHash 'Witness)
+-&gt; BootstrapWitness -&gt; BootstrapWitness -&gt; Ordering
+forall a b. Ord a =&gt; (b -&gt; a) -&gt; b -&gt; b -&gt; Ordering
+</span><span class="hs-identifier hs-var">comparing</span></span><span> </span><span class="annot"><span class="annottext">BootstrapWitness -&gt; KeyHash 'Witness
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#bootstrapWitKeyHash"><span class="hs-identifier hs-var">bootstrapWitKeyHash</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="annot"><span class="hs-comment">-- | Rebuild the addrRoot of the corresponding address.</span></span><span>
+</span><span id="line-99"></span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#bootstrapWitKeyHash"><span class="hs-identifier hs-type">bootstrapWitKeyHash</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span>
+</span><span id="line-102"></span><span id="bootstrapWitKeyHash"><span class="annot"><span class="annottext">bootstrapWitKeyHash :: BootstrapWitness -&gt; KeyHash 'Witness
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#bootstrapWitKeyHash"><span class="hs-identifier hs-var hs-var">bootstrapWitKeyHash</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span id="local-6989586621679434459"><span class="annot"><span class="annottext">VerKeyDSIGN Ed25519DSIGN
+</span><a href="#local-6989586621679434459"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#ChainCode"><span class="hs-identifier hs-type">ChainCode</span></a></span><span> </span><span id="local-6989586621679434460"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434460"><span class="hs-identifier hs-var">cc</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679434461"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434461"><span class="hs-identifier hs-var">attributes</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-103"></span><span>  </span><span class="annot"><span class="annottext">Hash ADDRHASH (VerKeyDSIGN Ed25519DSIGN) -&gt; KeyHash 'Witness
+forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN Ed25519DSIGN) -&gt; KeyHash r
+</span><a href="Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-var">KeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">(Hash ADDRHASH (VerKeyDSIGN Ed25519DSIGN) -&gt; KeyHash 'Witness)
+-&gt; (ByteString -&gt; Hash ADDRHASH (VerKeyDSIGN Ed25519DSIGN))
+-&gt; ByteString
+-&gt; KeyHash 'Witness
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Hash ADDRHASH (VerKeyDSIGN Ed25519DSIGN)
+forall a. ByteString -&gt; Hash ADDRHASH a
+</span><a href="#local-6989586621679434464"><span class="hs-identifier hs-var">hash_crypto</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Hash ADDRHASH (VerKeyDSIGN Ed25519DSIGN))
+-&gt; (ByteString -&gt; ByteString)
+-&gt; ByteString
+-&gt; Hash ADDRHASH (VerKeyDSIGN Ed25519DSIGN)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="#local-6989586621679434465"><span class="hs-identifier hs-var">hash_SHA3_256</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; KeyHash 'Witness) -&gt; ByteString -&gt; KeyHash 'Witness
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434466"><span class="hs-identifier hs-var">bytes</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-comment">-- The payload hashed to create an addrRoot consists of the following:</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">-- 1: a token indicating a list of length 3</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-comment">-- 2: the addrType</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-comment">-- 3: the key</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">-- 3a: token indicating list length 2</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">-- 3b: token indicating address type (which will be a vkey address)</span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-comment">-- 3c: a token indicating a bytestring of length 64</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-comment">-- 3d: public key bytes (32)</span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-comment">-- 3e: chain code bytes (32)</span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-comment">-- 4: the addrAttributes</span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-comment">-- the prefix is constant, and hard coded here:</span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><a href="#local-6989586621679434467"><span class="hs-identifier hs-type">prefix</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-117"></span><span>    </span><span id="local-6989586621679434467"><span class="annot"><span class="annottext">prefix :: ByteString
+</span><a href="#local-6989586621679434467"><span class="hs-identifier hs-var hs-var">prefix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\131\00\130\00\88\64&quot;</span></span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-comment">-- Here we are reserializing a key which we have previously deserialized.</span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-comment">-- This is normally naughty. However, this is a blob of bytes -- serializing</span><span>
+</span><span id="line-120"></span><span>    </span><span class="hs-comment">-- it amounts to wrapping the underlying byte array in a ByteString</span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-comment">-- constructor.</span><span>
+</span><span id="line-122"></span><span>    </span><span id="local-6989586621679434468"><span class="annot"><span class="annottext">keyBytes :: ByteString
+</span><a href="#local-6989586621679434468"><span class="hs-identifier hs-var hs-var">keyBytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VerKeyDSIGN Ed25519DSIGN -&gt; ByteString
+forall v. DSIGNAlgorithm v =&gt; VerKeyDSIGN v -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#rawSerialiseVerKeyDSIGN"><span class="hs-identifier hs-var">DSIGN.rawSerialiseVerKeyDSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">VerKeyDSIGN Ed25519DSIGN
+</span><a href="#local-6989586621679434459"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span id="local-6989586621679434466"><span class="annot"><span class="annottext">bytes :: ByteString
+</span><a href="#local-6989586621679434466"><span class="hs-identifier hs-var hs-var">bytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434467"><span class="hs-identifier hs-var">prefix</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434468"><span class="hs-identifier hs-var">keyBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434460"><span class="hs-identifier hs-var">cc</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434461"><span class="hs-identifier hs-var">attributes</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><a href="#local-6989586621679434465"><span class="hs-identifier hs-type">hash_SHA3_256</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-125"></span><span>    </span><span id="local-6989586621679434465"><span class="annot"><span class="annottext">hash_SHA3_256 :: ByteString -&gt; ByteString
+</span><a href="#local-6989586621679434465"><span class="hs-identifier hs-var hs-var">hash_SHA3_256</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy SHA3_256 -&gt; ByteString -&gt; ByteString
+forall h (proxy :: * -&gt; *).
+HashAlgorithm h =&gt;
+proxy h -&gt; ByteString -&gt; ByteString
+forall (proxy :: * -&gt; *).
+proxy SHA3_256 -&gt; ByteString -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#digest"><span class="hs-identifier hs-var">Hash.digest</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy SHA3_256
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Proxy</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.SHA3_256.html#SHA3_256"><span class="hs-identifier hs-type">Hash.SHA3_256</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>    </span><span id="local-6989586621679433968"><span class="annot"><a href="#local-6989586621679434464"><span class="hs-identifier hs-type">hash_crypto</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash.Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#ADDRHASH"><span class="hs-identifier hs-type">ADDRHASH</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679433968"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-127"></span><span>    </span><span id="local-6989586621679434464"><span class="annot"><span class="annottext">hash_crypto :: forall a. ByteString -&gt; Hash ADDRHASH a
+</span><a href="#local-6989586621679434464"><span class="hs-identifier hs-var hs-var">hash_crypto</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash ADDRHASH ByteString -&gt; Hash ADDRHASH a
+forall h a b. Hash h a -&gt; Hash h b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#castHash"><span class="hs-identifier hs-var">Hash.castHash</span></a></span><span> </span><span class="annot"><span class="annottext">(Hash ADDRHASH ByteString -&gt; Hash ADDRHASH a)
+-&gt; (ByteString -&gt; Hash ADDRHASH ByteString)
+-&gt; ByteString
+-&gt; Hash ADDRHASH a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">forall h a. HashAlgorithm h =&gt; (a -&gt; ByteString) -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashWith"><span class="hs-identifier hs-var">Hash.hashWith</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Ledger.Hashes.html#ADDRHASH"><span class="hs-identifier hs-type">ADDRHASH</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#unpackByronVKey"><span class="hs-identifier hs-type">unpackByronVKey</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">Byron.VerificationKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#ChainCode"><span class="hs-identifier hs-type">ChainCode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span id="unpackByronVKey"><span class="annot"><span class="annottext">unpackByronVKey :: VerificationKey -&gt; (VKey 'Witness, ChainCode)
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#unpackByronVKey"><span class="hs-identifier hs-var hs-var">unpackByronVKey</span></a></span></span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">Byron.VerificationKey</span></a></span><span>
+</span><span id="line-134"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#XPub"><span class="hs-identifier hs-type">WC.XPub</span></a></span><span> </span><span id="local-6989586621679434479"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434479"><span class="hs-identifier hs-var">vkeyBytes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.Types.html#ChainCode"><span class="hs-identifier hs-type">WC.ChainCode</span></a></span><span> </span><span id="local-6989586621679434481"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434481"><span class="hs-identifier hs-var">chainCodeBytes</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe (VerKeyDSIGN Ed25519DSIGN)
+forall v. DSIGNAlgorithm v =&gt; ByteString -&gt; Maybe (VerKeyDSIGN v)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#rawDeserialiseVerKeyDSIGN"><span class="hs-identifier hs-var">DSIGN.rawDeserialiseVerKeyDSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434479"><span class="hs-identifier hs-var">vkeyBytes</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-comment">-- This maybe is produced by a check that the length of the public key</span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-comment">-- is the correct one. (32 bytes). If the XPub was constructed correctly,</span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-comment">-- we already know that it has this length.</span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">Maybe (VerKeyDSIGN Ed25519DSIGN)
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; (VKey 'Witness, ChainCode)
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;unpackByronVKey: impossible!&quot;</span></span><span>
+</span><span id="line-140"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679434484"><span class="annot"><span class="annottext">VerKeyDSIGN Ed25519DSIGN
+</span><a href="#local-6989586621679434484"><span class="hs-identifier hs-var">vk</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VerKeyDSIGN Ed25519DSIGN -&gt; VKey 'Witness
+forall (kd :: KeyRole). VerKeyDSIGN Ed25519DSIGN -&gt; VKey kd
+</span><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-var">VKey</span></a></span><span> </span><span class="annot"><span class="annottext">VerKeyDSIGN Ed25519DSIGN
+</span><a href="#local-6989586621679434484"><span class="hs-identifier hs-var">vk</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ChainCode
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#ChainCode"><span class="hs-identifier hs-var">ChainCode</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679434481"><span class="hs-identifier hs-var">chainCodeBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#verifyBootstrapWit"><span class="hs-identifier hs-type">verifyBootstrapWit</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-type">EraIndependentTxBody</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-144"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-146"></span><span id="verifyBootstrapWit"><span class="annot"><span class="annottext">verifyBootstrapWit :: Hash HASH EraIndependentTxBody -&gt; BootstrapWitness -&gt; Bool
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#verifyBootstrapWit"><span class="hs-identifier hs-var hs-var">verifyBootstrapWit</span></a></span></span><span> </span><span id="local-6989586621679434485"><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621679434485"><span class="hs-identifier hs-var">txbodyHash</span></a></span></span><span> </span><span id="local-6989586621679434486"><span class="annot"><span class="annottext">BootstrapWitness
+</span><a href="#local-6989586621679434486"><span class="hs-identifier hs-var">witness</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-147"></span><span>  </span><span class="annot"><span class="annottext">VKey 'Witness
+-&gt; Hash HASH EraIndependentTxBody
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+-&gt; Bool
+forall a (kd :: KeyRole).
+Signable Ed25519DSIGN a =&gt;
+VKey kd -&gt; a -&gt; SignedDSIGN Ed25519DSIGN a -&gt; Bool
+</span><a href="Cardano.Ledger.Keys.Internal.html#verifySignedDSIGN"><span class="hs-identifier hs-var">verifySignedDSIGN</span></a></span><span>
+</span><span id="line-148"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BootstrapWitness -&gt; VKey 'Witness
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#bwKey"><span class="hs-identifier hs-var">bwKey</span></a></span><span> </span><span class="annot"><span class="annottext">BootstrapWitness
+</span><a href="#local-6989586621679434486"><span class="hs-identifier hs-var">witness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>    </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621679434485"><span class="hs-identifier hs-var">txbodyHash</span></a></span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+forall a b. Coercible a b =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">coerce</span></span><span> </span><span class="annot"><span class="annottext">(SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+ -&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody))
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">BootstrapWitness
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#bwSignature"><span class="hs-identifier hs-var">bwSignature</span></a></span><span> </span><span class="annot"><span class="annottext">BootstrapWitness
+</span><a href="#local-6989586621679434486"><span class="hs-identifier hs-var">witness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#coerceSignature"><span class="hs-identifier hs-type">coerceSignature</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#XSignature"><span class="hs-identifier hs-type">WC.XSignature</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SigDSIGN"><span class="hs-identifier hs-type">DSIGN.SigDSIGN</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Ed25519.html#Ed25519DSIGN"><span class="hs-identifier hs-type">DSIGN.Ed25519DSIGN</span></a></span><span>
+</span><span id="line-153"></span><span id="coerceSignature"><span class="annot"><span class="annottext">coerceSignature :: XSignature -&gt; SigDSIGN Ed25519DSIGN
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#coerceSignature"><span class="hs-identifier hs-var hs-var">coerceSignature</span></a></span></span><span> </span><span id="local-6989586621679434488"><span class="annot"><span class="annottext">XSignature
+</span><a href="#local-6989586621679434488"><span class="hs-identifier hs-var">sig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-154"></span><span>  </span><span class="annot"><span class="annottext">SigDSIGN Ed25519DSIGN
+-&gt; Maybe (SigDSIGN Ed25519DSIGN) -&gt; SigDSIGN Ed25519DSIGN
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; SigDSIGN Ed25519DSIGN
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;coerceSignature: impossible! signature size mismatch&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe (SigDSIGN Ed25519DSIGN) -&gt; SigDSIGN Ed25519DSIGN)
+-&gt; Maybe (SigDSIGN Ed25519DSIGN) -&gt; SigDSIGN Ed25519DSIGN
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-155"></span><span>    </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe (SigDSIGN Ed25519DSIGN)
+forall v. DSIGNAlgorithm v =&gt; ByteString -&gt; Maybe (SigDSIGN v)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#rawDeserialiseSigDSIGN"><span class="hs-identifier hs-var">DSIGN.rawDeserialiseSigDSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">XSignature -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#unXSignature"><span class="hs-identifier hs-var">WC.unXSignature</span></a></span><span> </span><span class="annot"><span class="annottext">XSignature
+</span><a href="#local-6989586621679434488"><span class="hs-identifier hs-var">sig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#makeBootstrapWitness"><span class="hs-identifier hs-type">makeBootstrapWitness</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-158"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-type">EraIndependentTxBody</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-159"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.SigningKey.html#SigningKey"><span class="hs-identifier hs-type">Byron.SigningKey</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-160"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.Attributes.html#Attributes"><span class="hs-identifier hs-type">Byron.Attributes</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-byron-1.2.0.0/doc/html/cardano-ledger-byron/src/Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">Byron.AddrAttributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-type">BootstrapWitness</span></a></span><span>
+</span><span id="line-162"></span><span id="makeBootstrapWitness"><span class="annot"><span class="annottext">makeBootstrapWitness :: Hash HASH EraIndependentTxBody
+-&gt; SigningKey -&gt; Attributes AddrAttributes -&gt; BootstrapWitness
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#makeBootstrapWitness"><span class="hs-identifier hs-var hs-var">makeBootstrapWitness</span></a></span></span><span> </span><span id="local-6989586621679434491"><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621679434491"><span class="hs-identifier hs-var">txBodyHash</span></a></span></span><span> </span><span id="local-6989586621679434492"><span class="annot"><span class="annottext">SigningKey
+</span><a href="#local-6989586621679434492"><span class="hs-identifier hs-var">byronSigningKey</span></a></span></span><span> </span><span id="local-6989586621679434493"><span class="annot"><span class="annottext">Attributes AddrAttributes
+</span><a href="#local-6989586621679434493"><span class="hs-identifier hs-var">addrAttributes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-163"></span><span>  </span><span class="annot"><span class="annottext">VKey 'Witness
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+-&gt; ChainCode
+-&gt; ByteString
+-&gt; BootstrapWitness
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#BootstrapWitness"><span class="hs-identifier hs-var">BootstrapWitness</span></a></span><span> </span><span class="annot"><span class="annottext">VKey 'Witness
+</span><a href="#local-6989586621679434494"><span class="hs-identifier hs-var">vk</span></a></span><span> </span><span class="annot"><span class="annottext">SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="#local-6989586621679434495"><span class="hs-keyword hs-var">signature</span></a></span><span> </span><span class="annot"><span class="annottext">ChainCode
+</span><a href="#local-6989586621679434496"><span class="hs-identifier hs-var">cc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Attributes AddrAttributes -&gt; ByteString
+forall a. ToCBOR a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.Serialize.html#serialize%27"><span class="hs-identifier hs-var">serialize'</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes AddrAttributes
+</span><a href="#local-6989586621679434493"><span class="hs-identifier hs-var">addrAttributes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679434494"><span class="annot"><span class="annottext">VKey 'Witness
+</span><a href="#local-6989586621679434494"><span class="hs-identifier hs-var">vk</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679434496"><span class="annot"><span class="annottext">ChainCode
+</span><a href="#local-6989586621679434496"><span class="hs-identifier hs-var">cc</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VerificationKey -&gt; (VKey 'Witness, ChainCode)
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#unpackByronVKey"><span class="hs-identifier hs-var">unpackByronVKey</span></a></span><span> </span><span class="annot"><span class="annottext">(VerificationKey -&gt; (VKey 'Witness, ChainCode))
+-&gt; VerificationKey -&gt; (VKey 'Witness, ChainCode)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">SigningKey -&gt; VerificationKey
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.SigningKey.html#toVerification"><span class="hs-identifier hs-var">Byron.toVerification</span></a></span><span> </span><span class="annot"><span class="annottext">SigningKey
+</span><a href="#local-6989586621679434492"><span class="hs-identifier hs-var">byronSigningKey</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span id="local-6989586621679434495"><span class="annot"><span class="annottext">signature :: SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+</span><a href="#local-6989586621679434495"><span class="hs-keyword hs-var hs-var">signature</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-167"></span><span>      </span><span class="annot"><span class="annottext">SigDSIGN Ed25519DSIGN
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+forall v a. SigDSIGN v -&gt; SignedDSIGN v a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignedDSIGN"><span class="hs-identifier hs-var">SignedDSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">(SigDSIGN Ed25519DSIGN
+ -&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody))
+-&gt; (XSignature -&gt; SigDSIGN Ed25519DSIGN)
+-&gt; XSignature
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">XSignature -&gt; SigDSIGN Ed25519DSIGN
+</span><a href="Cardano.Ledger.Keys.Bootstrap.html#coerceSignature"><span class="hs-identifier hs-var">coerceSignature</span></a></span><span> </span><span class="annot"><span class="annottext">(XSignature
+ -&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody))
+-&gt; XSignature
+-&gt; SignedDSIGN Ed25519DSIGN (Hash HASH EraIndependentTxBody)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-168"></span><span>        </span><span class="annot"><span class="annottext">ByteString -&gt; XPrv -&gt; ByteString -&gt; XSignature
+forall passPhrase msg.
+(ByteArrayAccess passPhrase, ByteArrayAccess msg) =&gt;
+passPhrase -&gt; XPrv -&gt; msg -&gt; XSignature
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-1.3.0-be0867936727c7255f491428fc6b8b0c735ee65e82d1a81e405580da7c00e537/share/doc/html/src/Cardano.Crypto.Wallet.html#sign"><span class="hs-identifier hs-var">WC.sign</span></a></span><span>
+</span><span id="line-169"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SigningKey -&gt; XPrv
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-crypto-wrapper-1.6.1.0/doc/html/cardano-crypto-wrapper/src/Cardano.Crypto.Signing.SigningKey.html#unSigningKey"><span class="hs-identifier hs-var">Byron.unSigningKey</span></a></span><span> </span><span class="annot"><span class="annottext">SigningKey
+</span><a href="#local-6989586621679434492"><span class="hs-identifier hs-var">byronSigningKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody -&gt; ByteString
+forall h a. Hash h a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-crypto-class-2.2.3.1-587788bd0abb83ca86364e7e25fdd2cb1ce3c8f25ede4b71a1cb43e4a1d72f36/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashToBytes"><span class="hs-identifier hs-var">Hash.hashToBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621679434491"><span class="hs-identifier hs-var">txBodyHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span></pre></body></html>

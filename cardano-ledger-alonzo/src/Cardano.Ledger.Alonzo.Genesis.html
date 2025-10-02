@@ -1,0 +1,831 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE ViewPatterns #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Alonzo.Genesis</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier">AlonzoGenesis</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesisWrapper"><span class="hs-identifier">AlonzoGenesisWrapper</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#unAlonzoGenesisWrapper"><span class="hs-identifier">unAlonzoGenesisWrapper</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier">AlonzoGenesis</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#agCoinsPerUTxOWord"><span class="hs-identifier">agCoinsPerUTxOWord</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#agCostModels"><span class="hs-identifier">agCostModels</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#agPrices"><span class="hs-identifier">agPrices</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxTxExUnits"><span class="hs-identifier">agMaxTxExUnits</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxBlockExUnits"><span class="hs-identifier">agMaxBlockExUnits</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxValSize"><span class="hs-identifier">agMaxValSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#agCollateralPercentage"><span class="hs-identifier">agCollateralPercentage</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxCollateralInputs"><span class="hs-identifier">agMaxCollateralInputs</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#toAlonzoGenesisPairs"><span class="hs-identifier">toAlonzoGenesisPairs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Era.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier">AlonzoEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#CoinPerWord"><span class="hs-identifier">CoinPerWord</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#UpgradeAlonzoPParams"><span class="hs-identifier">UpgradeAlonzoPParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#CostModels"><span class="hs-identifier">CostModels</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier">ExUnits</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.ExUnits.html#Prices"><span class="hs-identifier">Prices</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#KeyValuePairs"><span class="hs-identifier">KeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ToKeyValuePairs"><span class="hs-identifier">ToKeyValuePairs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier">DecCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Coders.html"><span class="hs-identifier">Cardano.Ledger.Binary.Coders</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#Decode"><span class="hs-identifier">Decode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier">From</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#RecD"><span class="hs-identifier">RecD</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Encode"><span class="hs-identifier">Encode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Rec"><span class="hs-identifier">Rec</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier">To</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#decode"><span class="hs-identifier">decode</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#encode"><span class="hs-identifier">encode</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator">(!&gt;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator">(&lt;!)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#EraGenesis"><span class="hs-identifier">EraGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html"><span class="hs-identifier">Cardano.Ledger.Plutus.CostModels</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#parseCostModels"><span class="hs-identifier">parseCostModels</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator">(.:)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator">(.=)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Identity</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Identity</span></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Numeric.Natural</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="annot"><span class="hs-comment">-- | All configuration that is necessary to bootstrap AlonzoEra from ShelleyGenesis</span></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">newtype</span><span> </span><span id="AlonzoGenesis"><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-var">AlonzoGenesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AlonzoGenesisWrapper"><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesisWrapper"><span class="hs-identifier hs-var">AlonzoGenesisWrapper</span></a></span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unAlonzoGenesisWrapper"><span class="annot"><span class="annottext">AlonzoGenesis -&gt; UpgradeAlonzoPParams Identity
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#unAlonzoGenesisWrapper"><span class="hs-identifier hs-var hs-var">unAlonzoGenesisWrapper</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#UpgradeAlonzoPParams"><span class="hs-identifier hs-type">UpgradeAlonzoPParams</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Identity</span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679484804"><span id="local-6989586621679484808"><span class="annot"><span class="annottext">AlonzoGenesis -&gt; AlonzoGenesis -&gt; Bool
+(AlonzoGenesis -&gt; AlonzoGenesis -&gt; Bool)
+-&gt; (AlonzoGenesis -&gt; AlonzoGenesis -&gt; Bool) -&gt; Eq AlonzoGenesis
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: AlonzoGenesis -&gt; AlonzoGenesis -&gt; Bool
+== :: AlonzoGenesis -&gt; AlonzoGenesis -&gt; Bool
+$c/= :: AlonzoGenesis -&gt; AlonzoGenesis -&gt; Bool
+/= :: AlonzoGenesis -&gt; AlonzoGenesis -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679484813"><span id="local-6989586621679484815"><span class="annot"><span class="annottext">(forall x. AlonzoGenesis -&gt; Rep AlonzoGenesis x)
+-&gt; (forall x. Rep AlonzoGenesis x -&gt; AlonzoGenesis)
+-&gt; Generic AlonzoGenesis
+forall x. Rep AlonzoGenesis x -&gt; AlonzoGenesis
+forall x. AlonzoGenesis -&gt; Rep AlonzoGenesis x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. AlonzoGenesis -&gt; Rep AlonzoGenesis x
+from :: forall x. AlonzoGenesis -&gt; Rep AlonzoGenesis x
+$cto :: forall x. Rep AlonzoGenesis x -&gt; AlonzoGenesis
+to :: forall x. Rep AlonzoGenesis x -&gt; AlonzoGenesis
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679484819"><span id="local-6989586621679484824"><span id="local-6989586621679484828"><span class="annot"><span class="annottext">Int -&gt; AlonzoGenesis -&gt; ShowS
+[AlonzoGenesis] -&gt; ShowS
+AlonzoGenesis -&gt; String
+(Int -&gt; AlonzoGenesis -&gt; ShowS)
+-&gt; (AlonzoGenesis -&gt; String)
+-&gt; ([AlonzoGenesis] -&gt; ShowS)
+-&gt; Show AlonzoGenesis
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; AlonzoGenesis -&gt; ShowS
+showsPrec :: Int -&gt; AlonzoGenesis -&gt; ShowS
+$cshow :: AlonzoGenesis -&gt; String
+show :: AlonzoGenesis -&gt; String
+$cshowList :: [AlonzoGenesis] -&gt; ShowS
+showList :: [AlonzoGenesis] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679484834"><span id="local-6989586621679484839"><span id="local-6989586621679484843"><span class="annot"><span class="annottext">Context -&gt; AlonzoGenesis -&gt; IO (Maybe ThunkInfo)
+Proxy AlonzoGenesis -&gt; String
+(Context -&gt; AlonzoGenesis -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; AlonzoGenesis -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy AlonzoGenesis -&gt; String)
+-&gt; NoThunks AlonzoGenesis
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; AlonzoGenesis -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; AlonzoGenesis -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; AlonzoGenesis -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; AlonzoGenesis -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy AlonzoGenesis -&gt; String
+showTypeOf :: Proxy AlonzoGenesis -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679484849"><span class="annot"><span class="annottext">AlonzoGenesis -&gt; ()
+(AlonzoGenesis -&gt; ()) -&gt; NFData AlonzoGenesis
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: AlonzoGenesis -&gt; ()
+rnf :: AlonzoGenesis -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679484856"><span id="local-6989586621679484862"><span id="local-6989586621679484867"><span id="local-6989586621679484872"><span id="local-6989586621679484877"><span class="annot"><span class="annottext">[AlonzoGenesis] -&gt; Value
+[AlonzoGenesis] -&gt; Encoding
+AlonzoGenesis -&gt; Bool
+AlonzoGenesis -&gt; Value
+AlonzoGenesis -&gt; Encoding
+(AlonzoGenesis -&gt; Value)
+-&gt; (AlonzoGenesis -&gt; Encoding)
+-&gt; ([AlonzoGenesis] -&gt; Value)
+-&gt; ([AlonzoGenesis] -&gt; Encoding)
+-&gt; (AlonzoGenesis -&gt; Bool)
+-&gt; ToJSON AlonzoGenesis
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: AlonzoGenesis -&gt; Value
+toJSON :: AlonzoGenesis -&gt; Value
+$ctoEncoding :: AlonzoGenesis -&gt; Encoding
+toEncoding :: AlonzoGenesis -&gt; Encoding
+$ctoJSONList :: [AlonzoGenesis] -&gt; Value
+toJSONList :: [AlonzoGenesis] -&gt; Value
+$ctoEncodingList :: [AlonzoGenesis] -&gt; Encoding
+toEncodingList :: [AlonzoGenesis] -&gt; Encoding
+$comitField :: AlonzoGenesis -&gt; Bool
+omitField :: AlonzoGenesis -&gt; Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#KeyValuePairs"><span class="hs-identifier hs-type">KeyValuePairs</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#CoinPerWord"><span class="hs-identifier hs-type">CoinPerWord</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#CostModels"><span class="hs-identifier hs-type">CostModels</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.ExUnits.html#Prices"><span class="hs-identifier hs-type">Prices</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">ExUnits</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">ExUnits</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">pattern</span><span> </span><span id="AlonzoGenesis"><span id="%24mAlonzoGenesis"><span id="%24bAlonzoGenesis"><span class="annot"><span class="annottext">$mAlonzoGenesis :: forall {r}.
+AlonzoGenesis
+-&gt; (CoinPerWord
+    -&gt; CostModels
+    -&gt; Prices
+    -&gt; ExUnits
+    -&gt; ExUnits
+    -&gt; Natural
+    -&gt; Natural
+    -&gt; Natural
+    -&gt; r)
+-&gt; ((# #) -&gt; r)
+-&gt; r
+$bAlonzoGenesis :: CoinPerWord
+-&gt; CostModels
+-&gt; Prices
+-&gt; ExUnits
+-&gt; ExUnits
+-&gt; Natural
+-&gt; Natural
+-&gt; Natural
+-&gt; AlonzoGenesis
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-var hs-var hs-var hs-var">AlonzoGenesis</span></a></span></span></span></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="agCoinsPerUTxOWord"><span class="annot"><span class="annottext">AlonzoGenesis -&gt; CoinPerWord
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agCoinsPerUTxOWord"><span class="hs-identifier hs-var hs-var hs-var">agCoinsPerUTxOWord</span></a></span></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="agCostModels"><span class="annot"><span class="annottext">AlonzoGenesis -&gt; CostModels
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agCostModels"><span class="hs-identifier hs-var hs-var hs-var">agCostModels</span></a></span></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="agPrices"><span class="annot"><span class="annottext">AlonzoGenesis -&gt; Prices
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agPrices"><span class="hs-identifier hs-var hs-var hs-var">agPrices</span></a></span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="agMaxTxExUnits"><span class="annot"><span class="annottext">AlonzoGenesis -&gt; ExUnits
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxTxExUnits"><span class="hs-identifier hs-var hs-var hs-var">agMaxTxExUnits</span></a></span></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="agMaxBlockExUnits"><span class="annot"><span class="annottext">AlonzoGenesis -&gt; ExUnits
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxBlockExUnits"><span class="hs-identifier hs-var hs-var hs-var">agMaxBlockExUnits</span></a></span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="agMaxValSize"><span class="annot"><span class="annottext">AlonzoGenesis -&gt; Natural
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxValSize"><span class="hs-identifier hs-var hs-var hs-var">agMaxValSize</span></a></span></span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="agCollateralPercentage"><span class="annot"><span class="annottext">AlonzoGenesis -&gt; Natural
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agCollateralPercentage"><span class="hs-identifier hs-var hs-var hs-var">agCollateralPercentage</span></a></span></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="agMaxCollateralInputs"><span class="annot"><span class="annottext">AlonzoGenesis -&gt; Natural
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxCollateralInputs"><span class="hs-identifier hs-var hs-var hs-var">agMaxCollateralInputs</span></a></span></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#unAlonzoGenesisWrapper"><span class="hs-identifier hs-var">unAlonzoGenesisWrapper</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>      </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#UpgradeAlonzoPParams"><span class="hs-identifier hs-type">UpgradeAlonzoPParams</span></a></span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#uappCoinsPerUTxOWord"><span class="hs-identifier hs-var">uappCoinsPerUTxOWord</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679484886"><span class="annot"><a href="#local-6989586621679484886"><span class="hs-identifier hs-var">agCoinsPerUTxOWord</span></a></span></span><span>
+</span><span id="line-93"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#uappCostModels"><span class="hs-identifier hs-var">uappCostModels</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679484887"><span class="annot"><a href="#local-6989586621679484887"><span class="hs-identifier hs-var">agCostModels</span></a></span></span><span>
+</span><span id="line-94"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#uappPrices"><span class="hs-identifier hs-var">uappPrices</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679484888"><span class="annot"><a href="#local-6989586621679484888"><span class="hs-identifier hs-var">agPrices</span></a></span></span><span>
+</span><span id="line-95"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#uappMaxTxExUnits"><span class="hs-identifier hs-var">uappMaxTxExUnits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679484889"><span class="annot"><a href="#local-6989586621679484889"><span class="hs-identifier hs-var">agMaxTxExUnits</span></a></span></span><span>
+</span><span id="line-96"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#uappMaxBlockExUnits"><span class="hs-identifier hs-var">uappMaxBlockExUnits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679484890"><span class="annot"><a href="#local-6989586621679484890"><span class="hs-identifier hs-var">agMaxBlockExUnits</span></a></span></span><span>
+</span><span id="line-97"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#uappMaxValSize"><span class="hs-identifier hs-var">uappMaxValSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679484891"><span class="annot"><a href="#local-6989586621679484891"><span class="hs-identifier hs-var">agMaxValSize</span></a></span></span><span>
+</span><span id="line-98"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#uappCollateralPercentage"><span class="hs-identifier hs-var">uappCollateralPercentage</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679484892"><span class="annot"><a href="#local-6989586621679484892"><span class="hs-identifier hs-var">agCollateralPercentage</span></a></span></span><span>
+</span><span id="line-99"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#uappMaxCollateralInputs"><span class="hs-identifier hs-var">uappMaxCollateralInputs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="local-6989586621679484893"><span class="annot"><a href="#local-6989586621679484893"><span class="hs-identifier hs-var">agMaxCollateralInputs</span></a></span></span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-var">AlonzoGenesis</span></a></span><span>
+</span><span id="line-104"></span><span>      </span><span id="local-6989586621679484903"><span class="annot"><span class="annottext">CoinPerWord
+</span><a href="#local-6989586621679484903"><span class="hs-identifier hs-var">coinsPerUTxOWord_</span></a></span></span><span>
+</span><span id="line-105"></span><span>      </span><span id="local-6989586621679484904"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679484904"><span class="hs-identifier hs-var">costModels_</span></a></span></span><span>
+</span><span id="line-106"></span><span>      </span><span id="local-6989586621679484905"><span class="annot"><span class="annottext">Prices
+</span><a href="#local-6989586621679484905"><span class="hs-identifier hs-var">prices_</span></a></span></span><span>
+</span><span id="line-107"></span><span>      </span><span id="local-6989586621679484906"><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621679484906"><span class="hs-identifier hs-var">maxTxExUnits_</span></a></span></span><span>
+</span><span id="line-108"></span><span>      </span><span id="local-6989586621679484907"><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621679484907"><span class="hs-identifier hs-var">maxBlockExUnits_</span></a></span></span><span>
+</span><span id="line-109"></span><span>      </span><span id="local-6989586621679484908"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679484908"><span class="hs-identifier hs-var">maxValSize_</span></a></span></span><span>
+</span><span id="line-110"></span><span>      </span><span id="local-6989586621679484909"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679484909"><span class="hs-identifier hs-var">collateralPercentage_</span></a></span></span><span>
+</span><span id="line-111"></span><span>      </span><span id="local-6989586621679484910"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679484910"><span class="hs-identifier hs-var">maxCollateralInputs_</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>        </span><span class="annot"><span class="annottext">UpgradeAlonzoPParams Identity -&gt; AlonzoGenesis
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesisWrapper"><span class="hs-identifier hs-var">AlonzoGenesisWrapper</span></a></span><span> </span><span class="annot"><span class="annottext">(UpgradeAlonzoPParams Identity -&gt; AlonzoGenesis)
+-&gt; UpgradeAlonzoPParams Identity -&gt; AlonzoGenesis
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-113"></span><span>          </span><span class="annot"><a href="Cardano.Ledger.Alonzo.PParams.html#UpgradeAlonzoPParams"><span class="hs-identifier hs-type">UpgradeAlonzoPParams</span></a></span><span>
+</span><span id="line-114"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">uappCoinsPerUTxOWord :: HKD Identity CoinPerWord
+</span><a href="Cardano.Ledger.Alonzo.PParams.html#uappCoinsPerUTxOWord"><span class="hs-identifier hs-var">uappCoinsPerUTxOWord</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HKD Identity CoinPerWord
+CoinPerWord
+</span><a href="#local-6989586621679484903"><span class="hs-identifier hs-var">coinsPerUTxOWord_</span></a></span><span>
+</span><span id="line-115"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">uappCostModels :: HKD Identity CostModels
+</span><a href="Cardano.Ledger.Alonzo.PParams.html#uappCostModels"><span class="hs-identifier hs-var">uappCostModels</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HKD Identity CostModels
+CostModels
+</span><a href="#local-6989586621679484904"><span class="hs-identifier hs-var">costModels_</span></a></span><span>
+</span><span id="line-116"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">uappPrices :: HKD Identity Prices
+</span><a href="Cardano.Ledger.Alonzo.PParams.html#uappPrices"><span class="hs-identifier hs-var">uappPrices</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HKD Identity Prices
+Prices
+</span><a href="#local-6989586621679484905"><span class="hs-identifier hs-var">prices_</span></a></span><span>
+</span><span id="line-117"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">uappMaxTxExUnits :: HKD Identity ExUnits
+</span><a href="Cardano.Ledger.Alonzo.PParams.html#uappMaxTxExUnits"><span class="hs-identifier hs-var">uappMaxTxExUnits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HKD Identity ExUnits
+ExUnits
+</span><a href="#local-6989586621679484906"><span class="hs-identifier hs-var">maxTxExUnits_</span></a></span><span>
+</span><span id="line-118"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">uappMaxBlockExUnits :: HKD Identity ExUnits
+</span><a href="Cardano.Ledger.Alonzo.PParams.html#uappMaxBlockExUnits"><span class="hs-identifier hs-var">uappMaxBlockExUnits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HKD Identity ExUnits
+ExUnits
+</span><a href="#local-6989586621679484907"><span class="hs-identifier hs-var">maxBlockExUnits_</span></a></span><span>
+</span><span id="line-119"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">uappMaxValSize :: HKD Identity Natural
+</span><a href="Cardano.Ledger.Alonzo.PParams.html#uappMaxValSize"><span class="hs-identifier hs-var">uappMaxValSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+HKD Identity Natural
+</span><a href="#local-6989586621679484908"><span class="hs-identifier hs-var">maxValSize_</span></a></span><span>
+</span><span id="line-120"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">uappCollateralPercentage :: HKD Identity Natural
+</span><a href="Cardano.Ledger.Alonzo.PParams.html#uappCollateralPercentage"><span class="hs-identifier hs-var">uappCollateralPercentage</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+HKD Identity Natural
+</span><a href="#local-6989586621679484909"><span class="hs-identifier hs-var">collateralPercentage_</span></a></span><span>
+</span><span id="line-121"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">uappMaxCollateralInputs :: HKD Identity Natural
+</span><a href="Cardano.Ledger.Alonzo.PParams.html#uappMaxCollateralInputs"><span class="hs-identifier hs-var">uappMaxCollateralInputs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+HKD Identity Natural
+</span><a href="#local-6989586621679484910"><span class="hs-identifier hs-var">maxCollateralInputs_</span></a></span><span>
+</span><span id="line-122"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-pragma hs-type">AlonzoGenesis</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#EraGenesis"><span class="hs-identifier hs-type">EraGenesis</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Genesis"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Genesis.html#Genesis"><span class="hs-identifier hs-var">Genesis</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="annot"><span class="hs-comment">-- | Genesis types are always encoded with the version of era they are defined in.</span></span><span>
+</span><span id="line-130"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679484920"><span id="local-6989586621679484926"><span id="local-6989586621679484929"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.DecCBOR.html#DecCBOR"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span></span></span></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679484935"><span id="local-6989586621679484941"><span id="local-6989586621679484944"><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span></span></span></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679484951"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-135"></span><span>  </span><span id="local-6989586621679484977"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s AlonzoGenesis
+</span><a href="#local-6989586621679484977"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><span class="annottext">forall era t s. Era era =&gt; Decoder s t -&gt; Decoder s t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#eraDecoder"><span class="hs-identifier hs-var">eraDecoder</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="annot"><span class="annottext">(Decoder s AlonzoGenesis -&gt; Decoder s AlonzoGenesis)
+-&gt; Decoder s AlonzoGenesis -&gt; Decoder s AlonzoGenesis
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-137"></span><span>      </span><span class="annot"><span class="annottext">Decode ('Closed 'Dense) AlonzoGenesis -&gt; Decoder s AlonzoGenesis
+forall t (w :: Wrapped) s. Typeable t =&gt; Decode w t -&gt; Decoder s t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#decode"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">(Decode ('Closed 'Dense) AlonzoGenesis -&gt; Decoder s AlonzoGenesis)
+-&gt; Decode ('Closed 'Dense) AlonzoGenesis -&gt; Decoder s AlonzoGenesis
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span>
+</span><span id="line-138"></span><span>        </span><span class="annot"><span class="annottext">(CoinPerWord
+ -&gt; CostModels
+ -&gt; Prices
+ -&gt; ExUnits
+ -&gt; ExUnits
+ -&gt; Natural
+ -&gt; Natural
+ -&gt; Natural
+ -&gt; AlonzoGenesis)
+-&gt; Decode
+     ('Closed 'Dense)
+     (CoinPerWord
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; ExUnits
+      -&gt; ExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; AlonzoGenesis)
+forall t. t -&gt; Decode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#RecD"><span class="hs-identifier hs-var">RecD</span></a></span><span> </span><span class="annot"><span class="annottext">CoinPerWord
+-&gt; CostModels
+-&gt; Prices
+-&gt; ExUnits
+-&gt; ExUnits
+-&gt; Natural
+-&gt; Natural
+-&gt; Natural
+-&gt; AlonzoGenesis
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-var">AlonzoGenesis</span></a></span><span>
+</span><span id="line-139"></span><span>          </span><span class="annot"><span class="annottext">Decode
+  ('Closed 'Dense)
+  (CoinPerWord
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; ExUnits
+   -&gt; ExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; AlonzoGenesis)
+-&gt; Decode ('Closed Any) CoinPerWord
+-&gt; Decode
+     ('Closed 'Dense)
+     (CostModels
+      -&gt; Prices
+      -&gt; ExUnits
+      -&gt; ExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; AlonzoGenesis)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) CoinPerWord
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-140"></span><span>          </span><span class="annot"><span class="annottext">Decode
+  ('Closed 'Dense)
+  (CostModels
+   -&gt; Prices
+   -&gt; ExUnits
+   -&gt; ExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; AlonzoGenesis)
+-&gt; Decode ('Closed Any) CostModels
+-&gt; Decode
+     ('Closed 'Dense)
+     (Prices
+      -&gt; ExUnits
+      -&gt; ExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; AlonzoGenesis)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) CostModels
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-141"></span><span>          </span><span class="annot"><span class="annottext">Decode
+  ('Closed 'Dense)
+  (Prices
+   -&gt; ExUnits
+   -&gt; ExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; AlonzoGenesis)
+-&gt; Decode ('Closed Any) Prices
+-&gt; Decode
+     ('Closed 'Dense)
+     (ExUnits
+      -&gt; ExUnits -&gt; Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) Prices
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-142"></span><span>          </span><span class="annot"><span class="annottext">Decode
+  ('Closed 'Dense)
+  (ExUnits
+   -&gt; ExUnits -&gt; Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+-&gt; Decode ('Closed Any) ExUnits
+-&gt; Decode
+     ('Closed 'Dense)
+     (ExUnits -&gt; Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) ExUnits
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-143"></span><span>          </span><span class="annot"><span class="annottext">Decode
+  ('Closed 'Dense)
+  (ExUnits -&gt; Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+-&gt; Decode ('Closed Any) ExUnits
+-&gt; Decode
+     ('Closed 'Dense) (Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) ExUnits
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-144"></span><span>          </span><span class="annot"><span class="annottext">Decode
+  ('Closed 'Dense) (Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+-&gt; Decode ('Closed Any) Natural
+-&gt; Decode ('Closed 'Dense) (Natural -&gt; Natural -&gt; AlonzoGenesis)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) Natural
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-145"></span><span>          </span><span class="annot"><span class="annottext">Decode ('Closed 'Dense) (Natural -&gt; Natural -&gt; AlonzoGenesis)
+-&gt; Decode ('Closed Any) Natural
+-&gt; Decode ('Closed 'Dense) (Natural -&gt; AlonzoGenesis)
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) Natural
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-146"></span><span>          </span><span class="annot"><span class="annottext">Decode ('Closed 'Dense) (Natural -&gt; AlonzoGenesis)
+-&gt; Decode ('Closed Any) Natural
+-&gt; Decode ('Closed 'Dense) AlonzoGenesis
+forall a (w1 :: Wrapped) t (w :: Density).
+Typeable a =&gt;
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#%3C%21"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">Decode ('Closed Any) Natural
+forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Coders.html#From"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679484984"><span id="local-6989586621679484987"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-149"></span><span>  </span><span id="local-6989586621679485006"><span class="annot"><span class="annottext">toCBOR :: AlonzoGenesis -&gt; Encoding
+</span><a href="#local-6989586621679485006"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span>
+</span><span id="line-150"></span><span>    </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span><span>
+</span><span id="line-151"></span><span>      </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679485008"><span class="annot"><span class="annottext">CoinPerWord
+agCoinsPerUTxOWord :: AlonzoGenesis -&gt; CoinPerWord
+agCoinsPerUTxOWord :: CoinPerWord
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agCoinsPerUTxOWord"><span class="hs-identifier hs-var hs-var">agCoinsPerUTxOWord</span></a></span></span><span>
+</span><span id="line-152"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679485009"><span class="annot"><span class="annottext">CostModels
+agCostModels :: AlonzoGenesis -&gt; CostModels
+agCostModels :: CostModels
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agCostModels"><span class="hs-identifier hs-var hs-var">agCostModels</span></a></span></span><span>
+</span><span id="line-153"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679485010"><span class="annot"><span class="annottext">Prices
+agPrices :: AlonzoGenesis -&gt; Prices
+agPrices :: Prices
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agPrices"><span class="hs-identifier hs-var hs-var">agPrices</span></a></span></span><span>
+</span><span id="line-154"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679485011"><span class="annot"><span class="annottext">ExUnits
+agMaxTxExUnits :: AlonzoGenesis -&gt; ExUnits
+agMaxTxExUnits :: ExUnits
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxTxExUnits"><span class="hs-identifier hs-var hs-var">agMaxTxExUnits</span></a></span></span><span>
+</span><span id="line-155"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679485012"><span class="annot"><span class="annottext">ExUnits
+agMaxBlockExUnits :: AlonzoGenesis -&gt; ExUnits
+agMaxBlockExUnits :: ExUnits
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxBlockExUnits"><span class="hs-identifier hs-var hs-var">agMaxBlockExUnits</span></a></span></span><span>
+</span><span id="line-156"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679485013"><span class="annot"><span class="annottext">Natural
+agMaxValSize :: AlonzoGenesis -&gt; Natural
+agMaxValSize :: Natural
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxValSize"><span class="hs-identifier hs-var hs-var">agMaxValSize</span></a></span></span><span>
+</span><span id="line-157"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679485014"><span class="annot"><span class="annottext">Natural
+agCollateralPercentage :: AlonzoGenesis -&gt; Natural
+agCollateralPercentage :: Natural
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agCollateralPercentage"><span class="hs-identifier hs-var hs-var">agCollateralPercentage</span></a></span></span><span>
+</span><span id="line-158"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679485015"><span class="annot"><span class="annottext">Natural
+agMaxCollateralInputs :: AlonzoGenesis -&gt; Natural
+agMaxCollateralInputs :: Natural
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxCollateralInputs"><span class="hs-identifier hs-var hs-var">agMaxCollateralInputs</span></a></span></span><span>
+</span><span id="line-159"></span><span>      </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-160"></span><span>      </span><span class="annot"><span class="annottext">forall era t. (Era era, EncCBOR t) =&gt; t -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Core.Era.html#toEraCBOR"><span class="hs-identifier hs-var">toEraCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/l/internal/doc/html/cardano-ledger-core/src/Cardano.Ledger.Internal.Definition.Era.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span>
+</span><span id="line-161"></span><span>        </span><span class="annot"><span class="annottext">(Encoding -&gt; Encoding)
+-&gt; (Encode ('Closed 'Dense) AlonzoGenesis -&gt; Encoding)
+-&gt; Encode ('Closed 'Dense) AlonzoGenesis
+-&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Encode ('Closed 'Dense) AlonzoGenesis -&gt; Encoding
+forall (w :: Wrapped) t. Encode w t -&gt; Encoding
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span>
+</span><span id="line-162"></span><span>        </span><span class="annot"><span class="annottext">(Encode ('Closed 'Dense) AlonzoGenesis -&gt; Encoding)
+-&gt; Encode ('Closed 'Dense) AlonzoGenesis -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(CoinPerWord
+ -&gt; CostModels
+ -&gt; Prices
+ -&gt; ExUnits
+ -&gt; ExUnits
+ -&gt; Natural
+ -&gt; Natural
+ -&gt; Natural
+ -&gt; AlonzoGenesis)
+-&gt; Encode
+     ('Closed 'Dense)
+     (CoinPerWord
+      -&gt; CostModels
+      -&gt; Prices
+      -&gt; ExUnits
+      -&gt; ExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; AlonzoGenesis)
+forall t. t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#Rec"><span class="hs-identifier hs-var">Rec</span></a></span><span> </span><span class="annot"><span class="annottext">CoinPerWord
+-&gt; CostModels
+-&gt; Prices
+-&gt; ExUnits
+-&gt; ExUnits
+-&gt; Natural
+-&gt; Natural
+-&gt; Natural
+-&gt; AlonzoGenesis
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-var">AlonzoGenesis</span></a></span><span>
+</span><span id="line-163"></span><span>          </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Dense)
+  (CoinPerWord
+   -&gt; CostModels
+   -&gt; Prices
+   -&gt; ExUnits
+   -&gt; ExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; AlonzoGenesis)
+-&gt; Encode ('Closed 'Dense) CoinPerWord
+-&gt; Encode
+     ('Closed 'Dense)
+     (CostModels
+      -&gt; Prices
+      -&gt; ExUnits
+      -&gt; ExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; AlonzoGenesis)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">CoinPerWord -&gt; Encode ('Closed 'Dense) CoinPerWord
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">CoinPerWord
+</span><a href="#local-6989586621679485008"><span class="hs-identifier hs-var">agCoinsPerUTxOWord</span></a></span><span>
+</span><span id="line-164"></span><span>          </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Dense)
+  (CostModels
+   -&gt; Prices
+   -&gt; ExUnits
+   -&gt; ExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; AlonzoGenesis)
+-&gt; Encode ('Closed 'Dense) CostModels
+-&gt; Encode
+     ('Closed 'Dense)
+     (Prices
+      -&gt; ExUnits
+      -&gt; ExUnits
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; Natural
+      -&gt; AlonzoGenesis)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels -&gt; Encode ('Closed 'Dense) CostModels
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679485009"><span class="hs-identifier hs-var">agCostModels</span></a></span><span>
+</span><span id="line-165"></span><span>          </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Dense)
+  (Prices
+   -&gt; ExUnits
+   -&gt; ExUnits
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; Natural
+   -&gt; AlonzoGenesis)
+-&gt; Encode ('Closed 'Dense) Prices
+-&gt; Encode
+     ('Closed 'Dense)
+     (ExUnits
+      -&gt; ExUnits -&gt; Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Prices -&gt; Encode ('Closed 'Dense) Prices
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Prices
+</span><a href="#local-6989586621679485010"><span class="hs-identifier hs-var">agPrices</span></a></span><span>
+</span><span id="line-166"></span><span>          </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Dense)
+  (ExUnits
+   -&gt; ExUnits -&gt; Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+-&gt; Encode ('Closed 'Dense) ExUnits
+-&gt; Encode
+     ('Closed 'Dense)
+     (ExUnits -&gt; Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ExUnits -&gt; Encode ('Closed 'Dense) ExUnits
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621679485011"><span class="hs-identifier hs-var">agMaxTxExUnits</span></a></span><span>
+</span><span id="line-167"></span><span>          </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Dense)
+  (ExUnits -&gt; Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+-&gt; Encode ('Closed 'Dense) ExUnits
+-&gt; Encode
+     ('Closed 'Dense) (Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ExUnits -&gt; Encode ('Closed 'Dense) ExUnits
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621679485012"><span class="hs-identifier hs-var">agMaxBlockExUnits</span></a></span><span>
+</span><span id="line-168"></span><span>          </span><span class="annot"><span class="annottext">Encode
+  ('Closed 'Dense) (Natural -&gt; Natural -&gt; Natural -&gt; AlonzoGenesis)
+-&gt; Encode ('Closed 'Dense) Natural
+-&gt; Encode ('Closed 'Dense) (Natural -&gt; Natural -&gt; AlonzoGenesis)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Encode ('Closed 'Dense) Natural
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679485013"><span class="hs-identifier hs-var">agMaxValSize</span></a></span><span>
+</span><span id="line-169"></span><span>          </span><span class="annot"><span class="annottext">Encode ('Closed 'Dense) (Natural -&gt; Natural -&gt; AlonzoGenesis)
+-&gt; Encode ('Closed 'Dense) Natural
+-&gt; Encode ('Closed 'Dense) (Natural -&gt; AlonzoGenesis)
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Encode ('Closed 'Dense) Natural
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679485014"><span class="hs-identifier hs-var">agCollateralPercentage</span></a></span><span>
+</span><span id="line-170"></span><span>          </span><span class="annot"><span class="annottext">Encode ('Closed 'Dense) (Natural -&gt; AlonzoGenesis)
+-&gt; Encode ('Closed 'Dense) Natural
+-&gt; Encode ('Closed 'Dense) AlonzoGenesis
+forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#%21%3E"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Encode ('Closed 'Dense) Natural
+forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.Coders.html#To"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679485015"><span class="hs-identifier hs-var">agMaxCollateralInputs</span></a></span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679485020"><span id="local-6989586621679485024"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#FromJSON"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-173"></span><span>  </span><span id="local-6989586621679485060"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser AlonzoGenesis
+</span><a href="#local-6989586621679485060"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser AlonzoGenesis)
+-&gt; Value
+-&gt; Parser AlonzoGenesis
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#withObject"><span class="hs-identifier hs-var">Aeson.withObject</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Alonzo Genesis&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser AlonzoGenesis) -&gt; Value -&gt; Parser AlonzoGenesis)
+-&gt; (Object -&gt; Parser AlonzoGenesis)
+-&gt; Value
+-&gt; Parser AlonzoGenesis
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679485063"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679485063"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-174"></span><span>    </span><span id="local-6989586621679485064"><span class="annot"><span class="annottext">CoinPerWord
+</span><a href="#local-6989586621679485064"><span class="hs-identifier hs-var">agCoinsPerUTxOWord</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679485063"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser CoinPerWord
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;lovelacePerUTxOWord&quot;</span></span><span>
+</span><span id="line-175"></span><span>    </span><span id="local-6989586621679485065"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679485065"><span class="hs-identifier hs-var">agCostModels</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Value -&gt; Parser CostModels
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.Plutus.CostModels.html#parseCostModels"><span class="hs-identifier hs-var">parseCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Parser CostModels) -&gt; Parser Value -&gt; Parser CostModels
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><span class="hs-operator hs-var">=&lt;&lt;</span></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679485063"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Value
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;costModels&quot;</span></span><span>
+</span><span id="line-176"></span><span>    </span><span id="local-6989586621679485067"><span class="annot"><span class="annottext">Prices
+</span><a href="#local-6989586621679485067"><span class="hs-identifier hs-var">agPrices</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679485063"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Prices
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;executionPrices&quot;</span></span><span>
+</span><span id="line-177"></span><span>    </span><span id="local-6989586621679485068"><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621679485068"><span class="hs-identifier hs-var">agMaxTxExUnits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679485063"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser ExUnits
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxTxExUnits&quot;</span></span><span>
+</span><span id="line-178"></span><span>    </span><span id="local-6989586621679485069"><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621679485069"><span class="hs-identifier hs-var">agMaxBlockExUnits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679485063"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser ExUnits
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxBlockExUnits&quot;</span></span><span>
+</span><span id="line-179"></span><span>    </span><span id="local-6989586621679485070"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679485070"><span class="hs-identifier hs-var">agMaxValSize</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679485063"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Natural
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxValueSize&quot;</span></span><span>
+</span><span id="line-180"></span><span>    </span><span id="local-6989586621679485071"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679485071"><span class="hs-identifier hs-var">agCollateralPercentage</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679485063"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Natural
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;collateralPercentage&quot;</span></span><span>
+</span><span id="line-181"></span><span>    </span><span id="local-6989586621679485072"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679485072"><span class="hs-identifier hs-var">agMaxCollateralInputs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679485063"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Natural
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.FromJSON.html#.%3A"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxCollateralInputs&quot;</span></span><span>
+</span><span id="line-182"></span><span>    </span><span class="annot"><span class="annottext">AlonzoGenesis -&gt; Parser AlonzoGenesis
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">Natural
+Prices
+ExUnits
+CostModels
+CoinPerWord
+agCoinsPerUTxOWord :: CoinPerWord
+agCostModels :: CostModels
+agPrices :: Prices
+agMaxTxExUnits :: ExUnits
+agMaxBlockExUnits :: ExUnits
+agMaxValSize :: Natural
+agCollateralPercentage :: Natural
+agMaxCollateralInputs :: Natural
+agCoinsPerUTxOWord :: CoinPerWord
+agCostModels :: CostModels
+agPrices :: Prices
+agMaxTxExUnits :: ExUnits
+agMaxBlockExUnits :: ExUnits
+agMaxValSize :: Natural
+agCollateralPercentage :: Natural
+agMaxCollateralInputs :: Natural
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agCoinsPerUTxOWord"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-183"></span><span>
+</span><span id="line-184"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#ToKeyValuePairs"><span class="hs-identifier hs-type">ToKeyValuePairs</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-185"></span><span>  </span><span id="local-6989586621679485105"><span class="annot"><span class="annottext">toKeyValuePairs :: forall e kv. KeyValue e kv =&gt; AlonzoGenesis -&gt; [kv]
+</span><a href="#local-6989586621679485105"><span class="hs-identifier hs-var hs-var hs-var hs-var">toKeyValuePairs</span></a></span></span><span> </span><span id="local-6989586621679485107"><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621679485107"><span class="hs-identifier hs-var">ag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-186"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;lovelacePerUTxOWord&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; CoinPerWord -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis -&gt; CoinPerWord
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agCoinsPerUTxOWord"><span class="hs-identifier hs-var">agCoinsPerUTxOWord</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621679485107"><span class="hs-identifier hs-var">ag</span></a></span><span>
+</span><span id="line-187"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;costModels&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; CostModels -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis -&gt; CostModels
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agCostModels"><span class="hs-identifier hs-var">agCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621679485107"><span class="hs-identifier hs-var">ag</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;executionPrices&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Prices -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis -&gt; Prices
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agPrices"><span class="hs-identifier hs-var">agPrices</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621679485107"><span class="hs-identifier hs-var">ag</span></a></span><span>
+</span><span id="line-189"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxTxExUnits&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; ExUnits -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis -&gt; ExUnits
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxTxExUnits"><span class="hs-identifier hs-var">agMaxTxExUnits</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621679485107"><span class="hs-identifier hs-var">ag</span></a></span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxBlockExUnits&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; ExUnits -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis -&gt; ExUnits
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxBlockExUnits"><span class="hs-identifier hs-var">agMaxBlockExUnits</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621679485107"><span class="hs-identifier hs-var">ag</span></a></span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxValueSize&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Natural -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis -&gt; Natural
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxValSize"><span class="hs-identifier hs-var">agMaxValSize</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621679485107"><span class="hs-identifier hs-var">ag</span></a></span><span>
+</span><span id="line-192"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;collateralPercentage&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Natural -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis -&gt; Natural
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agCollateralPercentage"><span class="hs-identifier hs-var">agCollateralPercentage</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621679485107"><span class="hs-identifier hs-var">ag</span></a></span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;maxCollateralInputs&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Natural -&gt; kv
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; kv
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#.%3D"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis -&gt; Natural
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#agMaxCollateralInputs"><span class="hs-identifier hs-var">agMaxCollateralInputs</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis
+</span><a href="#local-6989586621679485107"><span class="hs-identifier hs-var">ag</span></a></span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span id="local-6989586621679485108"><span id="local-6989586621679485109"><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#toAlonzoGenesisPairs"><span class="hs-identifier hs-type">toAlonzoGenesisPairs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#KeyValue"><span class="hs-identifier hs-type">Aeson.KeyValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485108"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679485109"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">AlonzoGenesis</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679485109"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span></span><span>
+</span><span id="line-197"></span><span id="toAlonzoGenesisPairs"><span class="annot"><span class="annottext">toAlonzoGenesisPairs :: forall e kv. KeyValue e kv =&gt; AlonzoGenesis -&gt; [kv]
+</span><a href="Cardano.Ledger.Alonzo.Genesis.html#toAlonzoGenesisPairs"><span class="hs-identifier hs-var hs-var">toAlonzoGenesisPairs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AlonzoGenesis -&gt; [a]
+forall a e kv. (ToKeyValuePairs a, KeyValue e kv) =&gt; a -&gt; [kv]
+forall e kv. KeyValue e kv =&gt; AlonzoGenesis -&gt; [kv]
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-core-1.19.0.0/doc/html/cardano-ledger-core/src/Cardano.Ledger.BaseTypes.html#toKeyValuePairs"><span class="hs-identifier hs-var">toKeyValuePairs</span></a></span><span>
+</span><span id="line-198"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">toAlonzoGenesisPairs</span><span> </span><span class="hs-pragma">&quot;In favor of `toKeyValuePairs`&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-199"></span></pre></body></html>

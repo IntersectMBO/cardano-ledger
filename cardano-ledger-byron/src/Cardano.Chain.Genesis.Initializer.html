@@ -1,0 +1,137 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Genesis.Initializer</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#GenesisInitializer"><span class="hs-identifier">GenesisInitializer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#TestnetBalanceOptions"><span class="hs-identifier">TestnetBalanceOptions</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#FakeAvvmOptions"><span class="hs-identifier">FakeAvvmOptions</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier">Lovelace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="annot"><span class="hs-comment">-- | Options determining generated genesis stakes, balances, and delegation</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">data</span><span> </span><span id="GenesisInitializer"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#GenesisInitializer"><span class="hs-identifier hs-var">GenesisInitializer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="GenesisInitializer"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#GenesisInitializer"><span class="hs-identifier hs-var">GenesisInitializer</span></a></span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="giTestBalance"><span class="annot"><span class="annottext">GenesisInitializer -&gt; TestnetBalanceOptions
+</span><a href="Cardano.Chain.Genesis.Initializer.html#giTestBalance"><span class="hs-identifier hs-var hs-var">giTestBalance</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#TestnetBalanceOptions"><span class="hs-identifier hs-type">TestnetBalanceOptions</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="giFakeAvvmBalance"><span class="annot"><span class="annottext">GenesisInitializer -&gt; FakeAvvmOptions
+</span><a href="Cardano.Chain.Genesis.Initializer.html#giFakeAvvmBalance"><span class="hs-identifier hs-var hs-var">giFakeAvvmBalance</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#FakeAvvmOptions"><span class="hs-identifier hs-type">FakeAvvmOptions</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="giAvvmBalanceFactor"><span class="annot"><span class="annottext">GenesisInitializer -&gt; Rational
+</span><a href="Cardano.Chain.Genesis.Initializer.html#giAvvmBalanceFactor"><span class="hs-identifier hs-var hs-var">giAvvmBalanceFactor</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Rational</span></span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Avvm balances will be multiplied by this factor</span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="giUseHeavyDlg"><span class="annot"><span class="annottext">GenesisInitializer -&gt; Bool
+</span><a href="Cardano.Chain.Genesis.Initializer.html#giUseHeavyDlg"><span class="hs-identifier hs-var hs-var">giUseHeavyDlg</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Whether to use heavyweight delegation for genesis keys</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679566753"><span id="local-6989586621679566764"><span class="annot"><span class="annottext">GenesisInitializer -&gt; GenesisInitializer -&gt; Bool
+(GenesisInitializer -&gt; GenesisInitializer -&gt; Bool)
+-&gt; (GenesisInitializer -&gt; GenesisInitializer -&gt; Bool)
+-&gt; Eq GenesisInitializer
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: GenesisInitializer -&gt; GenesisInitializer -&gt; Bool
+== :: GenesisInitializer -&gt; GenesisInitializer -&gt; Bool
+$c/= :: GenesisInitializer -&gt; GenesisInitializer -&gt; Bool
+/= :: GenesisInitializer -&gt; GenesisInitializer -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566770"><span id="local-6989586621679566783"><span id="local-6989586621679566787"><span class="annot"><span class="annottext">Int -&gt; GenesisInitializer -&gt; ShowS
+[GenesisInitializer] -&gt; ShowS
+GenesisInitializer -&gt; String
+(Int -&gt; GenesisInitializer -&gt; ShowS)
+-&gt; (GenesisInitializer -&gt; String)
+-&gt; ([GenesisInitializer] -&gt; ShowS)
+-&gt; Show GenesisInitializer
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; GenesisInitializer -&gt; ShowS
+showsPrec :: Int -&gt; GenesisInitializer -&gt; ShowS
+$cshow :: GenesisInitializer -&gt; String
+show :: GenesisInitializer -&gt; String
+$cshowList :: [GenesisInitializer] -&gt; ShowS
+showList :: [GenesisInitializer] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><span class="hs-comment">-- | These options determine balances of nodes specific for testnet</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">data</span><span> </span><span id="TestnetBalanceOptions"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#TestnetBalanceOptions"><span class="hs-identifier hs-var">TestnetBalanceOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TestnetBalanceOptions"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#TestnetBalanceOptions"><span class="hs-identifier hs-var">TestnetBalanceOptions</span></a></span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="tboPoors"><span class="annot"><span class="annottext">TestnetBalanceOptions -&gt; Word
+</span><a href="Cardano.Chain.Genesis.Initializer.html#tboPoors"><span class="hs-identifier hs-var hs-var">tboPoors</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Number of poor nodes (with small balance).</span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tboRichmen"><span class="annot"><span class="annottext">TestnetBalanceOptions -&gt; Word
+</span><a href="Cardano.Chain.Genesis.Initializer.html#tboRichmen"><span class="hs-identifier hs-var hs-var">tboRichmen</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Number of rich nodes (with huge balance).</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tboTotalBalance"><span class="annot"><span class="annottext">TestnetBalanceOptions -&gt; Lovelace
+</span><a href="Cardano.Chain.Genesis.Initializer.html#tboTotalBalance"><span class="hs-identifier hs-var hs-var">tboTotalBalance</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Total balance owned by these nodes.</span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tboRichmenShare"><span class="annot"><span class="annottext">TestnetBalanceOptions -&gt; Rational
+</span><a href="Cardano.Chain.Genesis.Initializer.html#tboRichmenShare"><span class="hs-identifier hs-var hs-var">tboRichmenShare</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Rational</span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Portion of stake owned by all richmen together.</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679566797"><span id="local-6989586621679566806"><span class="annot"><span class="annottext">TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool
+(TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool)
+-&gt; (TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool)
+-&gt; Eq TestnetBalanceOptions
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool
+== :: TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool
+$c/= :: TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool
+/= :: TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566809"><span id="local-6989586621679566819"><span id="local-6989586621679566822"><span class="annot"><span class="annottext">Int -&gt; TestnetBalanceOptions -&gt; ShowS
+[TestnetBalanceOptions] -&gt; ShowS
+TestnetBalanceOptions -&gt; String
+(Int -&gt; TestnetBalanceOptions -&gt; ShowS)
+-&gt; (TestnetBalanceOptions -&gt; String)
+-&gt; ([TestnetBalanceOptions] -&gt; ShowS)
+-&gt; Show TestnetBalanceOptions
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TestnetBalanceOptions -&gt; ShowS
+showsPrec :: Int -&gt; TestnetBalanceOptions -&gt; ShowS
+$cshow :: TestnetBalanceOptions -&gt; String
+show :: TestnetBalanceOptions -&gt; String
+$cshowList :: [TestnetBalanceOptions] -&gt; ShowS
+showList :: [TestnetBalanceOptions] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- | These options determines balances of fake AVVM nodes which didn't really go</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--   through vending, but pretend they did</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">data</span><span> </span><span id="FakeAvvmOptions"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#FakeAvvmOptions"><span class="hs-identifier hs-var">FakeAvvmOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="FakeAvvmOptions"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#FakeAvvmOptions"><span class="hs-identifier hs-var">FakeAvvmOptions</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="faoCount"><span class="annot"><span class="annottext">FakeAvvmOptions -&gt; Word
+</span><a href="Cardano.Chain.Genesis.Initializer.html#faoCount"><span class="hs-identifier hs-var hs-var">faoCount</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Word</span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="faoOneBalance"><span class="annot"><span class="annottext">FakeAvvmOptions -&gt; Lovelace
+</span><a href="Cardano.Chain.Genesis.Initializer.html#faoOneBalance"><span class="hs-identifier hs-var hs-var">faoOneBalance</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679566828"><span id="local-6989586621679566832"><span class="annot"><span class="annottext">FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool
+(FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool)
+-&gt; (FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool)
+-&gt; Eq FakeAvvmOptions
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool
+== :: FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool
+$c/= :: FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool
+/= :: FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566835"><span id="local-6989586621679566840"><span id="local-6989586621679566843"><span class="annot"><span class="annottext">Int -&gt; FakeAvvmOptions -&gt; ShowS
+[FakeAvvmOptions] -&gt; ShowS
+FakeAvvmOptions -&gt; String
+(Int -&gt; FakeAvvmOptions -&gt; ShowS)
+-&gt; (FakeAvvmOptions -&gt; String)
+-&gt; ([FakeAvvmOptions] -&gt; ShowS)
+-&gt; Show FakeAvvmOptions
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; FakeAvvmOptions -&gt; ShowS
+showsPrec :: Int -&gt; FakeAvvmOptions -&gt; ShowS
+$cshow :: FakeAvvmOptions -&gt; String
+show :: FakeAvvmOptions -&gt; String
+$cshowList :: [FakeAvvmOptions] -&gt; ShowS
+showList :: [FakeAvvmOptions] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566846"><span id="local-6989586621679566848"><span class="annot"><span class="annottext">(forall x. FakeAvvmOptions -&gt; Rep FakeAvvmOptions x)
+-&gt; (forall x. Rep FakeAvvmOptions x -&gt; FakeAvvmOptions)
+-&gt; Generic FakeAvvmOptions
+forall x. Rep FakeAvvmOptions x -&gt; FakeAvvmOptions
+forall x. FakeAvvmOptions -&gt; Rep FakeAvvmOptions x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. FakeAvvmOptions -&gt; Rep FakeAvvmOptions x
+from :: forall x. FakeAvvmOptions -&gt; Rep FakeAvvmOptions x
+$cto :: forall x. Rep FakeAvvmOptions x -&gt; FakeAvvmOptions
+to :: forall x. Rep FakeAvvmOptions x -&gt; FakeAvvmOptions
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span></pre></body></html>

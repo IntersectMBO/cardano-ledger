@@ -1,0 +1,621 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Epoch.File</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#mainnetEpochSlots"><span class="hs-identifier">mainnetEpochSlots</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#parseEpochFileWithBoundary"><span class="hs-identifier">parseEpochFileWithBoundary</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#parseEpochFilesWithBoundary"><span class="hs-identifier">parseEpochFilesWithBoundary</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseError"><span class="hs-identifier">ParseError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Block.Block.html"><span class="hs-identifier">Cardano.Chain.Block.Block</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Block.Block.html#ABlockOrBoundary"><span class="hs-identifier">ABlockOrBoundary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Block.Block.html#decCBORABlockOrBoundary"><span class="hs-identifier">decCBORABlockOrBoundary</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.html"><span class="hs-identifier">Cardano.Chain.Slotting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier">EpochSlots</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier">DecoderError</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#byronProtVer"><span class="hs-identifier">byronProtVer</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFullDecoder"><span class="hs-identifier">decodeFullDecoder</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#slice"><span class="hs-identifier">slice</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.html"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/resourcet-1.3.0-daaadf875bf5c7a54a4fddc6e9986d8365a90c01a64fc253eba10dff2e6b55df/share/doc/html/src/Control.Monad.Trans.Resource.html"><span class="hs-identifier">Control.Monad.Trans.Resource</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/resourcet-1.3.0-daaadf875bf5c7a54a4fddc6e9986d8365a90c01a64fc253eba10dff2e6b55df/share/doc/html/src/Control.Monad.Trans.Resource.Internal.html#ResIO"><span class="hs-identifier">ResIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Binary</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Binary.Get</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">getWord32be</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Binary.Get</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteString.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.String</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">String</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-binary-0.3.0.1-e9b17067e085d98050f1910ccd672a96025a0a40a54bd7cf15bc8f033f0c260b/share/doc/html/src/Streaming.Binary.html"><span class="hs-identifier">Streaming.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-binary-0.3.0.1-e9b17067e085d98050f1910ccd672a96025a0a40a54bd7cf15bc8f033f0c260b/share/doc/html/src/Streaming.Binary.html#decodedWith"><span class="hs-identifier">decodedWith</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-bytestring-0.3.4-f79869458562e2151d2407d3e027b49fddbce8f673b973748306763f7fc940c2/share/doc/html/src/Streaming.ByteString.html"><span class="hs-identifier">Streaming.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SBS</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Streaming.Prelude.html"><span class="hs-identifier">Streaming.Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Data.Functor.Of.html#Of"><span class="hs-identifier">Of</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Streaming.Internal.html#Stream"><span class="hs-identifier">Stream</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Streaming.Prelude.html"><span class="hs-identifier">Streaming.Prelude</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.Directory</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">doesFileExist</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.FilePath</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(-&lt;.&gt;)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- Epoch file format:</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- EpochFile := &quot;Epoch data v1\n&quot; *SlotData</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- SlotData := &quot;blnd&quot; BlockLength UndoLength Block Undo</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- BlockLength := Word32BE</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- UndoLength := Word32BE</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- Block := CBOR</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- Undo := CBOR</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#epochHeader"><span class="hs-identifier hs-type">epochHeader</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LBS.ByteString</span></span><span>
+</span><span id="line-42"></span><span id="epochHeader"><span class="annot"><span class="annottext">epochHeader :: ByteString
+</span><a href="Cardano.Chain.Epoch.File.html#epochHeader"><span class="hs-identifier hs-var hs-var">epochHeader</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;Epoch data v1\n&quot;</span></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">data</span><span> </span><span id="ParseError"><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseError"><span class="hs-identifier hs-var">ParseError</span></a></span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | The CBOR is invalid</span></span><span>
+</span><span id="line-46"></span><span>    </span><span id="ParseErrorDecoder"><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseErrorDecoder"><span class="hs-identifier hs-var">ParseErrorDecoder</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ParseErrorBinary"><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseErrorBinary"><span class="hs-identifier hs-var">ParseErrorBinary</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">B.ByteOffset</span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ParseErrorMissingHeader"><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseErrorMissingHeader"><span class="hs-identifier hs-var">ParseErrorMissingHeader</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679598657"><span id="local-6989586621679598669"><span class="annot"><span class="annottext">ParseError -&gt; ParseError -&gt; Bool
+(ParseError -&gt; ParseError -&gt; Bool)
+-&gt; (ParseError -&gt; ParseError -&gt; Bool) -&gt; Eq ParseError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ParseError -&gt; ParseError -&gt; Bool
+== :: ParseError -&gt; ParseError -&gt; Bool
+$c/= :: ParseError -&gt; ParseError -&gt; Bool
+/= :: ParseError -&gt; ParseError -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679598675"><span id="local-6989586621679598691"><span id="local-6989586621679598695"><span class="annot"><span class="annottext">Int -&gt; ParseError -&gt; ShowS
+[ParseError] -&gt; ShowS
+ParseError -&gt; FilePath
+(Int -&gt; ParseError -&gt; ShowS)
+-&gt; (ParseError -&gt; FilePath)
+-&gt; ([ParseError] -&gt; ShowS)
+-&gt; Show ParseError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ParseError -&gt; ShowS
+showsPrec :: Int -&gt; ParseError -&gt; ShowS
+$cshow :: ParseError -&gt; FilePath
+show :: ParseError -&gt; FilePath
+$cshowList :: [ParseError] -&gt; ShowS
+showList :: [ParseError] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#loadFileWithHeader"><span class="hs-identifier hs-type">loadFileWithHeader</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LBS.ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-bytestring-0.3.4-f79869458562e2151d2407d3e027b49fddbce8f673b973748306763f7fc940c2/share/doc/html/src/Streaming.ByteString.Internal.html#ByteStream"><span class="hs-identifier hs-type">SBS.ByteStream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ExceptT</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseError"><span class="hs-identifier hs-type">ParseError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/resourcet-1.3.0-daaadf875bf5c7a54a4fddc6e9986d8365a90c01a64fc253eba10dff2e6b55df/share/doc/html/src/Control.Monad.Trans.Resource.Internal.html#ResIO"><span class="hs-identifier hs-type">ResIO</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span id="loadFileWithHeader"><span class="annot"><span class="annottext">loadFileWithHeader :: FilePath -&gt; ByteString -&gt; ByteString (ExceptT ParseError ResIO) ()
+</span><a href="Cardano.Chain.Epoch.File.html#loadFileWithHeader"><span class="hs-identifier hs-var hs-var">loadFileWithHeader</span></a></span></span><span> </span><span id="local-6989586621679598700"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679598700"><span class="hs-identifier hs-var">file</span></a></span></span><span> </span><span id="local-6989586621679598701"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679598701"><span class="hs-identifier hs-var">header</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679598702"><span class="hs-identifier hs-type">bytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-bytestring-0.3.4-f79869458562e2151d2407d3e027b49fddbce8f673b973748306763f7fc940c2/share/doc/html/src/Streaming.ByteString.Internal.html#ByteStream"><span class="hs-identifier hs-type">SBS.ByteStream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ExceptT</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseError"><span class="hs-identifier hs-type">ParseError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/resourcet-1.3.0-daaadf875bf5c7a54a4fddc6e9986d8365a90c01a64fc253eba10dff2e6b55df/share/doc/html/src/Control.Monad.Trans.Resource.Internal.html#ResIO"><span class="hs-identifier hs-type">ResIO</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>      </span><span id="local-6989586621679598702"><span class="annot"><span class="annottext">bytes :: ByteString (ExceptT ParseError ResIO) ()
+</span><a href="#local-6989586621679598702"><span class="hs-identifier hs-var hs-var">bytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ByteString (ExceptT ParseError ResIO) ()
+forall (m :: * -&gt; *).
+MonadResource m =&gt;
+FilePath -&gt; ByteStream m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-bytestring-0.3.4-f79869458562e2151d2407d3e027b49fddbce8f673b973748306763f7fc940c2/share/doc/html/src/Streaming.ByteString.html#readFile"><span class="hs-identifier hs-var">SBS.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679598700"><span class="hs-identifier hs-var">file</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><a href="#local-6989586621679598704"><span class="hs-identifier hs-type">len</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int64</span></span><span>
+</span><span id="line-58"></span><span>      </span><span id="local-6989586621679598704"><span class="annot"><span class="annottext">len :: Int64
+</span><a href="#local-6989586621679598704"><span class="hs-identifier hs-var hs-var">len</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int64
+</span><span class="hs-identifier hs-var">LBS.length</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679598701"><span class="hs-identifier hs-var">header</span></a></span><span>
+</span><span id="line-59"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-60"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679598706"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679598706"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Data.Functor.Of.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679598708"><span class="annot"><span class="annottext">ByteString (ExceptT ParseError ResIO) ()
+</span><a href="#local-6989586621679598708"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ExceptT
+  ParseError
+  ResIO
+  (Of ByteString (ByteString (ExceptT ParseError ResIO) ()))
+-&gt; ByteStream
+     (ExceptT ParseError ResIO)
+     (Of ByteString (ByteString (ExceptT ParseError ResIO) ()))
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ByteStream m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(ExceptT
+   ParseError
+   ResIO
+   (Of ByteString (ByteString (ExceptT ParseError ResIO) ()))
+ -&gt; ByteStream
+      (ExceptT ParseError ResIO)
+      (Of ByteString (ByteString (ExceptT ParseError ResIO) ())))
+-&gt; ExceptT
+     ParseError
+     ResIO
+     (Of ByteString (ByteString (ExceptT ParseError ResIO) ()))
+-&gt; ByteStream
+     (ExceptT ParseError ResIO)
+     (Of ByteString (ByteString (ExceptT ParseError ResIO) ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ByteStream
+  (ExceptT ParseError ResIO)
+  (ByteString (ExceptT ParseError ResIO) ())
+-&gt; ExceptT
+     ParseError
+     ResIO
+     (Of ByteString (ByteString (ExceptT ParseError ResIO) ()))
+forall (m :: * -&gt; *) r.
+Monad m =&gt;
+ByteStream m r -&gt; m (Of ByteString r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-bytestring-0.3.4-f79869458562e2151d2407d3e027b49fddbce8f673b973748306763f7fc940c2/share/doc/html/src/Streaming.ByteString.html#toLazy"><span class="hs-identifier hs-var">SBS.toLazy</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteStream
+   (ExceptT ParseError ResIO)
+   (ByteString (ExceptT ParseError ResIO) ())
+ -&gt; ExceptT
+      ParseError
+      ResIO
+      (Of ByteString (ByteString (ExceptT ParseError ResIO) ())))
+-&gt; ByteStream
+     (ExceptT ParseError ResIO)
+     (ByteString (ExceptT ParseError ResIO) ())
+-&gt; ExceptT
+     ParseError
+     ResIO
+     (Of ByteString (ByteString (ExceptT ParseError ResIO) ()))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int64
+-&gt; ByteString (ExceptT ParseError ResIO) ()
+-&gt; ByteStream
+     (ExceptT ParseError ResIO)
+     (ByteString (ExceptT ParseError ResIO) ())
+forall (m :: * -&gt; *) r.
+Monad m =&gt;
+Int64 -&gt; ByteStream m r -&gt; ByteStream m (ByteStream m r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-bytestring-0.3.4-f79869458562e2151d2407d3e027b49fddbce8f673b973748306763f7fc940c2/share/doc/html/src/Streaming.ByteString.html#splitAt"><span class="hs-identifier hs-var">SBS.splitAt</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679598704"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString (ExceptT ParseError ResIO) ()
+</span><a href="#local-6989586621679598702"><span class="hs-identifier hs-var">bytes</span></a></span><span>
+</span><span id="line-61"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679598706"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679598701"><span class="hs-identifier hs-var">header</span></a></span><span>
+</span><span id="line-62"></span><span>          </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">ByteString (ExceptT ParseError ResIO) ()
+</span><a href="#local-6989586621679598708"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-63"></span><span>          </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">ExceptT ParseError ResIO ()
+-&gt; ByteString (ExceptT ParseError ResIO) ()
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ByteStream m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(ExceptT ParseError ResIO ()
+ -&gt; ByteString (ExceptT ParseError ResIO) ())
+-&gt; ExceptT ParseError ResIO ()
+-&gt; ByteString (ExceptT ParseError ResIO) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">ParseError -&gt; ExceptT ParseError ResIO ()
+forall a. ParseError -&gt; ExceptT ParseError ResIO a
+forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><span class="hs-identifier hs-var">throwError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; ParseError
+</span><a href="Cardano.Chain.Epoch.File.html#ParseErrorMissingHeader"><span class="hs-identifier hs-var">ParseErrorMissingHeader</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679598700"><span class="hs-identifier hs-var">file</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- | Slots per epoch used in mainnet</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- This number has been fixed throughout the Byron era.</span><span>
+</span><span id="line-68"></span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#mainnetEpochSlots"><span class="hs-identifier hs-type">mainnetEpochSlots</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-type">EpochSlots</span></a></span><span>
+</span><span id="line-69"></span><span id="mainnetEpochSlots"><span class="annot"><span class="annottext">mainnetEpochSlots :: EpochSlots
+</span><a href="Cardano.Chain.Epoch.File.html#mainnetEpochSlots"><span class="hs-identifier hs-var hs-var">mainnetEpochSlots</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; EpochSlots
+</span><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-var">EpochSlots</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">21600</span></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#parseEpochFileWithBoundary"><span class="hs-identifier hs-type">parseEpochFileWithBoundary</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-type">EpochSlots</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Streaming.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Block.Block.html#ABlockOrBoundary"><span class="hs-identifier hs-type">ABlockOrBoundary</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ExceptT</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseError"><span class="hs-identifier hs-type">ParseError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/resourcet-1.3.0-daaadf875bf5c7a54a4fddc6e9986d8365a90c01a64fc253eba10dff2e6b55df/share/doc/html/src/Control.Monad.Trans.Resource.Internal.html#ResIO"><span class="hs-identifier hs-type">ResIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span id="parseEpochFileWithBoundary"><span class="annot"><span class="annottext">parseEpochFileWithBoundary :: EpochSlots
+-&gt; FilePath
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+</span><a href="Cardano.Chain.Epoch.File.html#parseEpochFileWithBoundary"><span class="hs-identifier hs-var hs-var">parseEpochFileWithBoundary</span></a></span></span><span> </span><span id="local-6989586621679598714"><span class="annot"><span class="annottext">EpochSlots
+</span><a href="#local-6989586621679598714"><span class="hs-identifier hs-var">epochSlots</span></a></span></span><span> </span><span id="local-6989586621679598715"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679598715"><span class="hs-identifier hs-var">file</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679598716"><span class="annot"><span class="annottext">(ByteString (ExceptT ParseError ResIO) (), Int64,
+ Either FilePath ())
+</span><a href="#local-6989586621679598716"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">(Either DecoderError (ABlockOrBoundary ByteString)
+ -&gt; ExceptT ParseError ResIO (ABlockOrBoundary ByteString))
+-&gt; Stream
+     (Of (Either DecoderError (ABlockOrBoundary ByteString)))
+     (ExceptT ParseError ResIO)
+     (ByteString (ExceptT ParseError ResIO) (), Int64,
+      Either FilePath ())
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString))
+     (ExceptT ParseError ResIO)
+     (ByteString (ExceptT ParseError ResIO) (), Int64,
+      Either FilePath ())
+forall (m :: * -&gt; *) a b r.
+Monad m =&gt;
+(a -&gt; m b) -&gt; Stream (Of a) m r -&gt; Stream (Of b) m r
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Streaming.Prelude.html#mapM"><span class="hs-identifier hs-var">S.mapM</span></a></span><span> </span><span class="annot"><span class="annottext">Either DecoderError (ABlockOrBoundary ByteString)
+-&gt; ExceptT ParseError ResIO (ABlockOrBoundary ByteString)
+forall a. Either DecoderError a -&gt; ExceptT ParseError ResIO a
+</span><a href="#local-6989586621679598718"><span class="hs-identifier hs-var">liftDecoderError</span></a></span><span>
+</span><span id="line-81"></span><span>      </span><span class="annot"><span class="annottext">(Stream
+   (Of (Either DecoderError (ABlockOrBoundary ByteString)))
+   (ExceptT ParseError ResIO)
+   (ByteString (ExceptT ParseError ResIO) (), Int64,
+    Either FilePath ())
+ -&gt; Stream
+      (Of (ABlockOrBoundary ByteString))
+      (ExceptT ParseError ResIO)
+      (ByteString (ExceptT ParseError ResIO) (), Int64,
+       Either FilePath ()))
+-&gt; Stream
+     (Of (Either DecoderError (ABlockOrBoundary ByteString)))
+     (ExceptT ParseError ResIO)
+     (ByteString (ExceptT ParseError ResIO) (), Int64,
+      Either FilePath ())
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString))
+     (ExceptT ParseError ResIO)
+     (ByteString (ExceptT ParseError ResIO) (), Int64,
+      Either FilePath ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Get (Either DecoderError (ABlockOrBoundary ByteString))
+-&gt; ByteString (ExceptT ParseError ResIO) ()
+-&gt; Stream
+     (Of (Either DecoderError (ABlockOrBoundary ByteString)))
+     (ExceptT ParseError ResIO)
+     (ByteString (ExceptT ParseError ResIO) (), Int64,
+      Either FilePath ())
+forall (m :: * -&gt; *) a r.
+Monad m =&gt;
+Get a
+-&gt; ByteString m r
+-&gt; Stream (Of a) m (ByteString m r, Int64, Either FilePath r)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-binary-0.3.0.1-e9b17067e085d98050f1910ccd672a96025a0a40a54bd7cf15bc8f033f0c260b/share/doc/html/src/Streaming.Binary.html#decodedWith"><span class="hs-identifier hs-var">decodedWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochSlots
+-&gt; Get (Either DecoderError (ABlockOrBoundary ByteString))
+</span><a href="Cardano.Chain.Epoch.File.html#getSlotData"><span class="hs-identifier hs-var">getSlotData</span></a></span><span> </span><span class="annot"><span class="annottext">EpochSlots
+</span><a href="#local-6989586621679598714"><span class="hs-identifier hs-var">epochSlots</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString (ExceptT ParseError ResIO) ()
+</span><a href="#local-6989586621679598720"><span class="hs-identifier hs-var">boundaryBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString (ExceptT ParseError ResIO) ()
+-&gt; ByteString (ExceptT ParseError ResIO) ()
+-&gt; ByteString (ExceptT ParseError ResIO) ()
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">ByteString (ExceptT ParseError ResIO) ()
+</span><a href="#local-6989586621679598721"><span class="hs-identifier hs-var">bytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><span class="annottext">(ByteString (ExceptT ParseError ResIO) (), Int64,
+ Either FilePath ())
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+forall a.
+(a, Int64, Either FilePath ())
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+</span><a href="#local-6989586621679598722"><span class="hs-identifier hs-var">liftBinaryError</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString (ExceptT ParseError ResIO) (), Int64,
+ Either FilePath ())
+</span><a href="#local-6989586621679598716"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><a href="#local-6989586621679598720"><span class="hs-identifier hs-type">boundaryBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-bytestring-0.3.4-f79869458562e2151d2407d3e027b49fddbce8f673b973748306763f7fc940c2/share/doc/html/src/Streaming.ByteString.Internal.html#ByteStream"><span class="hs-identifier hs-type">SBS.ByteStream</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ExceptT</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseError"><span class="hs-identifier hs-type">ParseError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/resourcet-1.3.0-daaadf875bf5c7a54a4fddc6e9986d8365a90c01a64fc253eba10dff2e6b55df/share/doc/html/src/Control.Monad.Trans.Resource.Internal.html#ResIO"><span class="hs-identifier hs-type">ResIO</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>    </span><span id="local-6989586621679598720"><span class="annot"><span class="annottext">boundaryBytes :: ByteString (ExceptT ParseError ResIO) ()
+</span><a href="#local-6989586621679598720"><span class="hs-identifier hs-var hs-var">boundaryBytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679598723"><span class="annot"><span class="annottext">boundaryFile :: FilePath
+</span><a href="#local-6989586621679598723"><span class="hs-identifier hs-var hs-var">boundaryFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679598715"><span class="hs-identifier hs-var">file</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ShowS
+</span><span class="hs-operator hs-var">-&lt;.&gt;</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;boundary&quot;</span></span><span>
+</span><span id="line-87"></span><span>      </span><span id="local-6989586621679598724"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679598724"><span class="hs-identifier hs-var">boundaryExists</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Bool -&gt; ByteStream (ExceptT ParseError ResIO) Bool
+forall a. IO a -&gt; ByteStream (ExceptT ParseError ResIO) a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><span class="hs-identifier hs-var">liftIO</span></span><span> </span><span class="annot"><span class="annottext">(IO Bool -&gt; ByteStream (ExceptT ParseError ResIO) Bool)
+-&gt; IO Bool -&gt; ByteStream (ExceptT ParseError ResIO) Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO Bool
+</span><span class="hs-identifier hs-var">doesFileExist</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679598723"><span class="hs-identifier hs-var">boundaryFile</span></a></span><span>
+</span><span id="line-88"></span><span>      </span><span class="annot"><span class="annottext">Bool
+-&gt; ByteString (ExceptT ParseError ResIO) ()
+-&gt; ByteString (ExceptT ParseError ResIO) ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><span class="hs-identifier hs-var">when</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679598724"><span class="hs-identifier hs-var">boundaryExists</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString (ExceptT ParseError ResIO) ()
+ -&gt; ByteString (ExceptT ParseError ResIO) ())
+-&gt; ByteString (ExceptT ParseError ResIO) ()
+-&gt; ByteString (ExceptT ParseError ResIO) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ByteString (ExceptT ParseError ResIO) ()
+forall (m :: * -&gt; *).
+MonadResource m =&gt;
+FilePath -&gt; ByteStream m ()
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-bytestring-0.3.4-f79869458562e2151d2407d3e027b49fddbce8f673b973748306763f7fc940c2/share/doc/html/src/Streaming.ByteString.html#readFile"><span class="hs-identifier hs-var">SBS.readFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679598723"><span class="hs-identifier hs-var">boundaryFile</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span>    </span><span id="local-6989586621679598721"><span class="annot"><span class="annottext">bytes :: ByteString (ExceptT ParseError ResIO) ()
+</span><a href="#local-6989586621679598721"><span class="hs-identifier hs-var hs-var">bytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; ByteString -&gt; ByteString (ExceptT ParseError ResIO) ()
+</span><a href="Cardano.Chain.Epoch.File.html#loadFileWithHeader"><span class="hs-identifier hs-var">loadFileWithHeader</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679598715"><span class="hs-identifier hs-var">file</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="Cardano.Chain.Epoch.File.html#epochHeader"><span class="hs-identifier hs-var">epochHeader</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621679598479"><span class="annot"><a href="#local-6989586621679598718"><span class="hs-identifier hs-type">liftDecoderError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679598479"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ExceptT</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseError"><span class="hs-identifier hs-type">ParseError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/resourcet-1.3.0-daaadf875bf5c7a54a4fddc6e9986d8365a90c01a64fc253eba10dff2e6b55df/share/doc/html/src/Control.Monad.Trans.Resource.Internal.html#ResIO"><span class="hs-identifier hs-type">ResIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679598479"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621679598718"><span class="annot"><span class="annottext">liftDecoderError :: forall a. Either DecoderError a -&gt; ExceptT ParseError ResIO a
+</span><a href="#local-6989586621679598718"><span class="hs-identifier hs-var hs-var">liftDecoderError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-94"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679598733"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679598733"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; ExceptT ParseError ResIO a
+forall a. a -&gt; ExceptT ParseError ResIO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679598733"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679598734"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679598734"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ParseError -&gt; ExceptT ParseError ResIO a
+forall a. ParseError -&gt; ExceptT ParseError ResIO a
+forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><span class="hs-identifier hs-var">throwError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DecoderError -&gt; ParseError
+</span><a href="Cardano.Chain.Epoch.File.html#ParseErrorDecoder"><span class="hs-identifier hs-var">ParseErrorDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679598734"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>    </span><span id="local-6989586621679598484"><span class="annot"><a href="#local-6989586621679598722"><span class="hs-identifier hs-type">liftBinaryError</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-98"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679598484"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.ByteOffset</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Streaming.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Block.Block.html#ABlockOrBoundary"><span class="hs-identifier hs-type">ABlockOrBoundary</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ExceptT</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseError"><span class="hs-identifier hs-type">ParseError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/resourcet-1.3.0-daaadf875bf5c7a54a4fddc6e9986d8365a90c01a64fc253eba10dff2e6b55df/share/doc/html/src/Control.Monad.Trans.Resource.Internal.html#ResIO"><span class="hs-identifier hs-type">ResIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>        </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-103"></span><span>    </span><span id="local-6989586621679598722"><span class="annot"><span class="annottext">liftBinaryError :: forall a.
+(a, Int64, Either FilePath ())
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+</span><a href="#local-6989586621679598722"><span class="hs-identifier hs-var hs-var">liftBinaryError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-104"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">()
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+forall a.
+a
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679598741"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679598741"><span class="hs-identifier hs-var">offset</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679598742"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679598742"><span class="hs-identifier hs-var">message</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><span class="annottext">ParseError
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+forall a.
+ParseError
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) a
+forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><span class="hs-identifier hs-var">throwError</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Int64 -&gt; Text -&gt; ParseError
+</span><a href="Cardano.Chain.Epoch.File.html#ParseErrorBinary"><span class="hs-identifier hs-var">ParseErrorBinary</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679598715"><span class="hs-identifier hs-var">file</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679598741"><span class="hs-identifier hs-var">offset</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; Text
+forall a b. ConvertText a b =&gt; a -&gt; b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.ConvertText.html#toS"><span class="hs-identifier hs-var">toS</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679598742"><span class="hs-identifier hs-var">message</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#parseEpochFilesWithBoundary"><span class="hs-identifier hs-type">parseEpochFilesWithBoundary</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-type">EpochSlots</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">FilePath</span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Streaming.Internal.html#Stream"><span class="hs-identifier hs-type">Stream</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/streaming-0.2.4.0-84d69b3e7511d7733f5f51af7f55aaafcbbbdd85ab9da1daa0cd90489d713cdf/share/doc/html/src/Data.Functor.Of.html#Of"><span class="hs-identifier hs-type">Of</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Block.Block.html#ABlockOrBoundary"><span class="hs-identifier hs-type">ABlockOrBoundary</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ExceptT</span></span><span> </span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#ParseError"><span class="hs-identifier hs-type">ParseError</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/resourcet-1.3.0-daaadf875bf5c7a54a4fddc6e9986d8365a90c01a64fc253eba10dff2e6b55df/share/doc/html/src/Control.Monad.Trans.Resource.Internal.html#ResIO"><span class="hs-identifier hs-type">ResIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span id="parseEpochFilesWithBoundary"><span class="annot"><span class="annottext">parseEpochFilesWithBoundary :: EpochSlots
+-&gt; [FilePath]
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+</span><a href="Cardano.Chain.Epoch.File.html#parseEpochFilesWithBoundary"><span class="hs-identifier hs-var hs-var">parseEpochFilesWithBoundary</span></a></span></span><span> </span><span id="local-6989586621679598744"><span class="annot"><span class="annottext">EpochSlots
+</span><a href="#local-6989586621679598744"><span class="hs-identifier hs-var">epochSlots</span></a></span></span><span> </span><span id="local-6989586621679598745"><span class="annot"><span class="annottext">[FilePath]
+</span><a href="#local-6989586621679598745"><span class="hs-identifier hs-var">fs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><span class="annottext">(Stream
+   (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+ -&gt; Stream
+      (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+ -&gt; Stream
+      (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ())
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+-&gt; [Stream
+      (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()]
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldr</span></span><span> </span><span class="annot"><span class="annottext">Stream
+  (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">(&lt;&gt;)</span></span><span> </span><span class="annot"><span class="annottext">Stream
+  (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochSlots
+-&gt; FilePath
+-&gt; Stream
+     (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
+</span><a href="Cardano.Chain.Epoch.File.html#parseEpochFileWithBoundary"><span class="hs-identifier hs-var">parseEpochFileWithBoundary</span></a></span><span> </span><span class="annot"><span class="annottext">EpochSlots
+</span><a href="#local-6989586621679598744"><span class="hs-identifier hs-var">epochSlots</span></a></span><span> </span><span class="annot"><span class="annottext">(FilePath
+ -&gt; Stream
+      (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ())
+-&gt; [FilePath]
+-&gt; [Stream
+      (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[FilePath]
+</span><a href="#local-6989586621679598745"><span class="hs-identifier hs-var">fs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#slotDataHeader"><span class="hs-identifier hs-type">slotDataHeader</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">LBS.ByteString</span></span><span>
+</span><span id="line-119"></span><span id="slotDataHeader"><span class="annot"><span class="annottext">slotDataHeader :: ByteString
+</span><a href="Cardano.Chain.Epoch.File.html#slotDataHeader"><span class="hs-identifier hs-var hs-var">slotDataHeader</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;blnd&quot;</span></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Cardano.Chain.Epoch.File.html#getSlotData"><span class="hs-identifier hs-type">getSlotData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-type">EpochSlots</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">B.Get</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-binary-1.7.2.0-a8823886ffd0b2d51904ce75fd27e0a08a953fdc80b3ee2bc40708ca6dbab289/share/doc/html/src/Cardano.Binary.FromCBOR.html#DecoderError"><span class="hs-identifier hs-type">DecoderError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Block.Block.html#ABlockOrBoundary"><span class="hs-identifier hs-type">ABlockOrBoundary</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span id="getSlotData"><span class="annot"><span class="annottext">getSlotData :: EpochSlots
+-&gt; Get (Either DecoderError (ABlockOrBoundary ByteString))
+</span><a href="Cardano.Chain.Epoch.File.html#getSlotData"><span class="hs-identifier hs-var hs-var">getSlotData</span></a></span></span><span> </span><span id="local-6989586621679598749"><span class="annot"><span class="annottext">EpochSlots
+</span><a href="#local-6989586621679598749"><span class="hs-identifier hs-var">epochSlots</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExceptT DecoderError Get (ABlockOrBoundary ByteString)
+-&gt; Get (Either DecoderError (ABlockOrBoundary ByteString))
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><span class="hs-identifier hs-var">runExceptT</span></span><span> </span><span class="annot"><span class="annottext">(ExceptT DecoderError Get (ABlockOrBoundary ByteString)
+ -&gt; Get (Either DecoderError (ABlockOrBoundary ByteString)))
+-&gt; ExceptT DecoderError Get (ABlockOrBoundary ByteString)
+-&gt; Get (Either DecoderError (ABlockOrBoundary ByteString))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-123"></span><span>  </span><span id="local-6989586621679598751"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679598751"><span class="hs-identifier hs-var">header</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Get ByteString -&gt; ExceptT DecoderError Get ByteString
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ExceptT DecoderError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(Get ByteString -&gt; ExceptT DecoderError Get ByteString)
+-&gt; Get ByteString -&gt; ExceptT DecoderError Get ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Get ByteString
+</span><span class="hs-identifier hs-var">B.getLazyByteString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Int64
+</span><span class="hs-identifier hs-var">LBS.length</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="Cardano.Chain.Epoch.File.html#slotDataHeader"><span class="hs-identifier hs-var">slotDataHeader</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><span class="annottext">Get () -&gt; ExceptT DecoderError Get ()
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ExceptT DecoderError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(Get () -&gt; ExceptT DecoderError Get ())
+-&gt; Get () -&gt; ExceptT DecoderError Get ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Get ()
+forall (f :: * -&gt; *). Alternative f =&gt; Bool -&gt; f ()
+</span><span class="hs-identifier hs-var">guard</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679598751"><span class="hs-identifier hs-var">header</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="Cardano.Chain.Epoch.File.html#slotDataHeader"><span class="hs-identifier hs-var">slotDataHeader</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>  </span><span id="local-6989586621679598753"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679598753"><span class="hs-identifier hs-var">blockSize</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Get Word32 -&gt; ExceptT DecoderError Get Word32
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ExceptT DecoderError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">Get Word32
+</span><span class="hs-identifier hs-var">getWord32be</span></span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621679598754"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679598754"><span class="hs-identifier hs-var">undoSize</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Get Word32 -&gt; ExceptT DecoderError Get Word32
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ExceptT DecoderError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">Get Word32
+</span><span class="hs-identifier hs-var">getWord32be</span></span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679598755"><span class="annot"><span class="annottext">ABlockOrBoundary ByteString
+</span><a href="#local-6989586621679598755"><span class="hs-identifier hs-var">block</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-128"></span><span>    </span><span id="local-6989586621679598756"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679598756"><span class="hs-identifier hs-var">blockBytes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Get ByteString -&gt; ExceptT DecoderError Get ByteString
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ExceptT DecoderError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(Get ByteString -&gt; ExceptT DecoderError Get ByteString)
+-&gt; Get ByteString -&gt; ExceptT DecoderError Get ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Get ByteString
+</span><span class="hs-identifier hs-var">B.getLazyByteString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; Int64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679598753"><span class="hs-identifier hs-var">blockSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>    </span><span id="local-6989586621679598757"><span class="annot"><span class="annottext">ABlockOrBoundary ByteSpan
+</span><a href="#local-6989586621679598757"><span class="hs-identifier hs-var">bb</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-130"></span><span>      </span><span class="annot"><span class="annottext">Get (Either DecoderError (ABlockOrBoundary ByteSpan))
+-&gt; ExceptT DecoderError Get (ABlockOrBoundary ByteSpan)
+forall e (m :: * -&gt; *) a. m (Either e a) -&gt; ExceptT e m a
+</span><span class="hs-identifier hs-var">ExceptT</span></span><span>
+</span><span id="line-131"></span><span>        </span><span class="annot"><span class="annottext">(Get (Either DecoderError (ABlockOrBoundary ByteSpan))
+ -&gt; ExceptT DecoderError Get (ABlockOrBoundary ByteSpan))
+-&gt; (Either DecoderError (ABlockOrBoundary ByteSpan)
+    -&gt; Get (Either DecoderError (ABlockOrBoundary ByteSpan)))
+-&gt; Either DecoderError (ABlockOrBoundary ByteSpan)
+-&gt; ExceptT DecoderError Get (ABlockOrBoundary ByteSpan)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Either DecoderError (ABlockOrBoundary ByteSpan)
+-&gt; Get (Either DecoderError (ABlockOrBoundary ByteSpan))
+forall a. a -&gt; Get a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span>
+</span><span id="line-132"></span><span>        </span><span class="annot"><span class="annottext">(Either DecoderError (ABlockOrBoundary ByteSpan)
+ -&gt; ExceptT DecoderError Get (ABlockOrBoundary ByteSpan))
+-&gt; Either DecoderError (ABlockOrBoundary ByteSpan)
+-&gt; ExceptT DecoderError Get (ABlockOrBoundary ByteSpan)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Version
+-&gt; Text
+-&gt; (forall s. Decoder s (ABlockOrBoundary ByteSpan))
+-&gt; ByteString
+-&gt; Either DecoderError (ABlockOrBoundary ByteSpan)
+forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s a)
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.html#decodeFullDecoder"><span class="hs-identifier hs-var">decodeFullDecoder</span></a></span><span>
+</span><span id="line-133"></span><span>          </span><span class="annot"><span class="annottext">Version
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Version.html#byronProtVer"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span>
+</span><span id="line-134"></span><span>          </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ABlockOrBoundary&quot;</span></span><span>
+</span><span id="line-135"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EpochSlots -&gt; Decoder s (ABlockOrBoundary ByteSpan)
+forall s. EpochSlots -&gt; Decoder s (ABlockOrBoundary ByteSpan)
+</span><a href="Cardano.Chain.Block.Block.html#decCBORABlockOrBoundary"><span class="hs-identifier hs-var">decCBORABlockOrBoundary</span></a></span><span> </span><span class="annot"><span class="annottext">EpochSlots
+</span><a href="#local-6989586621679598749"><span class="hs-identifier hs-var">epochSlots</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>          </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679598756"><span class="hs-identifier hs-var">blockBytes</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><span class="annottext">ABlockOrBoundary ByteString
+-&gt; ExceptT DecoderError Get (ABlockOrBoundary ByteString)
+forall a. a -&gt; ExceptT DecoderError Get a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(ABlockOrBoundary ByteString
+ -&gt; ExceptT DecoderError Get (ABlockOrBoundary ByteString))
+-&gt; ABlockOrBoundary ByteString
+-&gt; ExceptT DecoderError Get (ABlockOrBoundary ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">(ByteSpan -&gt; ByteString)
+-&gt; ABlockOrBoundary ByteSpan -&gt; ABlockOrBoundary ByteString
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/cardano-prelude-0.2.1.0-a59cf9db2728e2b9c4e5b98de462f2c12b35f1d3360cd82a9f678672b897b0d2/share/doc/html/src/Cardano.Prelude.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><span class="hs-identifier hs-var">LBS.toStrict</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; (ByteSpan -&gt; ByteString) -&gt; ByteSpan -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteSpan -&gt; ByteString
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Annotated.html#slice"><span class="hs-identifier hs-var">slice</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679598756"><span class="hs-identifier hs-var">blockBytes</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ABlockOrBoundary ByteSpan
+</span><a href="#local-6989586621679598757"><span class="hs-identifier hs-var">bb</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-comment">-- Drop the Undo bytes as we no longer use these</span><span>
+</span><span id="line-139"></span><span>  </span><span class="annot"><span class="annottext">ExceptT DecoderError Get ByteString -&gt; ExceptT DecoderError Get ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><span class="hs-identifier hs-var">void</span></span><span> </span><span class="annot"><span class="annottext">(ExceptT DecoderError Get ByteString
+ -&gt; ExceptT DecoderError Get ())
+-&gt; (Get ByteString -&gt; ExceptT DecoderError Get ByteString)
+-&gt; Get ByteString
+-&gt; ExceptT DecoderError Get ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Get ByteString -&gt; ExceptT DecoderError Get ByteString
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ExceptT DecoderError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="annot"><span class="annottext">(Get ByteString -&gt; ExceptT DecoderError Get ())
+-&gt; Get ByteString -&gt; ExceptT DecoderError Get ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Get ByteString
+</span><span class="hs-identifier hs-var">B.getLazyByteString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; Int64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679598754"><span class="hs-identifier hs-var">undoSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><span class="annottext">ABlockOrBoundary ByteString
+-&gt; ExceptT DecoderError Get (ABlockOrBoundary ByteString)
+forall a. a -&gt; ExceptT DecoderError Get a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">ABlockOrBoundary ByteString
+</span><a href="#local-6989586621679598755"><span class="hs-identifier hs-var">block</span></a></span><span>
+</span><span id="line-141"></span></pre></body></html>

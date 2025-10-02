@@ -1,0 +1,506 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DefaultSignatures #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilyDependencies #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE UndecidableSuperClasses #-}</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- TODO: submit a ghc bug report</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- some GHC bug wrongfully complains about CanGetInstantStake constraint being redundant.</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-redundant-constraints #-}</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.State.Stake</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#EraStake"><span class="hs-identifier">EraStake</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#CanGetInstantStake"><span class="hs-identifier">CanGetInstantStake</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#CanSetInstantStake"><span class="hs-identifier">CanSetInstantStake</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#snapShotFromInstantStake"><span class="hs-identifier">snapShotFromInstantStake</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#resolveActiveInstantStakeCredentials"><span class="hs-identifier">resolveActiveInstantStakeCredentials</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.html"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#DecShareCBOR"><span class="hs-identifier">DecShareCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#Interns"><span class="hs-identifier">Interns</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Account.html"><span class="hs-identifier">Cardano.Ledger.State.Account</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.CertState.html"><span class="hs-identifier">Cardano.Ledger.State.CertState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.CertState.html#DState"><span class="hs-identifier">DState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.CertState.html#PState"><span class="hs-identifier">PState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.SnapShots.html"><span class="hs-identifier">Cardano.Ledger.State.SnapShots</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.StakePool.html"><span class="hs-identifier">Cardano.Ledger.State.StakePool</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.StakePool.html#stakePoolStateToPoolParams"><span class="hs-identifier">stakePoolStateToPoolParams</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.UTxO.html"><span class="hs-identifier">Cardano.Ledger.State.UTxO</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.UTxO.html#balance"><span class="hs-identifier">balance</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">guard</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.html"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier">ToJSON</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.html"><span class="hs-identifier">Data.Default</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#Default"><span class="hs-identifier">Default</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Functor.Identity</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Kind</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Type</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Merge.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html"><span class="hs-identifier">Data.VMap</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">VMap</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier">NoThunks</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">class</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Account.html#EraAccounts"><span class="hs-identifier hs-type">EraAccounts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Monoid</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/data-default-0.8.0.1-9291b190c5bc542cf17f99ce44e9365d143d76b9889465ad3d362701e6cc609e/share/doc/html/src/Data.Default.Internal.html#Default"><span class="hs-identifier hs-type">Default</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/nothunks-0.2.1.1-0663c3283fb5dee9e67d41860072fab0227b6d69ef882303baddf309058f8618/share/doc/html/src/NoThunks.Class.html#NoThunks"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/aeson-2.2.3.0-86b3ded2a2a93d56f93497d21d3bbbb23e8718e44c9fa876ad561a4cceac08c1/share/doc/html/src/Data.Aeson.Types.ToJSON.html#ToJSON"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Encoding.EncCBOR.html#EncCBOR"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#DecShareCBOR"><span class="hs-identifier hs-type">DecShareCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#Share"><span class="hs-identifier hs-type">Share</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/cardano-ledger-binary-1.7.0.1/doc/html/cardano-ledger-binary/src/Cardano.Ledger.Binary.Decoding.Sharing.html#Interns"><span class="hs-identifier hs-type">Interns</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-61"></span><span>  </span><span id="EraStake"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#EraStake"><span class="hs-identifier hs-var">EraStake</span></a></span></span><span> </span><span id="local-6989586621679469014"><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-comment">-- | This is the current stake in the system. The important part of this stake is that not all of</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-comment">-- it is active. Any stake credential that is not registred will not contribute to the active</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-comment">-- stake, however it will be part of the instant stake. Throughout an epoch it is not relevant</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-comment">-- which part of the stake is active, because it is only when we take the snaphot that we resolve</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-comment">-- all the active stake.</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="InstantStake"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-var">InstantStake</span></a></span></span><span> </span><span id="local-6989586621679469014"><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679469160"><span class="annot"><a href="#local-6989586621679469160"><span class="hs-identifier hs-type">r</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="#local-6989586621679469160"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>  </span><span id="instantStakeCredentialsL"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#instantStakeCredentialsL"><span class="hs-identifier hs-type">instantStakeCredentialsL</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier hs-type">Lens'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier hs-type">CompactForm</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-comment">-- | Add new UTxO to the `InstantStake`. This is invoked for every new TxOut that is added to the</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-comment">-- ledger state</span><span>
+</span><span id="line-74"></span><span>  </span><span id="addInstantStake"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#addInstantStake"><span class="hs-identifier hs-type">addInstantStake</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-comment">-- | Delete spent UTxO from the `InstantStake`. This is invoked for every TxOut that is removed</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-comment">-- from the ledger state</span><span>
+</span><span id="line-78"></span><span>  </span><span id="deleteInstantStake"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#deleteInstantStake"><span class="hs-identifier hs-type">deleteInstantStake</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-comment">-- TODO: This functionality will be removed and switched to use a pulser</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-comment">-- | Using known stake credential registrations and delegations resolve the instant stake into a</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-comment">-- `Stake` that will be used for `SnapShot` creation by `snapShotFromInstantStake`.</span><span>
+</span><span id="line-84"></span><span>  </span><span id="resolveInstantStake"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#resolveInstantStake"><span class="hs-identifier hs-type">resolveInstantStake</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Account.html#Accounts"><span class="hs-identifier hs-type">Accounts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469014"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.SnapShots.html#Stake"><span class="hs-identifier hs-type">Stake</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#snapShotFromInstantStake"><span class="hs-identifier hs-type">snapShotFromInstantStake</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679469028"><span class="annot"><a href="#local-6989586621679469028"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#EraStake"><span class="hs-identifier hs-type">EraStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469028"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469028"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.CertState.html#DState"><span class="hs-identifier hs-type">DState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469028"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.CertState.html#PState"><span class="hs-identifier hs-type">PState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469028"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.SnapShots.html#SnapShot"><span class="hs-identifier hs-type">SnapShot</span></a></span><span>
+</span><span id="line-88"></span><span id="snapShotFromInstantStake"><span class="annot"><span class="annottext">snapShotFromInstantStake :: forall era.
+EraStake era =&gt;
+InstantStake era -&gt; DState era -&gt; PState era -&gt; SnapShot
+</span><a href="Cardano.Ledger.State.Stake.html#snapShotFromInstantStake"><span class="hs-identifier hs-var hs-var">snapShotFromInstantStake</span></a></span></span><span> </span><span id="local-6989586621679469182"><span class="annot"><span class="annottext">InstantStake era
+</span><a href="#local-6989586621679469182"><span class="hs-identifier hs-var">iStake</span></a></span></span><span> </span><span id="local-6989586621679469183"><span class="annot"><span class="annottext">DState era
+</span><a href="#local-6989586621679469183"><span class="hs-identifier hs-var">dState</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Ledger.State.CertState.html#PState"><span class="hs-identifier hs-type">PState</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679469185"><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) StakePoolState
+psStakePools :: Map (KeyHash 'StakePool) StakePoolState
+psStakePools :: forall era. PState era -&gt; Map (KeyHash 'StakePool) StakePoolState
+</span><a href="#local-6989586621679469185"><span class="hs-identifier hs-var hs-var">psStakePools</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.State.SnapShots.html#SnapShot"><span class="hs-identifier hs-type">SnapShot</span></a></span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">$sel:ssStake:SnapShot :: Stake
+</span><a href="Cardano.Ledger.State.SnapShots.html#%24sel%3AssStake%3ASnapShot"><span class="hs-identifier hs-var">ssStake</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InstantStake era -&gt; Accounts era -&gt; Stake
+forall era.
+EraStake era =&gt;
+InstantStake era -&gt; Accounts era -&gt; Stake
+</span><a href="Cardano.Ledger.State.Stake.html#resolveInstantStake"><span class="hs-identifier hs-var">resolveInstantStake</span></a></span><span> </span><span class="annot"><span class="annottext">InstantStake era
+</span><a href="#local-6989586621679469182"><span class="hs-identifier hs-var">iStake</span></a></span><span> </span><span class="annot"><span class="annottext">Accounts era
+</span><a href="#local-6989586621679469189"><span class="hs-identifier hs-var">accounts</span></a></span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">$sel:ssDelegations:SnapShot :: VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+</span><a href="Cardano.Ledger.State.SnapShots.html#%24sel%3AssDelegations%3ASnapShot"><span class="hs-identifier hs-var">ssDelegations</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+-&gt; [(Credential 'Staking, KeyHash 'StakePool)]
+-&gt; VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+Int -&gt; [(k, v)] -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromDistinctAscListN"><span class="hs-identifier hs-var">VMap.fromDistinctAscListN</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679469192"><span class="hs-identifier hs-var">delegsCount</span></a></span><span> </span><span class="annot"><span class="annottext">[(Credential 'Staking, KeyHash 'StakePool)]
+</span><a href="#local-6989586621679469193"><span class="hs-identifier hs-var">delegsAscList</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">$sel:ssPoolParams:SnapShot :: VMap VB VB (KeyHash 'StakePool) PoolParams
+</span><a href="Cardano.Ledger.State.SnapShots.html#%24sel%3AssPoolParams%3ASnapShot"><span class="hs-identifier hs-var">ssPoolParams</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-93"></span><span>        </span><span class="annot"><span class="annottext">Int
+-&gt; [(KeyHash 'StakePool, PoolParams)]
+-&gt; VMap VB VB (KeyHash 'StakePool) PoolParams
+forall (kv :: * -&gt; *) k (vv :: * -&gt; *) v.
+(Vector kv k, Vector vv v) =&gt;
+Int -&gt; [(k, v)] -&gt; VMap kv vv k v
+</span><a href="file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.6.7/vector-map-1.1.0.1/doc/html/vector-map/src/Data.VMap.html#fromDistinctAscListN"><span class="hs-identifier hs-var">VMap.fromDistinctAscListN</span></a></span><span>
+</span><span id="line-94"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) StakePoolState -&gt; Int
+forall k a. Map k a -&gt; Int
+</span><span class="hs-identifier hs-var">Map.size</span></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) StakePoolState
+</span><a href="#local-6989586621679469185"><span class="hs-identifier hs-var">psStakePools</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>          </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679469196"><span class="hs-identifier hs-var">poolId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool -&gt; StakePoolState -&gt; PoolParams
+</span><a href="Cardano.Ledger.State.StakePool.html#stakePoolStateToPoolParams"><span class="hs-identifier hs-var">stakePoolStateToPoolParams</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679469196"><span class="hs-identifier hs-var">poolId</span></a></span><span> </span><span class="annot"><span class="annottext">StakePoolState
+</span><a href="#local-6989586621679469197"><span class="hs-identifier hs-var">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679469196"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679469196"><span class="hs-identifier hs-var">poolId</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679469197"><span class="annot"><span class="annottext">StakePoolState
+</span><a href="#local-6989586621679469197"><span class="hs-identifier hs-var">ps</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) StakePoolState
+-&gt; [(KeyHash 'StakePool, StakePoolState)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><span class="hs-identifier hs-var">Map.toAscList</span></span><span> </span><span class="annot"><span class="annottext">Map (KeyHash 'StakePool) StakePoolState
+</span><a href="#local-6989586621679469185"><span class="hs-identifier hs-var">psStakePools</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-98"></span><span>    </span><span id="local-6989586621679469189"><span class="annot"><span class="annottext">accounts :: Accounts era
+</span><a href="#local-6989586621679469189"><span class="hs-identifier hs-var hs-var">accounts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DState era -&gt; Accounts era
+forall era. DState era -&gt; Accounts era
+</span><a href="Cardano.Ledger.State.CertState.html#dsAccounts"><span class="hs-identifier hs-var">dsAccounts</span></a></span><span> </span><span class="annot"><span class="annottext">DState era
+</span><a href="#local-6989586621679469183"><span class="hs-identifier hs-var">dState</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><a href="#local-6989586621679469200"><span class="hs-identifier hs-type">keepAndCountDelegations</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><a href="Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><a href="Cardano.Ledger.State.Account.html#AccountState"><span class="hs-identifier hs-type">AccountState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469028"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-102"></span><span>      </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-type">StakePool</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-103"></span><span>      </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-type">StakePool</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span>    </span><span id="local-6989586621679469200"><span class="annot"><span class="annottext">keepAndCountDelegations :: Credential 'Staking
+-&gt; AccountState era
+-&gt; ([(Credential 'Staking, KeyHash 'StakePool)], Int)
+-&gt; ([(Credential 'Staking, KeyHash 'StakePool)], Int)
+</span><a href="#local-6989586621679469200"><span class="hs-identifier hs-var hs-var">keepAndCountDelegations</span></a></span></span><span> </span><span id="local-6989586621679469201"><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679469201"><span class="hs-identifier hs-var">cred</span></a></span></span><span> </span><span id="local-6989586621679469202"><span class="annot"><span class="annottext">AccountState era
+</span><a href="#local-6989586621679469202"><span class="hs-identifier hs-var">accountState</span></a></span></span><span> </span><span id="local-6989586621679469203"><span class="annot"><span class="annottext">acc :: ([(Credential 'Staking, KeyHash 'StakePool)], Int)
+</span><a href="#local-6989586621679469203"><span class="hs-identifier hs-var">acc</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="hs-glyph">!</span><span id="local-6989586621679469204"><span class="annot"><span class="annottext">[(Credential 'Staking, KeyHash 'StakePool)]
+</span><a href="#local-6989586621679469204"><span class="hs-identifier hs-var">delegs</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679469205"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679469205"><span class="hs-identifier hs-var">count</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">AccountState era
+</span><a href="#local-6989586621679469202"><span class="hs-identifier hs-var">accountState</span></a></span><span> </span><span class="annot"><span class="annottext">AccountState era
+-&gt; Getting
+     (Maybe (KeyHash 'StakePool))
+     (AccountState era)
+     (Maybe (KeyHash 'StakePool))
+-&gt; Maybe (KeyHash 'StakePool)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (KeyHash 'StakePool))
+  (AccountState era)
+  (Maybe (KeyHash 'StakePool))
+forall era.
+EraAccounts era =&gt;
+Lens' (AccountState era) (Maybe (KeyHash 'StakePool))
+Lens' (AccountState era) (Maybe (KeyHash 'StakePool))
+</span><a href="Cardano.Ledger.State.Account.html#stakePoolDelegationAccountStateL"><span class="hs-identifier hs-var">stakePoolDelegationAccountStateL</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-106"></span><span>        </span><span class="annot"><span class="annottext">Maybe (KeyHash 'StakePool)
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">([(Credential 'Staking, KeyHash 'StakePool)], Int)
+</span><a href="#local-6989586621679469203"><span class="hs-identifier hs-var">acc</span></a></span><span>
+</span><span id="line-107"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679469208"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679469208"><span class="hs-identifier hs-var">deleg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Credential 'Staking
+</span><a href="#local-6989586621679469201"><span class="hs-identifier hs-var">cred</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679469208"><span class="hs-identifier hs-var">deleg</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Credential 'Staking, KeyHash 'StakePool)
+-&gt; [(Credential 'Staking, KeyHash 'StakePool)]
+-&gt; [(Credential 'Staking, KeyHash 'StakePool)]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[(Credential 'Staking, KeyHash 'StakePool)]
+</span><a href="#local-6989586621679469204"><span class="hs-identifier hs-var">delegs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679469205"><span class="hs-identifier hs-var">count</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679469193"><span class="annot"><span class="annottext">[(Credential 'Staking, KeyHash 'StakePool)]
+</span><a href="#local-6989586621679469193"><span class="hs-identifier hs-var">delegsAscList</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679469192"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679469192"><span class="hs-identifier hs-var">delegsCount</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>      </span><span class="annot"><span class="annottext">(Credential 'Staking
+ -&gt; AccountState era
+ -&gt; ([(Credential 'Staking, KeyHash 'StakePool)], Int)
+ -&gt; ([(Credential 'Staking, KeyHash 'StakePool)], Int))
+-&gt; ([(Credential 'Staking, KeyHash 'StakePool)], Int)
+-&gt; Map (Credential 'Staking) (AccountState era)
+-&gt; ([(Credential 'Staking, KeyHash 'StakePool)], Int)
+forall k a b. (k -&gt; a -&gt; b -&gt; b) -&gt; b -&gt; Map k a -&gt; b
+</span><span class="hs-identifier hs-var">Map.foldrWithKey</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+-&gt; AccountState era
+-&gt; ([(Credential 'Staking, KeyHash 'StakePool)], Int)
+-&gt; ([(Credential 'Staking, KeyHash 'StakePool)], Int)
+</span><a href="#local-6989586621679469200"><span class="hs-identifier hs-var">keepAndCountDelegations</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Map (Credential 'Staking) (AccountState era)
+ -&gt; ([(Credential 'Staking, KeyHash 'StakePool)], Int))
+-&gt; Map (Credential 'Staking) (AccountState era)
+-&gt; ([(Credential 'Staking, KeyHash 'StakePool)], Int)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Accounts era
+</span><a href="#local-6989586621679469189"><span class="hs-identifier hs-var">accounts</span></a></span><span> </span><span class="annot"><span class="annottext">Accounts era
+-&gt; Getting
+     (Map (Credential 'Staking) (AccountState era))
+     (Accounts era)
+     (Map (Credential 'Staking) (AccountState era))
+-&gt; Map (Credential 'Staking) (AccountState era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Map (Credential 'Staking) (AccountState era))
+  (Accounts era)
+  (Map (Credential 'Staking) (AccountState era))
+forall era.
+EraAccounts era =&gt;
+Lens' (Accounts era) (Map (Credential 'Staking) (AccountState era))
+Lens' (Accounts era) (Map (Credential 'Staking) (AccountState era))
+</span><a href="Cardano.Ledger.State.Account.html#accountsMapL"><span class="hs-identifier hs-var">accountsMapL</span></a></span><span>
+</span><span id="line-110"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#snapShotFromInstantStake"><span class="hs-pragma hs-type">snapShotFromInstantStake</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">class</span><span> </span><span id="CanGetInstantStake"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#CanGetInstantStake"><span class="hs-identifier hs-var">CanGetInstantStake</span></a></span></span><span> </span><span id="local-6989586621679469070"><span class="annot"><a href="#local-6989586621679469070"><span class="hs-identifier hs-type">t</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>  </span><span id="instantStakeG"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#instantStakeG"><span class="hs-identifier hs-type">instantStakeG</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679469213"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#SimpleGetter"><span class="hs-identifier hs-type">SimpleGetter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679469070"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469213"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469213"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="instantStakeG"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#instantStakeG"><span class="hs-identifier hs-type">instantStakeG</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679469072"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#CanSetInstantStake"><span class="hs-identifier hs-type">CanSetInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469070"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#SimpleGetter"><span class="hs-identifier hs-type">SimpleGetter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679469070"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469072"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469072"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-115"></span><span>  </span><span id="local-6989586621679469215"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#instantStakeG"><span class="hs-identifier hs-var hs-var">instantStakeG</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(InstantStake era -&gt; Const r (InstantStake era))
+-&gt; t era -&gt; Const r (t era)
+forall era. Lens' (t era) (InstantStake era)
+forall (t :: * -&gt; *) era.
+CanSetInstantStake t =&gt;
+Lens' (t era) (InstantStake era)
+</span><a href="Cardano.Ledger.State.Stake.html#instantStakeL"><span class="hs-identifier hs-var">instantStakeL</span></a></span></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#instantStakeG"><span class="hs-pragma hs-type">instantStakeG</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#CanGetInstantStake"><span class="hs-identifier hs-type">CanGetInstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469078"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="CanSetInstantStake"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#CanSetInstantStake"><span class="hs-identifier hs-var">CanSetInstantStake</span></a></span></span><span> </span><span id="local-6989586621679469078"><span class="annot"><a href="#local-6989586621679469078"><span class="hs-identifier hs-type">t</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-119"></span><span>  </span><span id="instantStakeL"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#instantStakeL"><span class="hs-identifier hs-type">instantStakeL</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span id="local-6989586621679469077"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.Type.html#Lens%27"><span class="hs-identifier hs-type">Lens'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679469078"><span class="hs-identifier hs-type">t</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469077"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469077"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- | This is the total active stake including the rewards, but ignoring all the stake coming from</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- the pointers. Where &quot;active&quot; stake means any stake credential that is registered and delegated to</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- a stake pool.</span><span>
+</span><span id="line-124"></span><span id="local-6989586621679469079"><span class="annot"><a href="Cardano.Ledger.State.Stake.html#resolveActiveInstantStakeCredentials"><span class="hs-identifier hs-type">resolveActiveInstantStakeCredentials</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#EraStake"><span class="hs-identifier hs-type">EraStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469079"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#InstantStake"><span class="hs-identifier hs-type">InstantStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469079"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-127"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.State.Account.html#Accounts"><span class="hs-identifier hs-type">Accounts</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679469079"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">Credential</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-type">Staking</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Compactible.html#CompactForm"><span class="hs-identifier hs-type">CompactForm</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-129"></span><span id="resolveActiveInstantStakeCredentials"><span class="annot"><span class="annottext">resolveActiveInstantStakeCredentials :: forall era.
+EraStake era =&gt;
+InstantStake era
+-&gt; Accounts era -&gt; Map (Credential 'Staking) (CompactForm Coin)
+</span><a href="Cardano.Ledger.State.Stake.html#resolveActiveInstantStakeCredentials"><span class="hs-identifier hs-var hs-var">resolveActiveInstantStakeCredentials</span></a></span></span><span> </span><span id="local-6989586621679469252"><span class="annot"><span class="annottext">InstantStake era
+</span><a href="#local-6989586621679469252"><span class="hs-identifier hs-var">instantStake</span></a></span></span><span> </span><span id="local-6989586621679469253"><span class="annot"><span class="annottext">Accounts era
+</span><a href="#local-6989586621679469253"><span class="hs-identifier hs-var">accounts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><span class="annottext">SimpleWhenMissing
+  (Credential 'Staking) (CompactForm Coin) (CompactForm Coin)
+-&gt; SimpleWhenMissing
+     (Credential 'Staking) (AccountState era) (CompactForm Coin)
+-&gt; SimpleWhenMatched
+     (Credential 'Staking)
+     (CompactForm Coin)
+     (AccountState era)
+     (CompactForm Coin)
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+-&gt; Map (Credential 'Staking) (AccountState era)
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+forall k a c b.
+Ord k =&gt;
+SimpleWhenMissing k a c
+-&gt; SimpleWhenMissing k b c
+-&gt; SimpleWhenMatched k a b c
+-&gt; Map k a
+-&gt; Map k b
+-&gt; Map k c
+</span><span class="hs-identifier hs-var">Map.merge</span></span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><span class="annottext">SimpleWhenMissing
+  (Credential 'Staking) (CompactForm Coin) (CompactForm Coin)
+forall (f :: * -&gt; *) k x y. Applicative f =&gt; WhenMissing f k x y
+</span><span class="hs-identifier hs-var">Map.dropMissing</span></span><span> </span><span class="hs-comment">-- ignore non-registered stake credentials</span><span>
+</span><span id="line-132"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Credential 'Staking
+ -&gt; AccountState era -&gt; Maybe (CompactForm Coin))
+-&gt; SimpleWhenMissing
+     (Credential 'Staking) (AccountState era) (CompactForm Coin)
+forall (f :: * -&gt; *) k x y.
+Applicative f =&gt;
+(k -&gt; x -&gt; Maybe y) -&gt; WhenMissing f k x y
+</span><span class="hs-identifier hs-var">Map.mapMaybeMissing</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(AccountState era -&gt; Maybe (CompactForm Coin))
+-&gt; Credential 'Staking
+-&gt; AccountState era
+-&gt; Maybe (CompactForm Coin)
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">AccountState era -&gt; Maybe (CompactForm Coin)
+forall {era}.
+(Assert
+   (OrdCond
+      (CmpNat (ProtVerLow era) (ProtVerHigh era)) 'True 'True 'False)
+   (TypeError ...),
+ Assert
+   (OrdCond (CmpNat 0 (ProtVerLow era)) 'True 'True 'False)
+   (TypeError ...),
+ Assert
+   (OrdCond (CmpNat 0 (ProtVerHigh era)) 'True 'True 'False)
+   (TypeError ...),
+ EraAccounts era) =&gt;
+AccountState era -&gt; Maybe (CompactForm Coin)
+</span><a href="#local-6989586621679469258"><span class="hs-identifier hs-var">getNonZeroActiveBalance</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- use the account balance, unless it is zero</span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Credential 'Staking
+ -&gt; CompactForm Coin
+ -&gt; AccountState era
+ -&gt; Identity (Maybe (CompactForm Coin)))
+-&gt; SimpleWhenMatched
+     (Credential 'Staking)
+     (CompactForm Coin)
+     (AccountState era)
+     (CompactForm Coin)
+forall (f :: * -&gt; *) k x y z.
+Applicative f =&gt;
+(k -&gt; x -&gt; y -&gt; f (Maybe z)) -&gt; WhenMatched f k x y z
+</span><span class="hs-identifier hs-var">Map.zipWithMaybeAMatched</span></span><span> </span><span class="annot"><span class="annottext">Credential 'Staking
+-&gt; CompactForm Coin
+-&gt; AccountState era
+-&gt; Identity (Maybe (CompactForm Coin))
+forall {era} {p}.
+(Assert
+   (OrdCond
+      (CmpNat (ProtVerLow era) (ProtVerHigh era)) 'True 'True 'False)
+   (TypeError ...),
+ Assert
+   (OrdCond (CmpNat 0 (ProtVerLow era)) 'True 'True 'False)
+   (TypeError ...),
+ Assert
+   (OrdCond (CmpNat 0 (ProtVerHigh era)) 'True 'True 'False)
+   (TypeError ...),
+ EraAccounts era) =&gt;
+p
+-&gt; CompactForm Coin
+-&gt; AccountState era
+-&gt; Identity (Maybe (CompactForm Coin))
+</span><a href="#local-6989586621679469260"><span class="hs-identifier hs-var">addInstantActiveStake</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- combine the stake with the account balance</span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">InstantStake era
+</span><a href="#local-6989586621679469252"><span class="hs-identifier hs-var">instantStake</span></a></span><span> </span><span class="annot"><span class="annottext">InstantStake era
+-&gt; Getting
+     (Map (Credential 'Staking) (CompactForm Coin))
+     (InstantStake era)
+     (Map (Credential 'Staking) (CompactForm Coin))
+-&gt; Map (Credential 'Staking) (CompactForm Coin)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Map (Credential 'Staking) (CompactForm Coin))
+  (InstantStake era)
+  (Map (Credential 'Staking) (CompactForm Coin))
+forall era.
+EraStake era =&gt;
+Lens'
+  (InstantStake era) (Map (Credential 'Staking) (CompactForm Coin))
+Lens'
+  (InstantStake era) (Map (Credential 'Staking) (CompactForm Coin))
+</span><a href="Cardano.Ledger.State.Stake.html#instantStakeCredentialsL"><span class="hs-identifier hs-var">instantStakeCredentialsL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Accounts era
+</span><a href="#local-6989586621679469253"><span class="hs-identifier hs-var">accounts</span></a></span><span> </span><span class="annot"><span class="annottext">Accounts era
+-&gt; Getting
+     (Map (Credential 'Staking) (AccountState era))
+     (Accounts era)
+     (Map (Credential 'Staking) (AccountState era))
+-&gt; Map (Credential 'Staking) (AccountState era)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Map (Credential 'Staking) (AccountState era))
+  (Accounts era)
+  (Map (Credential 'Staking) (AccountState era))
+forall era.
+EraAccounts era =&gt;
+Lens' (Accounts era) (Map (Credential 'Staking) (AccountState era))
+Lens' (Accounts era) (Map (Credential 'Staking) (AccountState era))
+</span><a href="Cardano.Ledger.State.Account.html#accountsMapL"><span class="hs-identifier hs-var">accountsMapL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-comment">-- Only return balance for accounts that have an active delegation to a stake pool.</span><span>
+</span><span id="line-138"></span><span>    </span><span id="local-6989586621679469355"><span class="annot"><span class="annottext">getActiveBalance :: AccountState era -&gt; Maybe (CompactForm Coin)
+</span><a href="#local-6989586621679469355"><span class="hs-identifier hs-var hs-var">getActiveBalance</span></a></span></span><span> </span><span id="local-6989586621679469356"><span class="annot"><span class="annottext">AccountState era
+</span><a href="#local-6989586621679469356"><span class="hs-identifier hs-var">accountState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-139"></span><span>      </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">AccountState era
+</span><a href="#local-6989586621679469356"><span class="hs-identifier hs-var">accountState</span></a></span><span> </span><span class="annot"><span class="annottext">AccountState era
+-&gt; Getting
+     (Maybe (KeyHash 'StakePool))
+     (AccountState era)
+     (Maybe (KeyHash 'StakePool))
+-&gt; Maybe (KeyHash 'StakePool)
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting
+  (Maybe (KeyHash 'StakePool))
+  (AccountState era)
+  (Maybe (KeyHash 'StakePool))
+forall era.
+EraAccounts era =&gt;
+Lens' (AccountState era) (Maybe (KeyHash 'StakePool))
+Lens' (AccountState era) (Maybe (KeyHash 'StakePool))
+</span><a href="Cardano.Ledger.State.Account.html#stakePoolDelegationAccountStateL"><span class="hs-identifier hs-var">stakePoolDelegationAccountStateL</span></a></span><span>
+</span><span id="line-140"></span><span>      </span><span class="annot"><span class="annottext">CompactForm Coin -&gt; Maybe (CompactForm Coin)
+forall a. a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(CompactForm Coin -&gt; Maybe (CompactForm Coin))
+-&gt; CompactForm Coin -&gt; Maybe (CompactForm Coin)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="annot"><span class="annottext">AccountState era
+</span><a href="#local-6989586621679469356"><span class="hs-identifier hs-var">accountState</span></a></span><span> </span><span class="annot"><span class="annottext">AccountState era
+-&gt; Getting (CompactForm Coin) (AccountState era) (CompactForm Coin)
+-&gt; CompactForm Coin
+forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.7/microlens-0.4.13.1-71c999e1e9d35dc39dc696ab4bf56f0958d34c6f1e240362775e227e5e550787/share/doc/html/src/Lens.Micro.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Getting (CompactForm Coin) (AccountState era) (CompactForm Coin)
+forall era.
+EraAccounts era =&gt;
+Lens' (AccountState era) (CompactForm Coin)
+Lens' (AccountState era) (CompactForm Coin)
+</span><a href="Cardano.Ledger.State.Account.html#balanceAccountStateL"><span class="hs-identifier hs-var">balanceAccountStateL</span></a></span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="#local-6989586621679469355"><span class="hs-pragma hs-type">getActiveBalance</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-comment">-- Retain any non-zero balance</span><span>
+</span><span id="line-143"></span><span>    </span><span id="local-6989586621679469258"><span class="annot"><span class="annottext">getNonZeroActiveBalance :: AccountState era -&gt; Maybe (CompactForm Coin)
+</span><a href="#local-6989586621679469258"><span class="hs-identifier hs-var hs-var">getNonZeroActiveBalance</span></a></span></span><span> </span><span id="local-6989586621679469435"><span class="annot"><span class="annottext">AccountState era
+</span><a href="#local-6989586621679469435"><span class="hs-identifier hs-var">accountState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-144"></span><span>      </span><span id="local-6989586621679469436"><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679469436"><span class="hs-identifier hs-var">balance</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">AccountState era -&gt; Maybe (CompactForm Coin)
+forall {era}.
+(Assert
+   (OrdCond
+      (CmpNat (ProtVerLow era) (ProtVerHigh era)) 'True 'True 'False)
+   (TypeError ...),
+ Assert
+   (OrdCond (CmpNat 0 (ProtVerLow era)) 'True 'True 'False)
+   (TypeError ...),
+ Assert
+   (OrdCond (CmpNat 0 (ProtVerHigh era)) 'True 'True 'False)
+   (TypeError ...),
+ EraAccounts era) =&gt;
+AccountState era -&gt; Maybe (CompactForm Coin)
+</span><a href="#local-6989586621679469355"><span class="hs-identifier hs-var">getActiveBalance</span></a></span><span> </span><span class="annot"><span class="annottext">AccountState era
+</span><a href="#local-6989586621679469435"><span class="hs-identifier hs-var">accountState</span></a></span><span>
+</span><span id="line-145"></span><span>      </span><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679469436"><span class="hs-identifier hs-var">balance</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin -&gt; Maybe () -&gt; Maybe (CompactForm Coin)
+forall a b. a -&gt; Maybe b -&gt; Maybe a
+forall (f :: * -&gt; *) a b. Functor f =&gt; a -&gt; f b -&gt; f a
+</span><span class="hs-operator hs-var">&lt;$</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe ()
+forall (f :: * -&gt; *). Alternative f =&gt; Bool -&gt; f ()
+</span><span class="hs-identifier hs-var">guard</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679469436"><span class="hs-identifier hs-var">balance</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin -&gt; CompactForm Coin -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+forall a. Monoid a =&gt; a
+</span><span class="hs-identifier hs-var">mempty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="#local-6989586621679469258"><span class="hs-pragma hs-type">getNonZeroActiveBalance</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-comment">-- Adds instant stake to any active staking credential</span><span>
+</span><span id="line-148"></span><span>    </span><span id="local-6989586621679469260"><span class="annot"><span class="annottext">addInstantActiveStake :: p
+-&gt; CompactForm Coin
+-&gt; AccountState era
+-&gt; Identity (Maybe (CompactForm Coin))
+</span><a href="#local-6989586621679469260"><span class="hs-identifier hs-var hs-var">addInstantActiveStake</span></a></span></span><span> </span><span class="annot"><span class="annottext">p
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679469510"><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679469510"><span class="hs-identifier hs-var">stake</span></a></span></span><span> </span><span id="local-6989586621679469511"><span class="annot"><span class="annottext">AccountState era
+</span><a href="#local-6989586621679469511"><span class="hs-identifier hs-var">accountState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (CompactForm Coin) -&gt; Identity (Maybe (CompactForm Coin))
+forall a. a -&gt; Identity a
+</span><span class="hs-identifier hs-var">Identity</span></span><span> </span><span class="annot"><span class="annottext">(Maybe (CompactForm Coin) -&gt; Identity (Maybe (CompactForm Coin)))
+-&gt; Maybe (CompactForm Coin) -&gt; Identity (Maybe (CompactForm Coin))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-149"></span><span>      </span><span id="local-6989586621679469513"><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679469513"><span class="hs-identifier hs-var">balance</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">AccountState era -&gt; Maybe (CompactForm Coin)
+forall {era}.
+(Assert
+   (OrdCond
+      (CmpNat (ProtVerLow era) (ProtVerHigh era)) 'True 'True 'False)
+   (TypeError ...),
+ Assert
+   (OrdCond (CmpNat 0 (ProtVerLow era)) 'True 'True 'False)
+   (TypeError ...),
+ Assert
+   (OrdCond (CmpNat 0 (ProtVerHigh era)) 'True 'True 'False)
+   (TypeError ...),
+ EraAccounts era) =&gt;
+AccountState era -&gt; Maybe (CompactForm Coin)
+</span><a href="#local-6989586621679469355"><span class="hs-identifier hs-var">getActiveBalance</span></a></span><span> </span><span class="annot"><span class="annottext">AccountState era
+</span><a href="#local-6989586621679469511"><span class="hs-identifier hs-var">accountState</span></a></span><span>
+</span><span id="line-150"></span><span>      </span><span class="hs-comment">-- instant stake is guaranteed to be non-zero due to minUTxO, so no need to guard against mempty</span><span>
+</span><span id="line-151"></span><span>      </span><span class="annot"><span class="annottext">CompactForm Coin -&gt; Maybe (CompactForm Coin)
+forall a. a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(CompactForm Coin -&gt; Maybe (CompactForm Coin))
+-&gt; CompactForm Coin -&gt; Maybe (CompactForm Coin)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$!</span></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679469510"><span class="hs-identifier hs-var">stake</span></a></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin -&gt; CompactForm Coin -&gt; CompactForm Coin
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">CompactForm Coin
+</span><a href="#local-6989586621679469513"><span class="hs-identifier hs-var">balance</span></a></span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="#local-6989586621679469260"><span class="hs-pragma hs-type">addInstantActiveStake</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-153"></span><span class="hs-pragma">{-# INLINEABLE</span><span> </span><span class="annot"><a href="Cardano.Ledger.State.Stake.html#resolveActiveInstantStakeCredentials"><span class="hs-pragma hs-type">resolveActiveInstantStakeCredentials</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-154"></span></pre></body></html>
