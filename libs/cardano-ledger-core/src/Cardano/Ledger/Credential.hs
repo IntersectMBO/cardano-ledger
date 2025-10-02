@@ -321,11 +321,6 @@ instance EncCBORGroup Ptr where
     encCBOR sl
       <> encCBOR txIx
       <> encCBOR certIx
-  encodedGroupSizeExpr size_ proxy =
-    encodedSizeExpr size_ (ptrSlotNo <$> proxy)
-      + encodedSizeExpr size_ (ptrTxIx <$> proxy)
-      + encodedSizeExpr size_ (ptrCertIx <$> proxy)
-
   listLen _ = 3
   listLenBound _ = 3
 

@@ -17,12 +17,18 @@ import Cardano.Chain.UTxO (
   taWitness,
  )
 import Cardano.Crypto (ProtocolMagicId (..), SignTag (..), Signature, sign)
-import Cardano.Ledger.Binary (Case (..), EncCBOR, LengthOf, SizeOverride (..), szCases)
+import Cardano.Ledger.Binary (Case (..), LengthOf, SizeOverride (..), ToCBOR, szCases)
 import Cardano.Prelude
 import qualified Data.Map.Strict as M
 import Data.Vector (Vector)
 import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
+import Test.Cardano.Binary.Helpers (SizeTestConfig (..), scfg, sizeTest)
+import Test.Cardano.Binary.Helpers.GoldenRoundTrip (
+  goldenTestCBOR,
+  roundTripsCBORBuildable,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Chain.UTxO.Example (
   exampleHashTx,
   exampleRedeemSignature,
@@ -65,12 +71,6 @@ import Test.Cardano.Crypto.Example (
   exampleVerificationKey,
  )
 import Test.Cardano.Crypto.Gen (feedPM)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers (SizeTestConfig (..), scfg, sizeTest)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
-  goldenTestCBOR,
-  roundTripsCBORBuildable,
-  roundTripsCBORShow,
- )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
@@ -281,7 +281,7 @@ ts_roundTripUTxOConfiguration =
 
 sizeEstimates :: H.Group
 sizeEstimates =
-  let sizeTestGen :: (Show a, EncCBOR a) => Gen a -> Property
+  let sizeTestGen :: (Show a, ToCBOR a) => Gen a -> Property
       sizeTestGen g = sizeTest $ scfg {gen = g}
       pm = ProtocolMagicId 0
 

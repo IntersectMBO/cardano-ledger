@@ -86,6 +86,17 @@ instance B.Buildable TxInWitness where
 
 instance ToCBOR TxInWitness where
   toCBOR = toByronCBOR
+  encodedSizeExpr size _ =
+    2
+      + szCases
+        ( map
+            (fmap knownCborDataItemSizeExpr)
+            [ Case "VKWitness" $ size $ Proxy @(VerificationKey, TxSig)
+            , Case "RedeemWitness"
+                $ size
+                $ Proxy @(RedeemVerificationKey, RedeemSignature TxSigData)
+            ]
+        )
 
 instance FromCBOR TxInWitness where
   fromCBOR = fromByronCBOR
@@ -103,18 +114,6 @@ instance EncCBOR TxInWitness where
       encodeListLen 2
         <> encCBOR (2 :: Word8)
         <> encodeKnownCborDataItem (key, sig)
-
-  encodedSizeExpr size _ =
-    2
-      + szCases
-        ( map
-            (fmap knownCborDataItemSizeExpr)
-            [ Case "VKWitness" $ size $ Proxy @(VerificationKey, TxSig)
-            , Case "RedeemWitness"
-                $ size
-                $ Proxy @(RedeemVerificationKey, RedeemSignature TxSigData)
-            ]
-        )
 
 instance DecCBOR TxInWitness where
   decCBOR = do
@@ -145,13 +144,13 @@ instance ToJSON TxSigData
 
 instance ToCBOR TxSigData where
   toCBOR = toByronCBOR
+  encodedSizeExpr size pxy = size (txSigTxHash <$> pxy)
 
 instance FromCBOR TxSigData where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR TxSigData where
   encCBOR txSigData = encCBOR (txSigTxHash txSigData)
-  encodedSizeExpr size pxy = size (txSigTxHash <$> pxy)
 
 instance DecCBOR TxSigData where
   decCBOR = TxSigData <$> decCBOR

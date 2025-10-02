@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-byron
-version: 1.2.0.0
+version: 1.2.1.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -240,9 +240,10 @@ library
     binary,
     bytestring,
     canonical-json,
+    cardano-binary,
     cardano-crypto,
     cardano-crypto-wrapper >=1.6,
-    cardano-ledger-binary >=1.5,
+    cardano-ledger-binary >=1.8,
     cardano-prelude,
     cborg,
     containers,
@@ -345,6 +346,7 @@ library testlib
     byron-spec-chain,
     byron-spec-ledger,
     bytestring,
+    cardano-binary:{cardano-binary, testlib} >=1.7.2,
     cardano-crypto,
     cardano-crypto-wrapper:{cardano-crypto-wrapper, testlib},
     cardano-ledger-binary:{cardano-ledger-binary, testlib},

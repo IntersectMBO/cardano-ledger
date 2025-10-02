@@ -1,8 +1,8 @@
 # Revision history for `cardano-ledger-byron`
 
-## 1.2.0.1
+## 1.2.1.0
 
-*
+* Add `ToCBOR` and `FromCBOR` instances for `KeyHash` and `GenesisHash`
 
 ## 1.2.0.0
 

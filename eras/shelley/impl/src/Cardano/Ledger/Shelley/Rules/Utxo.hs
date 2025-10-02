@@ -98,6 +98,7 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -121,7 +122,7 @@ instance (EraPParams era, EraCertState era) => EncCBOR (UtxoEnv era) where
             !> To uePParams
             !> To ueCertState
 
-instance (EraPParams era, EraCertState era) => DecCBOR (UtxoEnv era) where
+instance (EraPParams era, EraCertState era, Typeable (CertState era)) => DecCBOR (UtxoEnv era) where
   decCBOR =
     decode $
       RecD UtxoEnv

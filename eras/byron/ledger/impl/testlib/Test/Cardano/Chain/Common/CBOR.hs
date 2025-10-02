@@ -36,8 +36,8 @@ import Cardano.Crypto (
 import Cardano.Crypto.Raw (Raw (..))
 import Cardano.Ledger.Binary (
   Case (..),
-  EncCBOR,
   SizeOverride (..),
+  ToCBOR,
   byronProtVer,
   decodeFullDecoder,
   serialize,
@@ -47,6 +47,12 @@ import Cardano.Prelude hiding (check)
 import qualified Data.Map as M
 import Hedgehog (Gen, Property, cover, forAll, property, (===))
 import qualified Hedgehog as H
+import Test.Cardano.Binary.Helpers (SizeTestConfig (..), scfg, sizeTest)
+import Test.Cardano.Binary.Helpers.GoldenRoundTrip (
+  goldenTestCBOR,
+  roundTripsCBORBuildable,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Chain.Common.Example (
   exampleAddrSpendingData_VerKey,
   exampleAddress,
@@ -75,12 +81,6 @@ import Test.Cardano.Chain.Common.Gen (
  )
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Gen (genHashRaw)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers (SizeTestConfig (..), scfg, sizeTest)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
-  goldenTestCBOR,
-  roundTripsCBORBuildable,
-  roundTripsCBORShow,
- )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
@@ -292,7 +292,7 @@ ts_roundTripMerkleRoot =
 --------------------------------------------------------------------------------
 sizeEstimates :: H.Group
 sizeEstimates =
-  let check :: forall a. (Show a, EncCBOR a) => Gen a -> Property
+  let check :: forall a. (Show a, ToCBOR a) => Gen a -> Property
       check g = sizeTest $ scfg {gen = g}
 
       -- Explicit bounds for types, based on the generators from Gen.

@@ -69,19 +69,16 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   CBORGroup (..),
-  Case (..),
   DecCBOR (..),
   DecCBORGroup (..),
   DecShareCBOR (..),
   EncCBOR (..),
   EncCBORGroup (..),
-  Size,
   decodeNullMaybe,
   decodeRecordNamed,
   decodeRecordSum,
   encodeListLen,
   encodeNullMaybe,
-  szCases,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -104,7 +101,6 @@ import qualified Data.ByteString.Base16 as B16
 import Data.Default (Default (..))
 import Data.Foldable (asum)
 import Data.IP (IPv4, IPv6)
-import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Text as Text
@@ -467,29 +463,6 @@ instance EncCBORGroup PoolParams where
       <> encCBOR (ppOwners poolParams)
       <> encCBOR (ppRelays poolParams)
       <> encodeNullMaybe encCBOR (strictMaybeToMaybe (ppMetadata poolParams))
-
-  encodedGroupSizeExpr size' proxy =
-    encodedSizeExpr size' (ppId <$> proxy)
-      + encodedSizeExpr size' (ppVrf <$> proxy)
-      + encodedSizeExpr size' (ppPledge <$> proxy)
-      + encodedSizeExpr size' (ppCost <$> proxy)
-      + encodedSizeExpr size' (ppMargin <$> proxy)
-      + encodedSizeExpr size' (ppRewardAccount <$> proxy)
-      + 2
-      + poolSize * encodedSizeExpr size' (elementProxy (ppOwners <$> proxy))
-      + 2
-      + relaySize * encodedSizeExpr size' (elementProxy (ppRelays <$> proxy))
-      + szCases
-        [ Case "Nothing" 1
-        , Case "Just" $ encodedSizeExpr size' (elementProxy (ppMetadata <$> proxy))
-        ]
-    where
-      poolSize, relaySize :: Size
-      poolSize = size' (Proxy @SizeOfPoolOwners)
-      relaySize = size' (Proxy @SizeOfPoolRelays)
-      elementProxy :: Proxy (f a) -> Proxy a
-      elementProxy _ = Proxy
-
   listLen _ = 9
   listLenBound _ = 9
 

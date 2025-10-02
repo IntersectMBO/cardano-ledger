@@ -1,8 +1,10 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.7.0.1
+## 1.8.0.0
 
-*
+* Remove `encodedSizeExpr` and `encodedListSizeExpr` from `EncCBOR`
+* Remove `Typeable` superconstraint from `EncCBOR`
+* Remove `Range`, `szEval`, `Size`, `Case`, `caseValue`, `LengthOf`, `SizeOverride`, `isTodo`, `szCases`, `szLazy`, `szGreedy`, `szForce`, `szWithCtx`, `szSimplify`, `apMono`, `szBounds`, `encodedVerKeyDSIGNSizeExpr`, `encodedSignKeyDSIGNSizeExpr`, `encodedSigDSIGNSizeExpr`, `encodedSignedDSIGNSizeExpr`, `encodedVerKeyKESSizeExpr`, `encodedSignKeyKESSizeExpr`, `encodedSigKESSizeExpr`, `encodedVerKeyVRFSizeExpr`, `encodedSignKeyVRFSizeExpr` and `encodedCertVRFSizeExpr`
 
 ## 1.7.0.0
 

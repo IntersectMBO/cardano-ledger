@@ -53,7 +53,6 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   decodeWord8,
   encodeWord8,
-  encodedSizeExpr,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -87,8 +86,8 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
 import qualified Data.Sequence.Strict as SSeq
 import Data.Set as Set (Set, member)
-import Data.Typeable (Proxy (..), Typeable)
-import Data.Word (Word16, Word32, Word8)
+import Data.Typeable (Typeable)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
@@ -125,8 +124,7 @@ deriving via
 deriving via
   CBORGroup (DijkstraPlutusPurpose f era)
   instance
-    ( Typeable f
-    , EraPParams era
+    ( EraPParams era
     , forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
     , EraTxCert era
     ) =>
@@ -152,8 +150,7 @@ instance
       n -> fail $ "Unexpected tag for DijkstraPlutusPurpose: " <> show n
 
 instance
-  ( Typeable f
-  , EraPParams era
+  ( EraPParams era
   , forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
   , EncCBOR (TxCert era)
   ) =>
@@ -169,8 +166,6 @@ instance
     DijkstraVoting p -> encodeWord8 4 <> encCBOR p
     DijkstraProposing p -> encodeWord8 5 <> encCBOR p
     DijkstraGuarding p -> encodeWord8 6 <> encCBOR p
-  encodedGroupSizeExpr size_ _proxy =
-    encodedSizeExpr size_ (Proxy @Word8) + encodedSizeExpr size_ (Proxy @Word16)
 
 instance
   ( forall a b. (ToJSON a, ToJSON b) => ToJSON (f a b)

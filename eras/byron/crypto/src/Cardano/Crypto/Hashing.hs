@@ -141,12 +141,12 @@ instance ToJSONKey (AbstractHash algo a) where
 instance (Typeable algo, Typeable a, HashAlgorithm algo) => ToCBOR (AbstractHash algo a) where
   toCBOR = toByronCBOR
 
-instance (Typeable algo, Typeable a, HashAlgorithm algo) => EncCBOR (AbstractHash algo a) where
-  encCBOR (AbstractHash h) = encCBOR h
-
   encodedSizeExpr _ _ =
     let realSz = hashDigestSize (panic "unused, I hope!" :: algo)
      in fromInteger (toInteger (withWordSize realSz + realSz))
+
+instance (Typeable algo, Typeable a, HashAlgorithm algo) => EncCBOR (AbstractHash algo a) where
+  encCBOR (AbstractHash h) = encCBOR h
 
 instance (Typeable algo, Typeable a, HashAlgorithm algo) => FromCBOR (AbstractHash algo a) where
   fromCBOR = fromByronCBOR

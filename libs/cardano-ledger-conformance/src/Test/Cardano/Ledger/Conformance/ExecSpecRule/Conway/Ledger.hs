@@ -87,9 +87,6 @@ instance
   ( EraPParams era
   , EraCertState era
   , EncCBOR (TxOut era)
-  , EncCBOR (TxBody era)
-  , EncCBOR (TxAuxData era)
-  , EncCBOR (TxWits era)
   , EncCBOR (Tx era)
   ) =>
   EncCBOR (ConwayLedgerExecContext era)

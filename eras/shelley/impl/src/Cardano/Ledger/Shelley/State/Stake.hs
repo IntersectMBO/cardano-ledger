@@ -43,7 +43,6 @@ import Data.Coerce
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Typeable
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -61,7 +60,7 @@ instance NFData (ShelleyInstantStake era)
 
 instance NoThunks (ShelleyInstantStake era)
 
-instance Typeable era => EncCBOR (ShelleyInstantStake era) where
+instance EncCBOR (ShelleyInstantStake era) where
   encCBOR (ShelleyInstantStake credentialStake ptrStake) =
     encodeListLen 2 <> encCBOR credentialStake <> encCBOR ptrStake
 

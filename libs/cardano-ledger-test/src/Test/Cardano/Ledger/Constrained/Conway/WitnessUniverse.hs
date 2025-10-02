@@ -585,7 +585,7 @@ genWitBlock ::
   (Era era, Ord t, HasWitness t era) => Int -> Gen (ProofType t era) -> Gen (WitBlock t era)
 genWitBlock n g = blockFromProofList <$> vectorOf n g
 
-instance (Era era, Typeable t) => EncCBOR (WitBlock t era) where
+instance Era era => EncCBOR (WitBlock t era) where
   encCBOR (WitBlock _ m) = encCBOR (Map.elems m)
 
 genWitUniv ::

@@ -587,13 +587,13 @@ instance NoThunks (HKD f a) => NoThunks (THKD t f a) where
 instance NFData (HKD f a) => NFData (THKD t f a) where
   rnf = rnf . unTHKD
 
-instance (Typeable t, EncCBOR a) => EncCBOR (THKD t Identity a) where
+instance EncCBOR a => EncCBOR (THKD t Identity a) where
   encCBOR = encCBOR . unTHKD
 
 instance (Typeable t, DecCBOR a) => DecCBOR (THKD t Identity a) where
   decCBOR = THKD <$> decCBOR
 
-instance (Typeable t, EncCBOR a) => EncCBOR (THKD t StrictMaybe a) where
+instance EncCBOR a => EncCBOR (THKD t StrictMaybe a) where
   encCBOR = encCBOR . unTHKD
 
 instance (Typeable t, DecCBOR a) => DecCBOR (THKD t StrictMaybe a) where

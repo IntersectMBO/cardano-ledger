@@ -106,7 +106,6 @@ import Cardano.Ledger.Binary (
   FromCBOR,
   ToCBOR,
   cborError,
-  encodedSizeExpr,
   ifDecoderVersionAtLeast,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -225,12 +224,6 @@ instance FromJSON ProtVer where
 
 instance EncCBORGroup ProtVer where
   encCBORGroup (ProtVer x y) = encCBOR x <> encCBOR y
-  encodedGroupSizeExpr l proxy =
-    encodedSizeExpr l (pvMajor <$> proxy)
-      + encodedSizeExpr l (toWord . pvMinor <$> proxy)
-    where
-      toWord :: Natural -> Word
-      toWord = fromIntegral
 
   listLen _ = 2
   listLenBound _ = 2
@@ -767,7 +760,7 @@ swapMismatch Mismatch {mismatchSupplied, mismatchExpected} = (mismatchExpected, 
 unswapMismatch :: (a, a) -> Mismatch r a
 unswapMismatch (mismatchExpected, mismatchSupplied) = Mismatch {mismatchSupplied, mismatchExpected}
 
-instance (EncCBOR a, Typeable r) => EncCBOR (Mismatch r a) where
+instance EncCBOR a => EncCBOR (Mismatch r a) where
   encCBOR (Mismatch supplied expected) =
     encode $
       Rec Mismatch
@@ -781,11 +774,8 @@ instance (DecCBOR a, Typeable r) => DecCBOR (Mismatch r a) where
         <! From
         <! From
 
-instance (Typeable r, EncCBOR a) => EncCBORGroup (Mismatch r a) where
+instance EncCBOR a => EncCBORGroup (Mismatch r a) where
   encCBORGroup Mismatch {..} = encCBOR mismatchSupplied <> encCBOR mismatchExpected
-  encodedGroupSizeExpr size_ proxy =
-    encodedSizeExpr size_ (mismatchSupplied <$> proxy)
-      + encodedSizeExpr size_ (mismatchExpected <$> proxy)
   listLen _ = 2
   listLenBound _ = 2
 

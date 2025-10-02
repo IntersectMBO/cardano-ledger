@@ -83,7 +83,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 newtype PlutusData era = PlutusData PV1.Data
   deriving newtype (Eq, Generic, Show, NFData, NoThunks, Cborg.Serialise)
 
-instance Typeable era => EncCBOR (PlutusData era) where
+instance EncCBOR (PlutusData era) where
   encCBOR (PlutusData d) = fromPlainEncoding $ Cborg.encode d
 
 instance Typeable era => DecCBOR (PlutusData era) where
@@ -148,7 +148,7 @@ newtype BinaryData era = BinaryData ShortByteString
 
 instance HashAnnotated (BinaryData era) EraIndependentData
 
-instance Typeable era => EncCBOR (BinaryData era) where
+instance EncCBOR (BinaryData era) where
   encCBOR (BinaryData sbs) = encodeTag 24 <> encCBOR sbs
 
 instance Era era => DecCBOR (BinaryData era) where

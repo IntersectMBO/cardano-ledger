@@ -298,7 +298,7 @@ data TooLarge n = TooLarge
   }
   deriving (Eq, Show)
 
-instance EncCBOR n => ToCBOR (TooLarge n) where
+instance (EncCBOR n, Typeable n) => ToCBOR (TooLarge n) where
   toCBOR = toByronCBOR
 
 instance DecCBOR n => FromCBOR (TooLarge n) where

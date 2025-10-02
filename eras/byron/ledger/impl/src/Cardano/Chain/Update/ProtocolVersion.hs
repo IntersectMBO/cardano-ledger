@@ -45,6 +45,11 @@ instance ToJSON ProtocolVersion
 
 instance ToCBOR ProtocolVersion where
   toCBOR = toByronCBOR
+  encodedSizeExpr f pv =
+    1
+      + encodedSizeExpr f (pvMajor <$> pv)
+      + encodedSizeExpr f (pvMinor <$> pv)
+      + encodedSizeExpr f (pvAlt <$> pv)
 
 instance FromCBOR ProtocolVersion where
   fromCBOR = fromByronCBOR
@@ -55,12 +60,6 @@ instance EncCBOR ProtocolVersion where
       <> encCBOR (pvMajor pv)
       <> encCBOR (pvMinor pv)
       <> encCBOR (pvAlt pv)
-
-  encodedSizeExpr f pv =
-    1
-      + encodedSizeExpr f (pvMajor <$> pv)
-      + encodedSizeExpr f (pvMinor <$> pv)
-      + encodedSizeExpr f (pvAlt <$> pv)
 
 instance DecCBOR ProtocolVersion where
   decCBOR = do

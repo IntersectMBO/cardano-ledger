@@ -31,14 +31,12 @@ import NoThunks.Class (InspectHeap (..), NoThunks (..))
 type RedeemSigningKey :: Type
 newtype RedeemSigningKey
   = RedeemSigningKey Ed25519.SecretKey
-  deriving (Eq, Show, Generic, NFData, DecCBOR, EncCBOR)
+  deriving (Eq, Show, Generic, NFData, ToCBOR, FromCBOR)
   deriving (NoThunks) via InspectHeap RedeemSigningKey
 
-instance ToCBOR RedeemSigningKey where
-  toCBOR = toByronCBOR
+instance EncCBOR RedeemSigningKey
 
-instance FromCBOR RedeemSigningKey where
-  fromCBOR = fromByronCBOR
+instance DecCBOR RedeemSigningKey
 
 -- Note that there is deliberately no Ord instance. The crypto libraries
 -- encourage using key /hashes/ not keys for things like sets, map etc.

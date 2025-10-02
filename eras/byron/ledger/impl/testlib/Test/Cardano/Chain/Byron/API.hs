@@ -52,6 +52,7 @@ import qualified Data.Set as Set
 import Hedgehog (Gen, Group (..), annotateShow, forAll, property, (===))
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import Test.Cardano.Binary.Helpers.GoldenRoundTrip (roundTripsCBORShow)
 import Test.Cardano.Chain.Block.Model (elaborateAndUpdate, elaborateBlock)
 import qualified Test.Cardano.Chain.Delegation.Gen as Dlg
 import Test.Cardano.Chain.Elaboration.Block (
@@ -67,7 +68,6 @@ import Test.Cardano.Chain.UTxO.Model (
  )
 import qualified Test.Cardano.Chain.Update.Gen as UpdateIface
 import Test.Cardano.Crypto.Gen (feedPM)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (roundTripsCBORShow)
 import qualified Test.Control.State.Transition.Generator as STS
 import qualified Test.Control.State.Transition.Trace as STS
 import Test.Options (TSGroup, TSProperty, eachOfTS, withTestsTS)

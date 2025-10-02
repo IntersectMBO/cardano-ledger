@@ -19,8 +19,6 @@ module Cardano.Ledger.Binary.Encoding (
   -- * Nested CBOR-in-CBOR
   encodeNestedCbor,
   encodeNestedCborBytes,
-  nestedCborSizeExpr,
-  nestedCborBytesSizeExpr,
 
   -- * Tools
   runByteBuilder,
@@ -92,12 +90,6 @@ encodeNestedCbor value =
 --   indeed to valid, previously-serialised CBOR data.
 encodeNestedCborBytes :: BSL.ByteString -> Encoding
 encodeNestedCborBytes x = encodeTag 24 <> encCBOR x
-
-nestedCborSizeExpr :: Size -> Size
-nestedCborSizeExpr x = 2 + apMono "withWordSize" withWordSize x + x
-
-nestedCborBytesSizeExpr :: Size -> Size
-nestedCborBytesSizeExpr x = 2 + apMono "withWordSize" withWordSize x + x
 
 --------------------------------------------------------------------------------
 -- Tools

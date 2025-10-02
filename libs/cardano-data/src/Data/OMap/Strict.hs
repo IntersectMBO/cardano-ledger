@@ -421,7 +421,7 @@ instance Ord k => Foldable (OMap k) where
   null = Map.null . omMap
   {-# INLINE null #-}
 
-instance (Typeable k, EncCBOR v, Ord k) => EncCBOR (OMap k v) where
+instance (EncCBOR v, Ord k) => EncCBOR (OMap k v) where
   encCBOR omap = encodeStrictSeq encCBOR (toStrictSeq omap)
 
 instance (Typeable k, HasOKey k v, DecCBOR v, Eq v) => DecCBOR (OMap k v) where

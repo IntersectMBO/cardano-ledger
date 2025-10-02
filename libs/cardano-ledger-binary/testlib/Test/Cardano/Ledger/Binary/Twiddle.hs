@@ -45,7 +45,6 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Text (Text)
 import qualified Data.Text.Lazy as T
-import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 import GHC.Generics
 import Test.Cardano.Ledger.Binary.Arbitrary ()
@@ -127,7 +126,7 @@ instance Twiddle a => Twiddle (Seq a) where
 instance Twiddle a => Twiddle (StrictSeq a) where
   twiddle v = twiddle v . toList
 
-instance Typeable a => EncCBOR (Twiddler a) where
+instance EncCBOR (Twiddler a) where
   encCBOR (Twiddler _ _ x) = encodeTerm x
 
 instance (EncCBOR a, DecCBOR a) => DecCBOR (Twiddler a) where

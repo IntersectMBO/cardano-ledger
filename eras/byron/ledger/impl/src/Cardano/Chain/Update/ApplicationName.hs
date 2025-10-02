@@ -44,18 +44,18 @@ newtype ApplicationName = ApplicationName
 
 instance ToCBOR ApplicationName where
   toCBOR = toByronCBOR
-
-instance FromCBOR ApplicationName where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR ApplicationName where
-  encCBOR appName = encCBOR (unApplicationName appName)
   encodedSizeExpr _ _ =
     1
       + szCases
         [ Case "minBound" 0
         , Case "maxBound" (fromInteger applicationNameMaxLength)
         ]
+
+instance FromCBOR ApplicationName where
+  fromCBOR = fromByronCBOR
+
+instance EncCBOR ApplicationName where
+  encCBOR appName = encCBOR (unApplicationName appName)
 
 instance DecCBOR ApplicationName where
   decCBOR = ApplicationName <$> decCBOR

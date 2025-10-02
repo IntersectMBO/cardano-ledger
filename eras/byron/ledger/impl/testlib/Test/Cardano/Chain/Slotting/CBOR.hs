@@ -7,6 +7,10 @@ module Test.Cardano.Chain.Slotting.CBOR (
 import Cardano.Chain.Slotting (EpochSlots (..), SlotNumber)
 import Cardano.Prelude
 import Hedgehog (Property)
+import Test.Cardano.Binary.Helpers.GoldenRoundTrip (
+  goldenTestCBOR,
+  roundTripsCBORBuildable,
+ )
 import Test.Cardano.Chain.Slotting.Example (
   exampleEpochAndSlotCount,
   exampleEpochNumber,
@@ -17,10 +21,6 @@ import Test.Cardano.Chain.Slotting.Gen (
   genEpochNumber,
   genEpochSlots,
   genSlotNumber,
- )
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
-  goldenTestCBOR,
-  roundTripsCBORBuildable,
  )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)

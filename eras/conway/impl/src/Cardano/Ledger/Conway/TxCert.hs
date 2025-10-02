@@ -713,7 +713,7 @@ conwayTxCertDelegDecoder = \case
 instance (Era era, Val (Value era)) => ToCBOR (ConwayTxCert era) where
   toCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
 
-instance (Era era, Val (Value era)) => EncCBOR (ConwayTxCert era) where
+instance Era era => EncCBOR (ConwayTxCert era) where
   encCBOR = \case
     ConwayTxCertDeleg delegCert -> encCBOR delegCert
     ConwayTxCertPool poolCert -> encodePoolCert poolCert

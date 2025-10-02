@@ -14,7 +14,28 @@ module Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
 import Cardano.Ledger.Binary.Group
-import Cardano.Ledger.Binary.Plain (FromCBOR (fromCBOR), ToCBOR (toCBOR))
+import Cardano.Ledger.Binary.Plain (
+  Case (..),
+  FromCBOR (fromCBOR),
+  LengthOf (..),
+  Range (..),
+  Size,
+  SizeOverride (..),
+  ToCBOR (..),
+  apMono,
+  caseValue,
+  isTodo,
+  szBounds,
+  szCases,
+  szEval,
+  szForce,
+  szGreedy,
+  szLazy,
+  szSimplify,
+  szWithCtx,
+  toCBORMaybe,
+  withWordSize,
+ )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Binary.Version
 import qualified Codec.CBOR.Read as C (DeserialiseFailure (..))

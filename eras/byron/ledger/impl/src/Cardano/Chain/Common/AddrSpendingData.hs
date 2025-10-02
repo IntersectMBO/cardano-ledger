@@ -54,6 +54,11 @@ instance B.Buildable AddrSpendingData where
 
 instance ToCBOR AddrSpendingData where
   toCBOR = toByronCBOR
+  encodedSizeExpr size _ =
+    szCases
+      [ Case "VerKeyASD" $ size $ Proxy @(Word8, VerificationKey)
+      , Case "RedeemASD" $ size $ Proxy @(Word8, RedeemVerificationKey)
+      ]
 
 instance FromCBOR AddrSpendingData where
   fromCBOR = fromByronCBOR
@@ -64,12 +69,6 @@ instance EncCBOR AddrSpendingData where
     VerKeyASD vk -> encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR vk
     RedeemASD redeemVK ->
       encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR redeemVK
-
-  encodedSizeExpr size _ =
-    szCases
-      [ Case "VerKeyASD" $ size $ Proxy @(Word8, VerificationKey)
-      , Case "RedeemASD" $ size $ Proxy @(Word8, RedeemVerificationKey)
-      ]
 
 instance DecCBOR AddrSpendingData where
   decCBOR = do
@@ -94,6 +93,7 @@ instance ToJSON AddrType
 
 instance ToCBOR AddrType where
   toCBOR = toByronCBOR
+  encodedSizeExpr size _ = encodedSizeExpr size (Proxy @Word8)
 
 instance FromCBOR AddrType where
   fromCBOR = fromByronCBOR
@@ -104,8 +104,6 @@ instance EncCBOR AddrType where
     encCBOR @Word8 . \case
       ATVerKey -> 0
       ATRedeem -> 2
-
-  encodedSizeExpr size _ = encodedSizeExpr size (Proxy @Word8)
 
 instance DecCBOR AddrType where
   decCBOR =

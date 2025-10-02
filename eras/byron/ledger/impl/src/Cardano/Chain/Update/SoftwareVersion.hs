@@ -58,17 +58,16 @@ instance ToJSON SoftwareVersion
 
 instance ToCBOR SoftwareVersion where
   toCBOR = toByronCBOR
+  encodedSizeExpr f sv =
+    1
+      + encodedSizeExpr f (svAppName <$> sv)
+      + encodedSizeExpr f (svNumber <$> sv)
 
 instance FromCBOR SoftwareVersion where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR SoftwareVersion where
   encCBOR sv = encodeListLen 2 <> encCBOR (svAppName sv) <> encCBOR (svNumber sv)
-
-  encodedSizeExpr f sv =
-    1
-      + encodedSizeExpr f (svAppName <$> sv)
-      + encodedSizeExpr f (svNumber <$> sv)
 
 instance DecCBOR SoftwareVersion where
   decCBOR = do

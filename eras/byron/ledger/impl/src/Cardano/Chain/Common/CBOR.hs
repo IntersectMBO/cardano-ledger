@@ -35,24 +35,28 @@ module Cardano.Chain.Common.CBOR (
   decodeCrcProtected,
 ) where
 
+import qualified Cardano.Binary as Plain (
+  Encoding,
+  encodeListLen,
+  encodeNestedCborBytes,
+  nestedCborBytesSizeExpr,
+  nestedCborSizeExpr,
+  serialize,
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
   EncCBOR (..),
   Encoding,
   Size,
+  ToCBOR (..),
   byronProtVer,
   cborError,
   decodeFull',
   decodeNestedCbor,
   decodeNestedCborBytes,
-  encodeListLen,
   encodeNestedCbor,
-  encodeNestedCborBytes,
   enforceSize,
-  nestedCborBytesSizeExpr,
-  nestedCborSizeExpr,
-  serialize,
   toCborError,
  )
 import Cardano.Prelude hiding (cborError, toCborError)
@@ -66,18 +70,18 @@ import Formatting (Format, sformat, shown)
 encodeKnownCborDataItem :: EncCBOR a => a -> Encoding
 encodeKnownCborDataItem = encodeNestedCbor
 
--- | This is an alias for 'encodeNestedCborBytes', so all its details apply.
+-- | This is an alias for 'Plain.encodeNestedCborBytes', so all its details apply.
 --
 -- This function is used to handle the case of an unknown type, so it takes an
 -- opaque blob that is the representation of the value of the unknown type.
-encodeUnknownCborDataItem :: LByteString -> Encoding
-encodeUnknownCborDataItem = encodeNestedCborBytes
+encodeUnknownCborDataItem :: LByteString -> Plain.Encoding
+encodeUnknownCborDataItem = Plain.encodeNestedCborBytes
 
 knownCborDataItemSizeExpr :: Size -> Size
-knownCborDataItemSizeExpr = nestedCborSizeExpr
+knownCborDataItemSizeExpr = Plain.nestedCborSizeExpr
 
 unknownCborDataItemSizeExpr :: Size -> Size
-unknownCborDataItemSizeExpr = nestedCborBytesSizeExpr
+unknownCborDataItemSizeExpr = Plain.nestedCborBytesSizeExpr
 
 -- | This is an alias for 'decodeNestedCbor'.
 --
@@ -99,22 +103,22 @@ decodeUnknownCborDataItem = decodeNestedCborBytes
 
 -- | Encodes a value of type @a@, protecting it from accidental corruption by
 -- protecting it with a CRC.
-encodeCrcProtected :: EncCBOR a => a -> Encoding
+encodeCrcProtected :: ToCBOR a => a -> Plain.Encoding
 encodeCrcProtected x =
-  encodeListLen 2 <> encodeUnknownCborDataItem body <> encCBOR (crc32 body)
+  Plain.encodeListLen 2 <> encodeUnknownCborDataItem body <> toCBOR (crc32 body)
   where
-    body = serialize byronProtVer x
+    body = Plain.serialize x
 
 encodedCrcProtectedSizeExpr ::
   forall a.
-  EncCBOR a =>
-  (forall t. EncCBOR t => Proxy t -> Size) ->
+  ToCBOR a =>
+  (forall t. ToCBOR t => Proxy t -> Size) ->
   Proxy a ->
   Size
 encodedCrcProtectedSizeExpr size pxy =
   2
     + unknownCborDataItemSizeExpr (size pxy)
-    + size (pure $ crc32 (serialize byronProtVer (panic "unused" :: a)))
+    + size (pure $ crc32 (Plain.serialize (panic "unused" :: a)))
 
 -- | Decodes a CBOR blob into a value of type @a@, checking the serialised CRC
 --   corresponds to the computed one

@@ -51,16 +51,16 @@ instance B.Buildable EpochAndSlotCount where
 
 instance ToCBOR EpochAndSlotCount where
   toCBOR = toByronCBOR
+  encodedSizeExpr f eas =
+    1
+      + encodedSizeExpr f (epochNo <$> eas)
+      + encodedSizeExpr f (slotCount <$> eas)
 
 instance FromCBOR EpochAndSlotCount where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR EpochAndSlotCount where
   encCBOR eas = encodeListLen 2 <> encCBOR (epochNo eas) <> encCBOR (slotCount eas)
-  encodedSizeExpr f eas =
-    1
-      + encodedSizeExpr f (epochNo <$> eas)
-      + encodedSizeExpr f (slotCount <$> eas)
 
 instance DecCBOR EpochAndSlotCount where
   decCBOR = do

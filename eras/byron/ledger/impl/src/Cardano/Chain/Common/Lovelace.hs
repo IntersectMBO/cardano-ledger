@@ -96,13 +96,13 @@ instance ToJSON Lovelace
 
 instance ToCBOR Lovelace where
   toCBOR = toByronCBOR
+  encodedSizeExpr size pxy = size (unsafeGetLovelace <$> pxy)
 
 instance FromCBOR Lovelace where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR Lovelace where
   encCBOR = encCBOR . unsafeGetLovelace
-  encodedSizeExpr size pxy = size (unsafeGetLovelace <$> pxy)
 
 instance DecCBOR Lovelace where
   decCBOR = do

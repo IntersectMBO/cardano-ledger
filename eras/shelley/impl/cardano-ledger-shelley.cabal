@@ -109,7 +109,7 @@ library
     cardano-crypto-class,
     cardano-crypto-wrapper,
     cardano-data ^>=1.2.2,
-    cardano-ledger-binary ^>=1.7,
+    cardano-ledger-binary ^>=1.8,
     cardano-ledger-byron,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.19,
     cardano-slotting,

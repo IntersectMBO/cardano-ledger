@@ -217,7 +217,7 @@ instance
 instance (Era era, Val (Value era)) => ToCBOR (DijkstraTxCert era) where
   toCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
 
-instance (Era era, Val (Value era)) => EncCBOR (DijkstraTxCert era) where
+instance Era era => EncCBOR (DijkstraTxCert era) where
   encCBOR = \case
     DijkstraTxCertDeleg delegCert -> encCBOR delegCert
     DijkstraTxCertPool poolCert -> encodePoolCert poolCert

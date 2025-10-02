@@ -11,6 +11,11 @@ import Cardano.Crypto (Hash, abstractHash)
 import Cardano.Crypto.Raw (Raw (..))
 import Cardano.Prelude
 import Hedgehog (Property)
+import Test.Cardano.Binary.Helpers.GoldenRoundTrip (
+  goldenTestCBOR,
+  roundTripsCBORBuildable,
+  roundTripsCBORShow,
+ )
 import Test.Cardano.Chain.Update.Example (
   exampleInstallerHash,
   examplePayload,
@@ -43,11 +48,6 @@ import Test.Cardano.Chain.Update.Gen (
   genVote,
  )
 import Test.Cardano.Crypto.Gen (feedPM, genHashRaw)
-import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
-  goldenTestCBOR,
-  roundTripsCBORBuildable,
-  roundTripsCBORShow,
- )
 import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 

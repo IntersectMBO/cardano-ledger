@@ -4,7 +4,7 @@
 
 module Test.Cardano.Ledger.Binary.Vintage.Failure (tests) where
 
-import Cardano.Ledger.Binary hiding (Range)
+import Cardano.Ledger.Binary
 import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
 import GHC.Stack (HasCallStack, withFrozenCallStack)

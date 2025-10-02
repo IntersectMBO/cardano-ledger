@@ -57,7 +57,7 @@ import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.MemPack
 import Data.Typeable
-import Data.Word (Word16, Word32, Word8)
+import Data.Word (Word32)
 import GHC.Generics
 import NoThunks.Class (NoThunks (..))
 
@@ -228,7 +228,6 @@ deriving via
   instance
     ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
     , EraPParams era
-    , Typeable f
     , EncCBOR (TxCert era)
     ) =>
     EncCBOR (ConwayPlutusPurpose f era)
@@ -266,7 +265,6 @@ instance
 instance
   ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
   , EraPParams era
-  , Typeable f
   , EncCBOR (TxCert era)
   ) =>
   EncCBORGroup (ConwayPlutusPurpose f era)
@@ -280,9 +278,6 @@ instance
     ConwayRewarding p -> encodeWord8 3 <> encCBOR p
     ConwayVoting p -> encodeWord8 4 <> encCBOR p
     ConwayProposing p -> encodeWord8 5 <> encCBOR p
-  encodedGroupSizeExpr size_ _proxy =
-    encodedSizeExpr size_ (Proxy :: Proxy Word8)
-      + encodedSizeExpr size_ (Proxy :: Proxy Word16)
 
 instance
   ( forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)

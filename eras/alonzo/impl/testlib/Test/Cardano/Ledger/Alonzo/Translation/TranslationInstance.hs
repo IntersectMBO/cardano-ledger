@@ -177,7 +177,6 @@ instance DecCBOR VersionedTxInfo where
 
 instance
   ( Era era
-  , EncCBOR (PParams era)
   , EncCBOR (UTxO era)
   , EncCBOR (Core.Tx era)
   ) =>

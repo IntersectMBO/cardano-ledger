@@ -135,7 +135,6 @@ import qualified Data.MapExtras as Map (fromElems)
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -312,7 +311,7 @@ newtype TxDatsRaw era = TxDatsRaw {unTxDatsRaw :: Map DataHash (Data era)}
 
 deriving instance Show (TxDatsRaw era)
 
-instance (Typeable era, EncCBOR (Data era)) => EncCBOR (TxDatsRaw era) where
+instance EncCBOR (Data era) => EncCBOR (TxDatsRaw era) where
   encCBOR = encodeWithSetTag . Map.elems . unTxDatsRaw
 
 pattern TxDats' :: Map DataHash (Data era) -> TxDats era

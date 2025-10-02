@@ -45,6 +45,9 @@ module Cardano.Chain.Common.Address (
   makeRedeemAddress,
 ) where
 
+import qualified Cardano.Binary as Plain (
+  Encoding,
+ )
 import Cardano.Chain.Common.AddrAttributes (
   AddrAttributes (..),
   HDAddressPayload,
@@ -153,21 +156,19 @@ data Address = Address
 instance Aeson.ToJSON Address
 
 instance ToCBOR Address where
-  toCBOR = toByronCBOR
-
-instance FromCBOR Address where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR Address where
-  encCBOR addr =
+  toCBOR addr =
     encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)
-
   encodedSizeExpr size pxy =
     encodedCrcProtectedSizeExpr size
       $ (,,)
       <$> (addrRoot <$> pxy)
       <*> (addrAttributes <$> pxy)
       <*> (addrType <$> pxy)
+
+instance FromCBOR Address where
+  fromCBOR = fromByronCBOR
+
+instance EncCBOR Address
 
 instance DecCBOR Address where
   decCBOR = do
@@ -359,6 +360,6 @@ encCBORAddr addr =
     <> encCBOR
       (addrType addr)
 
-encCBORAddrCRC32 :: Address -> Encoding
+encCBORAddrCRC32 :: Address -> Plain.Encoding
 encCBORAddrCRC32 addr =
   encodeCrcProtected (addrRoot addr, addrAttributes addr, addrType addr)

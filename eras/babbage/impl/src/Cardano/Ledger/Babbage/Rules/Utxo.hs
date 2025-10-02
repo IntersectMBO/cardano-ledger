@@ -498,10 +498,7 @@ instance
   , EncCBOR (TxOut era)
   , EncCBOR (Value era)
   , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
-  , EncCBOR (PredicateFailure (EraRule "UTXO" era))
-  , EncCBOR (Script era)
   , EncCBOR TxIn
-  , Typeable (TxAuxData era)
   ) =>
   EncCBOR (BabbageUtxoPredFailure era)
   where

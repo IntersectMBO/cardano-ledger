@@ -27,11 +27,6 @@ instance (DecCBORGroup a, EncCBORGroup a) => DecCBOR (CBORGroup a) where
 
 instance EncCBORGroup a => EncCBOR (CBORGroup a) where
   encCBOR (CBORGroup x) = encodeListLen (listLen x) <> encCBORGroup x
-  encodedSizeExpr size proxy =
-    fromInteger (withWordSize (listLenBound proxy'))
-      + encodedGroupSizeExpr size proxy'
-    where
-      proxy' = unCBORGroup <$> proxy
 
 groupRecord :: forall a s. (EncCBORGroup a, DecCBORGroup a) => Decoder s a
 groupRecord = decodeRecordNamed "CBORGroup" (fromIntegral . toInteger . listLen) decCBORGroup
@@ -40,12 +35,8 @@ groupRecord = decodeRecordNamed "CBORGroup" (fromIntegral . toInteger . listLen)
 -- EncCBORGroup
 --------------------------------------------------------------------------------
 
-class Typeable a => EncCBORGroup a where
+class EncCBORGroup a where
   encCBORGroup :: a -> Encoding
-  encodedGroupSizeExpr ::
-    (forall x. EncCBOR x => Proxy x -> Size) ->
-    Proxy a ->
-    Size
 
   listLen :: a -> Word
 
@@ -65,9 +56,6 @@ class Typeable a => DecCBORGroup a where
 instance EncCBOR a => EncCBORGroup (a, a) where
   encCBORGroup (x, y) =
     encCBOR x <> encCBOR y
-  encodedGroupSizeExpr size_ proxy =
-    encodedSizeExpr size_ (fst <$> proxy)
-      + encodedSizeExpr size_ (snd <$> proxy)
   listLen _ = 2
   listLenBound _ = 2
 

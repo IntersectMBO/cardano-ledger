@@ -36,14 +36,13 @@ instance ToJSON ChainDifficulty
 
 instance ToCBOR ChainDifficulty where
   toCBOR = toByronCBOR
+  encodedSizeExpr f cd = 1 + encodedSizeExpr f (unChainDifficulty <$> cd)
 
 instance FromCBOR ChainDifficulty where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR ChainDifficulty where
   encCBOR cd = encodeListLen 1 <> encCBOR (unChainDifficulty cd)
-
-  encodedSizeExpr f cd = 1 + encodedSizeExpr f (unChainDifficulty <$> cd)
 
 instance DecCBOR ChainDifficulty where
   decCBOR = do

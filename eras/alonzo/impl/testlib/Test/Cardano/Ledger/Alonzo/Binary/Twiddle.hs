@@ -21,7 +21,6 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val)
 import Codec.CBOR.Term (Term (..))
 import Data.Maybe (catMaybes)
-import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Twiddle
 import Test.Cardano.Ledger.Common
@@ -50,7 +49,7 @@ instance Twiddle MultiAsset where
 instance Twiddle ScriptIntegrityHash where
   twiddle v = twiddle v . toTerm v
 
-instance Typeable t => Twiddle (KeyHash t) where
+instance Twiddle (KeyHash t) where
   twiddle v = twiddle v . toTerm v
 
 instance Twiddle Network where

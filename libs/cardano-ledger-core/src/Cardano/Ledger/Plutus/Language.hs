@@ -360,7 +360,7 @@ instance NFData PV2.ScriptContext where
 instance NFData PV3.ScriptContext where
   rnf = rnf . PV3.toData
 
-instance (PlutusLanguage l, PV3.ToData (PlutusScriptContext l)) => EncCBOR (LegacyPlutusArgs l) where
+instance PV3.ToData (PlutusScriptContext l) => EncCBOR (LegacyPlutusArgs l) where
   encCBOR = encCBOR . legacyPlutusArgsToData
 
 instance (PlutusLanguage l, PV3.FromData (PlutusScriptContext l)) => DecCBOR (LegacyPlutusArgs l) where

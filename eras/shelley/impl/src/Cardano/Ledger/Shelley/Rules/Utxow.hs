@@ -177,8 +177,6 @@ deriving stock instance
 
 instance
   ( Era era
-  , Typeable (Script era)
-  , Typeable (TxAuxData era)
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
   ) =>
   EncCBOR (ShelleyUtxowPredFailure era)

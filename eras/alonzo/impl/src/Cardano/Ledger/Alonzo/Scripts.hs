@@ -116,7 +116,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
 import Data.MemPack
 import Data.Typeable
-import Data.Word (Word16, Word32, Word8)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Stack
 import NoThunks.Class (NoThunks (..))
@@ -331,7 +331,6 @@ instance
 instance
   ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
   , Era era
-  , Typeable f
   , EncCBOR (TxCert era)
   ) =>
   EncCBORGroup (AlonzoPlutusPurpose f era)
@@ -343,9 +342,6 @@ instance
     AlonzoMinting p -> encodeWord8 1 <> encCBOR p
     AlonzoCertifying p -> encodeWord8 2 <> encCBOR p
     AlonzoRewarding p -> encodeWord8 3 <> encCBOR p
-  encodedGroupSizeExpr size_ _proxy =
-    encodedSizeExpr size_ (Proxy :: Proxy Word8)
-      + encodedSizeExpr size_ (Proxy :: Proxy Word16)
 
 instance
   ( forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)
@@ -368,7 +364,6 @@ deriving via
   instance
     ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
     , Era era
-    , Typeable f
     , EncCBOR (TxCert era)
     ) =>
     EncCBOR (AlonzoPlutusPurpose f era)

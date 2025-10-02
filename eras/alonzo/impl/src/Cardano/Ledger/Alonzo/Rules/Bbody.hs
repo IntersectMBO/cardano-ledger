@@ -146,12 +146,7 @@ deriving anyclass instance
   (Era era, NoThunks (PredicateFailure (EraRule "LEDGERS" era))) =>
   NoThunks (AlonzoBbodyPredFailure era)
 
-instance
-  ( Typeable era
-  , EncCBOR (ShelleyBbodyPredFailure era)
-  ) =>
-  EncCBOR (AlonzoBbodyPredFailure era)
-  where
+instance EncCBOR (ShelleyBbodyPredFailure era) => EncCBOR (AlonzoBbodyPredFailure era) where
   encCBOR (ShelleyInAlonzoBbodyPredFailure x) = encode (Sum ShelleyInAlonzoBbodyPredFailure 0 !> To x)
   encCBOR (TooManyExUnits m) = encode (Sum TooManyExUnits 1 !> To m)
 

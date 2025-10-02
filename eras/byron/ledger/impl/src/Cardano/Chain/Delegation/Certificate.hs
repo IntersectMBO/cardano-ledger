@@ -182,6 +182,12 @@ isValid pm UnsafeACertificate {aEpoch, issuerVK, delegateVK, signature} =
 
 instance ToCBOR Certificate where
   toCBOR = toByronCBOR
+  encodedSizeExpr size cert =
+    1
+      + encodedSizeExpr size (epoch <$> cert)
+      + encodedSizeExpr size (issuerVK <$> cert)
+      + encodedSizeExpr size (delegateVK <$> cert)
+      + encodedSizeExpr size (signature <$> cert)
 
 instance FromCBOR Certificate where
   fromCBOR = fromByronCBOR
@@ -193,13 +199,6 @@ instance EncCBOR Certificate where
       <> encCBOR (issuerVK cert)
       <> encCBOR (delegateVK cert)
       <> encCBOR (signature cert)
-
-  encodedSizeExpr size cert =
-    1
-      + encodedSizeExpr size (epoch <$> cert)
-      + encodedSizeExpr size (issuerVK <$> cert)
-      + encodedSizeExpr size (delegateVK <$> cert)
-      + encodedSizeExpr size (signature <$> cert)
 
 instance DecCBOR Certificate where
   decCBOR = void <$> decCBOR @(ACertificate ByteSpan)

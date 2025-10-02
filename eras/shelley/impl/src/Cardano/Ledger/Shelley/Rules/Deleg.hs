@@ -147,10 +147,7 @@ instance NoThunks (ShelleyDelegPredFailure era)
 
 instance NFData (ShelleyDelegPredFailure era)
 
-instance
-  (Era era, Typeable (Script era)) =>
-  EncCBOR (ShelleyDelegPredFailure era)
-  where
+instance Era era => EncCBOR (ShelleyDelegPredFailure era) where
   encCBOR = \case
     StakeKeyAlreadyRegisteredDELEG cred ->
       encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR cred

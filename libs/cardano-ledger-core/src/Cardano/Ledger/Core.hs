@@ -126,6 +126,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Typeable
 import Data.Word (Word32, Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
@@ -522,6 +523,7 @@ class
   , Show (NativeScript era)
   , NFData (NativeScript era)
   , NoThunks (NativeScript era)
+  , ToCBOR (NativeScript era)
   , EncCBOR (NativeScript era)
   , DecCBOR (Annotator (NativeScript era))
   ) =>
@@ -582,6 +584,7 @@ class
   ( EraTx era
   , Eq (BlockBody era)
   , Show (BlockBody era)
+  , Typeable (BlockBody era)
   , EncCBORGroup (BlockBody era)
   , DecCBOR (Annotator (BlockBody era))
   ) =>
