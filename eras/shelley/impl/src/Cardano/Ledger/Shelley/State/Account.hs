@@ -57,7 +57,7 @@ instance NoThunks (ShelleyAccountState era)
 instance NFData (ShelleyAccountState era) where
   rnf = rwhnf
 
-instance Typeable era => EncCBOR (ShelleyAccountState era) where
+instance EncCBOR (ShelleyAccountState era) where
   encCBOR sas@(ShelleyAccountState _ _ _ _) =
     let ShelleyAccountState {..} = sas
      in encodeListLen 4
@@ -105,7 +105,7 @@ instance NFData (ShelleyAccounts era) where
   rnf (ShelleyAccounts accounts accountPtr) =
     accounts `deepseq` rnf accountPtr
 
-instance Typeable era => EncCBOR (ShelleyAccounts era) where
+instance EncCBOR (ShelleyAccounts era) where
   encCBOR ShelleyAccounts {saStates, saPtrs} =
     encodeListLen 2 <> encCBOR saStates <> encCBOR saPtrs
 

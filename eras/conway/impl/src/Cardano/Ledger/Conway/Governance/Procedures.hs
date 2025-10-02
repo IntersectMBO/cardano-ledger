@@ -634,8 +634,7 @@ newtype GovPurposeId (p :: GovActionPurpose) = GovPurposeId
 
 type role GovPurposeId nominal
 
-deriving newtype instance
-  Typeable p => EncCBOR (GovPurposeId (p :: GovActionPurpose))
+deriving newtype instance EncCBOR (GovPurposeId (p :: GovActionPurpose))
 
 deriving newtype instance
   Typeable p => DecCBOR (GovPurposeId (p :: GovActionPurpose))
@@ -718,9 +717,7 @@ instance
       (GovRelation <$> decCBOR <*> decCBOR <*> decCBOR <*> decCBOR)
 
 instance
-  ( Typeable f
-  , (forall p. Typeable p => EncCBOR (f (GovPurposeId (p :: GovActionPurpose))))
-  ) =>
+  (forall p. Typeable p => EncCBOR (f (GovPurposeId (p :: GovActionPurpose)))) =>
   EncCBOR (GovRelation f)
   where
   encCBOR govPurpose@(GovRelation _ _ _ _) =

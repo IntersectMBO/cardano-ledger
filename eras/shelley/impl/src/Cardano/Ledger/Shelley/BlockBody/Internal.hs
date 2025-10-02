@@ -192,19 +192,11 @@ pattern ShelleyBlockBody xs <-
 
 {-# COMPLETE ShelleyBlockBody #-}
 
-instance
-  forall era.
-  Era era =>
-  EncCBORGroup (ShelleyBlockBody era)
-  where
+instance Era era => EncCBORGroup (ShelleyBlockBody era) where
   encCBORGroup (ShelleyBlockBodyInternal _ _ bodyBytes witsBytes metadataBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes
-  encodedGroupSizeExpr size _proxy =
-    encodedSizeExpr size (Proxy :: Proxy ByteString)
-      + encodedSizeExpr size (Proxy :: Proxy ByteString)
-      + encodedSizeExpr size (Proxy :: Proxy ByteString)
   listLen _ = 3
   listLenBound _ = 3
 

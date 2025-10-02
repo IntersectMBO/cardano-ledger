@@ -110,7 +110,7 @@ library
     cardano-crypto-class ^>=2.2,
     cardano-crypto-praos ^>=2.2,
     cardano-crypto-wrapper,
-    cardano-ledger-binary ^>=1.7,
+    cardano-ledger-binary ^>=1.8,
     cardano-ledger-byron,
     cardano-ledger-core:internal,
     cardano-slotting,

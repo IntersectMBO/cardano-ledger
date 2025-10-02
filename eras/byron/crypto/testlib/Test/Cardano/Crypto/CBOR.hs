@@ -26,15 +26,15 @@ import Cardano.Crypto (
   sign,
  )
 import Cardano.Crypto.Wallet (xprv, xpub)
-import Cardano.Ledger.Binary (Dropper, EncCBOR, dropBytes, dropList, enforceSize)
+import Cardano.Ledger.Binary (Dropper, ToCBOR, dropBytes, dropList, enforceSize)
 import Cardano.Prelude
 import Crypto.Hash (Blake2b_224, Blake2b_256, Blake2b_384, Blake2b_512, SHA1)
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString as BS
 import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
+import Test.Cardano.Binary.Helpers (SizeTestConfig (..), scfg, sizeTest)
 import Test.Cardano.Crypto.Gen
-import Test.Cardano.Ledger.Binary.Vintage.Helpers (SizeTestConfig (..), scfg, sizeTest)
 import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
   deprecatedGoldenDecode,
   goldenTestCBOR,
@@ -266,7 +266,7 @@ constantByteString =
 
 sizeEstimates :: H.Group
 sizeEstimates =
-  let testPrecise :: forall a. (Show a, EncCBOR a) => Gen a -> Property
+  let testPrecise :: forall a. (Show a, ToCBOR a) => Gen a -> Property
       testPrecise g = sizeTest $ scfg {gen = g, precise = True}
    in H.Group
         "Encoded size bounds for crypto types."

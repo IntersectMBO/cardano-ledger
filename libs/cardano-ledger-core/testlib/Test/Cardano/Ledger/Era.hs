@@ -26,15 +26,7 @@ import Test.Cardano.Ledger.TreeDiff ()
 
 class
   ( -- Core
-    EraTx era
-  , EraTxOut era
-  , EraTxBody era
-  , EraTxAuxData era
-  , EraTxWits era
-  , EraScript era
-  , EraPParams era
-  , EraBlockBody era
-  , EraTxCert era
+    EraBlockBody era
   , -- State
     EraCertState era
   , EraGov era

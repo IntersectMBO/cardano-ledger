@@ -42,7 +42,6 @@ import Cardano.Ledger.Binary (
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
   encodePreEncoded,
-  encodedSizeExpr,
   serialize,
   withSlice,
  )
@@ -54,7 +53,6 @@ import Data.ByteString.Builder (Builder, shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Data.Maybe.Strict (maybeToStrictMaybe, strictMaybeToMaybe)
-import Data.Proxy (Proxy (..))
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -178,11 +176,6 @@ instance Era era => EncCBORGroup (AlonzoBlockBody era) where
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes <> invalidBytes
-  encodedGroupSizeExpr size _proxy =
-    encodedSizeExpr size (Proxy :: Proxy ByteString)
-      + encodedSizeExpr size (Proxy :: Proxy ByteString)
-      + encodedSizeExpr size (Proxy :: Proxy ByteString)
-      + encodedSizeExpr size (Proxy :: Proxy ByteString)
   listLen _ = 4
   listLenBound _ = 4
 

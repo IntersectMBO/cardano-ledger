@@ -164,7 +164,6 @@ instance
 
 instance
   ( Era era
-  , Typeable (Script era)
   , EncCBOR (PredicateFailure (EraRule "DELPL" era))
   ) =>
   EncCBOR (ShelleyDelegsPredFailure era)

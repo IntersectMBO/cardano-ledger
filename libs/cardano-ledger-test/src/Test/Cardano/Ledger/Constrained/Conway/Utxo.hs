@@ -176,9 +176,6 @@ instance
 instance
   ( EraPParams era
   , EncCBOR (TxOut era)
-  , EncCBOR (TxBody era)
-  , EncCBOR (TxAuxData era)
-  , EncCBOR (TxWits era)
   , EncCBOR (Tx era)
   , EraCertState era
   ) =>

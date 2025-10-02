@@ -99,7 +99,7 @@ library
     cardano-ledger-allegra ^>=1.9,
     cardano-ledger-alonzo ^>=1.15,
     cardano-ledger-babbage ^>=1.12,
-    cardano-ledger-binary ^>=1.7,
+    cardano-ledger-binary ^>=1.8,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.19,
     cardano-ledger-mary ^>=1.9,
     cardano-ledger-shelley ^>=1.17,

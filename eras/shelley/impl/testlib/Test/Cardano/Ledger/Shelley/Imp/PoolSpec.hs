@@ -15,7 +15,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure (..))
-import Cardano.Ledger.State (PoolMetadata (..), ppCostL, ppMetadataL, ppVrfL, spsVrf)
+import Cardano.Ledger.State
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Lens.Micro
@@ -30,11 +30,11 @@ spec = describe "POOL" $ do
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
       minPoolCost <- getsPParams ppMinPoolCostL
       tooLowCost <- Coin <$> choose (0, unCoin minPoolCost)
-      let pps = (\p -> p & ppCostL .~ tooLowCost) <$> poolParams kh vrf
-      registerPoolTx <$> pps >>= \tx ->
-        submitFailingTx
-          tx
-          [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
+      pps <- poolParams kh vrf
+      let tx = registerPoolTx (pps & ppCostL .~ tooLowCost)
+      submitFailingTx
+        tx
+        [injectFailure $ StakePoolCostTooLowPOOL $ Mismatch tooLowCost minPoolCost]
 
     it "register a pool with a reward account having the wrong network id" $ do
       pv <- getsPParams ppProtocolVersionL
@@ -45,13 +45,13 @@ spec = describe "POOL" $ do
               , raCredential = rewardCredential
               }
       kh <- freshKeyHash
-      let pps = freshPoolParams kh badRewardAccount
-      registerPoolTx <$> pps >>= \tx ->
-        if pvMajor pv < natVersion @5
-          then
-            submitTx_ tx
-          else
-            submitFailingTx tx [injectFailure $ WrongNetworkPOOL (Mismatch Mainnet Testnet) kh]
+      pps <- freshPoolParams kh badRewardAccount
+      let tx = registerPoolTx pps
+      if pvMajor pv < natVersion @5
+        then
+          submitTx_ tx
+        else
+          submitFailingTx tx [injectFailure $ WrongNetworkPOOL (Mismatch Mainnet Testnet) kh]
     it "register a pool with too big metadata" $ do
       pv <- getsPParams ppProtocolVersionL
       let maxMetadataSize = sizeHash (Proxy :: Proxy HASH)
@@ -60,13 +60,13 @@ spec = describe "POOL" $ do
       url <- arbitrary
       let metadata = PoolMetadata url metadataHash
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
-      let pps = (\p -> p & ppMetadataL .~ SJust metadata) <$> poolParams kh vrf
-      registerPoolTx <$> pps >>= \tx ->
-        if pvMajor pv < natVersion @5
-          then
-            submitTx_ tx
-          else
-            submitFailingTx tx [injectFailure $ PoolMedataHashTooBig kh (fromIntegral tooBigSize)]
+      pps <- poolParams kh vrf
+      let tx = registerPoolTx (pps & ppMetadataL .~ SJust metadata)
+      if pvMajor pv < natVersion @5
+        then
+          submitTx_ tx
+        else
+          submitFailingTx tx [injectFailure $ PoolMedataHashTooBig kh (fromIntegral tooBigSize)]
 
     it "register a new pool with an already registered VRF" $ do
       pv <- getsPParams ppProtocolVersionL
@@ -313,7 +313,7 @@ spec = describe "POOL" $ do
   where
     registerNewPool = do
       (kh, vrf) <- (,) <$> freshKeyHash <*> freshKeyHashVRF
-      registerPoolTx <$> poolParams kh vrf >>= submitTx_
+      submitTx_ . registerPoolTx =<< poolParams kh vrf
       expectPool kh (Just vrf)
       pure (kh, vrf)
     registerPoolTx pps =
@@ -339,6 +339,10 @@ spec = describe "POOL" $ do
     expectVRFs vrfs = do
       whenMajorVersionAtLeast @11 $
         Map.keysSet . psVRFKeyHashes <$> getPState `shouldReturn` vrfs
+    poolParams ::
+      KeyHash 'StakePool ->
+      VRFVerKeyHash 'StakePoolVRF ->
+      ImpTestM era PoolParams
     poolParams kh vrf = do
       pps <- registerRewardAccount >>= freshPoolParams kh
       pure $ pps & ppVrfL .~ vrf
