@@ -24,7 +24,7 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
 * Made `JSON` parser for `CostModel` in `AlonzoGenesis` and `ConwayGenesis` stable. Number of parameters will not change despite that they will change through governance on a running network.
 * Remove `delegators` field from JSON serialiser for `DRepState` for correct round-tripping.
 * Add `queryDRepDelegations` and `queryPoolState` ledger state queries
-* Thanks to improve testing we have discovered and fixed various issues in CDDL specification, some dating back as far as Byron era.
+* Thanks to improved testing, we have discovered and fixed various issues in CDDL specification - some dating back as far as Byron era.
 
 ## 10.5
 
