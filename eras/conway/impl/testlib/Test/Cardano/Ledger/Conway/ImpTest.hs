@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -156,10 +157,18 @@ import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
 import Cardano.Ledger.Conway.Rules (
+  ConwayBbodyPredFailure,
   ConwayCertPredFailure (..),
   ConwayCertsPredFailure (..),
   ConwayDelegPredFailure (..),
+  ConwayEpochEvent,
+  ConwayGovCertPredFailure,
+  ConwayGovPredFailure,
+  ConwayHardForkEvent,
   ConwayLedgerPredFailure (..),
+  ConwayUtxoPredFailure,
+  ConwayUtxosPredFailure,
+  ConwayUtxowPredFailure,
   EnactSignal,
   committeeAccepted,
   committeeAcceptedRatio,
@@ -191,7 +200,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   produced,
   utxosGovStateL,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyDelegPredFailure,
+ )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.Val (Val (..), (<->))
@@ -211,6 +222,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Tree
+import Data.Typeable (Typeable)
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
 import Prettyprinter (align, hsep, viaShow, vsep)
@@ -327,15 +339,32 @@ instance AlonzoEraImp ConwayEra where
       <> plutusTestScripts SPlutusV2
       <> plutusTestScripts SPlutusV3
 
+instance BabbageEraImp ConwayEra
+
 class
-  ( AlonzoEraImp era
+  ( BabbageEraImp era
   , ConwayEraTest era
   , STS (EraRule "ENACT" era)
   , BaseM (EraRule "ENACT" era) ~ ShelleyBase
   , State (EraRule "ENACT" era) ~ EnactState era
   , Signal (EraRule "ENACT" era) ~ EnactSignal era
   , Environment (EraRule "ENACT" era) ~ ()
+  , NFData (Event (EraRule "ENACT" era))
+  , ToExpr (Event (EraRule "ENACT" era))
+  , Typeable (Event (EraRule "ENACT" era))
+  , Eq (Event (EraRule "ENACT" era))
   , GovState era ~ ConwayGovState era
+  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
+  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , InjectRuleEvent "TICK" ConwayHardForkEvent era
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
   ) =>
   ConwayEraImp era
 
@@ -390,8 +419,8 @@ unRegisterDRep drep = do
 conwayGenUnRegTxCert ::
   forall era.
   ( ShelleyEraImp era
-  , ShelleyEraTxCert era
   , ConwayEraTxCert era
+  , ShelleyEraTxCert era
   ) =>
   Credential 'Staking ->
   ImpTestM era (TxCert era)
@@ -408,8 +437,8 @@ conwayGenUnRegTxCert stakingCredential = do
 conwayGenRegTxCert ::
   forall era.
   ( ShelleyEraImp era
-  , ShelleyEraTxCert era
   , ConwayEraTxCert era
+  , ShelleyEraTxCert era
   ) =>
   Credential 'Staking ->
   ImpTestM era (TxCert era)
@@ -1621,7 +1650,7 @@ mkUpdateCommitteeProposal mParent ccsToRemove ccsToAdd threshold = do
   nes <- getsNES id
   let
     curEpochNo = nes ^. nesELL
-    rootCommittee = nes ^. newEpochStateGovStateL . cgsProposalsL . pRootsL . grCommitteeL
+    rootCommittee = nes ^. newEpochStateGovStateL . proposalsGovStateL . pRootsL . grCommitteeL
     parent = fromMaybe (prRoot rootCommittee) mParent
     newCommitteMembers =
       Map.fromList [(cc, addEpochInterval curEpochNo lifetime) | (cc, lifetime) <- ccsToAdd]

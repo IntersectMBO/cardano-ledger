@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Era (
 ) where
 
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
@@ -52,6 +53,7 @@ class
   , Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (TxCert era)
   , Arbitrary (Value era)
+  , Arbitrary (CompactForm (Value era))
   , -- Arbitrary State
     Arbitrary (CertState era)
   , Arbitrary (GovState era)
@@ -69,12 +71,20 @@ class
   , ToExpr (PParamsHKD StrictMaybe era)
   , ToExpr (TxCert era)
   , ToExpr (Value era)
+  , ToExpr (CompactForm (Value era))
   , -- ToExpr State
     ToExpr (CertState era)
   , ToExpr (GovState era)
   , ToExpr (InstantStake era)
   , ToExpr (Accounts era)
   , ToExpr (AccountState era)
+  , -- Un-annotated DecCBOR instances
+    DecCBOR (Script era)
+  , DecCBOR (NativeScript era)
+  , DecCBOR (TxAuxData era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxBody era)
+  , DecCBOR (Tx era)
   , -- TranslationContext
     Eq (TranslationContext era)
   , Show (TranslationContext era)

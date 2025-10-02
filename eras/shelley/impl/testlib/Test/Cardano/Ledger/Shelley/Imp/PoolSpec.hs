@@ -23,12 +23,7 @@ import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-spec ::
-  forall era.
-  ( ShelleyEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "POOL" $ do
   describe "Register and re-register pools" $ do
     it "register a pool with too low cost" $ do

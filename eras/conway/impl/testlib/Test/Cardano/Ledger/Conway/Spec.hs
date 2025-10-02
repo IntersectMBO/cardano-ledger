@@ -8,42 +8,14 @@
 
 module Test.Cardano.Ledger.Conway.Spec (spec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoUtxoPredFailure,
-  AlonzoUtxosPredFailure,
-  AlonzoUtxowPredFailure,
- )
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
-import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
-import Cardano.Ledger.BaseTypes (Inject)
-import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
-  ConwayBbodyPredFailure,
-  ConwayCertsPredFailure,
-  ConwayDelegPredFailure,
   ConwayEpochEvent,
-  ConwayGovCertPredFailure,
-  ConwayGovPredFailure,
   ConwayHardForkEvent,
-  ConwayLedgerPredFailure,
   ConwayNewEpochEvent,
-  ConwayUtxoPredFailure,
-  ConwayUtxowPredFailure,
  )
-import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
-import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
-import Cardano.Ledger.Shelley.API (ApplyTx)
-import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyPoolPredFailure,
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowPredFailure,
- )
 import Control.State.Transition (STS (..))
-import Data.Typeable (Typeable)
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
@@ -56,7 +28,6 @@ import qualified Test.Cardano.Ledger.Conway.Imp as Imp
 import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp, EraSpecificSpec)
 import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
 import qualified Test.Cardano.Ledger.Conway.SPORatifySpec as SPORatifySpec
-import qualified Test.Cardano.Ledger.Conway.TxInfoSpec as TxInfo
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra)
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 
@@ -65,43 +36,9 @@ spec ::
   ( RuleListEra era
   , ConwayEraImp era
   , EraSpecificSpec era
-  , ApplyTx era
-  , DecCBOR (NativeScript era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
-  , Arbitrary (PlutusPurpose AsIx era)
-  , SafeToHash (TxWits era)
-  , StashedAVVMAddresses era ~ ()
-  , Inject (BabbageContextError era) (ContextError era)
-  , Inject (ConwayContextError era) (ContextError era)
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
-  , NFData (Event (EraRule "ENACT" era))
-  , ToExpr (Event (EraRule "ENACT" era))
-  , Eq (Event (EraRule "ENACT" era))
-  , Typeable (Event (EraRule "ENACT" era))
-  , ToExpr (Event (EraRule "BBODY" era))
-  , ShelleyEraTxCert era
-  , TxCert era ~ ConwayTxCert era
   ) =>
   Spec
 spec =
@@ -120,7 +57,6 @@ spec =
       TxWitsSpec.spec @era
     Regression.spec @era
     describe "TxInfo" $ do
-      TxInfo.spec @era
       BabbageTxInfo.spec @era
       describe "PlutusV3" $
         BabbageTxInfo.txInfoSpec @era SPlutusV3

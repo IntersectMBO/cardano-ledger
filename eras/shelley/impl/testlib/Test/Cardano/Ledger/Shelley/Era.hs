@@ -15,11 +15,13 @@ module Test.Cardano.Ledger.Shelley.Era (
   shelleyAccountsFromAccountsMap,
 ) where
 
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Plutus (emptyCostModels)
 import Cardano.Ledger.Shelley
+import Cardano.Ledger.Shelley.API (ApplyTx)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.State
@@ -30,10 +32,12 @@ import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
+import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 
 class
   ( EraTest era
+  , ApplyTx era
   , ShelleyEraScript era
   , EraTransition era
   , Arbitrary (TransitionConfig era)
@@ -43,7 +47,10 @@ class
   , NFData (StashedAVVMAddresses era)
   , Default (StashedAVVMAddresses era)
   , Arbitrary (StashedAVVMAddresses era)
+  , EncCBOR (StashedAVVMAddresses era)
+  , DecCBOR (StashedAVVMAddresses era)
   , ToExpr (ScriptsNeeded era)
+  , SafeToHash (TxWits era)
   ) =>
   ShelleyEraTest era
 

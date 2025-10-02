@@ -16,11 +16,7 @@ import Lens.Micro
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-spec ::
-  ( ShelleyEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
   describe "ShelleyUtxoPredFailure" $ do
     it "ValueNotConservedUTxO" $ do

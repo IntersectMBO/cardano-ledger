@@ -25,12 +25,7 @@ import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-spec ::
-  forall era.
-  ( ShelleyEraImp era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   describe "Bootstrap Witness" $ do
     it "Valid Witnesses" $ do

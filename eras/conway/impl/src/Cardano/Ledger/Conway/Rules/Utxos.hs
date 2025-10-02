@@ -60,7 +60,6 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.Plutus (PlutusWithContext)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), updateUTxOState)

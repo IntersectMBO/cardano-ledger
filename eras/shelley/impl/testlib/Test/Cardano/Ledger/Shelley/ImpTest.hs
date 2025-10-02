@@ -207,6 +207,10 @@ import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   LedgerEnv (..),
   ShelleyBbodyState,
+  ShelleyDelegPredFailure,
+  ShelleyPoolPredFailure,
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowPredFailure,
   epochFromSlot,
  )
 import Cardano.Ledger.Shelley.Scripts (
@@ -411,6 +415,7 @@ class
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+  , ToExpr (Event (EraRule "BBODY" era))
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , -- For the LEDGER rule
     STS (EraRule "LEDGER" era)
@@ -445,6 +450,12 @@ class
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
+  , EraRuleFailure "BBODY" era ~ PredicateFailure (EraRule "BBODY" era)
+  , EraRuleFailure "LEDGER" era ~ PredicateFailure (EraRule "LEDGER" era)
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
   ) =>
   ShelleyEraImp era
   where
@@ -1583,9 +1594,7 @@ registerStakeCredential cred = do
   pure $ RewardAccount networkId cred
 
 delegateStake ::
-  ( ShelleyEraImp era
-  , ShelleyEraTxCert era
-  ) =>
+  (ShelleyEraImp era, ShelleyEraTxCert era) =>
   Credential 'Staking ->
   KeyHash 'StakePool ->
   ImpTestM era ()

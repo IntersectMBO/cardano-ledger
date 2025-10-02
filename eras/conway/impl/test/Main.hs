@@ -13,6 +13,7 @@ import qualified Test.Cardano.Ledger.Conway.GoldenTranslation as GoldenTranslati
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
 import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Conway.Spec as ConwaySpec
+import qualified Test.Cardano.Ledger.Conway.TxInfoSpec as TxInfo
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 main :: IO ()
@@ -26,6 +27,7 @@ main = ledgerTestMain $ do
       PlutusSpec.spec
     Cddl.spec
     GoldenSpec.spec
+    TxInfo.spec
   describe "Various tests for functions defined in Conway" $ do
     prop "tierRefScriptFee is a linear function when growth is 1" $ \(Positive sizeIncrement) baseFee (NonNegative size) ->
       tierRefScriptFee 1 sizeIncrement baseFee size

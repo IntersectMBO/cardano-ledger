@@ -23,9 +23,7 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest
 
 spec ::
   forall era.
-  ( DijkstraEraImp era
-  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
-  ) =>
+  DijkstraEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec =
   describe "RequireGuard native scripts" $ do

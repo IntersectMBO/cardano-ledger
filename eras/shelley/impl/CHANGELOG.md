@@ -2,7 +2,9 @@
 
 ## 1.17.1.0
 
-*
+## 1.17.2.0
+
+* Added `Generic` instance to `ShelleyTxOut`
 
 ### `testlib`
 

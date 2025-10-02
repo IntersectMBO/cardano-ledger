@@ -55,7 +55,9 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   evalTxExUnits,
  )
 import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure (..),
+  AlonzoUtxowPredFailure,
   TagMismatchDescription (..),
   scriptFailureToFailureDescription,
  )
@@ -122,6 +124,9 @@ class
   , TxAuxData era ~ AlonzoTxAuxData era
   , ToExpr (ContextError era)
   , ToExpr (PlutusPurpose AsItem era)
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   ) =>
   AlonzoEraImp era
   where
@@ -490,7 +495,6 @@ impScriptPredicateFailure tx = do
 submitPhase2Invalid_ ::
   ( HasCallStack
   , AlonzoEraImp era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
   Tx era ->
   ImpTestM era ()
@@ -499,7 +503,6 @@ submitPhase2Invalid_ = void . submitPhase2Invalid
 submitPhase2Invalid ::
   ( HasCallStack
   , AlonzoEraImp era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
   Tx era ->
   ImpTestM era (Tx era)

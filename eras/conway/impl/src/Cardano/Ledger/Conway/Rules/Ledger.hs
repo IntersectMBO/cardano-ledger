@@ -177,9 +177,6 @@ instance InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure ConwayEra where
 instance InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ConwayUtxosPredFailure ConwayEra where
-  injectFailure = ConwayUtxowFailure . injectFailure
-
 instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
@@ -203,6 +200,9 @@ instance InjectRuleFailure "LEDGER" ConwayGovCertPredFailure ConwayEra where
 
 instance InjectRuleFailure "LEDGER" ConwayGovPredFailure ConwayEra where
   injectFailure = ConwayGovFailure
+
+instance InjectRuleFailure "LEDGER" ConwayUtxosPredFailure ConwayEra where
+  injectFailure = ConwayUtxowFailure . injectFailure
 
 deriving instance
   ( Era era

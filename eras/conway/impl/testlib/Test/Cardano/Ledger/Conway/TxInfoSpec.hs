@@ -31,18 +31,12 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Era (ConwayEraTest)
 import Test.Cardano.Ledger.Conway.Genesis ()
 
-spec ::
-  forall era.
-  ( ConwayEraTest era
-  , TxCert era ~ ConwayTxCert era
-  ) =>
-  Spec
+spec :: Spec
 spec = do
   describe "TxInfo" $ do
-    let trans pv cert = either (error . show) id (toPlutusTxCert @'PlutusV3 @era Proxy pv cert)
+    let trans pv cert = either (error . show) id (toPlutusTxCert @'PlutusV3 @ConwayEra Proxy pv cert)
         transV9 = trans (ProtVer (natVersion @9) 0)
         transV10 = trans (ProtVer (natVersion @10) 0)
 

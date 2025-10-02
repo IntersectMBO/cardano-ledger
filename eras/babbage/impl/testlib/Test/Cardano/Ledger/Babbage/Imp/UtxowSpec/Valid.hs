@@ -22,6 +22,7 @@ import Lens.Micro
 import Lens.Micro.GHC ()
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.ImpTest
+import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
@@ -29,9 +30,7 @@ import Test.Cardano.Ledger.Shelley.Era (nativeAlwaysFails, nativeAlwaysSucceeds)
 
 spec ::
   forall era.
-  ( AlonzoEraImp era
-  , BabbageEraTxBody era
-  ) =>
+  BabbageEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Valid" $ do
   it "Native reference scripts must not be witnessed" $ do

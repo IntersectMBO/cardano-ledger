@@ -9,39 +9,14 @@
 
 module Test.Cardano.Ledger.Conway.Imp (spec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (ContextError))
-import Cardano.Ledger.Alonzo.Rules (
-  AlonzoUtxoPredFailure,
-  AlonzoUtxosPredFailure,
-  AlonzoUtxowPredFailure,
- )
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
-import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
-import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
-  ConwayBbodyPredFailure,
-  ConwayCertsPredFailure,
-  ConwayDelegPredFailure,
   ConwayEpochEvent,
-  ConwayGovCertPredFailure,
-  ConwayGovPredFailure,
   ConwayHardForkEvent,
-  ConwayLedgerPredFailure,
   ConwayNewEpochEvent,
-  ConwayUtxoPredFailure,
-  ConwayUtxowPredFailure,
- )
-import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
-import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyPoolPredFailure,
-  ShelleyUtxoPredFailure,
-  ShelleyUtxowPredFailure,
  )
 import Control.State.Transition.Extended
-import Data.Typeable (Typeable)
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as Bbody
@@ -64,34 +39,9 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , EraSpecificSpec era
-  , Inject (BabbageContextError era) (ContextError era)
-  , Inject (ConwayContextError era) (ContextError era)
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
-  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , ApplyTx era
-  , NFData (Event (EraRule "ENACT" era))
-  , ToExpr (Event (EraRule "ENACT" era))
-  , Eq (Event (EraRule "ENACT" era))
-  , Typeable (Event (EraRule "ENACT" era))
-  , ToExpr (Event (EraRule "BBODY" era))
   ) =>
   Spec
 spec = do
@@ -101,31 +51,9 @@ spec = do
 conwayEraGenericSpec ::
   forall era.
   ( ConwayEraImp era
-  , Inject (BabbageContextError era) (ContextError era)
-  , Inject (ConwayContextError era) (ContextError era)
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" ShelleyPoolPredFailure era
-  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , ApplyTx era
-  , NFData (Event (EraRule "ENACT" era))
-  , ToExpr (Event (EraRule "ENACT" era))
-  , Eq (Event (EraRule "ENACT" era))
-  , Typeable (Event (EraRule "ENACT" era))
-  , ToExpr (Event (EraRule "BBODY" era))
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 conwayEraGenericSpec = do
@@ -143,11 +71,7 @@ conwayEraGenericSpec = do
   describe "UTXOS" Utxos.spec
   describe "UTXOW" Utxow.spec
 
-conwayEraSpecificSpec ::
-  ( ConwayEraImp era
-  , ShelleyEraTxCert era
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+conwayEraSpecificSpec :: SpecWith (ImpInit (LedgerSpec ConwayEra))
 conwayEraSpecificSpec = do
   describe "Conway era specific Imp spec" $
     describe "Certificates without deposits" $ do

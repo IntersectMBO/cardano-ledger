@@ -8,14 +8,13 @@
 
 module Test.Cardano.Ledger.Babbage.Imp.UtxosSpec (spec) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   TxOutSource (TxOutFromOutput),
  )
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (CollectErrors))
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Core (BabbageEraTxBody, referenceInputsTxBodyL)
+import Cardano.Ledger.Babbage.Core (referenceInputsTxBodyL)
 import Cardano.Ledger.Babbage.TxInfo (
   BabbageContextError (
     ReferenceInputsNotSupported,
@@ -23,10 +22,9 @@ import Cardano.Ledger.Babbage.TxInfo (
   ),
  )
 import Cardano.Ledger.Babbage.TxOut (referenceScriptTxOutL)
-import Cardano.Ledger.BaseTypes (Inject, StrictMaybe (..), TxIx (..), inject)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), TxIx (..), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (
-  InjectRuleFailure,
   eraProtVerHigh,
   eraProtVerLow,
   fromNativeScript,
@@ -42,17 +40,11 @@ import Cardano.Ledger.Plutus (Language (..), hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.ImpTest
+import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
 
-spec ::
-  forall era.
-  ( AlonzoEraImp era
-  , BabbageEraTxBody era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , Inject (BabbageContextError era) (ContextError era)
-  ) =>
-  SpecWith (ImpInit (LedgerSpec era))
+spec :: forall era. BabbageEraImp era => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOS" $ do
   describe "Plutus V1 with references" $ do
     let inBabbage = eraProtVerLow @era <= eraProtVerHigh @BabbageEra
