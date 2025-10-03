@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Shelley.Imp (spec) where
 
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Test.Cardano.Ledger.Imp.Common
+import qualified Test.Cardano.Ledger.Shelley.Imp.DelegSpec as Deleg
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Shelley.Imp.PoolSpec as Pool
@@ -26,6 +27,7 @@ spec ::
 spec = do
   describe "Era specific tests" . withEachEraVersion @era $ eraSpecificSpec
   describe "ShelleyImpSpec" $ withEachEraVersion @era $ do
+    describe "DELEG" Deleg.spec
     Epoch.spec
     Ledger.spec
     Pool.spec
