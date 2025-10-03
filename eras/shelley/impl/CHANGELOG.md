@@ -12,6 +12,7 @@
 * Added `shelleyGenRegTxCert`
 * Added `genRegTxCert` to `ShelleyEraImp`
 * Added `delegStakeTxCert` to `ShelleyEraImp`
+* Added `expectStakeCredRegistered`, `expectStakeCredNotRegistered`, `expectDelegatedToPool`, `expectNotDelegatedToPool` to `ImpTest`
 
 ## 1.17.0.0
 
