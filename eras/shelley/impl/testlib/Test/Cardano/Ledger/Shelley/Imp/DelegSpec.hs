@@ -8,18 +8,97 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.DelegSpec (
+  shelleyEraSpecificSpec,
   spec,
 ) where
 
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Scripts
+import qualified Data.Map.Strict as Map
 import Lens.Micro
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.ImpTest
+
+shelleyEraSpecificSpec ::
+  ( ShelleyEraImp era
+  , InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+shelleyEraSpecificSpec = do
+  it "Twice the same certificate in the same transaction" $ do
+    freshKeyHash >>= \kh -> do
+      regTxCert <- genRegTxCert (KeyHashObj kh)
+      submitFailingTx
+        ( mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ [regTxCert, regTxCert]
+        )
+        [injectFailure $ StakeKeyAlreadyRegisteredDELEG (KeyHashObj kh)]
+      expectStakeCredNotRegistered (KeyHashObj kh)
+
+  it "Delegate to unregistered pool" $ do
+    cred <- KeyHashObj <$> freshKeyHash
+    regTxCert <- genRegTxCert cred
+    submitTx_ $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . certsTxBodyL .~ [regTxCert]
+
+    poolKh <- freshKeyHash
+    submitFailingTx
+      ( mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ [delegStakeTxCert cred poolKh]
+      )
+      [injectFailure $ DelegateeNotRegisteredDELEG poolKh]
+    expectNotDelegatedToPool cred
+
+  it "Deregistering returns the deposit" $ do
+    let keyDeposit = Coin 2
+    -- This is paid out as the reward
+    let poolDeposit = Coin 3
+    modifyPParams $ \pp ->
+      pp
+        & ppKeyDepositL .~ keyDeposit
+        & ppPoolDepositL .~ poolDeposit
+    stakeCred <- KeyHashObj <$> freshKeyHash
+    rewardAccount <- getRewardAccountFor stakeCred
+    otherStakeCred <- KeyHashObj <$> freshKeyHash
+    otherRewardAccount <- getRewardAccountFor otherStakeCred
+    khStakePool <- freshKeyHash
+    registerPool khStakePool
+    stakeCredRegTxCert <- genRegTxCert stakeCred
+    otherStakeCredRegTxCert <- genRegTxCert otherStakeCred
+    submitTx_ . mkBasicTx $
+      mkBasicTxBody
+        & certsTxBodyL
+          .~ [ stakeCredRegTxCert
+             , delegStakeTxCert stakeCred khStakePool
+             , otherStakeCredRegTxCert
+             , delegStakeTxCert otherStakeCred khStakePool
+             ]
+    expectRegisteredRewardAddress rewardAccount
+    expectRegisteredRewardAddress otherRewardAccount
+    registerAndRetirePoolToMakeReward otherStakeCred
+
+    getBalance otherStakeCred `shouldReturn` poolDeposit
+    unRegTxCert <- genUnRegTxCert stakeCred
+
+    submitTx_ . mkBasicTx $
+      mkBasicTxBody
+        & certsTxBodyL .~ [unRegTxCert]
+        & withdrawalsTxBodyL
+          .~ Withdrawals
+            ( Map.fromList
+                [ (rewardAccount, Coin 0)
+                , (otherRewardAccount, poolDeposit)
+                ]
+            )
+    getBalance otherStakeCred `shouldReturn` Coin 0
+    expectNotRegisteredRewardAddress rewardAccount
 
 spec ::
   ShelleyEraImp era =>
