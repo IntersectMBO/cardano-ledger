@@ -7,23 +7,23 @@
 ;    length of transaction_bodies
 block = 
   [ header                 
-  , transaction_bodies       : [* transaction_body]                   
-  , transaction_witness_sets : [* transaction_witness_set]            
-  , auxiliary_data_set       : {* transaction_index => auxiliary_data}
-  , invalid_transactions     : [* transaction_index]                  
+  , transaction_bodies       : [* transaction_body]                
+  , transaction_witness_sets : [* transaction_witness_set]         
+  , auxiliary_data_set       : {* transaction_ix => auxiliary_data}
+  , invalid_transactions     : [* transaction_ix]                  
   ]
 
 
 transaction = 
   [transaction_body, transaction_witness_set, bool, auxiliary_data/ nil]
 
-kes_signature = bytes .size 448
+kes_signature = bytes448
 
 language = 0/ 1/ 2
 
 potential_languages = 0 .. 255
 
-signkeyKES = bytes .size 64
+signkey_kes = bytes64
 
 certificate = 
   [  stake_registration
@@ -56,7 +56,7 @@ stake_delegation = (2, stake_credential, pool_keyhash)
 
 pool_registration = (3, pool_params)
 
-pool_retirement = (4, pool_keyhash, epoch_no)
+pool_retirement = (4, pool_keyhash, epoch)
 
 reg_cert = (7, stake_credential, coin)
 
@@ -88,12 +88,12 @@ header = [header_body, body_signature : kes_signature]
 header_body = 
   [ block_number      : block_no    
   , slot              : slot_no     
-  , prev_hash         : hash32/ nil 
+  , prev_hash         : bytes32/ nil
   , issuer_vkey       : vkey        
   , vrf_vkey          : vrf_vkey    
   , vrf_result        : vrf_cert    
   , block_body_size   : uint .size 4
-  , block_body_hash   : hash32      
+  , block_body_hash   : bytes32     
   , operational_cert
   , protocol_version
   ]
@@ -103,13 +103,15 @@ block_no = uint .size 8
 
 slot_no = uint .size 8
 
-hash32 = bytes .size 32
+bytes32 = bytes .size 32
 
-vkey = bytes .size 32
+vkey = bytes32
 
-vrf_vkey = bytes .size 32
+vrf_vkey = bytes32
 
-vrf_cert = [bytes, bytes .size 80]
+vrf_cert = [bytes, bytes80]
+
+bytes80 = bytes .size 80
 
 operational_cert = 
   [ hot_vkey        : kes_vkey    
@@ -119,50 +121,55 @@ operational_cert =
   ]
 
 
-kes_vkey = bytes .size 32
+kes_vkey = bytes32
 
-signature = bytes .size 64
+signature = bytes64
+
+bytes64 = bytes .size 64
 
 protocol_version = [major_protocol_version, uint]
 
 major_protocol_version = 0 .. 13
 
+bytes448 = bytes .size 448
+
 transaction_body = 
-  {   0  : set<transaction_input>         
-  ,   1  : [* transaction_output]      
-  ,   2  : coin                            
-  , ? 3  : slot_no                         
-  , ? 4  : certificates                    
-  , ? 5  : withdrawals                     
-  , ? 7  : auxiliary_data_hash             
-  , ? 8  : slot_no                         
-  , ? 9  : mint                            
-  , ? 11 : script_data_hash                
-  , ? 13 : nonempty_set<transaction_input>
-  , ? 14 : guards                          
-  , ? 15 : network_id                      
-  , ? 16 : transaction_output              
-  , ? 17 : coin                            
-  , ? 18 : nonempty_set<transaction_input>
-  , ? 19 : voting_procedures               
-  , ? 20 : proposal_procedures             
-  , ? 21 : coin                            
-  , ? 22 : positive_coin                   
+  {   0  : set<transaction_input>            
+  ,   1  : [* dijkstra_transaction_output]
+  ,   2  : coin                               
+  , ? 3  : slot_no                            
+  , ? 4  : certificates                       
+  , ? 5  : withdrawals                        
+  , ? 7  : auxiliary_data_hash                
+  , ? 8  : slot_no                            
+  , ? 9  : mint                               
+  , ? 11 : script_data_hash                   
+  , ? 13 : nonempty_set<transaction_input>   
+  , ? 14 : guards                             
+  , ? 15 : network_id                         
+  , ? 16 : dijkstra_transaction_output        
+  , ? 17 : coin                               
+  , ? 18 : nonempty_set<transaction_input>   
+  , ? 19 : voting_procedures                  
+  , ? 20 : proposal_procedures                
+  , ? 21 : coin                               
+  , ? 22 : positive_coin                      
   }
 
 
 set<a0> = #6.258([* a0])/ [* a0]
 
-transaction_input = [transaction_id : transaction_id, index : uint .size 2]
+transaction_input = [id : transaction_id, index : uint .size 2]
 
-transaction_id = hash32
+transaction_id = bytes32
 
 ; Both of the Alonzo and Babbage style TxOut formats are equally valid
 ; and can be used interchangeably
-transaction_output = shelley_transaction_output/ babbage_transaction_output
+dijkstra_transaction_output = 
+  alonzo_transaction_output/ new_babbage_transaction_output
 
-; hash32: datum_hash
-shelley_transaction_output = [address, amount : value, ? hash32]
+alonzo_transaction_output = 
+  [address, amount : conway_value, ? datum_hash : bytes32]
 
 ; address = bytes
 ; 
@@ -206,7 +213,7 @@ address =
   / h'6070000000000000000000000000000000000000000000000000000000'                                                        
   / h'7080000000000000000000000000000000000000000000000000000000'                                                        
 
-value = coin/ [coin, multiasset<positive_coin>]
+conway_value = coin/ [coin, multiasset<positive_coin>]
 
 coin = uint
 
@@ -222,23 +229,24 @@ policy_id = script_hash
 ;   "\x01" for Plutus V1 scripts
 ;   "\x02" for Plutus V2 scripts
 ;   "\x03" for Plutus V3 scripts
-script_hash = hash28
+;   "\x04" for Plutus V4 scripts
+script_hash = bytes28
 
-hash28 = bytes .size 28
+bytes28 = bytes .size 28
 
 asset_name = bytes .size (0 .. 32)
 
-positive_coin = 1 .. maxWord64
+positive_coin = 1 .. max_word64
 
-maxWord64 = 18446744073709551615
+max_word64 = 18446744073709551615
 
 ; NEW starting with babbage
 ;   datum_option
 ;   script_ref
-babbage_transaction_output = 
-  {0 : address, 1 : value, ? 2 : datum_option, ? 3 : script_ref}
+new_babbage_transaction_output = 
+  {0 : address, 1 : conway_value, ? 2 : datum_option, ? 3 : script_ref}
 
-datum_option = [0, hash32// 1, data]
+datum_option = [0, bytes32// 1, data]
 
 data = #6.24(bytes .cbor plutus_data)
 
@@ -303,7 +311,7 @@ native_script =
 
 script_pubkey = (0, addr_keyhash)
 
-addr_keyhash = hash28
+addr_keyhash = bytes28
 
 script_all = (1, [* native_script])
 
@@ -311,7 +319,11 @@ script_any = (2, [* native_script])
 
 script_n_of_k = (3, n : int64, [* native_script])
 
-int64 = -9223372036854775808 .. 9223372036854775807
+int64 = min_int64 .. max_int64
+
+min_int64 = -9223372036854775808
+
+max_int64 = 9223372036854775807
 
 invalid_before = (4, slot_no)
 
@@ -327,11 +339,11 @@ credential = [0, addr_keyhash// 1, script_hash]
 ; around for tests in order to avoid generating duplicates, since
 ; the cddl tool we use for roundtrip testing doesn't generate
 ; distinct collections.
-plutus_v1_script = distinct_VBytes
+plutus_v1_script = distinct_bytes
 
 ; A type for distinct values.
 ; The type parameter must support .size, for example: bytes or uint
-distinct_VBytes = 
+distinct_bytes = 
   bytes .size 8 
   / bytes .size 16
   / bytes .size 20
@@ -339,11 +351,11 @@ distinct_VBytes =
   / bytes .size 30
   / bytes .size 32
 
-plutus_v2_script = distinct_VBytes
+plutus_v2_script = distinct_bytes
 
-plutus_v3_script = distinct_VBytes
+plutus_v3_script = distinct_bytes
 
-plutus_v4_script = distinct_VBytes
+plutus_v4_script = distinct_bytes
 
 certificates = nonempty_oset<certificate>
 
@@ -351,7 +363,7 @@ nonempty_oset<a0> = #6.258([+ a0])/ [+ a0]
 
 stake_credential = credential
 
-pool_keyhash = hash28
+pool_keyhash = bytes28
 
 ;         pool_keyhash: operator
 ;                 coin: pledge
@@ -370,7 +382,7 @@ pool_params =
   , pool_metadata  : pool_metadata/ nil
   )
 
-vrf_keyhash = hash32
+vrf_keyhash = bytes32
 
 ; The real unit_interval is: #6.30([uint, uint])
 ; 
@@ -415,7 +427,7 @@ pool_metadata = [url, bytes]
 
 url = text .size (0 .. 128)
 
-epoch_no = uint .size 8
+epoch = uint .size 8
 
 drep = [0, addr_keyhash// 1, script_hash// 2// 3]
 
@@ -423,21 +435,21 @@ committee_cold_credential = credential
 
 committee_hot_credential = credential
 
-anchor = [anchor_url : url, anchor_data_hash : hash32]
+anchor = [anchor_url : url, anchor_data_hash : bytes32]
 
 drep_credential = credential
 
-withdrawals = {+ reward_account => coin}
+withdrawals = {* reward_account => coin}
 
-auxiliary_data_hash = hash32
+auxiliary_data_hash = bytes32
 
-mint = {+ policy_id => {+ asset_name => nonZeroInt64}}
+mint = {+ policy_id => {+ asset_name => nonzero_int64}}
 
-nonZeroInt64 = negInt64/ posInt64
+nonzero_int64 = nint64/ pint64
 
-negInt64 = -9223372036854775808 .. -1
+nint64 = min_int64 .. -1
 
-posInt64 = 1 .. 9223372036854775807
+pint64 = 1 .. max_int64
 
 ; This is a hash of data which may affect evaluation of a script.
 ; This data consists of:
@@ -505,7 +517,7 @@ posInt64 = 1 .. 9223372036854775807
 ; supplied either as a map or as an array they must contain at least one element,
 ; therefore there is no way to override this behavior by providing a custom
 ; representation for empty redeemers.
-script_data_hash = hash32
+script_data_hash = bytes32
 
 nonempty_set<a0> = #6.258([+ a0])/ [+ a0]
 
@@ -587,16 +599,16 @@ protocol_param_update =
   , ? 33 : nonnegative_interval   ; minfee refScript coins per byte
   , ? 34 : uint .size 4           ; max refScript size per block
   , ? 35 : uint .size 4           ; max refScript size per tx
-  , ? 36 : posWord32              ; refScript cost stride
+  , ? 36 : pword32                ; refScript cost stride
   , ? 37 : positive_interval      ; refScript cost multiplier
   }
 
 
 epoch_interval = uint .size 4
 
-nonnegative_interval = #6.30([uint, positive_int])
+nonnegative_interval = #6.30([uint, pint])
 
-positive_int = 1 .. maxWord64
+pint = 1 .. max_word64
 
 ; The format for cost_models is flexible enough to allow adding
 ; Plutus built-ins and language versions in the future.
@@ -637,11 +649,11 @@ drep_voting_thresholds =
   ]
 
 
-posWord32 = 1 .. maxWord32
+pword32 = 1 .. max_word32
 
-maxWord32 = 4294967295
+max_word32 = 4294967295
 
-positive_interval = #6.30([positive_int, positive_int])
+positive_interval = #6.30([pint, pint])
 
 policy_hash = script_hash
 
@@ -652,11 +664,11 @@ treasury_withdrawals_action = (2, {* reward_account => coin}, policy_hash/ nil)
 no_confidence = (3, gov_action_id/ nil)
 
 update_committee = 
-  ( 4                                            
-  , gov_action_id/ nil                           
-  , set<committee_cold_credential>              
-  , {* committee_cold_credential => epoch_no}
-  , unit_interval                                
+  ( 4                                         
+  , gov_action_id/ nil                        
+  , set<committee_cold_credential>           
+  , {* committee_cold_credential => epoch}
+  , unit_interval                             
   )
 
 new_constitution = (5, gov_action_id/ nil, constitution)
@@ -666,7 +678,7 @@ constitution = [anchor, script_hash/ nil]
 info_action = 6
 
 transaction_witness_set = 
-  { ? 0 : nonempty_set<vkeywitness>      
+  { ? 0 : nonempty_set<vkey_witness>     
   , ? 1 : nonempty_set<native_script>    
   , ? 2 : nonempty_set<bootstrap_witness>
   , ? 3 : nonempty_set<plutus_v1_script> 
@@ -677,13 +689,13 @@ transaction_witness_set =
   }
 
 
-vkeywitness = [vkey, signature]
+vkey_witness = [vkey, signature]
 
 bootstrap_witness = 
-  [ public_key : vkey          
-  , signature  : signature     
-  , chain_code : bytes .size 32
-  , attributes : bytes         
+  [ public_key : vkey     
+  , signature  : signature
+  , chain_code : bytes32  
+  , attributes : bytes    
   ]
 
 
@@ -705,16 +717,15 @@ redeemer_tag =
   / 5 ; proposing
   / 6 ; guarding 
 
-transaction_index = uint .size 2
+transaction_ix = uint .size 2
 
 auxiliary_data = 
-  shelley_auxiliary_data/ shelley_ma_auxiliary_data/ alonzo_auxiliary_data
+  conway_auxiliary_data/ shelley_ma_auxiliary_data/ alonzo_auxiliary_data
 
-shelley_auxiliary_data = metadata
+conway_auxiliary_data = 
+  {* conway_transaction_metadatum_label => transaction_metadatum}
 
-metadata = {* transaction_metadatum_label => transaction_metadatum}
-
-transaction_metadatum_label = uint .size 8
+conway_transaction_metadatum_label = uint .size 8
 
 transaction_metadatum = 
   {* transaction_metadatum => transaction_metadatum}
@@ -724,11 +735,14 @@ transaction_metadatum =
   / text .size (0 .. 64)      
 
 shelley_ma_auxiliary_data = 
-  [transaction_metadata : metadata, auxiliary_scripts : [* native_script]]
+  [ transaction_metadata : conway_auxiliary_data
+  , auxiliary_scripts : [* native_script]
+  ]
+
 
 alonzo_auxiliary_data = 
   #6.259(
-    { ? 0 : metadata                
+    { ? 0 : conway_auxiliary_data   
     , ? 1 : [* native_script]   
     , ? 2 : [* plutus_v1_script]
     , ? 3 : [* plutus_v2_script]

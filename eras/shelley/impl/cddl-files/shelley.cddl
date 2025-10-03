@@ -2,9 +2,9 @@
 
 block = 
   [ header                 
-  , transaction_bodies       : [* transaction_body]                         
-  , transaction_witness_sets : [* transaction_witness_set]                  
-  , transaction_metadata_set : {* transaction_index => transaction_metadata}
+  , transaction_bodies       : [* transaction_body]                        
+  , transaction_witness_sets : [* transaction_witness_set]                 
+  , transaction_metadata_set : {* transaction_ix => shelley_auxiliary_data}
   ]
 
 
@@ -13,25 +13,27 @@ header = [header_body, body_signature : kes_signature]
 header_body = 
   [ block_number      : uint        
   , slot              : uint        
-  , prev_hash         : hash32/ nil 
+  , prev_hash         : bytes32/ nil
   , issuer_vkey       : vkey        
   , vrf_vkey          : vrf_vkey    
   , nonce_vrf         : vrf_cert    
   , leader_vrf        : vrf_cert    
   , block_body_size   : uint .size 4
-  , block_body_hash   : hash32      
+  , block_body_hash   : bytes32     
   , operational_cert
   , protocol_version
   ]
 
 
-hash32 = bytes .size 32
+bytes32 = bytes .size 32
 
-vkey = bytes .size 32
+vkey = bytes32
 
-vrf_vkey = bytes .size 32
+vrf_vkey = bytes32
 
-vrf_cert = [bytes, bytes .size 80]
+vrf_cert = [bytes, bytes80]
+
+bytes80 = bytes .size 80
 
 operational_cert = 
   ( hot_vkey        : kes_vkey 
@@ -40,25 +42,29 @@ operational_cert =
   , sigma           : signature
   )
 
-kes_vkey = bytes .size 32
+kes_vkey = bytes32
 
-signature = bytes .size 64
+signature = bytes64
 
-protocol_version = (major_protocol_version, uint)
+bytes64 = bytes .size 64
+
+protocol_version = [major_protocol_version, uint]
 
 major_protocol_version = 0 .. 3
 
-kes_signature = bytes .size 448
+kes_signature = bytes448
+
+bytes448 = bytes .size 448
 
 transaction_body = 
-  {   0 : set<transaction_input>   
-  ,   1 : [* transaction_output]
-  ,   2 : coin                      
-  ,   3 : uint                      
-  , ? 4 : [* certificate]       
-  , ? 5 : withdrawals               
-  , ? 6 : update                    
-  , ? 7 : metadata_hash             
+  {   0 : set<transaction_input>             
+  ,   1 : [* shelley_transaction_output]  
+  ,   2 : coin                                
+  ,   3 : uint                                
+  , ? 4 : [* certificate]                 
+  , ? 5 : withdrawals                         
+  , ? 6 : [protocol_param_updates, epoch]
+  , ? 7 : auxiliary_data_hash                 
   }
 
 
@@ -66,9 +72,9 @@ set<a0> = [* a0]
 
 transaction_input = [id : transaction_id, index : uint .size 2]
 
-transaction_id = hash32
+transaction_id = bytes32
 
-transaction_output = [address, amount : coin]
+shelley_transaction_output = [address, amount : coin]
 
 ; address = bytes
 ; 
@@ -132,9 +138,9 @@ stake_credential = credential
 
 credential = [0, addr_keyhash// 1, script_hash]
 
-addr_keyhash = hash28
+addr_keyhash = bytes28
 
-hash28 = bytes .size 28
+bytes28 = bytes .size 28
 
 ; To compute a script hash, note that you must prepend
 ; a tag to the bytes of the script before hashing.
@@ -144,14 +150,15 @@ hash28 = bytes .size 28
 ;   "\x01" for Plutus V1 scripts
 ;   "\x02" for Plutus V2 scripts
 ;   "\x03" for Plutus V3 scripts
-script_hash = hash28
+;   "\x04" for Plutus V4 scripts
+script_hash = bytes28
 
 ; This will be deprecated in a future era
 stake_deregistration = (1, stake_credential)
 
 stake_delegation = (2, stake_credential, pool_keyhash)
 
-pool_keyhash = hash28
+pool_keyhash = bytes28
 
 pool_registration = (3, pool_params)
 
@@ -167,7 +174,7 @@ pool_params =
   , pool_metadata  : pool_metadata/ nil
   )
 
-vrf_keyhash = hash32
+vrf_keyhash = bytes32
 
 ; The real unit_interval is: #6.30([uint, uint])
 ; 
@@ -218,9 +225,9 @@ epoch = uint
 
 genesis_key_delegation = (5, genesis_hash, genesis_delegate_hash, vrf_keyhash)
 
-genesis_hash = hash28
+genesis_hash = bytes28
 
-genesis_delegate_hash = hash28
+genesis_delegate_hash = bytes28
 
 move_instantaneous_rewards_cert = (6, move_instantaneous_reward)
 
@@ -238,9 +245,7 @@ delta_coin = int
 
 withdrawals = {* reward_account => coin}
 
-update = [proposed_protocol_parameter_updates, epoch]
-
-proposed_protocol_parameter_updates = {* genesis_hash => protocol_param_update}
+protocol_param_updates = {* genesis_hash => protocol_param_update}
 
 protocol_param_update = 
   { ? 0  : uint                   ; minfee A
@@ -263,47 +268,43 @@ protocol_param_update =
   }
 
 
-nonnegative_interval = #6.30([uint, positive_int])
+nonnegative_interval = #6.30([uint, pint])
 
-positive_int = 1 .. maxWord64
+pint = 1 .. max_word64
 
-maxWord64 = 18446744073709551615
+max_word64 = 18446744073709551615
 
 nonce = [0// 1, bytes .size 32]
 
-metadata_hash = hash32
+auxiliary_data_hash = bytes32
 
 transaction_witness_set = 
-  { ? 0 : [* vkeywitness]      
-  , ? 1 : [* multisig_script]  
-  , ? 2 : [* bootstrap_witness]
-  }
+  {? 0 : [* vkey_witness], ? 1 : [* native_script], ? 2 : [* bootstrap_witness]}
 
+vkey_witness = [vkey, signature]
 
-vkeywitness = [vkey, signature]
+native_script = [script_pubkey// script_all// script_any// script_n_of_k]
 
-multisig_script = 
-  [multisig_pubkey// multisig_all// multisig_any// multisig_n_of_k]
+script_pubkey = (0, addr_keyhash)
 
-multisig_pubkey = (0, addr_keyhash)
+script_all = (1, [* native_script])
 
-multisig_all = (1, [* multisig_script])
+script_any = (2, [* native_script])
 
-multisig_any = (2, [* multisig_script])
-
-multisig_n_of_k = (3, n : uint, [* multisig_script])
+script_n_of_k = (3, n : uint, [* native_script])
 
 bootstrap_witness = 
-  [ public_key : vkey          
-  , signature  : signature     
-  , chain_code : bytes .size 32
-  , attributes : bytes         
+  [ public_key : vkey     
+  , signature  : signature
+  , chain_code : bytes32  
+  , attributes : bytes    
   ]
 
 
-transaction_index = uint .size 2
+transaction_ix = uint .size 2
 
-transaction_metadata = {* transaction_metadatum_label => transaction_metadatum}
+shelley_auxiliary_data = 
+  {* transaction_metadatum_label => transaction_metadatum}
 
 transaction_metadatum_label = uint
 
@@ -315,7 +316,7 @@ transaction_metadatum =
   / text .size (0 .. 64)      
 
 transaction = 
-  [transaction_body, transaction_witness_set, transaction_metadata/ nil]
+  [transaction_body, transaction_witness_set, shelley_auxiliary_data/ nil]
 
-signkeyKES = bytes .size 64
+signkey_kes = bytes64
 

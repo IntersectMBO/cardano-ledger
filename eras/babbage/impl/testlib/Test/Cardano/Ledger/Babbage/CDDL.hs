@@ -10,33 +10,16 @@
 
 module Test.Cardano.Ledger.Babbage.CDDL (
   module Test.Cardano.Ledger.Alonzo.CDDL,
-  module Test.Cardano.Ledger.Babbage.CDDL,
+  babbageCDDL,
+  babbage_transaction_output,
+  babbage_operational_cert,
+  mkBabbageTransactionOutput,
 ) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import Codec.CBOR.Cuddle.Huddle
 import Data.Word (Word64)
-import Test.Cardano.Ledger.Alonzo.CDDL hiding (
-  auxiliary_data,
-  block,
-  cost_models,
-  header,
-  header_body,
-  language,
-  operational_cert,
-  plutus_data,
-  plutus_script,
-  proposed_protocol_parameter_updates,
-  protocol_param_update,
-  protocol_version,
-  script_data_hash,
-  script_n_of_k,
-  transaction,
-  transaction_body,
-  transaction_output,
-  transaction_witness_set,
-  update,
- )
+import Test.Cardano.Ledger.Alonzo.CDDL
 import Text.Heredoc
 import Prelude hiding ((/))
 
@@ -47,7 +30,7 @@ babbageCDDL =
     , HIRule transaction
     , HIRule kes_signature
     , HIRule language
-    , HIRule signkeyKES
+    , HIRule signkey_kes
     ]
 
 block :: Rule
@@ -64,8 +47,8 @@ block =
         [ a header
         , "transaction_bodies" ==> arr [0 <+ a transaction_body]
         , "transaction_witness_sets" ==> arr [0 <+ a transaction_witness_set]
-        , "auxiliary_data_set" ==> mp [0 <+ asKey transaction_index ==> auxiliary_data]
-        , "invalid_transactions" ==> arr [0 <+ a transaction_index]
+        , "auxiliary_data_set" ==> mp [0 <+ asKey transaction_ix ==> auxiliary_data]
+        , "invalid_transactions" ==> arr [0 <+ a transaction_ix]
         ]
 
 transaction :: Rule
@@ -91,18 +74,18 @@ header_body =
       =:= arr
         [ "block_number" ==> VUInt
         , "slot" ==> VUInt
-        , "prev_hash" ==> (hash32 / VNil)
+        , "prev_hash" ==> (bytes32 / VNil)
         , "issuer_vkey" ==> vkey
         , "vrf_vkey" ==> vrf_vkey
         , "vrf_result" ==> vrf_cert
         , "block_body_size" ==> VUInt
-        , "block_body_hash" ==> hash32
-        , a operational_cert
-        , a protocol_version
+        , "block_body_hash" ==> bytes32
+        , a babbage_operational_cert
+        , a (protocol_version @BabbageEra)
         ]
 
-operational_cert :: Rule
-operational_cert =
+babbage_operational_cert :: Rule
+babbage_operational_cert =
   "operational_cert"
     =:= arr
       [ "hot_vkey" ==> kes_vkey
@@ -110,9 +93,6 @@ operational_cert =
       , "kes_period" ==> VUInt
       , "sigma" ==> signature
       ]
-
-protocol_version :: Rule
-protocol_version = "protocol_version" =:= arr [a $ major_protocol_version @BabbageEra, a VUInt]
 
 transaction_body :: Rule
 transaction_body =
@@ -128,23 +108,23 @@ transaction_body =
         |]
     $ "transaction_body"
       =:= mp
-        [ idx 0 ==> set transaction_input
-        , idx 1 ==> arr [0 <+ a transaction_output]
+        [ idx 0 ==> untagged_set transaction_input
+        , idx 1 ==> arr [0 <+ a babbage_transaction_output]
         , idx 2 ==> coin
         , opt (idx 3 ==> VUInt)
-        , opt (idx 4 ==> arr [0 <+ a certificate])
-        , opt (idx 5 ==> withdrawals)
+        , opt (idx 4 ==> arr [0 <+ a shelley_certificate])
+        , opt (idx 5 ==> shelley_withdrawals)
         , opt (idx 6 ==> update)
         , opt (idx 7 ==> auxiliary_data_hash)
         , opt (idx 8 ==> VUInt)
-        , opt (idx 9 ==> mint)
+        , opt (idx 9 ==> mary_mint)
         , opt (idx 11 ==> script_data_hash)
-        , opt (idx 13 ==> set transaction_input)
-        , opt (idx 14 ==> required_signers)
-        , opt (idx 15 ==> network_id)
-        , opt (idx 16 ==> transaction_output)
+        , opt (idx 13 ==> untagged_set transaction_input)
+        , opt (idx 14 ==> alonzo_required_signers)
+        , opt (idx 15 ==> alonzo_network_id)
+        , opt (idx 16 ==> babbage_transaction_output)
         , opt (idx 17 ==> coin)
-        , opt (idx 18 ==> set transaction_input)
+        , opt (idx 18 ==> untagged_set transaction_input)
         ]
 
 -- TODO: Allow for adding to the comments of a Rule in order to not have to
@@ -214,35 +194,28 @@ script_data_hash =
         |Note that a transaction might include the redeemers field and set it to the
         |empty map, in which case the user supplied encoding of the empty map is used.
         |]
-    $ "script_data_hash" =:= hash32
+    $ "script_data_hash" =:= bytes32
 
-transaction_output :: Rule
-transaction_output =
+babbage_transaction_output :: Rule
+babbage_transaction_output =
   comment
     [str|Both of the Alonzo and Babbage style TxOut formats are equally valid
         |and can be used interchangeably.
         |NEW:
         |  babbage_transaction_output
         |]
-    $ "transaction_output"
-      =:= shelley_transaction_output
-      / babbage_transaction_output babbage_script
+    $ "babbage_transaction_output"
+      =:= mkAlonzoTransactionOutput mary_value
+      / mkBabbageTransactionOutput mary_value babbage_script
 
--- TODO: Make it possible to override names in Cuddle to obviate the need for
--- this redefinition here.
-shelley_transaction_output :: Rule
-shelley_transaction_output =
-  "shelley_transaction_output"
-    =:= arr [a address, "amount" ==> value, opt ("datum_hash" ==> hash32)]
-
-babbage_transaction_output :: Rule -> Rule
-babbage_transaction_output script =
+mkBabbageTransactionOutput :: Rule -> Rule -> Rule
+mkBabbageTransactionOutput value script =
   comment
     [str|NEW starting with babbage
         |  datum_option
         |  script_ref
         |]
-    $ "babbage_transaction_output"
+    $ "new_babbage_transaction_output"
       =:= mp
         [ idx 0 ==> address
         , idx 1 ==> value
@@ -259,24 +232,14 @@ transaction_witness_set =
         |]
     $ "transaction_witness_set"
       =:= mp
-        [ opt $ idx 0 ==> arr [0 <+ a vkeywitness]
-        , opt $ idx 1 ==> arr [0 <+ a native_script]
+        [ opt $ idx 0 ==> arr [0 <+ a vkey_witness]
+        , opt $ idx 1 ==> arr [0 <+ a alonzo_native_script]
         , opt $ idx 2 ==> arr [0 <+ a bootstrap_witness]
         , opt $ idx 3 ==> arr [0 <+ a plutus_v1_script]
-        , opt $ idx 4 ==> arr [0 <+ a plutus_data]
-        , opt $ idx 5 ==> redeemers
+        , opt $ idx 4 ==> arr [0 <+ a alonzo_plutus_data]
+        , opt $ idx 5 ==> alonzo_redeemers
         , opt $ idx 6 ==> arr [0 <+ a plutus_v2_script]
         ]
-
--- TODO Allow to override the comment in addition to extending it.
-plutus_data :: Rule
-plutus_data =
-  "plutus_data"
-    =:= constr plutus_data
-    / smp [0 <+ asKey plutus_data ==> plutus_data]
-    / sarr [0 <+ a plutus_data]
-    / big_int
-    / bounded_bytes
 
 plutus_v1_script :: Rule
 plutus_v1_script = "plutus_v1_script" =:= VBytes
@@ -314,31 +277,31 @@ auxiliary_data =
         |  3: [* plutus_v2_script]
         |]
     $ "auxiliary_data"
-      =:= metadata
+      =:= shelley_auxiliary_data
       / sarr
-        [ "transaction_metadata" ==> metadata
-        , "auxiliary_scripts" ==> auxiliary_scripts
+        [ "transaction_metadata" ==> shelley_auxiliary_data
+        , "auxiliary_scripts" ==> allegra_auxiliary_scripts
         ]
       / tag
         259
         ( mp
-            [ opt (idx 0 ==> metadata)
-            , opt (idx 1 ==> arr [0 <+ a native_script])
+            [ opt (idx 0 ==> shelley_auxiliary_data)
+            , opt (idx 1 ==> arr [0 <+ a alonzo_native_script])
             , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
             , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
             ]
         )
 
 data' :: Rule
-data' = "data" =:= tag 24 (VBytes `cbor` plutus_data)
+data' = "data" =:= tag 24 (VBytes `cbor` alonzo_plutus_data)
 
 datum_option :: Rule
-datum_option = "datum_option" =:= arr [0, a hash32] / arr [1, a data']
+datum_option = "datum_option" =:= arr [0, a bytes32] / arr [1, a data']
 
 babbage_script :: Rule
 babbage_script =
   "script"
-    =:= arr [0, a native_script]
+    =:= arr [0, a alonzo_native_script]
     / arr [1, a plutus_v1_script]
     / arr [2, a plutus_v2_script]
 
@@ -377,18 +340,18 @@ protocol_param_update =
         , opt (idx 4 ==> (VUInt `sized` (2 :: Word64)))
         , opt (idx 5 ==> coin)
         , opt (idx 6 ==> coin)
-        , opt (idx 7 ==> epoch)
+        , opt (idx 7 ==> shelley_epoch)
         , opt (idx 8 ==> VUInt `sized` (2 :: Word64))
         , opt (idx 9 ==> nonnegative_interval)
         , opt (idx 10 ==> unit_interval)
         , opt (idx 11 ==> unit_interval)
-        , opt (idx 14 ==> protocol_version)
+        , opt (idx 14 ==> protocol_version @BabbageEra)
         , opt (idx 16 ==> coin)
         , opt (idx 17 ==> coin)
         , opt (idx 18 ==> cost_models)
-        , opt (idx 19 ==> ex_unit_prices)
-        , opt (idx 20 ==> ex_units)
-        , opt (idx 21 ==> ex_units)
+        , opt (idx 19 ==> alonzo_ex_unit_prices)
+        , opt (idx 20 ==> alonzo_ex_units)
+        , opt (idx 21 ==> alonzo_ex_units)
         , opt (idx 22 ==> VUInt)
         , opt (idx 23 ==> VUInt)
         , opt (idx 24 ==> VUInt)
@@ -397,7 +360,7 @@ protocol_param_update =
 proposed_protocol_parameter_updates :: Rule
 proposed_protocol_parameter_updates =
   "proposed_protocol_parameter_updates"
-    =:= mp [0 <+ asKey genesis_hash ==> protocol_param_update]
+    =:= mp [0 <+ asKey shelley_genesis_hash ==> protocol_param_update]
 
 update :: Rule
-update = "update" =:= arr [a proposed_protocol_parameter_updates, a epoch]
+update = "update" =:= arr [a proposed_protocol_parameter_updates, a shelley_epoch]
