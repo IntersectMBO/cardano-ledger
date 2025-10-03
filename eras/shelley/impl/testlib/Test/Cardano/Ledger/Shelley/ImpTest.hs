@@ -125,6 +125,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impSatisfySignature,
   shelleyGenRegTxCert,
   shelleyGenUnRegTxCert,
+  shelleyDelegStakeTxCert,
 
   -- * Logging
   Doc,
@@ -524,6 +525,8 @@ class
 
   genUnRegTxCert :: Credential 'Staking -> ImpTestM era (TxCert era)
 
+  delegStakeTxCert :: Credential 'Staking -> KeyHash 'StakePool -> TxCert era
+
 impSatisfySignature ::
   KeyHash 'Witness ->
   Set.Set (KeyHash 'Witness) ->
@@ -819,6 +822,7 @@ instance
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
+  delegStakeTxCert = shelleyDelegStakeTxCert
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -1594,16 +1598,14 @@ registerStakeCredential cred = do
   pure $ RewardAccount networkId cred
 
 delegateStake ::
-  (ShelleyEraImp era, ShelleyEraTxCert era) =>
+  ShelleyEraImp era =>
   Credential 'Staking ->
   KeyHash 'StakePool ->
   ImpTestM era ()
 delegateStake cred poolKH = do
   submitTxAnn_ ("Delegate Staking Credential: " <> T.unpack (credToText cred)) $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList
-          [DelegStakeTxCert cred poolKH]
+      & bodyTxL . certsTxBodyL .~ [delegStakeTxCert cred poolKH]
 
 registerRewardAccount ::
   forall era.
@@ -1865,15 +1867,20 @@ simulateThenRestore sim = do
   pure result
 
 shelleyGenRegTxCert ::
-  forall era.
   ShelleyEraTxCert era =>
   Credential 'Staking ->
   ImpTestM era (TxCert era)
 shelleyGenRegTxCert = pure . RegTxCert
 
 shelleyGenUnRegTxCert ::
-  forall era.
   ShelleyEraTxCert era =>
   Credential 'Staking ->
   ImpTestM era (TxCert era)
 shelleyGenUnRegTxCert = pure . UnRegTxCert
+
+shelleyDelegStakeTxCert ::
+  ShelleyEraTxCert era =>
+  Credential 'Staking ->
+  KeyHash 'StakePool ->
+  TxCert era
+shelleyDelegStakeTxCert cred pool = DelegStakeTxCert cred pool

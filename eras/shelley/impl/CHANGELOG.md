@@ -11,6 +11,7 @@
 * Added `genUnRegTxCert` to `ShelleyEraImp`
 * Added `shelleyGenRegTxCert`
 * Added `genRegTxCert` to `ShelleyEraImp`
+* Added `delegStakeTxCert` to `ShelleyEraImp`
 
 ## 1.17.0.0
 

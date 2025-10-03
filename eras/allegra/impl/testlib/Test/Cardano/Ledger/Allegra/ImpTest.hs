@@ -43,6 +43,7 @@ instance ShelleyEraImp AllegraEra where
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
+  delegStakeTxCert = shelleyDelegStakeTxCert
 
 impAllegraSatisfyNativeScript ::
   ( ShelleyEraImp era
