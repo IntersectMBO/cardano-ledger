@@ -43,12 +43,16 @@ jobs:
 
       - name: Truncate benchmark git history
         run: |
-          git checkout $GH_PAGES_BRANCH
+          git fetch origin refs/heads/$GH_PAGES_BRANCH:refs/remotes/origin/$GH_PAGES_BRANCH
+          git checkout -t origin/$GH_PAGES_BRANCH
           START=$(git rev-parse "@{2 weeks ago}")
           git checkout --orphan new-root $START
-          git commit -m "Truncated history"
+          git config user.name "$(git log -1 --format=%cn $START)"
+          git config user.email "$(git log -1 --format=%ce $START)"
+          git commit -C $START
           git rebase --onto new-root $START $GH_PAGES_BRANCH
           git push -f
+          git checkout --detach
 
       - name: Store benchmark results
         uses: benchmark-action/github-action-benchmark@v1
