@@ -2,7 +2,7 @@
 
 CHAP=./cardano-haskell-packages
 # Download a shallow copy of CHaP
-git clone --depth 1 git@github.com:IntersectMBO/cardano-haskell-packages.git $CHAP
+git clone --depth 1 https://github.com/IntersectMBO/cardano-haskell-packages $CHAP
 
 cd $CHAP || exit
 # Save all the available packages from CHaP
@@ -41,6 +41,10 @@ do
 done
 
 rm -rf $CHAP
-printf "\n!!!!!!\n%s %s\n!!!!!!\n" \
-  "WARNING! DO NOT BUMP THE VERSION NUMBER IN THE CABAL FILES" \
-  "(unless its dependencies were bumped)!"
+BUMPED=$(git diff --exit-code)
+if [[ $BUMPED ]]; then
+  printf "\n!!!!!!\n%s %s\n!!!!!!\n" \
+    "WARNING! DO NOT BUMP THE VERSION NUMBER IN THE CABAL FILES" \
+    "(unless its dependencies were bumped)!"
+fi
+echo $(( BUMPED ))
