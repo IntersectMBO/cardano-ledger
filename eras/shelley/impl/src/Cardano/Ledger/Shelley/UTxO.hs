@@ -103,7 +103,7 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
 getShelleyScriptsNeeded ::
   EraTxBody era =>
   UTxO era ->
-  TxBody era ->
+  TxBody t era ->
   ShelleyScriptsNeeded era
 getShelleyScriptsNeeded u txBody =
   ShelleyScriptsNeeded
@@ -124,7 +124,7 @@ shelleyConsumed ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  TxBody era ->
+  TxBody t era ->
   Value era
 shelleyConsumed pp certState =
   getConsumedValue
@@ -138,7 +138,7 @@ produced ::
   (EraUTxO era, EraCertState era) =>
   PParams era ->
   CertState era ->
-  TxBody era ->
+  TxBody t era ->
   Value era
 produced pp certState =
   getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolsL)
@@ -148,7 +148,7 @@ shelleyProducedValue ::
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
   (KeyHash 'StakePool -> Bool) ->
-  TxBody era ->
+  TxBody FullTx era ->
   Value era
 shelleyProducedValue pp isRegPoolId txBody =
   sumAllValue (txBody ^. outputsTxBodyL)
@@ -162,7 +162,7 @@ getConsumedCoin ::
   PParams era ->
   (Credential 'Staking -> Maybe Coin) ->
   UTxO era ->
-  TxBody era ->
+  TxBody t era ->
   Coin
 getConsumedCoin pp lookupRefund utxo txBody =
   {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds dpstate tx -}
@@ -191,25 +191,28 @@ instance EraUTxO ShelleyEra where
 
   getScriptsHashesNeeded (ShelleyScriptsNeeded scriptsHashes) = scriptsHashes
 
-  getWitsVKeyNeeded = getShelleyWitsVKeyNeeded
+  getWitsVKeyNeeded certState utxo = getShelleyWitsVKeyNeeded certState utxo
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
 -- We don't consider the reference scripts in the calculation before Conway
-getShelleyMinFeeTxUtxo :: EraTx era => PParams era -> Tx era -> Coin
+getShelleyMinFeeTxUtxo :: EraTx era => PParams era -> Tx t era -> Coin
 getShelleyMinFeeTxUtxo pparams tx = getMinFeeTx pparams tx 0
 
 -- | Collect the set of hashes of keys that needs to sign a
 --  given transaction. This set consists of the txin owners,
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeededGenDelegs ::
-  forall era.
+  forall era t.
   ShelleyEraTxBody era =>
-  TxBody era ->
+  TxBody FullTx era ->
   GenDelegs ->
   Set (KeyHash 'Witness)
 witsVKeyNeededGenDelegs txBody (GenDelegs genDelegs) =
-  asWitness `Set.map` proposedUpdatesWitnesses (txBody ^. updateTxBodyL)
+  withTxType
+    txBody
+    (\fullTxBody -> asWitness `Set.map` proposedUpdatesWitnesses (fullTxBody ^. updateTxBodyL))
+    (const mempty)
   where
     -- Calculate the set of hash keys of the required witnesses for update
     -- proposals.
@@ -224,10 +227,10 @@ witsVKeyNeededGenDelegs txBody (GenDelegs genDelegs) =
 -- | Extract witnesses from UTxO and TxBody. Does not enforce witnesses for governance
 -- related Keys, i.e. `GenDelegs`
 getShelleyWitsVKeyNeededNoGov ::
-  forall era.
+  forall era t.
   EraTx era =>
   UTxO era ->
-  TxBody era ->
+  TxBody t era ->
   Set (KeyHash 'Witness)
 getShelleyWitsVKeyNeededNoGov utxo' txBody =
   certAuthors
@@ -276,7 +279,7 @@ getShelleyWitsVKeyNeeded ::
   (EraTx era, ShelleyEraTxBody era, EraCertState era) =>
   CertState era ->
   UTxO era ->
-  TxBody era ->
+  TxBody FullTx era ->
   Set (KeyHash 'Witness)
 getShelleyWitsVKeyNeeded certState utxo txBody =
   getShelleyWitsVKeyNeededNoGov utxo txBody

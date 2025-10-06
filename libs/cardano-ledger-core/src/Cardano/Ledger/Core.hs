@@ -27,6 +27,7 @@
 module Cardano.Ledger.Core (
   -- * Transaction types
   TxType (..),
+  withTxType,
   applyTxType,
   applyFullTxType,
 
@@ -140,6 +141,15 @@ import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 type data TxType = FullTx | SubTx
+
+withTxType ::
+  forall f t a era. Typeable t => f t era -> (f FullTx era -> a) -> (f SubTx era -> a) -> a
+withTxType txType withFullTxType withSubTxType =
+  case eqT @t @FullTx of
+    Just Refl -> withFullTxType txType
+    Nothing -> case eqT @t @SubTx of
+      Just Refl -> withSubTxType txType
+      Nothing -> error $ "Impossible: Unrecognized TxType: " <> show (typeRep (Proxy @t))
 
 applyTxType ::
   forall f t m era. (Typeable t, HasCallStack) => m (f FullTx era) -> m (f SubTx era) -> m (f t era)
