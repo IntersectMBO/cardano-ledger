@@ -128,9 +128,9 @@ library testlib
   build-depends:
     base,
     bytestring,
+    cardano-binary:testlib,
     cardano-crypto,
     cardano-crypto-wrapper,
-    cardano-binary:testlib,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-prelude,
     cardano-prelude-test,
