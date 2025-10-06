@@ -82,7 +82,7 @@ import Lens.Micro hiding (ix)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 data ShelleyBlockBody era = ShelleyBlockBodyInternal
-  { sbbTxs :: !(StrictSeq (Tx era))
+  { sbbTxs :: !(StrictSeq (Tx FullTx era))
   , sbbHash :: Hash.Hash HASH EraIndependentBlockBody
   -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
   , sbbTxsBodyBytes :: BSL.ByteString
