@@ -142,7 +142,7 @@ import NoThunks.Class (NoThunks)
 type data TxType = FullTx | SubTx
 
 applyTxType ::
-  forall f t m. (Typeable t, HasCallStack) => m (f FullTx) -> m (f SubTx) -> m (f t)
+  forall f t m era. (Typeable t, HasCallStack) => m (f FullTx era) -> m (f SubTx era) -> m (f t era)
 applyTxType decFullTx decSubTx =
   case eqT @t @FullTx of
     Just Refl -> decFullTx
@@ -152,7 +152,7 @@ applyTxType decFullTx decSubTx =
 
 -- | Same as `applyTxType`, but will `fail` if `SubTx` transaction type is requested.
 applyFullTxType ::
-  forall f t m. (Typeable f, Typeable t, MonadFail m) => m (f FullTx) -> m (f t)
+  forall f t m era. (Typeable f, Typeable t, MonadFail m) => m (f FullTx era) -> m (f t era)
 applyFullTxType decFullTx =
   applyTxType decFullTx $
     fail $
@@ -164,11 +164,11 @@ class
   , EraTxWits era
   , EraTxAuxData era
   , EraPParams era
-  , forall t. NFData (Tx t era)
-  , forall t. NoThunks (Tx t era)
-  , forall t. EncCBOR (Tx t era)
+  , forall t. Typeable t => NoThunks (Tx t era)
   , forall t. Typeable t => DecCBOR (Annotator (Tx t era))
   , forall t. Typeable t => ToCBOR (Tx t era)
+  , forall t. EncCBOR (Tx t era)
+  , forall t. NFData (Tx t era)
   , forall t. Show (Tx t era)
   , forall t. Eq (Tx t era)
   ) =>
@@ -176,7 +176,7 @@ class
   where
   data Tx (t :: TxType) era
 
-  mkBasicTx :: TxBody t era -> Tx t era
+  mkBasicTx :: Typeable t => TxBody t era -> Tx t era
 
   bodyTxL :: Lens' (Tx t era) (TxBody t era)
 
