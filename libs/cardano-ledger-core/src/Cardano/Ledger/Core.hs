@@ -27,6 +27,8 @@
 module Cardano.Ledger.Core (
   -- * Transaction types
   TxType (..),
+  applyTxType,
+  applyFullTxType,
 
   -- * Era-changing types
   EraTx (..),
@@ -139,6 +141,23 @@ import NoThunks.Class (NoThunks)
 
 type data TxType = FullTx | SubTx
 
+applyTxType ::
+  forall f t m. (Typeable t, HasCallStack) => m (f FullTx) -> m (f SubTx) -> m (f t)
+applyTxType decFullTx decSubTx =
+  case eqT @t @FullTx of
+    Just Refl -> decFullTx
+    Nothing -> case eqT @t @SubTx of
+      Just Refl -> decSubTx
+      Nothing -> error $ "Impossible: Unrecognized TxType: " <> show (typeRep (Proxy @t))
+
+-- | Same as `applyTxType`, but will `fail` if `SubTx` transaction type is requested.
+applyFullTxType ::
+  forall f t m. (Typeable f, Typeable t, MonadFail m) => m (f FullTx) -> m (f t)
+applyFullTxType decFullTx =
+  applyTxType decFullTx $
+    fail $
+      "SubTx type is not supported for " <> show (typeRep (Proxy @f))
+
 -- | A transaction.
 class
   ( EraTxBody era
@@ -147,8 +166,8 @@ class
   , EraPParams era
   , forall t. NFData (Tx t era)
   , forall t. NoThunks (Tx t era)
+  , forall t. EncCBOR (Tx t era)
   , forall t. Typeable t => DecCBOR (Annotator (Tx t era))
-  , forall t. Typeable t => EncCBOR (Tx t era)
   , forall t. Typeable t => ToCBOR (Tx t era)
   , forall t. Show (Tx t era)
   , forall t. Eq (Tx t era)
@@ -195,8 +214,8 @@ class
   , EraTxCert era
   , EraPParams era
   , forall t. HashAnnotated (TxBody t era) EraIndependentTxBody
+  , forall t. EncCBOR (TxBody t era)
   , forall t. Typeable t => DecCBOR (Annotator (TxBody t era))
-  , forall t. Typeable t => EncCBOR (TxBody t era)
   , forall t. Typeable t => ToCBOR (TxBody t era)
   , forall t. Typeable t => NoThunks (TxBody t era)
   , forall t. NFData (TxBody t era)
@@ -209,7 +228,7 @@ class
   -- | The body of a transaction.
   data TxBody (t :: TxType) era
 
-  mkBasicTxBody :: TxBody t era
+  mkBasicTxBody :: TxBody FullTx era
 
   inputsTxBodyL :: Lens' (TxBody t era) (Set TxIn)
 
@@ -636,7 +655,7 @@ txIdTxBody :: EraTxBody era => TxBody t era -> TxId
 txIdTxBody = TxId . hashAnnotated
 
 -- | txsize computes the length of the serialised bytes (actual size)
-wireSizeTxF :: forall era t. (EraTx era, Typeable t) => SimpleGetter (Tx t era) Word32
+wireSizeTxF :: forall era t. EraTx era => SimpleGetter (Tx t era) Word32
 wireSizeTxF =
   to $
     checkedFromIntegral

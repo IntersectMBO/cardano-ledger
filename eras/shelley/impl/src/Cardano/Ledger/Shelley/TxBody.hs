@@ -7,6 +7,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -80,7 +81,7 @@ import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert (..))
 import Cardano.Ledger.Shelley.TxOut ()
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -90,7 +91,6 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
-import Type.Reflection (someTypeRep)
 
 class (ShelleyEraTxCert era, EraTxBody era, AtMostEra "Babbage" era) => ShelleyEraTxBody era where
   ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (TxBody FullTx era) SlotNo
@@ -100,38 +100,41 @@ class (ShelleyEraTxCert era, EraTxBody era, AtMostEra "Babbage" era) => ShelleyE
 -- ==============================
 -- The underlying type for TxBody
 
-data ShelleyTxBodyRaw (t :: TxType) = ShelleyTxBodyRaw
-  { stbrInputs :: !(Set TxIn)
-  , stbrOutputs :: !(StrictSeq (TxOut ShelleyEra))
-  , stbrCerts :: !(StrictSeq (TxCert ShelleyEra))
-  , stbrWithdrawals :: !Withdrawals
-  , stbrFee :: !Coin
-  , stbrTtl :: !SlotNo
-  , stbrUpdate :: !(StrictMaybe (Update ShelleyEra))
-  , stbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
-  }
-  deriving (Generic)
+data ShelleyTxBodyRaw t where
+  ShelleyTxBodyRaw ::
+    { stbrInputs :: !(Set TxIn)
+    , stbrOutputs :: !(StrictSeq (TxOut ShelleyEra))
+    , stbrCerts :: !(StrictSeq (TxCert ShelleyEra))
+    , stbrWithdrawals :: !Withdrawals
+    , stbrFee :: !Coin
+    , stbrTtl :: !SlotNo
+    , stbrUpdate :: !(StrictMaybe (Update ShelleyEra))
+    , stbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
+    } ->
+    ShelleyTxBodyRaw FullTx
 
-deriving instance NoThunks (ShelleyTxBodyRaw t)
+instance NoThunks (ShelleyTxBodyRaw t) where
+  noThunks = undefined
+  wNoThunks = undefined
+  showTypeOf = undefined
 
-deriving instance NFData (ShelleyTxBodyRaw t)
+instance NFData (ShelleyTxBodyRaw t) where
+  rnf ShelleyTxBodyRaw {stbrWithdrawals, stbrUpdate, stbrAuxDataHash} =
+    stbrWithdrawals `deepseq` stbrUpdate `deepseq` rnf stbrAuxDataHash
 
 deriving instance Eq (ShelleyTxBodyRaw t)
 
 deriving instance Show (ShelleyTxBodyRaw t)
 
--- | Encodes memoized bytes created upon construction.
-instance Typeable t => EncCBOR (TxBody t ShelleyEra)
-
 instance Typeable t => DecCBOR (ShelleyTxBodyRaw t) where
   decCBOR =
-    decode
-      ( SparseKeyed
+    applyFullTxType $
+      decode $
+        SparseKeyed
           "TxBody"
           basicShelleyTxBodyRaw
           boxBody
           [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")]
-      )
 
 instance Typeable t => DecCBOR (Annotator (ShelleyTxBodyRaw t)) where
   decCBOR = pure <$> decCBOR
@@ -172,7 +175,7 @@ txSparse (ShelleyTxBodyRaw input output cert wdrl fee ttl update hash) =
 
 -- The initial TxBody. We will overide some of these fields as we build a TxBody,
 -- adding one field at a time, using optional serialisers, inside the Pattern.
-basicShelleyTxBodyRaw :: ShelleyTxBodyRaw t
+basicShelleyTxBodyRaw :: ShelleyTxBodyRaw FullTx
 basicShelleyTxBodyRaw =
   ShelleyTxBodyRaw
     { stbrInputs = Set.empty
@@ -185,7 +188,7 @@ basicShelleyTxBodyRaw =
     , stbrAuxDataHash = SNothing
     }
 
-instance Typeable t => EncCBOR (ShelleyTxBodyRaw t) where
+instance EncCBOR (ShelleyTxBodyRaw t) where
   encCBOR = encode . txSparse
 
 instance Memoized (TxBody t ShelleyEra) where
@@ -193,16 +196,10 @@ instance Memoized (TxBody t ShelleyEra) where
 
 instance EqRaw (TxBody t ShelleyEra)
 
-instance SafeToHash (TxBody t ShelleyEra) where
-  originalBytes (MkShelleyTxBody memoTxBodyRaw) = originalBytes memoTxBodyRaw
-  originalBytesSize (MkShelleyTxBody memoTxBodyRaw) = originalBytesSize memoTxBodyRaw
-
-instance Typeable t => ToCBOR (TxBody t ShelleyEra) where
-  toCBOR (MkShelleyTxBody memoTxBodyRaw) = toCBOR memoTxBodyRaw
-
 instance EraTxBody ShelleyEra where
-  data TxBody t ShelleyEra where
-    MkShelleyTxBody :: MemoBytes (ShelleyTxBodyRaw FullTx) -> TxBody FullTx ShelleyEra
+  newtype TxBody t ShelleyEra = MkShelleyTxBody (MemoBytes (ShelleyTxBodyRaw t))
+    deriving (Generic)
+    deriving newtype (SafeToHash, ToCBOR, EncCBOR)
 
   mkBasicTxBody = mkMemoizedEra @ShelleyEra basicShelleyTxBodyRaw
 
@@ -213,13 +210,15 @@ instance EraTxBody ShelleyEra where
   {-# INLINE allInputsTxBodyF #-}
 
   inputsTxBodyL =
-    lensMemoRawType @ShelleyEra stbrInputs $
-      \txBodyRaw inputs -> txBodyRaw {stbrInputs = inputs}
+    lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrInputs} -> stbrInputs) $
+      \txBodyRaw inputs -> case txBodyRaw of
+        ShelleyTxBodyRaw {} -> txBodyRaw {stbrInputs = inputs}
   {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
-    lensMemoRawType @ShelleyEra stbrOutputs $
-      \txBodyRaw outputs -> txBodyRaw {stbrOutputs = outputs}
+    lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrOutputs} -> stbrOutputs) $
+      \txBodyRaw outputs -> case txBodyRaw of
+        ShelleyTxBodyRaw {} -> txBodyRaw {stbrOutputs = outputs}
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
@@ -228,18 +227,21 @@ instance EraTxBody ShelleyEra where
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
-    lensMemoRawType @ShelleyEra stbrAuxDataHash $
-      \txBodyRaw auxDataHash -> txBodyRaw {stbrAuxDataHash = auxDataHash}
+    lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrAuxDataHash} -> stbrAuxDataHash) $
+      \txBodyRaw auxDataHash -> case txBodyRaw of
+        ShelleyTxBodyRaw {} -> txBodyRaw {stbrAuxDataHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
   withdrawalsTxBodyL =
-    lensMemoRawType @ShelleyEra stbrWithdrawals $
-      \txBodyRaw withdrawals -> txBodyRaw {stbrWithdrawals = withdrawals}
+    lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrWithdrawals} -> stbrWithdrawals) $
+      \txBodyRaw withdrawals -> case txBodyRaw of
+        ShelleyTxBodyRaw {} -> txBodyRaw {stbrWithdrawals = withdrawals}
   {-# INLINEABLE withdrawalsTxBodyL #-}
 
   certsTxBodyL =
-    lensMemoRawType @ShelleyEra stbrCerts $
-      \txBodyRaw certs -> txBodyRaw {stbrCerts = certs}
+    lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrCerts} -> stbrCerts) $
+      \txBodyRaw certs -> case txBodyRaw of
+        ShelleyTxBodyRaw {} -> txBodyRaw {stbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
@@ -253,23 +255,18 @@ instance ShelleyEraTxBody ShelleyEra where
     lensMemoRawType @ShelleyEra stbrUpdate $ \txBodyRaw update -> txBodyRaw {stbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
 
-instance Typeable t => NoThunks (TxBody t ShelleyEra) where
-  noThunks ctx (MkShelleyTxBody memoTxBodyRaw) = noThunks ctx memoTxBodyRaw
-  wNoThunks ctx (MkShelleyTxBody memoTxBodyRaw) = wNoThunks ctx memoTxBodyRaw
-  showTypeOf = show . someTypeRep
+deriving newtype instance Typeable t => NoThunks (TxBody t ShelleyEra)
 
-instance NFData (TxBody t ShelleyEra) where
-  rnf (MkShelleyTxBody memoTxBodyRaw) = rnf memoTxBodyRaw
+deriving newtype instance NFData (TxBody t ShelleyEra)
 
 deriving instance Show (TxBody t ShelleyEra)
 
 deriving instance Eq (TxBody t ShelleyEra)
 
-instance Typeable t => DecCBOR (Annotator (TxBody t ShelleyEra)) where
-  decCBOR = do
-    undefined
-
--- fmap MkShelleyTxBody <$> decCBOR
+deriving via
+  Mem (ShelleyTxBodyRaw t)
+  instance
+    Typeable t => DecCBOR (Annotator (TxBody t ShelleyEra))
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::

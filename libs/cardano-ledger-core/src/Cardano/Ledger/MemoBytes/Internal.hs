@@ -74,10 +74,11 @@ import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
   Decoder,
-  EncCBOR,
+  EncCBOR (..),
   Version,
   decodeAnnotated,
   decodeFullAnnotator,
+  encodePreEncoded,
   serialize,
   withSlice,
  )
@@ -163,6 +164,9 @@ deriving instance NFData t => NFData (MemoBytes t)
 
 instance Typeable t => Plain.ToCBOR (MemoBytes t) where
   toCBOR (MemoBytes _ bytes _hash) = Plain.encodePreEncoded (fromShort bytes)
+
+instance EncCBOR (MemoBytes t) where
+  encCBOR (MemoBytes _ bytes _hash) = encodePreEncoded (fromShort bytes)
 
 instance DecCBOR t => DecCBOR (MemoBytes t) where
   decCBOR = decodeMemoized decCBOR

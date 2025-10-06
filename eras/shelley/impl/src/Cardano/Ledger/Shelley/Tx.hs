@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -54,7 +55,7 @@ import Cardano.Ledger.Shelley.TxAuxData ()
 import Cardano.Ledger.Shelley.TxBody ()
 import Cardano.Ledger.Shelley.TxWits ()
 import Cardano.Ledger.Val ((<+>), (<×>))
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Functor.Classes (Eq1 (..))
@@ -62,6 +63,7 @@ import Data.Maybe.Strict (
   StrictMaybe (..),
   strictMaybeToMaybe,
  )
+import Data.Typeable
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
@@ -70,63 +72,67 @@ import NoThunks.Class (NoThunks (..))
 
 -- ========================================================
 
-data ShelleyTx era = ShelleyTx
-  { stBody :: !(TxBody era)
-  , stWits :: !(TxWits era)
-  , stAuxData :: !(StrictMaybe (TxAuxData era))
-  }
-  deriving (Generic)
+data ShelleyTx t era where
+  ShelleyTx ::
+    { stBody :: !(TxBody FullTx era)
+    , stWits :: !(TxWits era)
+    , stAuxData :: !(StrictMaybe (TxAuxData era))
+    } ->
+    ShelleyTx FullTx era
 
 instance
-  ( NFData (TxBody era)
+  ( NFData (TxBody t era)
   , NFData (TxWits era)
   , NFData (TxAuxData era)
   ) =>
-  NFData (ShelleyTx era)
+  NFData (ShelleyTx t era)
+  where
+  rnf ShelleyTx {stBody, stWits, stAuxData} =
+    stBody `deepseq` stWits `deepseq` rnf stAuxData
 
 deriving instance
   ( Era era
-  , Eq (TxBody era)
+  , Eq (TxBody t era)
   , Eq (TxWits era)
   , Eq (TxAuxData era)
   ) =>
-  Eq (ShelleyTx era)
+  Eq (ShelleyTx t era)
 
 deriving instance
   ( Era era
-  , Show (TxBody era)
+  , Show (TxBody t era)
   , Show (TxWits era)
   , Show (TxAuxData era)
   ) =>
-  Show (ShelleyTx era)
+  Show (ShelleyTx t era)
 
 instance
   ( Era era
-  , NoThunks (TxAuxData era)
-  , NoThunks (TxBody era)
+  , NoThunks (TxBody t era)
   , NoThunks (TxWits era)
+  , NoThunks (TxAuxData era)
   ) =>
-  NoThunks (ShelleyTx era)
+  NoThunks (ShelleyTx t era)
 
 -- | `TxBody` setter and getter for `ShelleyTx`.
-bodyShelleyTxL :: Lens' (ShelleyTx era) (TxBody era)
+bodyShelleyTxL :: Lens' (ShelleyTx t era) (TxBody t era)
 bodyShelleyTxL =
   lens stBody $ \tx txBody -> tx {stBody = txBody}
 {-# INLINEABLE bodyShelleyTxL #-}
 
 -- | `TxWits` setter and getter for `ShelleyTx`.
-witsShelleyTxL :: Lens' (ShelleyTx era) (TxWits era)
+witsShelleyTxL :: Lens' (ShelleyTx t era) (TxWits era)
 witsShelleyTxL =
   lens stWits $ \tx txWits -> tx {stWits = txWits}
 {-# INLINEABLE witsShelleyTxL #-}
 
 -- | `TxAuxData` setter and getter for `ShelleyTx`.
-auxDataShelleyTxL :: Lens' (ShelleyTx era) (StrictMaybe (TxAuxData era))
+auxDataShelleyTxL :: Lens' (ShelleyTx t era) (StrictMaybe (TxAuxData era))
 auxDataShelleyTxL =
   lens stAuxData $ \tx txAuxData -> tx {stAuxData = txAuxData}
 {-# INLINEABLE auxDataShelleyTxL #-}
 
-mkBasicShelleyTx :: EraTx era => TxBody era -> ShelleyTx era
+mkBasicShelleyTx :: EraTx era => TxBody t era -> ShelleyTx t era
 mkBasicShelleyTx txBody =
   ShelleyTx
     { stBody = txBody
@@ -139,7 +145,7 @@ toCBORForSizeComputation ::
   , EncCBOR (TxWits era)
   , EncCBOR (TxAuxData era)
   ) =>
-  ShelleyTx era ->
+  ShelleyTx t era ->
   Encoding
 toCBORForSizeComputation ShelleyTx {stBody, stWits, stAuxData} =
   encodeListLen 3
@@ -148,7 +154,7 @@ toCBORForSizeComputation ShelleyTx {stBody, stWits, stAuxData} =
     <> encodeNullStrictMaybe encCBOR stAuxData
 
 -- | txsize computes the length of the serialised bytes (for estimations)
-sizeShelleyTxF :: forall era. (HasCallStack, EraTx era) => SimpleGetter (ShelleyTx era) Word32
+sizeShelleyTxF :: forall era t. (HasCallStack, EraTx era) => SimpleGetter (ShelleyTx t era) Word32
 sizeShelleyTxF =
   to $
     errorFail
@@ -163,7 +169,7 @@ instance
   , EraTxWits era
   , EraTxAuxData era
   ) =>
-  DecCBOR (Annotator (ShelleyTx era))
+  DecCBOR (Annotator (ShelleyTx t era))
   where
   decCBOR =
     decode $
@@ -172,11 +178,11 @@ instance
         <*! From
         <*! D (sequence <$> decodeNullStrictMaybe decCBOR)
 
-instance DecCBOR (Annotator (Tx ShelleyEra)) where
+instance Typeable t => DecCBOR (Annotator (Tx t ShelleyEra)) where
   decCBOR = fmap MkShelleyTx <$> decCBOR
 
 instance EraTx ShelleyEra where
-  newtype Tx ShelleyEra = MkShelleyTx {unShelleyTx :: ShelleyTx ShelleyEra}
+  newtype Tx t ShelleyEra = MkShelleyTx {unShelleyTx :: ShelleyTx t ShelleyEra}
     deriving newtype (Eq, EncCBOR, NFData, NoThunks, Show, ToCBOR)
     deriving (Generic)
 
@@ -208,7 +214,7 @@ shelleyTxEqRaw tx1 tx2 =
       (strictMaybeToMaybe (tx1 ^. auxDataTxL))
       (strictMaybeToMaybe (tx2 ^. auxDataTxL))
 
-instance EqRaw (Tx ShelleyEra) where
+instance EqRaw (Tx t ShelleyEra) where
   eqRaw = shelleyTxEqRaw
 
 shelleyTxL :: Lens' (Tx ShelleyEra) (ShelleyTx ShelleyEra)
@@ -220,7 +226,7 @@ shelleyTxL = lens unShelleyTx (\x y -> x {unShelleyTx = y})
 
 instance
   (Era era, EncCBOR (TxWits era), EncCBOR (TxBody era), EncCBOR (TxAuxData era)) =>
-  EncCBOR (ShelleyTx era)
+  EncCBOR (ShelleyTx t era)
   where
   encCBOR ShelleyTx {..} =
     encode $
@@ -231,11 +237,12 @@ instance
 
 instance
   ( Era era
+  , Typeable t
   , DecCBOR (TxBody era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxAuxData era)
   ) =>
-  DecCBOR (ShelleyTx era)
+  DecCBOR (ShelleyTx t era)
   where
   decCBOR =
     decode $
