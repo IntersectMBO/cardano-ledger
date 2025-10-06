@@ -256,7 +256,7 @@ instance
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx FullTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
@@ -265,7 +265,7 @@ instance
   STS (ShelleyLEDGER era)
   where
   type State (ShelleyLEDGER era) = LedgerState era
-  type Signal (ShelleyLEDGER era) = Tx era
+  type Signal (ShelleyLEDGER era) = Tx FullTx era
   type Environment (ShelleyLEDGER era) = LedgerEnv era
   type BaseM (ShelleyLEDGER era) = ShelleyBase
   type PredicateFailure (ShelleyLEDGER era) = ShelleyLedgerPredFailure era
@@ -289,7 +289,7 @@ ledgerTransition ::
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx FullTx era
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
@@ -341,7 +341,7 @@ renderDepositEqualsObligationViolation ::
   , EraGov era
   , EraCertState era
   , Environment t ~ LedgerEnv era
-  , Signal t ~ Tx era
+  , Signal t ~ Tx FullTx era
   , State t ~ LedgerState era
   ) =>
   AssertionViolation t ->

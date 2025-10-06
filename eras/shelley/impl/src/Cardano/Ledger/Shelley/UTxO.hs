@@ -43,7 +43,7 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Up
 import Cardano.Ledger.Shelley.State ()
 import Cardano.Ledger.Shelley.Tx ()
 import Cardano.Ledger.Shelley.TxBody (
-  ShelleyEraTxBody (..),
+  ShelleyEraTxBody (..),KnownTxType(..),
   Withdrawals (..),
   raCredential,
  )
@@ -185,7 +185,7 @@ instance EraUTxO ShelleyEra where
 
   getProducedValue pp isRegPoolId txBody =
     case txBodyType txBody of
-      SFullTx -> shelleyProducedValue pp isRegPoolId txBody
+      ShelleyFullTx -> shelleyProducedValue pp isRegPoolId txBody
 
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
@@ -195,7 +195,7 @@ instance EraUTxO ShelleyEra where
 
   getWitsVKeyNeeded certState utxo txBody =
     case txBodyType txBody of
-      SFullTx -> getShelleyWitsVKeyNeeded certState utxo txBody
+      ShelleyFullTx -> getShelleyWitsVKeyNeeded certState utxo txBody
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
@@ -207,7 +207,7 @@ getShelleyMinFeeTxUtxo pparams tx = getMinFeeTx pparams tx 0
 --  given transaction. This set consists of the txin owners,
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeededGenDelegs ::
-  forall era t.
+  forall era.
   ShelleyEraTxBody era =>
   TxBody FullTx era ->
   GenDelegs ->
