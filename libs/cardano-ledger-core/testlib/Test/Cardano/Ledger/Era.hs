@@ -76,8 +76,8 @@ class
   , DecCBOR (NativeScript era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
+  , DecCBOR (TxBody FullTx era)
+  , DecCBOR (Tx FullTx era)
   , -- TranslationContext
     Eq (TranslationContext era)
   , Show (TranslationContext era)
