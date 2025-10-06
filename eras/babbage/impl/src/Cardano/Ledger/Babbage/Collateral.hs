@@ -9,6 +9,7 @@
 module Cardano.Ledger.Babbage.Collateral (
   collAdaBalance,
   collOuts,
+  mkCollateralTxIn,
 ) where
 
 import Cardano.Ledger.Babbage.PParams ()
@@ -46,11 +47,14 @@ collOuts ::
 collOuts txBody =
   case txBody ^. collateralReturnTxBodyL of
     SNothing -> UTxO Map.empty
-    SJust txOut -> UTxO (Map.singleton (TxIn (txIdTxBody txBody) index) txOut)
-      where
-        index = case txIxFromIntegral (length (txBody ^. outputsTxBodyL)) of
-          Just i -> i
-          -- In the impossible event that there are more transaction outputs
-          -- in the transaction than will fit into a Word16 (which backs the TxIx),
-          -- we give the collateral return output an index of maxBound.
-          Nothing -> TxIx (maxBound :: Word16)
+    SJust txOut -> UTxO (Map.singleton (mkCollateralTxIn txBody) txOut)
+
+mkCollateralTxIn :: EraTxBody era => TxBody era -> TxIn
+mkCollateralTxIn txBody = TxIn (txIdTxBody txBody) txIx
+  where
+    txIx = case txIxFromIntegral (length (txBody ^. outputsTxBodyL)) of
+      Just i -> i
+      -- In the impossible event that there are more transaction outputs
+      -- in the transaction than will fit into a Word16 (which backs the TxIx),
+      -- we give the collateral return output an index of maxBound.
+      Nothing -> TxIx (maxBound :: Word16)

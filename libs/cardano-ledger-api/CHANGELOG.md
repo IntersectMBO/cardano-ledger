@@ -2,7 +2,17 @@
 
 ## 1.13.0.0
 
-*
+* Add `AnyEraScript`
+* Add `AnyEraSpendingPurpose`, `AnyEraMintingPurpose`, `AnyEraCertifyingPurpose`, `AnyEraRewardingPurpose`, `AnyEraVotingPurpose`, `AnyEraProposingPurpose`, `AnyEraGuardingPurpose` patterns
+* Re-export `DijkstraEraScript`, `toGuardingPurpose` and `GuardingPurpose` pattern
+* Add `producedTxOuts` and `mkCollateralTxIn`
+* Add `AnyEraTx`
+* Add `AnyEraTxBody`
+* Add `ttlToValidityInterval`
+* Re-export `DijkstraEraTxBody`, `guardsTxBodyL`
+* Add `AnyEraTxCert`
+* Add `AnyEraTxWits`
+* Add `AnyEraTxOut` and `AnyEraTxAuxData`
 
 ### `testlib`
 
