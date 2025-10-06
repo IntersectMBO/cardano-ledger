@@ -4,6 +4,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
@@ -27,6 +28,7 @@
 module Cardano.Ledger.Core (
   -- * Transaction types
   TxType (..),
+  STxType (..),
   withTxType,
   applyTxType,
   applyFullTxType,
@@ -144,11 +146,11 @@ type data TxType = FullTx | SubTx
 
 withTxType ::
   forall f t a era. Typeable t => f t era -> (f FullTx era -> a) -> (f SubTx era -> a) -> a
-withTxType txType withFullTxType withSubTxType =
+withTxType anyTxType withFullTxType withSubTxType =
   case eqT @t @FullTx of
-    Just Refl -> withFullTxType txType
+    Just Refl -> withFullTxType anyTxType
     Nothing -> case eqT @t @SubTx of
-      Just Refl -> withSubTxType txType
+      Just Refl -> withSubTxType anyTxType
       Nothing -> error $ "Impossible: Unrecognized TxType: " <> show (typeRep (Proxy @t))
 
 applyTxType ::
@@ -168,6 +170,10 @@ applyFullTxType decFullTx =
     fail $
       "SubTx type is not supported for " <> show (typeRep (Proxy @f))
 
+data STxType t where
+  SFullTx :: STxType FullTx
+  SSubTx :: STxType SubTx
+
 -- | A transaction.
 class
   ( EraTxBody era
@@ -185,6 +191,8 @@ class
   EraTx era
   where
   data Tx (t :: TxType) era
+
+  txType :: Tx t era -> STxType t
 
   mkBasicTx :: Typeable t => TxBody t era -> Tx t era
 
@@ -237,6 +245,8 @@ class
   where
   -- | The body of a transaction.
   data TxBody (t :: TxType) era
+
+  txBodyType :: TxBody t era -> STxType t
 
   mkBasicTxBody :: TxBody FullTx era
 

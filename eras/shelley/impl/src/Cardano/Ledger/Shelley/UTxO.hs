@@ -183,7 +183,9 @@ instance EraUTxO ShelleyEra where
 
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 
-  getProducedValue = shelleyProducedValue
+  getProducedValue pp isRegPoolId txBody =
+    case txBodyType txBody of
+      SFullTx -> shelleyProducedValue pp isRegPoolId txBody
 
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
@@ -191,7 +193,9 @@ instance EraUTxO ShelleyEra where
 
   getScriptsHashesNeeded (ShelleyScriptsNeeded scriptsHashes) = scriptsHashes
 
-  getWitsVKeyNeeded certState utxo = getShelleyWitsVKeyNeeded certState utxo
+  getWitsVKeyNeeded certState utxo txBody =
+    case txBodyType txBody of
+      SFullTx -> getShelleyWitsVKeyNeeded certState utxo txBody
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
