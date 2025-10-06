@@ -185,7 +185,6 @@ library testlib
     Test.Cardano.Ledger.Era
     Test.Cardano.Ledger.Imp.Common
     Test.Cardano.Ledger.Plutus
-    Test.Cardano.Ledger.Plutus.ExUnits
     Test.Cardano.Ledger.Plutus.Examples
     Test.Cardano.Ledger.Plutus.Guardrail
     Test.Cardano.Ledger.Plutus.ScriptTestContext
