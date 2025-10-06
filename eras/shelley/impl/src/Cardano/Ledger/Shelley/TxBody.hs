@@ -32,6 +32,7 @@ module Cardano.Ledger.Shelley.TxBody (
     stbUpdate,
     stbMDHash
   ),
+  KnownTxType (..),
   ShelleyEraTxBody (..),
   ShelleyTxBodyRaw (..),
   EraIndependentTxBody,
@@ -202,12 +203,14 @@ instance EraTxBody ShelleyEra where
   newtype TxBody t ShelleyEra = MkShelleyTxBody (MemoBytes (ShelleyTxBodyRaw t ShelleyEra))
     deriving (Generic)
     deriving newtype (SafeToHash, ToCBOR, EncCBOR)
+  data KnownTxType t ShelleyEra where
+    ShelleyFullTx :: KnownTxType FullTx ShelleyEra
 
   mkBasicTxBody = mkMemoizedEra @ShelleyEra basicShelleyTxBodyRaw
 
   txBodyType txBody =
     case getMemoRawType txBody of
-      ShelleyTxBodyRaw {} -> SFullTx
+      ShelleyTxBodyRaw {} -> ShelleyFullTx
 
   spendableInputsTxBodyF = inputsTxBodyL
   {-# INLINE spendableInputsTxBodyF #-}

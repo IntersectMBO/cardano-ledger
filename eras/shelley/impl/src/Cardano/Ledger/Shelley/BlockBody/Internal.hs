@@ -116,7 +116,7 @@ txSeqBlockBodyShelleyL ::
   , SafeToHash (TxWits era)
   , BlockBody era ~ ShelleyBlockBody era
   ) =>
-  Lens' (BlockBody era) (StrictSeq (Tx era))
+  Lens' (BlockBody era) (StrictSeq (Tx FullTx era))
 txSeqBlockBodyShelleyL = lens sbbTxs (\_ s -> ShelleyBlockBody s)
 {-# INLINEABLE txSeqBlockBodyShelleyL #-}
 
@@ -129,14 +129,14 @@ deriving via
      ]
     (ShelleyBlockBody era)
   instance
-    (Typeable era, NoThunks (Tx era)) => NoThunks (ShelleyBlockBody era)
+    (Typeable era, NoThunks (Tx FullTx era)) => NoThunks (ShelleyBlockBody era)
 
 deriving stock instance
-  Show (Tx era) =>
+  Show (Tx FullTx era) =>
   Show (ShelleyBlockBody era)
 
 deriving stock instance
-  Eq (Tx era) =>
+  Eq (Tx FullTx era) =>
   Eq (ShelleyBlockBody era)
 
 -- ===========================
@@ -144,14 +144,14 @@ deriving stock instance
 
 coreWitnessBytes ::
   (EraTx era, SafeToHash (TxWits era)) =>
-  Tx era ->
+  Tx FullTx era ->
   ByteString
 coreWitnessBytes tx = originalBytes $ tx ^. witsTxL
 
-coreBodyBytes :: EraTx era => Tx era -> ByteString
+coreBodyBytes :: EraTx era => Tx FullTx era -> ByteString
 coreBodyBytes tx = originalBytes $ tx ^. bodyTxL
 
-coreAuxDataBytes :: EraTx era => Tx era -> StrictMaybe ByteString
+coreAuxDataBytes :: EraTx era => Tx FullTx era -> StrictMaybe ByteString
 coreAuxDataBytes tx = originalBytes <$> tx ^. auxDataTxL
 
 -- ===========================
@@ -162,7 +162,7 @@ pattern ShelleyBlockBody ::
   ( EraTx era
   , SafeToHash (TxWits era)
   ) =>
-  StrictSeq (Tx era) ->
+  StrictSeq (Tx FullTx era) ->
   ShelleyBlockBody era
 pattern ShelleyBlockBody xs <-
   ShelleyBlockBodyInternal xs _ _ _ _
@@ -238,7 +238,7 @@ auxDataSeqDecoder bodiesLength auxDataMap = do
 instance
   ( EraTx era
   , DecCBOR (Annotator (TxAuxData era))
-  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (TxBody FullTx era))
   , DecCBOR (Annotator (TxWits era))
   ) =>
   DecCBOR (Annotator (ShelleyBlockBody era))

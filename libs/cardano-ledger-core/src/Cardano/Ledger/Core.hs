@@ -192,7 +192,7 @@ class
   where
   data Tx (t :: TxType) era
 
-  txType :: Tx t era -> STxType t
+  txType :: Tx t era -> KnownTxType t era
 
   mkBasicTx :: Typeable t => TxBody t era -> Tx t era
 
@@ -245,8 +245,9 @@ class
   where
   -- | The body of a transaction.
   data TxBody (t :: TxType) era
+  data KnownTxType (t :: TxType) era
 
-  txBodyType :: TxBody t era -> STxType t
+  txBodyType :: TxBody t era -> KnownTxType t era
 
   mkBasicTxBody :: TxBody FullTx era
 
