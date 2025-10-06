@@ -205,6 +205,10 @@ instance EraTxBody ShelleyEra where
 
   mkBasicTxBody = mkMemoizedEra @ShelleyEra basicShelleyTxBodyRaw
 
+  txBodyType txBody =
+    case getMemoRawType txBody of
+      ShelleyTxBodyRaw {} -> SFullTx
+
   spendableInputsTxBodyF = inputsTxBodyL
   {-# INLINE spendableInputsTxBodyF #-}
 
