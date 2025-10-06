@@ -1,9 +1,5 @@
 # Version history for `small-steps`
 
-## 1.1.2.1
-
-*
-
 ## 1.1.2.0
 
 * Add `whenFailureFreeDefault`
