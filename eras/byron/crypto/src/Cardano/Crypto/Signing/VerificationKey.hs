@@ -18,18 +18,18 @@ module Cardano.Crypto.Signing.VerificationKey (
   parseFullVerificationKey,
 ) where
 
-import qualified Cardano.Crypto.Wallet as CC
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
+import Cardano.Binary (
   Decoder,
-  EncCBOR (..),
   Encoding,
   FromCBOR (..),
   ToCBOR (..),
   decodeBytesCanonical,
-  fromByronCBOR,
-  toByronCBOR,
   toCborError,
+ )
+import qualified Cardano.Crypto.Wallet as CC
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
  )
 import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (FromJSON (..), ToJSON (..))
@@ -76,25 +76,23 @@ instance MonadError SchemaError m => TJC.FromJSON m VerificationKey where
   fromJSON = parseJSString parseFullVerificationKey
 
 instance ToCBOR VerificationKey where
-  toCBOR = toByronCBOR
+  toCBOR (VerificationKey a) = toCBORXPub a
   encodedSizeExpr _ _ = 66
 
 instance FromCBOR VerificationKey where
-  fromCBOR = fromByronCBOR
+  fromCBOR = fmap VerificationKey fromCBORXPub
 
-instance EncCBOR VerificationKey where
-  encCBOR (VerificationKey a) = encCBORXPub a
+instance EncCBOR VerificationKey
 
-instance DecCBOR VerificationKey where
-  decCBOR = fmap VerificationKey decCBORXPub
+instance DecCBOR VerificationKey
 
-encCBORXPub :: CC.XPub -> Encoding
-encCBORXPub a = encCBOR $ CC.unXPub a
+toCBORXPub :: CC.XPub -> Encoding
+toCBORXPub = toCBOR . CC.unXPub
 
 -- | We enforce canonical CBOR encodings for `VerificationKey`s, because we serialize
 --   them before hashing to get `KeyHash`es.
-decCBORXPub :: Decoder s CC.XPub
-decCBORXPub = toCborError . CC.xpub =<< decodeBytesCanonical
+fromCBORXPub :: Decoder s CC.XPub
+fromCBORXPub = toCborError . CC.xpub =<< decodeBytesCanonical
 
 instance Buildable VerificationKey where
   build = bprint ("pub:" . shortVerificationKeyHexF)

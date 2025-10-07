@@ -15,6 +15,12 @@ module Cardano.Crypto.Signing.Redeem.Compact (
   toCompactRedeemVerificationKey,
 ) where
 
+import Cardano.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Crypto.Signing.Redeem.VerificationKey (
   RedeemVerificationKey (..),
   fromAvvmVK,
@@ -22,16 +28,7 @@ import Cardano.Crypto.Signing.Redeem.VerificationKey (
   redeemVKB64UrlF,
   redeemVKBuild,
  )
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  encodeListLen,
-  enforceSize,
-  fromByronCBOR,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude
 import Data.Aeson (
   FromJSON (..),
@@ -66,29 +63,27 @@ data CompactRedeemVerificationKey
   deriving anyclass (NFData)
 
 instance ToCBOR CompactRedeemVerificationKey where
-  toCBOR = toByronCBOR
-
-instance FromCBOR CompactRedeemVerificationKey where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR CompactRedeemVerificationKey where
-  encCBOR (CompactRedeemVerificationKey a b c d) =
+  toCBOR (CompactRedeemVerificationKey a b c d) =
     mconcat
       [ encodeListLen 4
-      , encCBOR @Word64 a
-      , encCBOR @Word64 b
-      , encCBOR @Word64 c
-      , encCBOR @Word64 d
+      , toCBOR @Word64 a
+      , toCBOR @Word64 b
+      , toCBOR @Word64 c
+      , toCBOR @Word64 d
       ]
 
-instance DecCBOR CompactRedeemVerificationKey where
-  decCBOR = do
+instance FromCBOR CompactRedeemVerificationKey where
+  fromCBOR = do
     enforceSize "CompactRedeemVerificationKey" 4
     CompactRedeemVerificationKey
-      <$> decCBOR @Word64
-      <*> decCBOR @Word64
-      <*> decCBOR @Word64
-      <*> decCBOR @Word64
+      <$> fromCBOR @Word64
+      <*> fromCBOR @Word64
+      <*> fromCBOR @Word64
+      <*> fromCBOR @Word64
+
+instance EncCBOR CompactRedeemVerificationKey
+
+instance DecCBOR CompactRedeemVerificationKey
 
 getCompactRedeemVerificationKey :: Get CompactRedeemVerificationKey
 getCompactRedeemVerificationKey =

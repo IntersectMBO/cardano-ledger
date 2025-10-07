@@ -3,17 +3,17 @@
 
 module Cardano.Crypto.Orphans () where
 
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
+import Cardano.Binary (
   FromCBOR (..),
   Size,
   ToCBOR (..),
   encodeBytes,
-  fromByronCBOR,
-  toByronCBOR,
   toCborError,
   withWordSize,
+ )
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
  )
 import Cardano.Prelude hiding (toCborError)
 import Crypto.Error (CryptoFailable (..))
@@ -63,55 +63,49 @@ instance ToJSON Ed25519.Signature where
   toJSON = toJSON . makeByteString64 . toByteString
 
 instance ToCBOR Ed25519.PublicKey where
-  toCBOR = toByronCBOR
+  toCBOR = encodeBytes . toByteString
   encodedSizeExpr _ _ = bsSize 32
 
 instance FromCBOR Ed25519.PublicKey where
-  fromCBOR = fromByronCBOR
+  fromCBOR = do
+    res <- Ed25519.publicKey . fromByteStringToBytes <$> fromCBOR
+    toCborError $ fromCryptoFailable "fromCBOR Ed25519.PublicKey" res
 
 instance ToCBOR Ed25519.SecretKey where
-  toCBOR = toByronCBOR
+  toCBOR sk =
+    encodeBytes
+      $ BS.append (toByteString sk) (toByteString $ Ed25519.toPublic sk)
   encodedSizeExpr _ _ = bsSize 64
 
 instance FromCBOR Ed25519.SecretKey where
-  fromCBOR = fromByronCBOR
-
-instance ToCBOR Ed25519.Signature where
-  toCBOR = toByronCBOR
-  encodedSizeExpr _ _ = bsSize 64
-
-instance FromCBOR Ed25519.Signature where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR Ed25519.PublicKey where
-  encCBOR = encodeBytes . toByteString
-
-instance DecCBOR Ed25519.PublicKey where
-  decCBOR = do
-    res <- Ed25519.publicKey . fromByteStringToBytes <$> decCBOR
-    toCborError $ fromCryptoFailable "decCBOR Ed25519.PublicKey" res
-
-instance EncCBOR Ed25519.SecretKey where
-  encCBOR sk =
-    encodeBytes
-      $ BS.append (toByteString sk) (toByteString $ Ed25519.toPublic sk)
-
-instance DecCBOR Ed25519.SecretKey where
-  decCBOR = do
+  fromCBOR = do
     res <-
       Ed25519.secretKey
         . fromByteStringToScrubbedBytes
         . BS.take Ed25519.secretKeySize
-        <$> decCBOR
-    toCborError $ fromCryptoFailable "decCBOR Ed25519.SecretKey" res
+        <$> fromCBOR
+    toCborError $ fromCryptoFailable "fromCBOR Ed25519.SecretKey" res
 
-instance EncCBOR Ed25519.Signature where
-  encCBOR = encodeBytes . toByteString
+instance ToCBOR Ed25519.Signature where
+  toCBOR = encodeBytes . toByteString
+  encodedSizeExpr _ _ = bsSize 64
 
-instance DecCBOR Ed25519.Signature where
-  decCBOR = do
-    res <- Ed25519.signature . fromByteStringToBytes <$> decCBOR
-    toCborError $ fromCryptoFailable "decCBOR Ed25519.Signature" res
+instance FromCBOR Ed25519.Signature where
+  fromCBOR = do
+    res <- Ed25519.signature . fromByteStringToBytes <$> fromCBOR
+    toCborError $ fromCryptoFailable "fromCBOR Ed25519.Signature" res
+
+instance EncCBOR Ed25519.PublicKey
+
+instance DecCBOR Ed25519.PublicKey
+
+instance EncCBOR Ed25519.SecretKey where
+
+instance DecCBOR Ed25519.SecretKey where
+
+instance EncCBOR Ed25519.Signature
+
+instance DecCBOR Ed25519.Signature
 
 -- Helper for encodedSizeExpr in EncCBOR instances
 bsSize :: Int -> Size

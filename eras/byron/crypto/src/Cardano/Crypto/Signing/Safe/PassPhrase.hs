@@ -14,8 +14,6 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
-  fromByronCBOR,
-  toByronCBOR,
   toCborError,
  )
 import Cardano.Prelude hiding (toCborError)
@@ -49,17 +47,11 @@ instance Default PassPhrase where
   def = emptyPassphrase
 
 instance ToCBOR PassPhrase where
-  toCBOR = toByronCBOR
+  toCBOR pp = toCBOR (ByteArray.convert pp :: ByteString)
 
 instance FromCBOR PassPhrase where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR PassPhrase where
-  encCBOR pp = encCBOR (ByteArray.convert pp :: ByteString)
-
-instance DecCBOR PassPhrase where
-  decCBOR = do
-    bs <- decCBOR @ByteString
+  fromCBOR = do
+    bs <- fromCBOR @ByteString
     let bl = BS.length bs
     -- Currently passphrase may be either 32-byte long or empty (for
     -- unencrypted keys).
@@ -73,6 +65,6 @@ instance DecCBOR PassPhrase where
               passphraseLength
               bl
 
-{-instance Monoid PassPhrase where
-    mempty = PassPhrase mempty
-    mappend (PassPhrase p1) (PassPhrase p2) = PassPhrase (p1 `mappend` p2)-}
+instance EncCBOR PassPhrase
+
+instance DecCBOR PassPhrase

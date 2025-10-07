@@ -13,14 +13,7 @@ import Cardano.Crypto.Signing.Redeem.VerificationKey (
   RedeemVerificationKey (..),
   redeemVKB64F,
  )
-import Cardano.Ledger.Binary (
-  DecCBOR,
-  EncCBOR,
-  FromCBOR (..),
-  ToCBOR (..),
-  fromByronCBOR,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Cardano.Prelude
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import Formatting (bprint)
