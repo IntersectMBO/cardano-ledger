@@ -54,7 +54,7 @@ shelleyEraSpecificSpec = do
           & bodyTxL . certsTxBodyL .~ [delegStakeTxCert cred poolKh]
       )
       [injectFailure $ DelegateeNotRegisteredDELEG poolKh]
-    expectNotDelegatedToPool cred
+    expectNotDelegatedToAnyPool cred
 
   it "Deregistering returns the deposit" $ do
     let keyDeposit = Coin 2
@@ -228,6 +228,7 @@ spec = do
               else StakeKeyNotRegisteredDELEG cred
         ]
       expectStakeCredNotRegistered cred
+      expectNotDelegatedToAnyPool cred
 
     it "Delegate already delegated credentials" $ do
       cred <- KeyHashObj <$> freshKeyHash
@@ -251,6 +252,7 @@ spec = do
           & bodyTxL . certsTxBodyL
             .~ [delegStakeTxCert cred poolKh1]
       expectDelegatedToPool cred poolKh1
+      expectNotDelegatedToPool cred poolKh
 
       poolKh2 <- freshKeyHash
       registerPool poolKh2
@@ -265,6 +267,8 @@ spec = do
                ]
 
       expectDelegatedToPool cred poolKh3
+      expectNotDelegatedToPool cred poolKh2
+      expectNotDelegatedToPool cred poolKh
 
     it "Delegate and unregister" $ do
       cred <- KeyHashObj <$> freshKeyHash
@@ -277,3 +281,4 @@ spec = do
           & bodyTxL . certsTxBodyL
             .~ [regTxCert, delegStakeTxCert cred poolKh, unRegTxCert]
       expectStakeCredNotRegistered cred
+      expectNotDelegatedToAnyPool cred
