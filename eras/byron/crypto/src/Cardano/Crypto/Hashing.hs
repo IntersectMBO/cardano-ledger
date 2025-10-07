@@ -54,21 +54,21 @@ module Cardano.Crypto.Hashing (
   shortHashF,
 ) where
 
+import Cardano.Binary (
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  withWordSize,
+ )
 import Cardano.Crypto.Raw (Raw (..))
 import Cardano.HeapWords
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoded (..),
-  DecoderError (..),
   EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
   byronProtVer,
-  cborError,
-  fromByronCBOR,
   serialize,
-  toByronCBOR,
-  withWordSize,
  )
 import Cardano.Prelude hiding (cborError)
 import Crypto.Hash (Blake2b_256, Digest, HashAlgorithm, hashDigestSize)
@@ -139,33 +139,29 @@ instance ToJSONKey (AbstractHash algo a) where
   toJSONKey = toJSONKeyText (sformat hashHexF)
 
 instance (Typeable algo, Typeable a, HashAlgorithm algo) => ToCBOR (AbstractHash algo a) where
-  toCBOR = toByronCBOR
-
+  toCBOR (AbstractHash h) = toCBOR h
   encodedSizeExpr _ _ =
     let realSz = hashDigestSize (panic "unused, I hope!" :: algo)
      in fromInteger (toInteger (withWordSize realSz + realSz))
 
-instance (Typeable algo, Typeable a, HashAlgorithm algo) => EncCBOR (AbstractHash algo a) where
-  encCBOR (AbstractHash h) = encCBOR h
+instance (Typeable algo, Typeable a, HashAlgorithm algo) => EncCBOR (AbstractHash algo a)
 
 instance (Typeable algo, Typeable a, HashAlgorithm algo) => FromCBOR (AbstractHash algo a) where
-  fromCBOR = fromByronCBOR
-
-instance
-  (Typeable algo, Typeable a, HashAlgorithm algo) =>
-  DecCBOR (AbstractHash algo a)
-  where
-  decCBOR = do
+  fromCBOR = do
     -- FIXME bad decode: it reads an arbitrary-length byte string.
     -- Better instance: know the hash algorithm up front, read exactly that
     -- many bytes, fail otherwise. Then convert to a digest.
-    bs <- decCBOR @SBS.ShortByteString
+    bs <- fromCBOR @SBS.ShortByteString
     when (SBS.length bs /= expectedSize)
       $ cborError
       $ DecoderErrorCustom "AbstractHash" "Bytes not expected length"
     return (AbstractHash bs)
     where
       expectedSize = hashDigestSize (Prelude.undefined :: algo)
+
+instance
+  (Typeable algo, Typeable a, HashAlgorithm algo) =>
+  DecCBOR (AbstractHash algo a)
 
 instance HeapWords (AbstractHash algo a) where
   heapWords _ =

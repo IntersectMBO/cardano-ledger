@@ -48,12 +48,13 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   byronProtVer,
-  fromByronCBOR,
+  fromPlainDecoder,
+  fromPlainEncoding,
   serialize,
   serialize',
-  toByronCBOR,
   toCborError,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.ByteArray (ScrubbedBytes)
@@ -124,23 +125,27 @@ parseFullSignature s = do
   Signature <$> first (SignatureParseXSignatureError . toS) (CC.xsignature b)
 
 encCBORXSignature :: CC.XSignature -> Encoding
-encCBORXSignature a = encCBOR $ CC.unXSignature a
+encCBORXSignature = fromPlainEncoding . toCBORXSignature
 
 decCBORXSignature :: Decoder s CC.XSignature
-decCBORXSignature = toCborError . CC.xsignature =<< decCBOR
+decCBORXSignature = fromPlainDecoder fromCBORXSignature
+
+toCBORXSignature :: CC.XSignature -> Plain.Encoding
+toCBORXSignature = toCBOR . CC.unXSignature
+
+fromCBORXSignature :: Plain.Decoder s CC.XSignature
+fromCBORXSignature = toCborError . CC.xsignature =<< fromCBOR
 
 instance Typeable a => ToCBOR (Signature a) where
-  toCBOR = toByronCBOR
+  toCBOR (Signature a) = toCBORXSignature a
   encodedSizeExpr _ _ = 66
 
 instance Typeable a => FromCBOR (Signature a) where
-  fromCBOR = fromByronCBOR
+  fromCBOR = fmap Signature fromCBORXSignature
 
-instance Typeable a => EncCBOR (Signature a) where
-  encCBOR (Signature a) = encCBORXSignature a
+instance Typeable a => EncCBOR (Signature a)
 
-instance Typeable a => DecCBOR (Signature a) where
-  decCBOR = fmap Signature decCBORXSignature
+instance Typeable a => DecCBOR (Signature a)
 
 --------------------------------------------------------------------------------
 -- Signing

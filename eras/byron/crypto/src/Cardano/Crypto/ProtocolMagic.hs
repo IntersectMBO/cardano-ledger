@@ -19,16 +19,16 @@ module Cardano.Crypto.ProtocolMagic (
   getProtocolMagicId,
 ) where
 
-import Cardano.Ledger.Binary (
-  Annotated (..),
-  DecCBOR (..),
-  EncCBOR (..),
+import Cardano.Binary (
   FromCBOR (..),
   ToCBOR (..),
   decodeWord8,
   encodeWord8,
-  fromByronCBOR,
-  toByronCBOR,
+ )
+import Cardano.Ledger.Binary (
+  Annotated (..),
+  DecCBOR (..),
+  EncCBOR (..),
  )
 import Cardano.Prelude
 import Control.Monad.Fail (fail)
@@ -108,22 +108,20 @@ data RequiresNetworkMagic
   deriving (Show, Eq, Generic, NFData, NoThunks)
 
 instance ToCBOR RequiresNetworkMagic where
-  toCBOR = toByronCBOR
-
-instance FromCBOR RequiresNetworkMagic where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR RequiresNetworkMagic where
-  encCBOR = \case
+  toCBOR = \case
     RequiresNoMagic -> encodeWord8 0
     RequiresMagic -> encodeWord8 1
 
-instance DecCBOR RequiresNetworkMagic where
-  decCBOR =
+instance FromCBOR RequiresNetworkMagic where
+  fromCBOR =
     decodeWord8 >>= \case
       0 -> return RequiresNoMagic
       1 -> return RequiresMagic
       w8 -> fail $ "RequiresNetworkMagic: unknown constructor " ++ show w8
+
+instance EncCBOR RequiresNetworkMagic
+
+instance DecCBOR RequiresNetworkMagic
 
 -- Aeson JSON instances
 -- N.B @RequiresNetworkMagic@'s ToJSON & FromJSON instances do not round-trip.

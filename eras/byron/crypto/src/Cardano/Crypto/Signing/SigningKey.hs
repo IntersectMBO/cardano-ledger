@@ -13,20 +13,22 @@ module Cardano.Crypto.Signing.SigningKey (
   fromCBORXPrv,
 ) where
 
+import Cardano.Binary (
+  Decoder,
+  Encoding,
+  FromCBOR (..),
+  ToCBOR (..),
+  toCborError,
+ )
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..), shortVerificationKeyHexF)
 import qualified Cardano.Crypto.Wallet as CC
 import Cardano.Ledger.Binary (
   DecCBOR (..),
-  Decoder,
   EncCBOR (..),
-  Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
-  fromByronCBOR,
-  toByronCBOR,
-  toCborError,
+  fromPlainDecoder,
+  fromPlainEncoding,
  )
-import qualified Cardano.Ledger.Binary.Plain as Plain
+import qualified Cardano.Ledger.Binary as V (Decoder, Encoding)
 import Cardano.Prelude hiding (toCborError)
 import Formatting (bprint)
 import Formatting.Buildable
@@ -58,26 +60,24 @@ instance Show SigningKey where
 instance Buildable SigningKey where
   build = bprint ("sec:" . shortVerificationKeyHexF) . toVerification
 
-encCBORXPrv :: CC.XPrv -> Encoding
-encCBORXPrv a = encCBOR $ CC.unXPrv a
+encCBORXPrv :: CC.XPrv -> V.Encoding
+encCBORXPrv = fromPlainEncoding . toCBORXPrv
 
-decCBORXPrv :: Decoder s CC.XPrv
-decCBORXPrv = toCborError . CC.xprv =<< decCBOR @ByteString
+decCBORXPrv :: V.Decoder s CC.XPrv
+decCBORXPrv = fromPlainDecoder fromCBORXPrv
 
-toCBORXPrv :: CC.XPrv -> Plain.Encoding
-toCBORXPrv a = toCBOR $ CC.unXPrv a
+toCBORXPrv :: CC.XPrv -> Encoding
+toCBORXPrv = toCBOR . CC.unXPrv
 
-fromCBORXPrv :: Plain.Decoder s CC.XPrv
+fromCBORXPrv :: Decoder s CC.XPrv
 fromCBORXPrv = toCborError . CC.xprv =<< fromCBOR @ByteString
 
 instance ToCBOR SigningKey where
-  toCBOR = toByronCBOR
+  toCBOR (SigningKey a) = toCBORXPrv a
 
 instance FromCBOR SigningKey where
-  fromCBOR = fromByronCBOR
+  fromCBOR = fmap SigningKey fromCBORXPrv
 
-instance EncCBOR SigningKey where
-  encCBOR (SigningKey a) = encCBORXPrv a
+instance EncCBOR SigningKey
 
-instance DecCBOR SigningKey where
-  decCBOR = fmap SigningKey decCBORXPrv
+instance DecCBOR SigningKey
