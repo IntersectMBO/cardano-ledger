@@ -39,6 +39,8 @@ module Cardano.Chain.Block.Block (
   blockLength,
 
   -- * Block Binary Serialization
+  toCBORBlock,
+  fromCBORABlock,
   encCBORBlock,
   decCBORABlock,
 
@@ -49,8 +51,12 @@ module Cardano.Chain.Block.Block (
   ABlockOrBoundary (..),
   encCBORABOBBlock,
   decCBORABOBBlock,
-  decCBORABlockOrBoundary,
   encCBORABlockOrBoundary,
+  decCBORABlockOrBoundary,
+  toCBORABOBBlock,
+  fromCBORABOBBlock,
+  toCBORABlockOrBoundary,
+  fromCBORABlockOrBoundary,
 
   -- * ABoundaryBlock
   ABoundaryBlock (..),
@@ -58,14 +64,20 @@ module Cardano.Chain.Block.Block (
   decCBORABoundaryBlock,
   encCBORABoundaryBlock,
   encCBORABOBBoundary,
+  fromCBORABoundaryBlock,
+  toCBORABoundaryBlock,
+  toCBORABOBBoundary,
   boundaryBlockSlot,
   ABoundaryBody (..),
 
   -- * ABlockOrBoundaryHdr
   ABlockOrBoundaryHdr (..),
   aBlockOrBoundaryHdr,
+  fromCBORABlockOrBoundaryHdr,
   decCBORABlockOrBoundaryHdr,
+  toCBORABlockOrBoundaryHdr,
   encCBORABlockOrBoundaryHdr,
+  toCBORABlockOrBoundaryHdrSize,
   encCBORABlockOrBoundaryHdrSize,
   abobHdrFromBlock,
   abobHdrSlotNo,
@@ -76,6 +88,20 @@ module Cardano.Chain.Block.Block (
 
 -- TODO `contramap` should be in `Cardano.Prelude`
 
+import Cardano.Binary (
+  Case (..),
+  DecoderError (..),
+  FromCBOR (..),
+  Size,
+  ToCBOR (..),
+  cborError,
+  encodeBreak,
+  encodeListLen,
+  encodeListLenIndef,
+  encodePreEncoded,
+  encodeWord,
+  szCases,
+ )
 import Cardano.Chain.Block.Body (
   ABody,
   Body,
@@ -99,8 +125,8 @@ import Cardano.Chain.Block.Header (
   boundaryHeaderHashAnnotated,
   decCBORABoundaryHeader,
   decCBORAHeader,
-  encCBORABoundaryHeader,
-  encCBORHeader,
+  fromCBORABoundaryHeader,
+  fromCBORAHeader,
   genesisHeaderHash,
   hashHeader,
   headerDifficulty,
@@ -116,7 +142,9 @@ import Cardano.Chain.Block.Header (
   headerSoftwareVersion,
   headerToSign,
   mkHeaderExplicit,
+  toCBORABoundaryHeader,
   toCBORABoundaryHeaderSize,
+  toCBORHeader,
   toCBORHeaderSize,
  )
 import Cardano.Chain.Block.Proof (Proof (..))
@@ -137,24 +165,18 @@ import Cardano.Crypto (ProtocolMagicId, SigningKey, VerificationKey)
 import Cardano.Ledger.Binary (
   Annotated (..),
   ByteSpan (..),
-  Case (..),
   DecCBOR (..),
   Decoded (..),
   Decoder,
-  DecoderError (..),
-  EncCBOR (..),
   Encoding,
-  Size,
   annotatedDecoder,
-  cborError,
-  encodeBreak,
-  encodeListLen,
-  encodeListLenIndef,
-  encodePreEncoded,
-  encodeWord,
+  byronProtVer,
   enforceSize,
-  szCases,
+  fromPlainDecoder,
+  fromPlainEncoding,
+  toPlainDecoder,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Prelude hiding (cborError)
 import Control.Monad.Fail (fail)
 import Control.Tracer (contramap)
@@ -316,12 +338,18 @@ blockLength = fromIntegral . BS.length . blockAnnotation
 --
 --   Unlike 'encCBORABOBBlock', this function does not take the deprecated epoch
 --   boundary blocks into account.
-encCBORBlock :: EpochSlots -> Block -> Encoding
-encCBORBlock epochSlots block =
+toCBORBlock :: EpochSlots -> Block -> Plain.Encoding
+toCBORBlock epochSlots block =
   encodeListLen 3
-    <> encCBORHeader epochSlots (blockHeader block)
-    <> encCBOR (blockBody block)
-    <> (encodeListLen 1 <> encCBOR (mempty :: Map Word8 LByteString))
+    <> toCBORHeader epochSlots (blockHeader block)
+    <> toCBOR (blockBody block)
+    <> (encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
+
+encCBORBlock :: EpochSlots -> Block -> Encoding
+encCBORBlock epochSlots = fromPlainEncoding . toCBORBlock epochSlots
+
+fromCBORABlock :: EpochSlots -> Plain.Decoder s (ABlock ByteSpan)
+fromCBORABlock = toPlainDecoder Nothing byronProtVer . decCBORABlock
 
 decCBORABlock :: EpochSlots -> Decoder s (ABlock ByteSpan)
 decCBORABlock epochSlots = do
@@ -383,25 +411,34 @@ data ABlockOrBoundary a
 instance ToJSON a => ToJSON (ABlockOrBoundary a)
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
-encCBORABOBBlock :: EpochSlots -> ABlock a -> Encoding
-encCBORABOBBlock epochSlots block =
+toCBORABOBBlock :: EpochSlots -> ABlock a -> Plain.Encoding
+toCBORABOBBlock epochSlots block =
   encodeListLen 2
-    <> encCBOR (1 :: Word)
-    <> encCBORBlock epochSlots (fmap (const ()) block)
+    <> toCBOR (1 :: Word)
+    <> toCBORBlock epochSlots (fmap (const ()) block)
+
+encCBORABOBBlock :: EpochSlots -> ABlock a -> Encoding
+encCBORABOBBlock epochSlots = fromPlainEncoding . toCBORABOBBlock epochSlots
 
 -- | encCBORABoundaryBlock but with the list length and tag discriminator bytes.
-encCBORABOBBoundary :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
-encCBORABOBBoundary pm bvd =
+toCBORABOBBoundary :: ProtocolMagicId -> ABoundaryBlock a -> Plain.Encoding
+toCBORABOBBoundary pm bvd =
   encodeListLen 2
-    <> encCBOR (0 :: Word)
-    <> encCBORABoundaryBlock pm bvd
+    <> toCBOR (0 :: Word)
+    <> toCBORABoundaryBlock pm bvd
+
+encCBORABOBBoundary :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
+encCBORABOBBoundary pm = fromPlainEncoding . toCBORABOBBoundary pm
 
 -- | Decode a 'Block' accounting for deprecated epoch boundary blocks
-decCBORABOBBlock :: EpochSlots -> Decoder s (Maybe Block)
-decCBORABOBBlock epochSlots =
-  decCBORABlockOrBoundary epochSlots >>= \case
+fromCBORABOBBlock :: EpochSlots -> Plain.Decoder s (Maybe Block)
+fromCBORABOBBlock epochSlots =
+  fromCBORABlockOrBoundary epochSlots >>= \case
     ABOBBoundary _ -> pure Nothing
     ABOBBlock b -> pure . Just $ void b
+
+decCBORABOBBlock :: EpochSlots -> Decoder s (Maybe Block)
+decCBORABOBBlock = fromPlainDecoder . fromCBORABOBBlock
 
 -- | Decode a 'Block' accounting for deprecated epoch boundary blocks
 --
@@ -410,20 +447,28 @@ decCBORABOBBlock epochSlots =
 --   now deprecated these explicit boundary blocks, but we still need to decode
 --   blocks in the old format. In the case that we find a boundary block, we
 --   drop it using 'dropBoundaryBlock' and return a 'Nothing'.
+fromCBORABlockOrBoundary ::
+  EpochSlots -> Plain.Decoder s (ABlockOrBoundary ByteSpan)
+fromCBORABlockOrBoundary epochSlots = do
+  Plain.enforceSize "Block" 2
+  fromCBOR @Word >>= \case
+    0 -> ABOBBoundary <$> fromCBORABoundaryBlock
+    1 -> ABOBBlock <$> fromCBORABlock epochSlots
+    t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
+
 decCBORABlockOrBoundary ::
   EpochSlots -> Decoder s (ABlockOrBoundary ByteSpan)
-decCBORABlockOrBoundary epochSlots = do
-  enforceSize "Block" 2
-  decCBOR @Word >>= \case
-    0 -> ABOBBoundary <$> decCBORABoundaryBlock
-    1 -> ABOBBlock <$> decCBORABlock epochSlots
-    t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
+decCBORABlockOrBoundary = fromPlainDecoder . fromCBORABlockOrBoundary
+
+toCBORABlockOrBoundary ::
+  ProtocolMagicId -> EpochSlots -> ABlockOrBoundary a -> Plain.Encoding
+toCBORABlockOrBoundary pm epochSlots abob = case abob of
+  ABOBBlock blk -> toCBORABOBBlock epochSlots blk
+  ABOBBoundary ebb -> toCBORABOBBoundary pm ebb
 
 encCBORABlockOrBoundary ::
   ProtocolMagicId -> EpochSlots -> ABlockOrBoundary a -> Encoding
-encCBORABlockOrBoundary pm epochSlots abob = case abob of
-  ABOBBlock blk -> encCBORABOBBlock epochSlots blk
-  ABOBBoundary ebb -> encCBORABOBBoundary pm ebb
+encCBORABlockOrBoundary pm epochSlots = fromPlainEncoding . toCBORABlockOrBoundary pm epochSlots
 
 --------------------------------------------------------------------------------
 -- ABoundaryBlock
@@ -451,11 +496,11 @@ decCBORABoundaryBody = do
   pure $ ABoundaryBody bs
 
 -- | Every boundary body has the same encoding: empty.
-encCBORABoundaryBody :: ABoundaryBody a -> Encoding
-encCBORABoundaryBody _ =
+toCBORABoundaryBody :: ABoundaryBody a -> Plain.Encoding
+toCBORABoundaryBody _ =
   (encodeListLenIndef <> encodeBreak)
     <> ( encodeListLen 1
-           <> encCBOR (mempty :: Map Word8 LByteString)
+           <> toCBOR (mempty :: Map Word8 LByteString)
        )
 
 -- | For a boundary block, we keep the header, body, and an annotation for
@@ -480,6 +525,9 @@ instance ToJSON a => ToJSON (ABoundaryBlock a)
 boundaryHashAnnotated :: ABoundaryBlock ByteString -> HeaderHash
 boundaryHashAnnotated = boundaryHeaderHashAnnotated . boundaryHeader
 
+fromCBORABoundaryBlock :: Plain.Decoder s (ABoundaryBlock ByteSpan)
+fromCBORABoundaryBlock = toPlainDecoder Nothing byronProtVer decCBORABoundaryBlock
+
 decCBORABoundaryBlock :: Decoder s (ABoundaryBlock ByteSpan)
 decCBORABoundaryBlock = do
   Annotated (hdr, bod) bytespan@(ByteSpan start end) <- annotatedDecoder $ do
@@ -499,13 +547,16 @@ decCBORABoundaryBlock = do
 
 -- | See note on `encCBORABoundaryHeader`. This as well does not necessarily
 -- invert the decoder `decCBORABoundaryBlock`.
-encCBORABoundaryBlock :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
-encCBORABoundaryBlock pm ebb =
+toCBORABoundaryBlock :: ProtocolMagicId -> ABoundaryBlock a -> Plain.Encoding
+toCBORABoundaryBlock pm ebb =
   encodeListLen 3
     -- 1 item (list of 5)
-    <> encCBORABoundaryHeader pm (boundaryHeader ebb)
+    <> toCBORABoundaryHeader pm (boundaryHeader ebb)
     -- 2 items (body and extra body data)
-    <> encCBORABoundaryBody (boundaryBody ebb)
+    <> toCBORABoundaryBody (boundaryBody ebb)
+
+encCBORABoundaryBlock :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
+encCBORABoundaryBlock pm = fromPlainEncoding . toCBORABoundaryBlock pm
 
 instance B.Buildable (ABoundaryBlock a) where
   build bvd =
@@ -547,15 +598,20 @@ data ABlockOrBoundaryHdr a
   | ABOBBoundaryHdr !(ABoundaryHeader a)
   deriving (Eq, Show, Functor, Generic, NoThunks)
 
+fromCBORABlockOrBoundaryHdr ::
+  EpochSlots ->
+  Plain.Decoder s (ABlockOrBoundaryHdr ByteSpan)
+fromCBORABlockOrBoundaryHdr epochSlots = do
+  Plain.enforceSize "ABlockOrBoundaryHdr" 2
+  fromCBOR @Word >>= \case
+    0 -> ABOBBoundaryHdr <$> fromCBORABoundaryHeader
+    1 -> ABOBBlockHdr <$> fromCBORAHeader epochSlots
+    t -> fail $ "Unknown tag in encoded HeaderOrBoundary" <> show t
+
 decCBORABlockOrBoundaryHdr ::
   EpochSlots ->
   Decoder s (ABlockOrBoundaryHdr ByteSpan)
-decCBORABlockOrBoundaryHdr epochSlots = do
-  enforceSize "ABlockOrBoundaryHdr" 2
-  decCBOR @Word >>= \case
-    0 -> ABOBBoundaryHdr <$> decCBORABoundaryHeader
-    1 -> ABOBBlockHdr <$> decCBORAHeader epochSlots
-    t -> fail $ "Unknown tag in encoded HeaderOrBoundary" <> show t
+decCBORABlockOrBoundaryHdr = fromPlainDecoder . fromCBORABlockOrBoundaryHdr
 
 -- | Encoder for 'ABlockOrBoundaryHdr' which is using the annotation.
 -- It is right inverse of 'decCBORAblockOrBoundaryHdr'.
@@ -565,8 +621,8 @@ decCBORABlockOrBoundaryHdr epochSlots = do
 -- > decCBORABlockOrBoundaryHdr . encCBORABlockOrBoundaryHdr = id
 --
 -- which does not type check, but convey the meaning.
-encCBORABlockOrBoundaryHdr :: ABlockOrBoundaryHdr ByteString -> Encoding
-encCBORABlockOrBoundaryHdr hdr =
+toCBORABlockOrBoundaryHdr :: ABlockOrBoundaryHdr ByteString -> Plain.Encoding
+toCBORABlockOrBoundaryHdr hdr =
   encodeListLen 2
     <> case hdr of
       ABOBBoundaryHdr h ->
@@ -576,14 +632,21 @@ encCBORABlockOrBoundaryHdr hdr =
         encodeWord 1
           <> encodePreEncoded (headerAnnotation h)
 
+encCBORABlockOrBoundaryHdr :: ABlockOrBoundaryHdr ByteString -> Encoding
+encCBORABlockOrBoundaryHdr = fromPlainEncoding . toCBORABlockOrBoundaryHdr
+
 -- | The size computation is compatible with 'encCBORABlockOrBoundaryHdr'
-encCBORABlockOrBoundaryHdrSize :: Proxy (ABlockOrBoundaryHdr a) -> Size
-encCBORABlockOrBoundaryHdrSize hdr =
+toCBORABlockOrBoundaryHdrSize :: Proxy (ABlockOrBoundaryHdr a) -> Size
+toCBORABlockOrBoundaryHdrSize hdr =
   2 -- @encodeListLen 2@ followed by @encodeWord 0@ or @encodeWord 1@.
     + szCases
       [ Case "ABOBBoundaryHdr" $ toCBORABoundaryHeaderSize Proxy (ABOBBoundaryHdr `contramap` hdr)
       , Case "ABOBBlockHdr" $ toCBORHeaderSize Proxy (ABOBBlockHdr `contramap` hdr)
       ]
+
+encCBORABlockOrBoundaryHdrSize :: Proxy (ABlockOrBoundaryHdr a) -> Size
+encCBORABlockOrBoundaryHdrSize = toCBORABlockOrBoundaryHdrSize
+{-# DEPRECATED encCBORABlockOrBoundaryHdrSize "In favor of `toCBORABlockOrBoundaryHdrSize`" #-}
 
 -- | The analogue of 'Data.Either.either'
 aBlockOrBoundaryHdr ::

@@ -120,7 +120,7 @@ ts_prop_sizeToSign =
 ts_prop_sizeBlockVersions :: TSProperty
 ts_prop_sizeBlockVersions =
   encodedSizeTest
-    (toPlainEncoding byronProtVer . uncurry encCBORBlockVersions)
+    (uncurry toCBORBlockVersions)
     (uncurryP toCBORBlockVersionsSize)
     ((,) <$> Update.genProtocolVersion <*> Update.genSoftwareVersion)
 
@@ -155,7 +155,7 @@ ts_prop_sizeBlockSignature =
 ts_prop_sizeHeader :: TSProperty
 ts_prop_sizeHeader =
   encodedSizeTest
-    (toPlainEncoding byronProtVer . uncurry encCBORHeader)
+    (uncurry toCBORHeader)
     (uncurryP toCBORHeaderSize)
     $ do
       protocolMagicId <- Crypto.genProtocolMagicId
@@ -173,7 +173,7 @@ ts_prop_sizeGenesisHash = encodedSizeTestEncCBOR Genesis.genGenesisHash
 ts_prop_sizeABoundaryHeader :: TSProperty
 ts_prop_sizeABoundaryHeader =
   encodedSizeTest
-    (toPlainEncoding byronProtVer . uncurry encCBORABoundaryHeader)
+    (uncurry toCBORABoundaryHeader)
     (uncurryP toCBORABoundaryHeaderSize)
     ( (,)
         <$> Crypto.genProtocolMagicId
@@ -187,8 +187,8 @@ ts_prop_sizeABoundaryHeader =
 ts_prop_sizeABlockOrBoundaryHdr :: TSProperty
 ts_prop_sizeABlockOrBoundaryHdr =
   encodedSizeTest
-    (toPlainEncoding byronProtVer . encCBORABlockOrBoundaryHdr)
-    encCBORABlockOrBoundaryHdrSize
+    toCBORABlockOrBoundaryHdr
+    toCBORABlockOrBoundaryHdrSize
     $ ((,) <$> Crypto.genProtocolMagicId <*> Slotting.genEpochSlots)
     >>= uncurry genABlockOrBoundaryHdr
 
