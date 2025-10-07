@@ -15,23 +15,19 @@ module Cardano.Chain.Block.Body (
   bodyWitnesses,
 ) where
 
+import Cardano.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+ )
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscPayload (..))
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxPayload (ATxPayload, TxPayload, txpTxs, txpWitnesses)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
-import Cardano.Ledger.Binary (
-  ByteSpan,
-  DecCBOR (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  encodeListLen,
-  enforceSize,
-  fromByronCBOR,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (ByteSpan, DecCBOR, EncCBOR)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 
@@ -59,33 +55,30 @@ data ABody a = ABody
 instance ToJSON a => ToJSON (ABody a)
 
 instance ToCBOR Body where
-  toCBOR = toByronCBOR
+  toCBOR bc =
+    encodeListLen 4
+      <> toCBOR (bodyTxPayload bc)
+      <> toCBOR (bodySscPayload bc)
+      <> toCBOR (bodyDlgPayload bc)
+      <> toCBOR (bodyUpdatePayload bc)
 
 instance FromCBOR Body where
-  fromCBOR = fromByronCBOR
+  fromCBOR = void <$> fromCBOR @(ABody ByteSpan)
 
 instance FromCBOR (ABody ByteSpan) where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR Body where
-  encCBOR bc =
-    encodeListLen 4
-      <> encCBOR (bodyTxPayload bc)
-      <> encCBOR (bodySscPayload bc)
-      <> encCBOR (bodyDlgPayload bc)
-      <> encCBOR (bodyUpdatePayload bc)
-
-instance DecCBOR Body where
-  decCBOR = void <$> decCBOR @(ABody ByteSpan)
-
-instance DecCBOR (ABody ByteSpan) where
-  decCBOR = do
+  fromCBOR = do
     enforceSize "Body" 4
     ABody
-      <$> decCBOR
-      <*> decCBOR
-      <*> decCBOR
-      <*> decCBOR
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+
+instance EncCBOR Body
+
+instance DecCBOR Body
+
+instance DecCBOR (ABody ByteSpan)
 
 bodyTxs :: Body -> [Tx]
 bodyTxs = txpTxs . bodyTxPayload

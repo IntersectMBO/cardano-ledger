@@ -100,9 +100,7 @@ import Cardano.Chain.Block.Header (
   decCBORABoundaryHeader,
   decCBORAHeader,
   encCBORABoundaryHeader,
-  encCBORABoundaryHeaderSize,
   encCBORHeader,
-  encCBORHeaderSize,
   genesisHeaderHash,
   hashHeader,
   headerDifficulty,
@@ -118,6 +116,8 @@ import Cardano.Chain.Block.Header (
   headerSoftwareVersion,
   headerToSign,
   mkHeaderExplicit,
+  toCBORABoundaryHeaderSize,
+  toCBORHeaderSize,
  )
 import Cardano.Chain.Block.Proof (Proof (..))
 import Cardano.Chain.Common (ChainDifficulty (..), dropEmptyAttributes)
@@ -581,8 +581,8 @@ encCBORABlockOrBoundaryHdrSize :: Proxy (ABlockOrBoundaryHdr a) -> Size
 encCBORABlockOrBoundaryHdrSize hdr =
   2 -- @encodeListLen 2@ followed by @encodeWord 0@ or @encodeWord 1@.
     + szCases
-      [ Case "ABOBBoundaryHdr" $ encCBORABoundaryHeaderSize Proxy (ABOBBoundaryHdr `contramap` hdr)
-      , Case "ABOBBlockHdr" $ encCBORHeaderSize Proxy (ABOBBlockHdr `contramap` hdr)
+      [ Case "ABOBBoundaryHdr" $ toCBORABoundaryHeaderSize Proxy (ABOBBoundaryHdr `contramap` hdr)
+      , Case "ABOBBlockHdr" $ toCBORHeaderSize Proxy (ABOBBlockHdr `contramap` hdr)
       ]
 
 -- | The analogue of 'Data.Either.either'

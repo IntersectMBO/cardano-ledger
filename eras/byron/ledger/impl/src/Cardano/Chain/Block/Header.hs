@@ -31,6 +31,12 @@ module Cardano.Chain.Block.Header (
   headerToSign,
 
   -- * Header Binary Serialization
+  toCBORHeader,
+  toCBORHeaderSize,
+  toCBORHeaderToHash,
+  fromCBORAHeader,
+  fromCBORHeader,
+  fromCBORHeaderToHash,
   encCBORHeader,
   encCBORHeaderSize,
   encCBORHeaderToHash,
@@ -40,6 +46,8 @@ module Cardano.Chain.Block.Header (
   wrapHeaderBytes,
   encCBORBlockVersions,
   encCBORBlockVersionsSize,
+  toCBORBlockVersions,
+  toCBORBlockVersionsSize,
 
   -- * Header Formatting
   renderHeader,
@@ -47,8 +55,11 @@ module Cardano.Chain.Block.Header (
   -- * Boundary Header
   ABoundaryHeader (..),
   mkABoundaryHeader,
+  toCBORABoundaryHeader,
+  toCBORABoundaryHeaderSize,
   encCBORABoundaryHeader,
   encCBORABoundaryHeaderSize,
+  fromCBORABoundaryHeader,
   decCBORABoundaryHeader,
   boundaryHeaderHashAnnotated,
   wrapBoundaryBytes,
@@ -69,6 +80,18 @@ module Cardano.Chain.Block.Header (
   recoverSignedBytes,
 ) where
 
+import Cardano.Binary (
+  Case (..),
+  DecoderError (..),
+  FromCBOR (..),
+  Size,
+  ToCBOR (..),
+  cborError,
+  encodeListLen,
+  serialize,
+  szCases,
+  szGreedy,
+ )
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary (
   decCBORBoundaryConsensusData,
@@ -106,30 +129,22 @@ import Cardano.Crypto.Raw (Raw)
 import Cardano.Ledger.Binary (
   Annotated (..),
   ByteSpan,
-  Case (..),
   DecCBOR (..),
   Decoded (..),
   Decoder,
-  DecoderError (..),
   EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  Size,
-  ToCBOR (..),
   annotatedDecoder,
   byronProtVer,
-  cborError,
   decCBORAnnotated,
   dropBytes,
   dropInt32,
-  encodeListLen,
   enforceSize,
-  fromByronCBOR,
-  serialize,
-  szCases,
-  szGreedy,
-  toByronCBOR,
+  fromPlainDecoder,
+  fromPlainEncoding,
+  toPlainDecoder,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
@@ -294,22 +309,29 @@ headerLength = fromIntegral . BS.length . headerAnnotation
 
 -- | Encode a header, without taking in to account deprecated epoch boundary
 -- blocks.
-encCBORHeader :: EpochSlots -> Header -> Encoding
-encCBORHeader es h =
+toCBORHeader :: EpochSlots -> Header -> Plain.Encoding
+toCBORHeader es h =
   encodeListLen 5
-    <> encCBOR (headerProtocolMagicId h)
-    <> encCBOR (headerPrevHash h)
-    <> encCBOR (headerProof h)
+    <> toCBOR (headerProtocolMagicId h)
+    <> toCBOR (headerPrevHash h)
+    <> toCBOR (headerProof h)
     <> ( encodeListLen 4
-           <> encCBOR (fromSlotNumber es $ headerSlot h)
-           <> encCBOR (headerGenesisKey h)
-           <> encCBOR (headerDifficulty h)
-           <> encCBOR (headerSignature h)
+           <> toCBOR (fromSlotNumber es $ headerSlot h)
+           <> toCBOR (headerGenesisKey h)
+           <> toCBOR (headerDifficulty h)
+           <> toCBOR (headerSignature h)
        )
-    <> encCBORBlockVersions (headerProtocolVersion h) (headerSoftwareVersion h)
+    <> toCBORBlockVersions (headerProtocolVersion h) (headerSoftwareVersion h)
+
+encCBORHeader :: EpochSlots -> Header -> Encoding
+encCBORHeader es = fromPlainEncoding . toCBORHeader es
 
 encCBORHeaderSize :: Proxy EpochSlots -> Proxy (AHeader a) -> Size
-encCBORHeaderSize es hdr =
+encCBORHeaderSize = toCBORHeaderSize
+{-# DEPRECATED encCBORHeaderSize "In favor of `toCBORHeaderSize`" #-}
+
+toCBORHeaderSize :: Proxy EpochSlots -> Proxy (AHeader a) -> Size
+toCBORHeaderSize es hdr =
   1 -- encodeListLen 5
     + szGreedy (headerProtocolMagicId <$> hdr)
     + szGreedy (headerPrevHash <$> hdr)
@@ -318,26 +340,33 @@ encCBORHeaderSize es hdr =
           + szGreedy (fromSlotNumber <$> es <*> (headerSlot <$> hdr))
           + szGreedy (headerGenesisKey <$> hdr)
           + szGreedy (headerDifficulty <$> hdr)
-          -- there is only 'EncCBOR' @ASignature ()@ instance, we
+          -- there is only 'ToCBOR' @ASignature ()@ instance, we
           -- must map 'a' to '()'
           + szGreedy (headerSignature . fmap (const ()) <$> hdr)
       )
-    + encCBORBlockVersionsSize
+    + toCBORBlockVersionsSize
       (headerProtocolVersion <$> hdr)
       (headerSoftwareVersion <$> hdr)
 
-encCBORBlockVersions :: ProtocolVersion -> SoftwareVersion -> Encoding
-encCBORBlockVersions pv sv =
+toCBORBlockVersions :: ProtocolVersion -> SoftwareVersion -> Plain.Encoding
+toCBORBlockVersions pv sv =
   encodeListLen 4
-    <> encCBOR pv
-    <> encCBOR sv
+    <> toCBOR pv
+    <> toCBOR sv
     -- Encoding of empty Attributes
-    <> encCBOR (mempty :: Map Word8 LByteString)
+    <> toCBOR (mempty :: Map Word8 LByteString)
     -- Hash of the encoding of empty ExtraBodyData
-    <> encCBOR (hashRaw "\129\160")
+    <> toCBOR (hashRaw "\129\160")
+
+encCBORBlockVersions :: ProtocolVersion -> SoftwareVersion -> Encoding
+encCBORBlockVersions pv = fromPlainEncoding . toCBORBlockVersions pv
 
 encCBORBlockVersionsSize :: Proxy ProtocolVersion -> Proxy SoftwareVersion -> Size
-encCBORBlockVersionsSize pv sv =
+encCBORBlockVersionsSize = toCBORBlockVersionsSize
+{-# DEPRECATED encCBORBlockVersionsSize "In favor of `toCBORBlockVersionsSize`" #-}
+
+toCBORBlockVersionsSize :: Proxy ProtocolVersion -> Proxy SoftwareVersion -> Size
+toCBORBlockVersionsSize pv sv =
   1
     + szGreedy pv
     + szGreedy sv
@@ -345,8 +374,14 @@ encCBORBlockVersionsSize pv sv =
     + 1
     + szGreedy (Proxy :: Proxy (Hash Raw))
 
+fromCBORHeader :: EpochSlots -> Plain.Decoder s Header
+fromCBORHeader = toPlainDecoder Nothing byronProtVer . decCBORHeader
+
 decCBORHeader :: EpochSlots -> Decoder s Header
 decCBORHeader epochSlots = void <$> decCBORAHeader epochSlots
+
+fromCBORAHeader :: EpochSlots -> Plain.Decoder s (AHeader ByteSpan)
+fromCBORAHeader = toPlainDecoder Nothing byronProtVer . decCBORAHeader
 
 decCBORAHeader :: EpochSlots -> Decoder s (AHeader ByteSpan)
 decCBORAHeader epochSlots = do
@@ -389,6 +424,9 @@ decCBORAHeader epochSlots = do
       byteSpan
       extraByteSpan
 
+fromCBORBlockVersions :: Plain.Decoder s (ProtocolVersion, SoftwareVersion)
+fromCBORBlockVersions = toPlainDecoder Nothing byronProtVer decCBORBlockVersions
+
 decCBORBlockVersions :: Decoder s (ProtocolVersion, SoftwareVersion)
 decCBORBlockVersions = do
   enforceSize "BlockVersions" 4
@@ -403,19 +441,25 @@ instance Decoded (AHeader ByteString) where
 --   This encoding is only used when hashing the header for backwards
 --   compatibility, but should not be used when serializing a header within a
 --   block
+toCBORHeaderToHash :: EpochSlots -> Header -> Plain.Encoding
+toCBORHeaderToHash epochSlots h =
+  encodeListLen 2 <> toCBOR (1 :: Word) <> toCBORHeader epochSlots h
+
+fromCBORHeaderToHash :: EpochSlots -> Plain.Decoder s (Maybe Header)
+fromCBORHeaderToHash epochSlots = do
+  Plain.enforceSize "Header" 2
+  fromCBOR @Word >>= \case
+    0 -> do
+      void fromCBORABoundaryHeader
+      pure Nothing
+    1 -> Just <$!> fromCBORHeader epochSlots
+    t -> cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
+
 encCBORHeaderToHash :: EpochSlots -> Header -> Encoding
-encCBORHeaderToHash epochSlots h =
-  encodeListLen 2 <> encCBOR (1 :: Word) <> encCBORHeader epochSlots h
+encCBORHeaderToHash epochSlots = fromPlainEncoding . toCBORHeaderToHash epochSlots
 
 decCBORHeaderToHash :: EpochSlots -> Decoder s (Maybe Header)
-decCBORHeaderToHash epochSlots = do
-  enforceSize "Header" 2
-  decCBOR @Word >>= \case
-    0 -> do
-      void decCBORABoundaryHeader
-      pure Nothing
-    1 -> Just <$!> decCBORHeader epochSlots
-    t -> cborError $ DecoderErrorUnknownTag "Header" (fromIntegral t)
+decCBORHeaderToHash = fromPlainDecoder . fromCBORHeaderToHash
 
 --------------------------------------------------------------------------------
 -- Header Formatting
@@ -494,7 +538,7 @@ wrapHeaderBytes = mappend "\130\SOH"
 --   For backwards compatibility we have to take the hash of the header
 --   serialised with 'encCBORHeaderToHash'
 hashHeader :: EpochSlots -> Header -> HeaderHash
-hashHeader es = unsafeAbstractHash . serialize byronProtVer . encCBORHeaderToHash es
+hashHeader es = unsafeAbstractHash . serialize . toCBORHeaderToHash es
 
 headerHashAnnotated :: AHeader ByteString -> HeaderHash
 headerHashAnnotated = hashDecoded . fmap wrapHeaderBytes
@@ -543,27 +587,27 @@ boundaryHeaderHashAnnotated = coerce . hashDecoded . fmap wrapBoundaryBytes
 -- necessarily invert `decCBORBoundaryHeader`, because that decoder drops
 -- information that this encoder replaces, such as the body proof (assumes
 -- the body is empty) and the extra header data (sets it to empty map).
-encCBORABoundaryHeader :: ProtocolMagicId -> ABoundaryHeader a -> Encoding
-encCBORABoundaryHeader pm hdr =
+toCBORABoundaryHeader :: ProtocolMagicId -> ABoundaryHeader a -> Plain.Encoding
+toCBORABoundaryHeader pm hdr =
   encodeListLen 5
-    <> encCBOR pm
+    <> toCBOR pm
     <> ( case boundaryPrevHash hdr of
-           Left gh -> encCBOR (genesisHeaderHash gh)
-           Right hh -> encCBOR hh
+           Left gh -> toCBOR (genesisHeaderHash gh)
+           Right hh -> toCBOR hh
        )
     -- Body proof
     -- The body is always an empty slot leader schedule, so we hash that.
-    <> encCBOR (serializeCborHash ([] :: [()]))
+    <> toCBOR (serializeCborHash ([] :: [()]))
     -- Consensus data
     <> ( encodeListLen 2
            -- Epoch
-           <> encCBOR (boundaryEpoch hdr)
+           <> toCBOR (boundaryEpoch hdr)
            -- Chain difficulty
-           <> encCBOR (boundaryDifficulty hdr)
+           <> toCBOR (boundaryDifficulty hdr)
        )
     -- Extra data
     <> ( encodeListLen 1
-           <> encCBOR genesisTag
+           <> toCBOR genesisTag
        )
   where
     -- Genesis tag to indicate the presence of a genesis hash in a non-zero
@@ -573,8 +617,11 @@ encCBORABoundaryHeader pm hdr =
       (Left _, n) | n > 0 -> Map.singleton 255 "Genesis"
       _ -> mempty :: Map Word8 LByteString
 
-encCBORABoundaryHeaderSize :: Proxy ProtocolMagicId -> Proxy (ABoundaryHeader a) -> Size
-encCBORABoundaryHeaderSize pm hdr =
+encCBORABoundaryHeader :: ProtocolMagicId -> ABoundaryHeader a -> Encoding
+encCBORABoundaryHeader pm = fromPlainEncoding . toCBORABoundaryHeader pm
+
+toCBORABoundaryHeaderSize :: Proxy ProtocolMagicId -> Proxy (ABoundaryHeader a) -> Size
+toCBORABoundaryHeaderSize pm hdr =
   1
     + szGreedy pm
     + szCases
@@ -609,6 +656,13 @@ encCBORABoundaryHeaderSize pm hdr =
 
     pFromRight :: Proxy (Either a b) -> Proxy b
     pFromRight _ = Proxy
+
+encCBORABoundaryHeaderSize :: Proxy ProtocolMagicId -> Proxy (ABoundaryHeader a) -> Size
+encCBORABoundaryHeaderSize = toCBORABoundaryHeaderSize
+{-# DEPRECATED encCBORABoundaryHeaderSize "In favor of `toCBORABoundaryHeaderSize`" #-}
+
+fromCBORABoundaryHeader :: Plain.Decoder s (ABoundaryHeader ByteSpan)
+fromCBORABoundaryHeader = toPlainDecoder Nothing byronProtVer decCBORABoundaryHeader
 
 decCBORABoundaryHeader :: Decoder s (ABoundaryHeader ByteSpan)
 decCBORABoundaryHeader = do
@@ -665,39 +719,36 @@ instance B.Buildable BlockSignature where
 instance ToJSON a => ToJSON (ABlockSignature a)
 
 instance ToCBOR BlockSignature where
-  toCBOR = toByronCBOR
+  toCBOR (ABlockSignature cert sig) =
+    -- Tag 0 was previously used for BlockSignature (no delegation)
+    -- Tag 1 was previously used for BlockPSignatureLight
+    encodeListLen 2
+      <> toCBOR (2 :: Word8)
+      <> (encodeListLen 2 <> toCBOR cert <> toCBOR sig)
   encodedSizeExpr size sig =
     3
       + encodedSizeExpr size (delegationCertificate <$> sig)
       + encodedSizeExpr size (signature <$> sig)
 
 instance FromCBOR BlockSignature where
-  fromCBOR = fromByronCBOR
+  fromCBOR = void <$> fromCBOR @(ABlockSignature ByteSpan)
 
 instance FromCBOR (ABlockSignature ByteSpan) where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR BlockSignature where
-  encCBOR (ABlockSignature cert sig) =
-    -- Tag 0 was previously used for BlockSignature (no delegation)
-    -- Tag 1 was previously used for BlockPSignatureLight
-    encodeListLen 2
-      <> encCBOR (2 :: Word8)
-      <> (encodeListLen 2 <> encCBOR cert <> encCBOR sig)
-
-instance DecCBOR BlockSignature where
-  decCBOR = void <$> decCBOR @(ABlockSignature ByteSpan)
-
-instance DecCBOR (ABlockSignature ByteSpan) where
-  decCBOR = do
-    enforceSize "BlockSignature" 2
-    decCBOR >>= \case
+  fromCBOR = do
+    Plain.enforceSize "BlockSignature" 2
+    fromCBOR >>= \case
       2 ->
         ABlockSignature
-          <$ enforceSize "BlockSignature" 2
-          <*> decCBOR
-          <*> decCBOR
+          <$ Plain.enforceSize "BlockSignature" 2
+          <*> fromCBOR
+          <*> fromCBOR
       t -> cborError $ DecoderErrorUnknownTag "BlockSignature" t
+
+instance EncCBOR BlockSignature
+
+instance DecCBOR BlockSignature
+
+instance DecCBOR (ABlockSignature ByteSpan)
 
 --------------------------------------------------------------------------------
 -- ToSign
@@ -734,29 +785,27 @@ data ToSign = ToSign
   deriving (Eq, Show, Generic)
 
 instance ToCBOR ToSign where
-  toCBOR = toByronCBOR
+  toCBOR ts =
+    encodeListLen 5
+      <> toCBOR (tsHeaderHash ts)
+      <> toCBOR (tsBodyProof ts)
+      <> toCBOR (tsSlot ts)
+      <> toCBOR (tsDifficulty ts)
+      <> toCBORBlockVersions (tsProtocolVersion ts) (tsSoftwareVersion ts)
   encodedSizeExpr size ts =
     1
       + encodedSizeExpr size (tsHeaderHash <$> ts)
       + encodedSizeExpr size (tsBodyProof <$> ts)
       + encodedSizeExpr size (tsSlot <$> ts)
       + encodedSizeExpr size (tsDifficulty <$> ts)
-      + encCBORBlockVersionsSize (tsProtocolVersion <$> ts) (tsSoftwareVersion <$> ts)
+      + toCBORBlockVersionsSize (tsProtocolVersion <$> ts) (tsSoftwareVersion <$> ts)
 
 instance FromCBOR ToSign where
-  fromCBOR = fromByronCBOR
+  fromCBOR = do
+    Plain.enforceSize "ToSign" 5
+    fmap uncurry (ToSign <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR)
+      <*> fromCBORBlockVersions
 
-instance EncCBOR ToSign where
-  encCBOR ts =
-    encodeListLen 5
-      <> encCBOR (tsHeaderHash ts)
-      <> encCBOR (tsBodyProof ts)
-      <> encCBOR (tsSlot ts)
-      <> encCBOR (tsDifficulty ts)
-      <> encCBORBlockVersions (tsProtocolVersion ts) (tsSoftwareVersion ts)
+instance EncCBOR ToSign
 
-instance DecCBOR ToSign where
-  decCBOR = do
-    enforceSize "ToSign" 5
-    fmap uncurry (ToSign <$> decCBOR <*> decCBOR <*> decCBOR <*> decCBOR)
-      <*> decCBORBlockVersions
+instance DecCBOR ToSign
