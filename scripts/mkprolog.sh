@@ -10,11 +10,17 @@ exec >"$PROLOG_FILE" # Write all stdout to $PROLOG_FILE from here on
 cd "$HADDOCKS_DIR"
 
 cat << EOF
-= Cardano Ledger Repository Hackage Documentation
+= Cardano Ledger Repository Documentation
 
-[skip to module list](#module-list)
+== Benchmarks
 
-This site contains Haskell documentation of:
+* [Charts](dev/bench/) showing historical trends
+
+== Package Documentation
+
+[Skip to module list](#module-list)
+
+This page contains Haskell documentation of:
 
 EOF
 
