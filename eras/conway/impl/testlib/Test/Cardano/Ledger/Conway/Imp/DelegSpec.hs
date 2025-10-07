@@ -184,7 +184,7 @@ spec = do
               .~ [DelegTxCert cred (DelegStake poolKh)]
         )
         [injectFailure $ DelegateeStakePoolNotRegisteredDELEG poolKh]
-      expectNotDelegatedToPool cred
+      expectNotDelegatedToAnyPool cred
 
   describe "Delegate vote" $ do
     it "Delegate vote of registered stake credentials to registered drep" $ do
@@ -203,7 +203,7 @@ spec = do
             .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
 
       expectDelegatedVote cred (DRepCredential drepCred)
-      expectNotDelegatedToPool cred
+      expectNotDelegatedToAnyPool cred
       whenBootstrap $ do
         impAnn "Ensure DRep delegation is populated after bootstrap" $ do
           -- Clear out delegation, in order to check its repopulation from accounts.
@@ -222,6 +222,25 @@ spec = do
           passNEpochs 2
           getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
           expectDelegatedVote cred (DRepCredential drepCred)
+
+    it "Redelegate vote to the same DRep" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+      cred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+
+      expectDelegatedVote cred (DRepCredential drepCred)
 
     it "Delegate vote of registered stake credentials to unregistered drep" $ do
       RewardAccount _ cred <- registerRewardAccount
@@ -284,7 +303,13 @@ spec = do
       impAnn "Check that unregistration of previous delegation does not affect current delegation" $ do
         unRegisterDRep drepCred
         -- we need to preserve the buggy behavior until the boostrap phase is over.
-        ifBootstrap (expectNotDelegatedVote cred) (expectDelegatedVote cred (DRepCredential drepCred2))
+        ifBootstrap
+          ( do
+              -- we cannot `expectNotDelegatedVote` because the the delegation is still in the DRepState of the other pool
+              accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+              expectNothingExpr (lookupDRepDelegation cred accounts)
+          )
+          (expectDelegatedVote cred (DRepCredential drepCred2))
 
     it "Delegate vote and unregister stake credentials" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -300,6 +325,8 @@ spec = do
             .~ [UnRegDepositTxCert cred expectedDeposit]
       expectStakeCredNotRegistered cred
       expectNotDelegatedVote cred
+      expectNotDelegatedToAnyPool cred
+
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/917
     -- TODO: Re-enable after issue is resolved, by removing this override
     disableInConformanceIt "Delegate vote and unregister after hardfork" $ do
@@ -412,9 +439,9 @@ spec = do
 
       -- when pool is re-registered after its expiration, all delegations are cleared
       passNEpochs $ fromIntegral poolLifetime
-      expectNotDelegatedToPool cred
+      expectNotDelegatedToAnyPool cred
       registerPoolWithRewardAccount poolKh rewardAccount
-      expectNotDelegatedToPool cred
+      expectNotDelegatedToAnyPool cred
       -- the vote delegation is kept
       expectDelegatedVote cred (DRepCredential drepCred)
 
@@ -502,6 +529,7 @@ spec = do
           & bodyTxL . certsTxBodyL
             .~ [DelegTxCert cred (DelegStake poolKh')]
       expectDelegatedToPool cred poolKh'
+      expectNotDelegatedToPool cred poolKh
       expectDelegatedVote cred (DRepCredential drepCred)
   where
     expectDelegatedVote :: HasCallStack => Credential 'Staking -> DRep -> ImpTestM era ()
@@ -527,8 +555,12 @@ spec = do
     expectNotDelegatedVote :: Credential 'Staking -> ImpTestM era ()
     expectNotDelegatedVote cred = do
       accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
-      impAnn (show cred <> " expected to not have their vote delegated") $
+      dreps <- getsNES $ nesEsL . epochStateRegDrepL
+      impAnn (show cred <> " expected to not have their vote delegated") $ do
         expectNothingExpr (lookupDRepDelegation cred accounts)
+        assertBool
+          ("Expected no drep state delegation to contain the stake credential: " <> show cred)
+          (all (Set.notMember cred . drepDelegs) (Map.elems dreps))
 
 conwayEraSpecificSpec :: SpecWith (ImpInit (LedgerSpec ConwayEra))
 conwayEraSpecificSpec = do
