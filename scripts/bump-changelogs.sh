@@ -47,4 +47,8 @@ if [[ $BUMPED ]]; then
     "WARNING! DO NOT BUMP THE VERSION NUMBER IN THE CABAL FILES" \
     "(unless their dependencies were bumped)!"
 fi
-echo $(( BUMPED ))
+if git diff --exit-code; then
+  printf "\n!!!!!!\n%s %s\n!!!!!!\n" \
+    "WARNING! DO NOT BUMP THE VERSION NUMBER IN THE CABAL FILES" \
+    "(unless their dependencies were bumped)!"
+fi
