@@ -71,6 +71,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   delegateStake,
   registerRewardAccount,
   registerStakeCredential,
+  expectNotDelegatedToAnyPool,
   expectNotDelegatedToPool,
   expectStakeCredRegistered,
   expectStakeCredNotRegistered,
@@ -1637,20 +1638,51 @@ expectDelegatedToPool ::
   KeyHash 'StakePool ->
   ImpTestM era ()
 expectDelegatedToPool cred poolKh = do
-  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+  certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+  let accounts = certState ^. certDStateL . accountsL
+  let pools = certState ^. certPStateL . psStakePoolsL
   impAnn (show cred <> " expected to have delegated to " <> show poolKh) $ do
     accountState <- expectJust $ lookupAccountState cred accounts
     accountState ^. stakePoolDelegationAccountStateL `shouldBe` Just poolKh
+    case Map.lookup poolKh pools of
+      Nothing ->
+        assertFailure $
+          "Expected stake pool state for: " <> show poolKh
+      Just poolState ->
+        assertBool
+          ("Expected pool delegations to contain the stake credential: " <> show cred)
+          (cred `Set.member` (poolState ^. spsDelegatorsL))
+
+expectNotDelegatedToAnyPool ::
+  (HasCallStack, ShelleyEraImp era) =>
+  Credential 'Staking ->
+  ImpTestM era ()
+expectNotDelegatedToAnyPool cred = do
+  certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+  let accounts = certState ^. certDStateL . accountsL
+  let pools = certState ^. certPStateL . psStakePoolsL
+  impAnn (show cred <> " expected to not have delegated to a stake pool") $ do
+    forM_ (lookupAccountState cred accounts) $ \accountState ->
+      expectNothingExpr (accountState ^. stakePoolDelegationAccountStateL)
+    assertBool
+      ("Expected no stake pool state delegation to contain the stake credential: " <> show cred)
+      (all (Set.notMember cred . spsDelegators) pools)
 
 expectNotDelegatedToPool ::
   (HasCallStack, ShelleyEraImp era) =>
   Credential 'Staking ->
+  KeyHash 'StakePool ->
   ImpTestM era ()
-expectNotDelegatedToPool cred = do
-  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+expectNotDelegatedToPool cred pool = do
+  certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+  let accounts = certState ^. certDStateL . accountsL
+  let pools = certState ^. certPStateL . psStakePoolsL
   impAnn (show cred <> " expected to not have delegated to a stake pool") $ do
-    accountState <- expectJust $ lookupAccountState cred accounts
-    expectNothingExpr (accountState ^. stakePoolDelegationAccountStateL)
+    forM_ (lookupAccountState cred accounts) $ \accountState ->
+      accountState ^. stakePoolDelegationAccountStateL `shouldNotBe` Just pool
+    assertBool
+      ("Expected stake pool state delegation to not contain the stake credential: " <> show cred)
+      (maybe True (Set.notMember cred . spsDelegators) (Map.lookup pool pools))
 
 registerRewardAccount ::
   forall era.
