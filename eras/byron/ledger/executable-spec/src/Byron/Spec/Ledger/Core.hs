@@ -12,7 +12,7 @@
 
 module Byron.Spec.Ledger.Core where
 
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR (..), toByronCBOR)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Data.AbstractSize
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
@@ -44,11 +44,10 @@ newtype Hash = Hash
   { unHash :: Maybe Int
   }
   deriving stock (Show, Generic, Data)
-  deriving newtype (Eq, Ord, Hashable, EncCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
-instance ToCBOR Hash where
-  toCBOR = toByronCBOR
+instance EncCBOR Hash
 
 isValid :: Hash -> Bool
 isValid = isJust . unHash
