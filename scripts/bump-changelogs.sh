@@ -50,4 +50,5 @@ if ! git diff -s --exit-code; then
   printf "\n!!!!!!\n%s %s\n!!!!!!\n" \
     "WARNING! DO NOT BUMP THE VERSION NUMBER IN THE CABAL FILES" \
     "(unless their dependencies were bumped)!"
+  exit 1
 fi
