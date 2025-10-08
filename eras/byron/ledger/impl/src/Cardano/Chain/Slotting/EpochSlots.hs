@@ -10,14 +10,7 @@ module Cardano.Chain.Slotting.EpochSlots (
 
 import Cardano.Chain.Slotting.EpochNumber
 import Cardano.Chain.Slotting.SlotNumber
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  fromByronCBOR,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude
 import Data.Data (Data)
 import Formatting.Buildable (Buildable)
@@ -30,16 +23,14 @@ newtype EpochSlots = EpochSlots
   deriving (Data, Eq, Ord, Read, Show, Buildable, Generic, NoThunks)
 
 instance ToCBOR EpochSlots where
-  toCBOR = toByronCBOR
+  toCBOR = toCBOR . unEpochSlots
 
 instance FromCBOR EpochSlots where
-  fromCBOR = fromByronCBOR
+  fromCBOR = EpochSlots <$> fromCBOR
 
-instance EncCBOR EpochSlots where
-  encCBOR = encCBOR . unEpochSlots
+instance EncCBOR EpochSlots
 
-instance DecCBOR EpochSlots where
-  decCBOR = EpochSlots <$> decCBOR
+instance DecCBOR EpochSlots
 
 -- | Data with an accompanying slots per epoch context.
 data WithEpochSlots a = WithEpochSlots
