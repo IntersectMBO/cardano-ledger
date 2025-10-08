@@ -131,10 +131,15 @@ newtype ShelleyDelegEvent era = DelegNewEpoch EpochNo
 instance NFData (ShelleyDelegEvent era)
 
 instance
-  (EraPParams era, ShelleyEraAccounts era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
+  ( EraCertState era
+  , EraPParams era
+  , ShelleyEraAccounts era
+  , ShelleyEraTxCert era
+  , AtMostEra "Babbage" era
+  ) =>
   STS (ShelleyDELEG era)
   where
-  type State (ShelleyDELEG era) = DState era
+  type State (ShelleyDELEG era) = CertState era
   type Signal (ShelleyDELEG era) = TxCert era
   type Environment (ShelleyDELEG era) = DelegEnv era
   type BaseM (ShelleyDELEG era) = ShelleyBase
@@ -242,17 +247,23 @@ instance
       k -> invalidKey k
 
 delegationTransition ::
-  (ShelleyEraAccounts era, ShelleyEraTxCert era, EraPParams era, AtMostEra "Babbage" era) =>
+  ( EraCertState era
+  , ShelleyEraAccounts era
+  , ShelleyEraTxCert era
+  , EraPParams era
+  , AtMostEra "Babbage" era
+  ) =>
   TransitionRule (ShelleyDELEG era)
 delegationTransition = do
-  TRC (DelegEnv slot epochNo ptr chainAccountState pp, ds, c) <- judgmentContext
+  TRC (DelegEnv slot epochNo ptr chainAccountState pp, certState, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
+      ds = certState ^. certDStateL
   case c of
     RegTxCert cred -> do
       -- (hk ∉ dom (rewards ds))
       not (isAccountRegistered cred (ds ^. accountsL)) ?! StakeKeyAlreadyRegisteredDELEG cred
       let compactDeposit = compactCoinOrError (pp ^. ppKeyDepositL)
-      pure (ds & accountsL %~ registerShelleyAccount cred ptr compactDeposit Nothing)
+      pure $ certState & certDStateL . accountsL %~ registerShelleyAccount cred ptr compactDeposit Nothing
     UnRegTxCert cred -> do
       let !(mAccountState, !accounts) = unregisterShelleyAccount cred (ds ^. accountsL)
           checkStakeKeyHasZeroRewardBalance = do
@@ -263,13 +274,14 @@ delegationTransition = do
       -- (hk ∈ dom (rewards ds))
       isJust mAccountState ?! StakeKeyNotRegisteredDELEG cred
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyNonZeroAccountBalanceDELEG
-      pure $ ds & accountsL .~ accounts
+      pure $ certState & certDStateL . accountsL .~ accounts
     DelegStakeTxCert cred stakePool -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
       isAccountRegistered cred (ds ^. accountsL) ?! StakeDelegationImpossibleDELEG cred
       pure $
-        ds & accountsL %~ adjustAccountState (stakePoolDelegationAccountStateL ?~ stakePool) cred
+        certState
+          & certDStateL . accountsL %~ adjustAccountState (stakePoolDelegationAccountStateL ?~ stakePool) cred
     GenesisDelegTxCert gkh vkh vrf -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
@@ -294,13 +306,12 @@ delegationTransition = do
         ?! DuplicateGenesisVRFDELEG vrf
 
       pure $
-        ds
-          { dsFutureGenDelegs =
-              eval (dsFutureGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
-          }
+        certState
+          & certDStateL . dsFutureGenDelegsL
+            .~ eval (dsFutureGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
     RegPoolTxCert _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
-      pure ds
+      pure certState
     _ | Just (MIRCert targetPot mirTarget) <- getMirTxCert c -> do
       checkSlotNotTooLate slot epochNo
       case mirTarget of
@@ -327,46 +338,39 @@ delegationTransition = do
               else do
                 all (>= mempty) credCoinMap ?! MIRNegativesNotCurrentlyAllowed
                 pure (Map.union credCoinMap' instantaneousRewards, potAmount)
-          updateReservesAndTreasury targetPot combinedMap available ds
+          updateReservesAndTreasury targetPot combinedMap available certState
         SendToOppositePotMIR coin ->
           if hardforkAlonzoAllowMIRTransfer pv
             then do
               let available = availableAfterMIR targetPot chainAccountState (dsIRewards ds)
               coin >= mempty ?! MIRNegativeTransfer targetPot coin
               coin <= available ?! InsufficientForTransferDELEG targetPot (Mismatch coin available)
-
-              let ir = dsIRewards ds
-                  dr = deltaReserves ir
-                  dt = deltaTreasury ir
               case targetPot of
                 ReservesMIR ->
                   pure $
-                    ds
-                      { dsIRewards =
-                          ir
-                            { deltaReserves = dr <> invert (toDeltaCoin coin)
-                            , deltaTreasury = dt <> toDeltaCoin coin
-                            }
-                      }
+                    certState
+                      & certDStateL . dsIRewardsL . iRDeltaReservesL <>~ invert (toDeltaCoin coin)
+                      & certDStateL . dsIRewardsL . iRDeltaTreasuryL <>~ toDeltaCoin coin
                 TreasuryMIR ->
                   pure $
-                    ds
-                      { dsIRewards =
-                          ir
-                            { deltaReserves = dr <> toDeltaCoin coin
-                            , deltaTreasury = dt <> invert (toDeltaCoin coin)
-                            }
-                      }
+                    certState
+                      & certDStateL . dsIRewardsL . iRDeltaReservesL <>~ toDeltaCoin coin
+                      & certDStateL . dsIRewardsL . iRDeltaTreasuryL <>~ invert (toDeltaCoin coin)
             else do
               failBecause MIRTransferNotCurrentlyAllowed
-              pure ds
+              pure certState
     _ -> do
       -- The impossible case
       failBecause WrongCertificateTypeDELEG -- this always fails
-      pure ds
+      pure certState
 
 checkSlotNotTooLate ::
-  (ShelleyEraAccounts era, ShelleyEraTxCert era, EraPParams era, AtMostEra "Babbage" era) =>
+  ( EraCertState era
+  , ShelleyEraAccounts era
+  , ShelleyEraTxCert era
+  , EraPParams era
+  , AtMostEra "Babbage" era
+  ) =>
   SlotNo ->
   EpochNo ->
   Rule (ShelleyDELEG era) 'Transition ()
@@ -380,12 +384,13 @@ checkSlotNotTooLate slot curEpochNo = do
   slot < tooLate ?! MIRCertificateTooLateinEpochDELEG (Mismatch slot tooLate)
 
 updateReservesAndTreasury ::
+  EraCertState era =>
   MIRPot ->
   Map.Map (Credential 'Staking) Coin ->
   Coin ->
-  DState era ->
-  Rule (ShelleyDELEG era) 'Transition (DState era)
-updateReservesAndTreasury targetPot combinedMap available ds = do
+  CertState era ->
+  Rule (ShelleyDELEG era) 'Transition (CertState era)
+updateReservesAndTreasury targetPot combinedMap available certState = do
   let requiredForRewards = fold combinedMap
   requiredForRewards
     <= available
@@ -397,5 +402,5 @@ updateReservesAndTreasury targetPot combinedMap available ds = do
           }
   pure $
     case targetPot of
-      ReservesMIR -> ds {dsIRewards = (dsIRewards ds) {iRReserves = combinedMap}}
-      TreasuryMIR -> ds {dsIRewards = (dsIRewards ds) {iRTreasury = combinedMap}}
+      ReservesMIR -> certState & certDStateL . dsIRewardsL . iRReservesL .~ combinedMap
+      TreasuryMIR -> certState & certDStateL . dsIRewardsL . iRTreasuryL .~ combinedMap

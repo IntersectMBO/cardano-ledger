@@ -2,6 +2,8 @@
 
 ## 1.18.0.0
 
+* Change state of `ShelleyDELEG` rule from `DState` to `CertState`
+* Add `EraCertState` constraint to `STS` instance for `ShelleyDELEG`
 * Move withdrawals-draining from `DELEGS` to `LEDGER`
   - Remove `WithdrawalsNotInRewardsDELEGS`
   - Add to `ShelleyLedgerPredFailure`
