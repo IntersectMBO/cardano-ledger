@@ -120,7 +120,7 @@ instance
   , EraCertState era
   , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
-  , State (EraRule "DELEG" era) ~ DState era
+  , State (EraRule "DELEG" era) ~ CertState era
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , State (EraRule "POOL" era) ~ PState era
@@ -183,7 +183,7 @@ delplTransition ::
   forall era.
   ( Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
-  , State (EraRule "DELEG" era) ~ DState era
+  , State (EraRule "DELEG" era) ~ CertState era
   , State (EraRule "POOL" era) ~ PState era
   , Signal (EraRule "DELEG" era) ~ TxCert era
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
@@ -201,20 +201,14 @@ delplTransition = do
         trans @(EraRule "POOL" era) $ TRC (PoolEnv eNo pp, d ^. certPStateL, poolCert)
       pure $ d & certPStateL .~ ps
     ShelleyTxCertGenesisDeleg GenesisDelegCert {} -> do
-      ds <-
-        trans @(EraRule "DELEG" era) $
-          TRC (DelegEnv slot eNo ptr chainAccountState pp, d ^. certDStateL, c)
-      pure $ d & certDStateL .~ ds
+      trans @(EraRule "DELEG" era) $
+        TRC (DelegEnv slot eNo ptr chainAccountState pp, d, c)
     ShelleyTxCertDelegCert _ -> do
-      ds <-
-        trans @(EraRule "DELEG" era) $
-          TRC (DelegEnv slot eNo ptr chainAccountState pp, d ^. certDStateL, c)
-      pure $ d & certDStateL .~ ds
+      trans @(EraRule "DELEG" era) $
+        TRC (DelegEnv slot eNo ptr chainAccountState pp, d, c)
     ShelleyTxCertMir _ -> do
-      ds <-
-        trans @(EraRule "DELEG" era) $
-          TRC (DelegEnv slot eNo ptr chainAccountState pp, d ^. certDStateL, c)
-      pure $ d & certDStateL .~ ds
+      trans @(EraRule "DELEG" era) $
+        TRC (DelegEnv slot eNo ptr chainAccountState pp, d, c)
 
 instance
   ( Era era
@@ -230,6 +224,7 @@ instance
 instance
   ( ShelleyEraAccounts era
   , ShelleyEraTxCert era
+  , EraCertState era
   , EraPParams era
   , AtMostEra "Babbage" era
   , PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era

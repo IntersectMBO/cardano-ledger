@@ -2,6 +2,8 @@
 
 ## 1.17.1.0
 
+* Change state of `ShelleyDELEG` rule from `DState` to `CertState`
+* Add `EraCertState` constraint to `STS` instance for `ShelleyDELEG`
 * Added `Generic` instance to `ShelleyTxOut`
 
 ### `testlib`
