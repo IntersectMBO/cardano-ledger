@@ -95,6 +95,7 @@ import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
@@ -211,12 +212,19 @@ deregStakeCred cred cs = cs {chainNes = nes}
       chainNes cs
         & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL .~ accounts'
         & nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL %~ (<-> refund)
+        & nesEsL . esLStateL . lsCertStateL . certPStateL %~ adjustPState
     accounts =
       chainNes cs
         ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
     (mAccountState, accounts') =
       unregisterShelleyAccount cred accounts
     refund = fromCompact (fromJust mAccountState ^. depositAccountStateL)
+    currentDeleg = Map.lookup cred (accounts ^. accountsMapL) >>= (^. stakePoolDelegationAccountStateL)
+    adjustPState =
+      maybe
+        id
+        (\oldPool -> psStakePoolsL %~ Map.adjust (spsDelegatorsL %~ Set.delete cred) oldPool)
+        currentDeleg
 
 -- | = New Delegation
 --
@@ -234,6 +242,8 @@ delegation cred poolId cs = cs {chainNes = nes}
       chainNes cs
         & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
           %~ Map.adjust (stakePoolDelegationAccountStateL .~ Just poolId) cred
+        & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+          %~ Map.adjust (spsDelegatorsL %~ Set.insert cred) poolId
 
 -- | Register a stake pool.
 regPool ::
