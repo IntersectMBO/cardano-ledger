@@ -89,7 +89,7 @@ tests =
 
 -- | Check stake key registration
 keyRegistration ::
-  (EraAccounts era, ShelleyEraTxCert era) =>
+  (EraCertState era, ShelleyEraTxCert era) =>
   SourceSignalTarget (ShelleyDELEG era) ->
   Property
 keyRegistration
@@ -100,10 +100,10 @@ keyRegistration
     conjoin
       [ counterexample
           "a newly registered key should have a reward account"
-          (isAccountRegistered cred (targetSt ^. accountsL))
+          (isAccountRegistered cred (targetSt ^. certDStateL . accountsL))
       , counterexample
           "a newly registered key should have a reward account with 0 balance"
-          ( ((^. balanceAccountStateL) <$> lookupAccountState cred (targetSt ^. accountsL))
+          ( ((^. balanceAccountStateL) <$> lookupAccountState cred (targetSt ^. certDStateL . accountsL))
               === Just mempty
           )
       ]
@@ -111,7 +111,7 @@ keyRegistration _ = property ()
 
 -- | Check stake key de-registration
 keyDeRegistration ::
-  (EraAccounts era, ShelleyEraTxCert era) =>
+  (EraCertState era, ShelleyEraTxCert era) =>
   SourceSignalTarget (ShelleyDELEG era) ->
   Property
 keyDeRegistration
@@ -122,16 +122,16 @@ keyDeRegistration
     conjoin
       [ counterexample
           "a deregistered stake key should no longer be in the rewards mapping"
-          (not (isAccountRegistered cred (targetSt ^. accountsL)))
+          (not (isAccountRegistered cred (targetSt ^. certDStateL . accountsL)))
       , counterexample
           "a deregistered stake key should no longer be in the delegations mapping"
-          (isNothing (lookupStakePoolDelegation cred (targetSt ^. accountsL)))
+          (isNothing (lookupStakePoolDelegation cred (targetSt ^. certDStateL . accountsL)))
       ]
 keyDeRegistration _ = property ()
 
 -- | Check stake key delegation
 keyDelegation ::
-  (EraAccounts era, ShelleyEraTxCert era) =>
+  (EraCertState era, ShelleyEraTxCert era) =>
   SourceSignalTarget (ShelleyDELEG era) ->
   Property
 keyDelegation
@@ -142,21 +142,21 @@ keyDelegation
     conjoin
       [ counterexample
           "a delegated key should have a reward account"
-          (isAccountRegistered stakeCred (targetSt ^. accountsL))
+          (isAccountRegistered stakeCred (targetSt ^. certDStateL . accountsL))
       , counterexample
           "a registered stake credential should be delegated"
-          (lookupStakePoolDelegation stakeCred (targetSt ^. accountsL) === Just poolId)
+          (lookupStakePoolDelegation stakeCred (targetSt ^. certDStateL . accountsL) === Just poolId)
       ]
 keyDelegation _ = property ()
 
 -- | Check that the sum of balances does not change and that each element
 -- that is either removed or added has a zero balance.
-balancesSumInvariant :: EraAccounts era => SourceSignalTarget (ShelleyDELEG era) -> Property
+balancesSumInvariant :: EraCertState era => SourceSignalTarget (ShelleyDELEG era) -> Property
 balancesSumInvariant
   SourceSignalTarget {source, target} =
     let accountsBalances ds = Map.map (^. balanceAccountStateL) (ds ^. accountsL . accountsMapL)
-        sourceBalances = accountsBalances source
-        targetBalances = accountsBalances target
+        sourceBalances = accountsBalances (source ^. certDStateL)
+        targetBalances = accountsBalances (target ^. certDStateL)
         balancesSum = F.foldl' (<>) mempty
      in conjoin
           [ counterexample
@@ -171,7 +171,7 @@ balancesSumInvariant
           ]
 
 checkInstantaneousRewards ::
-  (EraPParams era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
+  (EraPParams era, EraCertState era, ShelleyEraTxCert era, AtMostEra "Babbage" era) =>
   DelegEnv era ->
   SourceSignalTarget (ShelleyDELEG era) ->
   Property
@@ -183,36 +183,36 @@ checkInstantaneousRewards
         conjoin
           [ counterexample
               "a ReservesMIR certificate should add all entries to the `irwd` mapping"
-              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards target))
+              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ dsIRewards (target ^. certDStateL)))
           , counterexample
               "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
               ( if hardforkAlonzoAllowMIRTransfer . view ppProtocolVersionL $ ppDE denv
                   then -- In the Alonzo era, repeated fields are added
-                    fold (iRReserves $ dsIRewards source)
+                    fold (iRReserves $ dsIRewards (source ^. certDStateL))
                       `addDeltaCoin` fold irwd
-                      == fold (iRReserves $ dsIRewards target)
+                      == fold (iRReserves $ dsIRewards (target ^. certDStateL))
                   else -- Prior to the Alonzo era, repeated fields overridden
-                    fold (iRReserves (dsIRewards source) Map.\\ irwd)
+                    fold (iRReserves (dsIRewards (source ^. certDStateL)) Map.\\ irwd)
                       `addDeltaCoin` fold irwd
-                      == fold (iRReserves $ dsIRewards target)
+                      == fold (iRReserves $ dsIRewards (target ^. certDStateL))
               )
           ]
       MirTxCert (MIRCert TreasuryMIR (StakeAddressesMIR irwd)) ->
         conjoin
           [ counterexample
               "a TreasuryMIR certificate should add all entries to the `irwd` mapping"
-              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ dsIRewards target))
+              (Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ dsIRewards (target ^. certDStateL)))
           , counterexample
               "a TreasuryMIR certificate should add* the total value to the `irwd` map"
               ( if hardforkAlonzoAllowMIRTransfer . view ppProtocolVersionL . ppDE $ denv
                   then -- In the Alonzo era, repeated fields are added
-                    fold (iRTreasury $ dsIRewards source)
+                    fold (iRTreasury $ dsIRewards (source ^. certDStateL))
                       `addDeltaCoin` fold irwd
-                      == fold (iRTreasury $ dsIRewards target)
+                      == fold (iRTreasury $ dsIRewards (target ^. certDStateL))
                   else -- Prior to the Alonzo era, repeated fields overridden
-                    fold (iRTreasury (dsIRewards source) Map.\\ irwd)
+                    fold (iRTreasury (dsIRewards (source ^. certDStateL)) Map.\\ irwd)
                       `addDeltaCoin` fold irwd
-                      == fold (iRTreasury $ dsIRewards target)
+                      == fold (iRTreasury $ dsIRewards (target ^. certDStateL))
               )
           ]
       _ -> property ()

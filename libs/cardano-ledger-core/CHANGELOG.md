@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `iRReservesL`, `iRTreasuryL`, `iRDeltaReservesL`, `iRDeltaTreasuryL`
 * Add `spsDelegators` field to `StakePool`
 * Add `spsDelegatorsL`
 * Change parameter type of `removeStakePoolDelegations` from `Set (KeyHash 'StakePool)` to `Set (Credential 'Staking)`

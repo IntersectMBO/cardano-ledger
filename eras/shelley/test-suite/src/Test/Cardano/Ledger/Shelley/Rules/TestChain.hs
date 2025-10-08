@@ -220,7 +220,7 @@ delegTraceFromBlock ::
 delegTraceFromBlock chainSt block =
   ( delegEnv
   , runShelleyBase $
-      Trace.closure @(ShelleyDELEG era) delegEnv delegSt0 blockCerts
+      Trace.closure @(ShelleyDELEG era) delegEnv (ledgerSt0 ^. lsCertStateL) blockCerts
   )
   where
     (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
@@ -231,8 +231,6 @@ delegTraceFromBlock chainSt block =
           dummyCertIx = minBound
           ptr = Ptr (SlotNo32 (fromIntegral slot64)) txIx dummyCertIx
        in DelegEnv slot (epochFromSlotNo slot) ptr reserves pp
-    delegSt0 =
-      ledgerSt0 ^. lsCertStateL . certDStateL
     delegCert (RegTxCert _) = True
     delegCert (UnRegTxCert _) = True
     delegCert (DelegStakeTxCert _ _) = True
