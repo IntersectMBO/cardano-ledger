@@ -9,20 +9,17 @@ module Cardano.Chain.Delegation.Validation.Activation (
   activateDelegation,
 ) where
 
-import Cardano.Chain.Common (KeyHash)
-import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.Delegation.Validation.Scheduling (ScheduledDelegation (..))
-import Cardano.Chain.Slotting (SlotNumber (..))
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
+import Cardano.Binary (
   FromCBOR (..),
   ToCBOR (..),
   encodeListLen,
   enforceSize,
-  fromByronCBOR,
-  toByronCBOR,
  )
+import Cardano.Chain.Common (KeyHash)
+import qualified Cardano.Chain.Delegation as Delegation
+import Cardano.Chain.Delegation.Validation.Scheduling (ScheduledDelegation (..))
+import Cardano.Chain.Slotting (SlotNumber (..))
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import NoThunks.Class (NoThunks (..))
@@ -40,23 +37,21 @@ data State = State
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance ToCBOR State where
-  toCBOR = toByronCBOR
+  toCBOR s =
+    encodeListLen 2
+      <> toCBOR (delegationMap s)
+      <> toCBOR (delegationSlots s)
 
 instance FromCBOR State where
-  fromCBOR = fromByronCBOR
-
-instance DecCBOR State where
-  decCBOR = do
+  fromCBOR = do
     enforceSize "State" 2
     State
-      <$> decCBOR
-      <*> decCBOR
+      <$> fromCBOR
+      <*> fromCBOR
 
-instance EncCBOR State where
-  encCBOR s =
-    encodeListLen 2
-      <> encCBOR (delegationMap s)
-      <> encCBOR (delegationSlots s)
+instance DecCBOR State
+
+instance EncCBOR State
 
 -- | Activate a 'ScheduledDelegation' if its activation slot is less than the
 --   previous delegation slot for this delegate, otherwise discard it. This is

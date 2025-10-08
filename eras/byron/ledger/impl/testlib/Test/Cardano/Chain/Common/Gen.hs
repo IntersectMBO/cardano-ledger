@@ -28,6 +28,7 @@ module Test.Cardano.Chain.Common.Gen (
   genTxSizeLinear,
 ) where
 
+import Cardano.Binary (ToCBOR)
 import Cardano.Chain.Common (
   AddrAttributes (..),
   AddrSpendingData (..),
@@ -57,7 +58,6 @@ import Cardano.Chain.Common (
   rationalToLovelacePortion,
   toCompactAddress,
  )
-import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Prelude
 import Formatting (build, sformat)
 import Hedgehog
@@ -171,11 +171,11 @@ genLovelacePortion =
   rationalToLovelacePortion . realToFrac <$> Gen.double (Range.constant 0 1)
 
 -- slow
-genMerkleTree :: EncCBOR a => Gen a -> Gen (MerkleTree a)
+genMerkleTree :: ToCBOR a => Gen a -> Gen (MerkleTree a)
 genMerkleTree genA = mkMerkleTree <$> Gen.list (Range.linear 0 10) genA
 
 -- slow
-genMerkleRoot :: EncCBOR a => Gen a -> Gen (MerkleRoot a)
+genMerkleRoot :: ToCBOR a => Gen a -> Gen (MerkleRoot a)
 genMerkleRoot genA = mtRoot <$> genMerkleTree genA
 
 genNetworkMagic :: Gen NetworkMagic

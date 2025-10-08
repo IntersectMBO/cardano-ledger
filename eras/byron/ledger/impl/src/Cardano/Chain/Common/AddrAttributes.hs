@@ -10,29 +10,25 @@ module Cardano.Chain.Common.AddrAttributes (
   HDAddressPayload (..),
 ) where
 
-import Cardano.Chain.Common.Attributes (
-  Attributes (..),
-  decCBORAttributes,
-  encCBORAttributes,
- )
-import Cardano.Chain.Common.NetworkMagic (NetworkMagic (..))
-import Cardano.HeapWords (HeapWords (..))
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  Decoder,
-  EncCBOR (..),
+import Cardano.Binary (
   FromCBOR (..),
   ToCBOR (..),
-  byronProtVer,
   decodeBytesCanonical,
   decodeFull,
   decodeFullDecoder,
   decodeWord32Canonical,
-  fromByronCBOR,
   serialize,
-  toByronCBOR,
   toCborError,
  )
+import Cardano.Chain.Common.Attributes (
+  Attributes (..),
+  fromCBORAttributes,
+  toCBORAttributes,
+ )
+import Cardano.Chain.Common.NetworkMagic (NetworkMagic (..))
+import Cardano.HeapWords (HeapWords (..))
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.ByteString.Char8 as Char8
@@ -81,20 +77,14 @@ For address there are two attributes:
 -}
 
 instance ToCBOR (Attributes AddrAttributes) where
-  toCBOR = toByronCBOR
-
-instance FromCBOR (Attributes AddrAttributes) where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR (Attributes AddrAttributes) where
   -- FIXME @avieth it was observed that for a 150kb block, this call to
-  -- encCBORAttributes allocated 3.685mb
+  -- toCBORAttributes allocated 3.685mb
   -- Try using serialize rather than serialize', to avoid the
   -- toStrict call.
   -- Also consider using a custom builder strategy; serialized attributes are
   -- probably small, right?
-  encCBOR attrs@Attributes {attrData = AddrAttributes derivationPath networkMagic} =
-    encCBORAttributes listWithIndices attrs
+  toCBOR attrs@Attributes {attrData = AddrAttributes derivationPath networkMagic} =
+    toCBORAttributes listWithIndices attrs
     where
       listWithIndices :: [(Word8, AddrAttributes -> LByteString)]
       listWithIndices =
@@ -106,7 +96,7 @@ instance EncCBOR (Attributes AddrAttributes) where
         Nothing -> []
         -- 'unsafeFromJust' is safe, because 'case' ensures
         -- that derivation path is 'Just'.
-        Just _ -> [(1, serialize byronProtVer . unsafeFromJust . aaVKDerivationPath)]
+        Just _ -> [(1, serialize . unsafeFromJust . aaVKDerivationPath)]
       unsafeFromJust :: Maybe a -> a
       unsafeFromJust =
         fromMaybe (panic "Maybe was Nothing in EncCBOR (Attributes AddrAttributes)")
@@ -116,10 +106,10 @@ instance EncCBOR (Attributes AddrAttributes) where
         case networkMagic of
           NetworkMainOrStage -> []
           NetworkTestnet x ->
-            [(2, \_ -> serialize byronProtVer x)]
+            [(2, \_ -> serialize x)]
 
-instance DecCBOR (Attributes AddrAttributes) where
-  decCBOR = decCBORAttributes initValue go
+instance FromCBOR (Attributes AddrAttributes) where
+  fromCBOR = fromCBORAttributes initValue go
     where
       initValue =
         AddrAttributes
@@ -131,16 +121,20 @@ instance DecCBOR (Attributes AddrAttributes) where
         Word8 ->
         LByteString ->
         AddrAttributes ->
-        Decoder s (Maybe AddrAttributes)
+        Plain.Decoder s (Maybe AddrAttributes)
       go n v acc = case n of
         1 ->
           (\deriv -> Just $ acc {aaVKDerivationPath = Just deriv})
-            <$> toCborError (decodeFull byronProtVer v)
+            <$> toCborError (decodeFull v)
         2 ->
           (\deriv -> Just $ acc {aaNetworkMagic = NetworkTestnet deriv})
             <$> toCborError
-              (decodeFullDecoder byronProtVer "NetworkMagic" decodeWord32Canonical v)
+              (decodeFullDecoder "NetworkMagic" decodeWord32Canonical v)
         _ -> pure Nothing
+
+instance EncCBOR (Attributes AddrAttributes)
+
+instance DecCBOR (Attributes AddrAttributes)
 
 -- | Passphrase is a hash of root verification key.
 data HDPassphrase = HDPassphrase !ByteString
@@ -162,18 +156,16 @@ newtype HDAddressPayload = HDAddressPayload
   { getHDAddressPayload :: ByteString
   }
   deriving (Eq, Ord, Show, Generic)
-  deriving newtype (EncCBOR, HeapWords)
+  deriving newtype (ToCBOR, HeapWords)
   deriving anyclass (NFData, NoThunks)
 
-instance ToCBOR HDAddressPayload where
-  toCBOR = toByronCBOR
-
 instance FromCBOR HDAddressPayload where
-  fromCBOR = fromByronCBOR
+  fromCBOR = HDAddressPayload <$> decodeBytesCanonical
 
 -- Used for debugging purposes only
 instance ToJSON HDAddressPayload where
   toJSON (HDAddressPayload bs) = object ["HDAddressPayload" .= Char8.unpack bs]
 
-instance DecCBOR HDAddressPayload where
-  decCBOR = HDAddressPayload <$> decodeBytesCanonical
+instance EncCBOR HDAddressPayload
+
+instance DecCBOR HDAddressPayload

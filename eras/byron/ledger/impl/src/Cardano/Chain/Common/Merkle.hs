@@ -33,19 +33,10 @@ module Cardano.Chain.Common.Merkle (
 -- used unqualified. The hiding in fact makes it clearer for the human reader
 -- what's going on.
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), serializeBuilder)
 import Cardano.Crypto (Hash, hashDecoded, hashRaw, hashToBytes)
 import Cardano.Crypto.Raw (Raw)
-import Cardano.Ledger.Binary (
-  Annotated (..),
-  DecCBOR (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  byronProtVer,
-  fromByronCBOR,
-  serializeBuilder,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (Annotated (..), DecCBOR, EncCBOR)
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Data.ByteString.Builder (Builder, byteString, word8)
@@ -75,18 +66,16 @@ instance Buildable (MerkleRoot a) where
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (MerkleRoot a)
 
-instance (EncCBOR a, Typeable a) => ToCBOR (MerkleRoot a) where
-  toCBOR = toByronCBOR
+instance (ToCBOR a, Typeable a) => ToCBOR (MerkleRoot a) where
+  toCBOR = toCBOR . getMerkleRoot
   encodedSizeExpr size = encodedSizeExpr size . fmap getMerkleRoot
 
-instance DecCBOR a => FromCBOR (MerkleRoot a) where
-  fromCBOR = fromByronCBOR
+instance FromCBOR a => FromCBOR (MerkleRoot a) where
+  fromCBOR = MerkleRoot <$> fromCBOR
 
-instance EncCBOR a => EncCBOR (MerkleRoot a) where
-  encCBOR = encCBOR . getMerkleRoot
+instance ToCBOR a => EncCBOR (MerkleRoot a)
 
-instance DecCBOR a => DecCBOR (MerkleRoot a) where
-  decCBOR = MerkleRoot <$> decCBOR
+instance FromCBOR a => DecCBOR (MerkleRoot a)
 
 merkleRootToBuilder :: MerkleRoot a -> Builder
 merkleRootToBuilder (MerkleRoot h) = byteString (hashToBytes h)
@@ -125,22 +114,20 @@ instance Foldable MerkleTree where
 instance Show a => Show (MerkleTree a) where
   show tree = "Merkle tree: " <> show (F.toList tree)
 
-instance (EncCBOR a, Typeable a) => ToCBOR (MerkleTree a) where
-  toCBOR = toByronCBOR
+instance (ToCBOR a, Typeable a) => ToCBOR (MerkleTree a) where
+  toCBOR = toCBOR . F.toList
 
-instance (DecCBOR a, EncCBOR a) => FromCBOR (MerkleTree a) where
-  fromCBOR = fromByronCBOR
+instance (FromCBOR a, ToCBOR a) => FromCBOR (MerkleTree a) where
+  fromCBOR = mkMerkleTree <$> fromCBOR
 
 -- This instance is both faster and more space-efficient (as confirmed by a
 -- benchmark). Hashing turns out to be faster than decoding extra data.
-instance EncCBOR a => EncCBOR (MerkleTree a) where
-  encCBOR = encCBOR . F.toList
+instance ToCBOR a => EncCBOR (MerkleTree a)
 
-instance (DecCBOR a, EncCBOR a) => DecCBOR (MerkleTree a) where
-  decCBOR = mkMerkleTree <$> decCBOR
+instance (FromCBOR a, ToCBOR a) => DecCBOR (MerkleTree a)
 
 -- | Smart constructor for 'MerkleTree'
-mkMerkleTree :: EncCBOR a => [a] -> MerkleTree a
+mkMerkleTree :: ToCBOR a => [a] -> MerkleTree a
 mkMerkleTree = mkMerkleTree' (mkLeaf . getConst) . fmap Const
 
 -- | Reconstruct a 'MerkleTree' from a decoded list of items
@@ -215,14 +202,14 @@ nodeRoot :: MerkleNode a -> MerkleRoot a
 nodeRoot (MerkleLeaf root _) = root
 nodeRoot (MerkleBranch root _ _) = root
 
-mkLeaf :: forall a. EncCBOR a => a -> MerkleNode a
+mkLeaf :: forall a. ToCBOR a => a -> MerkleNode a
 mkLeaf a = MerkleLeaf mRoot a
   where
     mRoot :: MerkleRoot a
     mRoot =
       MerkleRoot
         $ hashRaw
-          (toLazyByteString (word8 0 <> serializeBuilder byronProtVer a))
+          (toLazyByteString (word8 0 <> serializeBuilder a))
 
 mkLeafDecoded :: Annotated a ByteString -> MerkleNode a
 mkLeafDecoded a = MerkleLeaf mRoot (unAnnotated a)

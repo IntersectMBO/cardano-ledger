@@ -11,6 +11,7 @@ module Cardano.Chain.Byron.API.Mempool (
   mempoolPayloadReencode,
 ) where
 
+import Cardano.Binary
 import qualified Cardano.Chain.Block as CC
 import Cardano.Chain.Byron.API.Common
 import qualified Cardano.Chain.Delegation as Delegation
@@ -24,7 +25,7 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Update.Validation.Interface as U.Iface
 import qualified Cardano.Chain.ValidationMode as CC
 import Cardano.Crypto.ProtocolMagic
-import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, recoverBytes)
 import Cardano.Prelude hiding (cborError)
 import qualified Codec.CBOR.Write as CBOR
 import qualified Data.Set as Set
@@ -47,30 +48,28 @@ data ApplyMempoolPayloadErr
   deriving (Eq, Show)
 
 instance ToCBOR ApplyMempoolPayloadErr where
-  toCBOR = toByronCBOR
+  toCBOR (MempoolTxErr err) =
+    encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR err
+  toCBOR (MempoolDlgErr err) =
+    encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR err
+  toCBOR (MempoolUpdateProposalErr err) =
+    encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR err
+  toCBOR (MempoolUpdateVoteErr err) =
+    encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR err
 
 instance FromCBOR ApplyMempoolPayloadErr where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR ApplyMempoolPayloadErr where
-  encCBOR (MempoolTxErr err) =
-    encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR err
-  encCBOR (MempoolDlgErr err) =
-    encodeListLen 2 <> encCBOR (1 :: Word8) <> encCBOR err
-  encCBOR (MempoolUpdateProposalErr err) =
-    encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR err
-  encCBOR (MempoolUpdateVoteErr err) =
-    encodeListLen 2 <> encCBOR (3 :: Word8) <> encCBOR err
-
-instance DecCBOR ApplyMempoolPayloadErr where
-  decCBOR = do
+  fromCBOR = do
     enforceSize "ApplyMempoolPayloadErr" 2
     decodeWord8 >>= \case
-      0 -> MempoolTxErr <$> decCBOR
-      1 -> MempoolDlgErr <$> decCBOR
-      2 -> MempoolUpdateProposalErr <$> decCBOR
-      3 -> MempoolUpdateVoteErr <$> decCBOR
+      0 -> MempoolTxErr <$> fromCBOR
+      1 -> MempoolDlgErr <$> fromCBOR
+      2 -> MempoolUpdateProposalErr <$> fromCBOR
+      3 -> MempoolUpdateVoteErr <$> fromCBOR
       tag -> cborError $ DecoderErrorUnknownTag "ApplyMempoolPayloadErr" tag
+
+instance EncCBOR ApplyMempoolPayloadErr
+
+instance DecCBOR ApplyMempoolPayloadErr
 
 applyMempoolPayload ::
   MonadError ApplyMempoolPayloadErr m =>
@@ -115,8 +114,8 @@ mempoolPayloadReencode = go
     go (CC.MempoolUpdateProposal payload) = reencode payload
     go (CC.MempoolUpdateVote payload) = reencode payload
 
-    reencode :: (Functor f, EncCBOR (f ())) => f a -> ByteString
-    reencode = CBOR.toStrictByteString . toPlainEncoding byronProtVer . encCBOR . void
+    reencode :: (Functor f, ToCBOR (f ())) => f a -> ByteString
+    reencode = CBOR.toStrictByteString . toCBOR . void
 
 {-------------------------------------------------------------------------------
   Applying transactions

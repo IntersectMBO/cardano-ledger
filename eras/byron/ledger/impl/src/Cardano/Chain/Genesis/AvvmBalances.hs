@@ -11,18 +11,15 @@ module Cardano.Chain.Genesis.AvvmBalances (
   GenesisAvvmBalances (..),
 ) where
 
-import Cardano.Chain.Common (Lovelace)
-import Cardano.Crypto.Signing.Redeem (CompactRedeemVerificationKey)
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
+import Cardano.Binary (
   FromCBOR (..),
   ToCBOR (..),
   encodeListLen,
   enforceSize,
-  fromByronCBOR,
-  toByronCBOR,
  )
+import Cardano.Chain.Common (Lovelace)
+import Cardano.Crypto.Signing.Redeem (CompactRedeemVerificationKey)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude
 import NoThunks.Class (NoThunks (..))
 import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
@@ -42,17 +39,15 @@ instance MonadError SchemaError m => FromJSON m GenesisAvvmBalances where
   fromJSON = fmap (GenesisAvvmBalances . forceElemsToWHNF) . fromJSON
 
 instance ToCBOR GenesisAvvmBalances where
-  toCBOR = toByronCBOR
+  toCBOR (GenesisAvvmBalances gab) =
+    encodeListLen 1
+      <> toCBOR @(Map CompactRedeemVerificationKey Lovelace) gab
 
 instance FromCBOR GenesisAvvmBalances where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR GenesisAvvmBalances where
-  encCBOR (GenesisAvvmBalances gab) =
-    encodeListLen 1
-      <> encCBOR @(Map CompactRedeemVerificationKey Lovelace) gab
-
-instance DecCBOR GenesisAvvmBalances where
-  decCBOR = do
+  fromCBOR = do
     enforceSize "GenesisAvvmBalances" 1
-    GenesisAvvmBalances <$> decCBOR @(Map CompactRedeemVerificationKey Lovelace)
+    GenesisAvvmBalances <$> fromCBOR @(Map CompactRedeemVerificationKey Lovelace)
+
+instance EncCBOR GenesisAvvmBalances
+
+instance DecCBOR GenesisAvvmBalances

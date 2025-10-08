@@ -45,6 +45,15 @@ module Cardano.Chain.Common.Address (
   makeRedeemAddress,
 ) where
 
+import Cardano.Binary (
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  decodeFull',
+  decodeListLenCanonical,
+  matchSize,
+  serialize',
+ )
 import qualified Cardano.Binary as Plain (
   Encoding,
  )
@@ -73,18 +82,9 @@ import Cardano.Crypto.Signing (
 import Cardano.HeapWords (HeapWords (..), heapWords3)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
-  DecoderError (..),
   EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
-  byronProtVer,
-  decodeFull',
-  decodeListLenCanonical,
-  fromByronCBOR,
-  matchSize,
-  serialize',
-  toByronCBOR,
+  fromPlainEncoding,
  )
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
@@ -121,22 +121,20 @@ newtype Address' = Address'
   { unAddress' :: (AddrType, AddrSpendingData, Attributes AddrAttributes)
   }
   deriving (Eq, Show, Generic)
-  deriving newtype (EncCBOR)
+  deriving newtype (ToCBOR)
 
-instance ToCBOR Address' where
-  toCBOR = toByronCBOR
-
-instance FromCBOR Address' where
-  fromCBOR = fromByronCBOR
+instance EncCBOR Address'
 
 -- We need to use canonical encodings for @Address'@ so that all implementations
 -- agree on the `AddressHash`. The components of the @Address'@ also have
 -- canonical encodings enforced.
-instance DecCBOR Address' where
-  decCBOR = do
+instance FromCBOR Address' where
+  fromCBOR = do
     len <- decodeListLenCanonical
     matchSize "Address'" 3 len
-    fmap Address' $ (,,) <$> decCBOR <*> decCBOR <*> decCBOR
+    fmap Address' $ (,,) <$> fromCBOR <*> fromCBOR <*> fromCBOR
+
+instance DecCBOR Address'
 
 -- | 'Address' is where you can send Lovelace
 data Address = Address
@@ -166,19 +164,18 @@ instance ToCBOR Address where
       <*> (addrType <$> pxy)
 
 instance FromCBOR Address where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR Address
-
-instance DecCBOR Address where
-  decCBOR = do
+  fromCBOR = do
     (root, attributes, addrType') <- decodeCrcProtected
     pure
-      $ Address
+      Address
         { addrRoot = root
         , addrAttributes = attributes
         , addrType = addrType'
         }
+
+instance EncCBOR Address
+
+instance DecCBOR Address
 
 instance B.Buildable [Address] where
   build = bprint listJson
@@ -221,7 +218,7 @@ addrAlphabet :: Alphabet
 addrAlphabet = bitcoinAlphabet
 
 addrToBase58 :: Address -> ByteString
-addrToBase58 = encodeBase58 addrAlphabet . serialize' byronProtVer
+addrToBase58 = encodeBase58 addrAlphabet . serialize'
 
 instance B.Buildable Address where
   build = B.build . decodeLatin1 . addrToBase58
@@ -242,7 +239,7 @@ decCBORTextAddress = decCBORAddress . encodeUtf8
               "Address"
               "Invalid base58 representation of address"
       dbs <- maybeToRight base58Err $ decodeBase58 addrAlphabet bs
-      decodeFull' byronProtVer dbs
+      decodeFull' dbs
 
 -- | Decode an address from Base58 encoded Text.
 decodeAddressBase58 :: Text -> Either DecoderError Address
@@ -349,16 +346,18 @@ isRedeemAddress addr = case addrType addr of
   _ -> False
 
 -- Encodes the `Address` __without__ the CRC32.
--- It's important to keep this function separated from the `encCBOR`
--- definition to avoid that `encCBOR` would call `crc32` and
--- the latter invoke `crc32Update`, which would then try to call `encCBOR`
+-- It's important to keep this function separated from the `toCBOR`
+-- definition to avoid that `toCBOR` would call `crc32` and
+-- the latter invoke `crc32Update`, which would then try to call `toCBOR`
 -- indirectly once again, in an infinite loop.
+toCBORAddr :: Address -> Plain.Encoding
+toCBORAddr addr =
+  toCBOR (addrRoot addr)
+    <> toCBOR (addrAttributes addr)
+    <> toCBOR (addrType addr)
+
 encCBORAddr :: Address -> Encoding
-encCBORAddr addr =
-  encCBOR (addrRoot addr)
-    <> encCBOR (addrAttributes addr)
-    <> encCBOR
-      (addrType addr)
+encCBORAddr = fromPlainEncoding . toCBORAddr
 
 encCBORAddrCRC32 :: Address -> Plain.Encoding
 encCBORAddrCRC32 addr =

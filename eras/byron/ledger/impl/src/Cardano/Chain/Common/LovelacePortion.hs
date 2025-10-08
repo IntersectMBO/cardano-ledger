@@ -15,14 +15,7 @@ module Cardano.Chain.Common.LovelacePortion (
 ) where
 
 import Cardano.HeapWords (HeapWords)
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  fromByronCBOR,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude
 import Control.Monad (fail)
 import qualified Data.Aeson as Aeson
@@ -52,7 +45,7 @@ import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
 newtype LovelacePortion = LovelacePortion
   { unLovelacePortion :: Word64
   }
-  deriving (Ord, Eq, Generic, HeapWords, NFData, NoThunks)
+  deriving (Ord, Eq, Generic, HeapWords, NFData, NoThunks,ToCBOR)
   deriving (Show) via (Quiet LovelacePortion)
 
 instance B.Buildable LovelacePortion where
@@ -66,21 +59,16 @@ instance B.Buildable LovelacePortion where
 -- Used for debugging purposes only
 instance Aeson.ToJSON LovelacePortion
 
-instance ToCBOR LovelacePortion where
-  toCBOR = toByronCBOR
-
 instance FromCBOR LovelacePortion where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR LovelacePortion where
-  encCBOR = encCBOR . unLovelacePortion
-
-instance DecCBOR LovelacePortion where
-  decCBOR = do
-    nominator <- decCBOR
+  fromCBOR = do
+    nominator <- fromCBOR
     when (nominator > lovelacePortionDenominator)
       $ fail "LovelacePortion: value out of bounds [0..1e15]"
     return (LovelacePortion nominator)
+
+instance EncCBOR LovelacePortion
+
+instance DecCBOR LovelacePortion
 
 -- The canonical JSON instance for LovelacePortion uses only the nominator in
 -- the external representation,  rather than a real in the range [0,1].

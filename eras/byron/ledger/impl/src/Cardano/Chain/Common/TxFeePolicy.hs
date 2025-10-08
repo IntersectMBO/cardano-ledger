@@ -14,6 +14,14 @@ module Cardano.Chain.Common.TxFeePolicy (
   TxFeePolicy (..),
 ) where
 
+import Cardano.Binary (
+  DecoderError (DecoderErrorUnknownTag),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Chain.Common.CBOR (
   decodeKnownCborDataItem,
   encodeKnownCborDataItem,
@@ -25,18 +33,7 @@ import Cardano.Chain.Common.Lovelace (
   mkLovelace,
  )
 import Cardano.Chain.Common.TxSizeLinear (TxSizeLinear (..))
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  DecoderError (DecoderErrorUnknownTag),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  cborError,
-  encodeListLen,
-  enforceSize,
-  fromByronCBOR,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude hiding (cborError)
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, build, formatToString)
@@ -78,25 +75,23 @@ instance B.Buildable TxFeePolicy where
 instance Aeson.ToJSON TxFeePolicy
 
 instance ToCBOR TxFeePolicy where
-  toCBOR = toByronCBOR
-
-instance FromCBOR TxFeePolicy where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR TxFeePolicy where
-  encCBOR policy = case policy of
+  toCBOR policy = case policy of
     TxFeePolicyTxSizeLinear txSizeLinear ->
       encodeListLen 2
-        <> encCBOR (0 :: Word8)
+        <> toCBOR (0 :: Word8)
         <> encodeKnownCborDataItem txSizeLinear
 
-instance DecCBOR TxFeePolicy where
-  decCBOR = do
+instance FromCBOR TxFeePolicy where
+  fromCBOR = do
     enforceSize "TxFeePolicy" 2
-    tag <- decCBOR @Word8
+    tag <- fromCBOR @Word8
     case tag of
       0 -> TxFeePolicyTxSizeLinear <$> decodeKnownCborDataItem
       _ -> cborError $ DecoderErrorUnknownTag "TxFeePolicy" tag
+
+instance EncCBOR TxFeePolicy
+
+instance DecCBOR TxFeePolicy
 
 instance Monad m => ToJSON m TxFeePolicy where
   -- We multiply by 1e9 to keep compatibility with 'Nano' coefficients

@@ -15,6 +15,7 @@ module Cardano.Chain.Genesis.Data (
   readGenesisData,
 ) where
 
+import Cardano.Binary
 import Cardano.Chain.Common (BlockCount (..))
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
@@ -26,7 +27,7 @@ import Cardano.Crypto (
   ProtocolMagicId (..),
   hashRaw,
  )
-import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -119,13 +120,7 @@ instance B.Buildable GenesisDataError where
         (show err)
 
 instance ToCBOR GenesisData where
-  toCBOR = toByronCBOR
-
-instance FromCBOR GenesisData where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR GenesisData where
-  encCBOR
+  toCBOR
     ( GenesisData
         gdGenesisKeyHashes_
         gdHeavyDelegation_
@@ -138,28 +133,32 @@ instance EncCBOR GenesisData where
       ) =
       mconcat
         [ encodeListLen 8
-        , encCBOR @GenesisKeyHashes gdGenesisKeyHashes_
-        , encCBOR @GenesisDelegation gdHeavyDelegation_
-        , encCBOR {- @UTCTime -} gdStartTime_
-        , encCBOR @GenesisNonAvvmBalances gdNonAvvmBalances_
-        , encCBOR @ProtocolParameters gdProtocolParameters_
-        , encCBOR @BlockCount gdK_
-        , encCBOR @ProtocolMagicId gdProtocolMagicId_
-        , encCBOR @GenesisAvvmBalances gdAvvmDistr_
+        , toCBOR @GenesisKeyHashes gdGenesisKeyHashes_
+        , toCBOR @GenesisDelegation gdHeavyDelegation_
+        , toCBOR {- @UTCTime -} gdStartTime_
+        , toCBOR @GenesisNonAvvmBalances gdNonAvvmBalances_
+        , toCBOR @ProtocolParameters gdProtocolParameters_
+        , toCBOR @BlockCount gdK_
+        , toCBOR @ProtocolMagicId gdProtocolMagicId_
+        , toCBOR @GenesisAvvmBalances gdAvvmDistr_
         ]
 
-instance DecCBOR GenesisData where
-  decCBOR = do
+instance FromCBOR GenesisData where
+  fromCBOR = do
     enforceSize "GenesisData" 8
     GenesisData
-      <$> decCBOR @GenesisKeyHashes
-      <*> decCBOR @GenesisDelegation
-      <*> decCBOR -- @UTCTime
-      <*> decCBOR @GenesisNonAvvmBalances
-      <*> decCBOR @ProtocolParameters
-      <*> decCBOR @BlockCount
-      <*> decCBOR @ProtocolMagicId
-      <*> decCBOR @GenesisAvvmBalances
+      <$> fromCBOR @GenesisKeyHashes
+      <*> fromCBOR @GenesisDelegation
+      <*> fromCBOR -- @UTCTime
+      <*> fromCBOR @GenesisNonAvvmBalances
+      <*> fromCBOR @ProtocolParameters
+      <*> fromCBOR @BlockCount
+      <*> fromCBOR @ProtocolMagicId
+      <*> fromCBOR @GenesisAvvmBalances
+
+instance EncCBOR GenesisData
+
+instance DecCBOR GenesisData
 
 -- | Parse @GenesisData@ from a JSON file and annotate with Canonical JSON hash
 readGenesisData ::

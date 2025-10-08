@@ -20,14 +20,7 @@ module Cardano.Chain.Delegation.Map (
 ) where
 
 import Cardano.Chain.Common.KeyHash (KeyHash)
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  fromByronCBOR,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude hiding (Map)
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
@@ -41,16 +34,14 @@ newtype Map = Map
   deriving anyclass (NFData)
 
 instance ToCBOR Map where
-  toCBOR = toByronCBOR
+  toCBOR = toCBOR . Bimap.toList . unMap
 
 instance FromCBOR Map where
-  fromCBOR = fromByronCBOR
+  fromCBOR = Map . Bimap.fromList <$> fromCBOR
 
-instance DecCBOR Map where
-  decCBOR = Map . Bimap.fromList <$> decCBOR
+instance DecCBOR Map
 
-instance EncCBOR Map where
-  encCBOR = encCBOR . Bimap.toList . unMap
+instance EncCBOR Map
 
 -- | A 'Bimap' contains two regular 'Map's, which are spine strict; we therefore
 -- have to worry about the elements only

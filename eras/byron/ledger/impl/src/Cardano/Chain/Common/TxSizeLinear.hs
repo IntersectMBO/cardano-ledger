@@ -11,6 +11,15 @@ module Cardano.Chain.Common.TxSizeLinear (
   calculateTxSizeLinear,
 ) where
 
+import Cardano.Binary (
+  Decoder,
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+  toCborError,
+ )
 import Cardano.Chain.Common.Lovelace (
   Lovelace,
   LovelaceError,
@@ -20,19 +29,7 @@ import Cardano.Chain.Common.Lovelace (
   scaleLovelaceRationalUp,
   unsafeGetLovelace,
  )
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  Decoder,
-  DecoderError (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  encodeListLen,
-  enforceSize,
-  fromByronCBOR,
-  toByronCBOR,
-  toCborError,
- )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude hiding (toCborError)
 import Data.Aeson (ToJSON)
 import Data.Fixed (Nano)
@@ -52,31 +49,29 @@ instance B.Buildable TxSizeLinear where
   build (TxSizeLinear a b) = bprint (build . " + " . build . "*s") a b
 
 instance ToCBOR TxSizeLinear where
-  toCBOR = toByronCBOR
+  -- We encode as 'Nano' for backwards compatibility
+  toCBOR (TxSizeLinear a b) =
+    encodeListLen 2
+      <> toCBOR (fromIntegral (unsafeGetLovelace a) :: Nano)
+      <> toCBOR (fromRational b :: Nano)
 
 instance FromCBOR TxSizeLinear where
-  fromCBOR = fromByronCBOR
-
--- Used for debugging purposes only
-instance ToJSON TxSizeLinear
-
-instance EncCBOR TxSizeLinear where
-  -- We encode as 'Nano' for backwards compatibility
-  encCBOR (TxSizeLinear a b) =
-    encodeListLen 2
-      <> encCBOR (fromIntegral (unsafeGetLovelace a) :: Nano)
-      <> encCBOR (fromRational b :: Nano)
-
-instance DecCBOR TxSizeLinear where
-  decCBOR = do
+  fromCBOR = do
     enforceSize "TxSizeLinear" 2
-    !a <- wrapLovelaceError . mkLovelace . round =<< decCBOR @Nano
-    !b <- toRational <$> decCBOR @Nano
+    !a <- wrapLovelaceError . mkLovelace . round =<< fromCBOR @Nano
+    !b <- toRational <$> fromCBOR @Nano
     return $ TxSizeLinear a b
     where
       wrapLovelaceError :: Either LovelaceError Lovelace -> Decoder s Lovelace
       wrapLovelaceError =
         toCborError . first (DecoderErrorCustom "TxSizeLinear" . sformat build)
+
+-- Used for debugging purposes only
+instance ToJSON TxSizeLinear
+
+instance EncCBOR TxSizeLinear
+
+instance DecCBOR TxSizeLinear
 
 calculateTxSizeLinear ::
   TxSizeLinear -> Natural -> Either LovelaceError Lovelace

@@ -23,6 +23,12 @@ module Cardano.Chain.Genesis.Config (
   mkConfigFromFile,
 ) where
 
+import Cardano.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Chain.Block.Header (HeaderHash, genesisHeaderHash)
 import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances (..))
@@ -54,17 +60,7 @@ import Cardano.Crypto (
   RequiresNetworkMagic,
  )
 import Cardano.Crypto.Raw (Raw)
-import Cardano.Ledger.Binary (
-  Annotated (..),
-  DecCBOR (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  encodeListLen,
-  enforceSize,
-  fromByronCBOR,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (Annotated (..), DecCBOR, EncCBOR)
 import Cardano.Prelude
 import Data.Time (UTCTime)
 import NoThunks.Class (NoThunks (..))
@@ -168,13 +164,7 @@ data ConfigurationError
   deriving (Show)
 
 instance ToCBOR Config where
-  toCBOR = toByronCBOR
-
-instance FromCBOR Config where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR Config where
-  encCBOR
+  toCBOR
     ( Config
         configGenesisData_
         configGenesisHash_
@@ -183,17 +173,21 @@ instance EncCBOR Config where
       ) =
       mconcat
         [ encodeListLen 4
-        , encCBOR @GenesisData configGenesisData_
-        , encCBOR @GenesisHash configGenesisHash_
-        , encCBOR @RequiresNetworkMagic configReqNetMagic_
-        , encCBOR @UTxOConfiguration configUTxOConfiguration_
+        , toCBOR @GenesisData configGenesisData_
+        , toCBOR @GenesisHash configGenesisHash_
+        , toCBOR @RequiresNetworkMagic configReqNetMagic_
+        , toCBOR @UTxOConfiguration configUTxOConfiguration_
         ]
 
-instance DecCBOR Config where
-  decCBOR = do
+instance FromCBOR Config where
+  fromCBOR = do
     enforceSize "Config" 4
     Config
-      <$> decCBOR @GenesisData
-      <*> decCBOR @GenesisHash
-      <*> decCBOR @RequiresNetworkMagic
-      <*> decCBOR @UTxOConfiguration
+      <$> fromCBOR @GenesisData
+      <*> fromCBOR @GenesisHash
+      <*> fromCBOR @RequiresNetworkMagic
+      <*> fromCBOR @UTxOConfiguration
+
+instance EncCBOR Config
+
+instance DecCBOR Config

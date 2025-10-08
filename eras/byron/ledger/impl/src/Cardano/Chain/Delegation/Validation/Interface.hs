@@ -17,6 +17,13 @@ module Cardano.Chain.Delegation.Validation.Interface (
   updateDelegation,
 ) where
 
+import Cardano.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+  serialize',
+ )
 import Cardano.Chain.Common (BlockCount (..), KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
@@ -32,14 +39,6 @@ import Cardano.Ledger.Binary (
   Annotated (..),
   DecCBOR (..),
   EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  byronProtVer,
-  encodeListLen,
-  enforceSize,
-  fromByronCBOR,
-  serialize',
-  toByronCBOR,
  )
 import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
@@ -68,23 +67,21 @@ data State = State
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance ToCBOR State where
-  toCBOR = toByronCBOR
+  toCBOR s =
+    encodeListLen 2
+      <> toCBOR (schedulingState s)
+      <> toCBOR (activationState s)
 
 instance FromCBOR State where
-  fromCBOR = fromByronCBOR
-
-instance DecCBOR State where
-  decCBOR = do
+  fromCBOR = do
     enforceSize "State" 2
     State
-      <$> decCBOR
-      <*> decCBOR
+      <$> fromCBOR
+      <*> fromCBOR
 
-instance EncCBOR State where
-  encCBOR s =
-    encodeListLen 2
-      <> encCBOR (schedulingState s)
-      <> encCBOR (activationState s)
+instance DecCBOR State
+
+instance EncCBOR State
 
 delegationMap :: State -> Delegation.Map
 delegationMap = Activation.delegationMap . activationState
@@ -132,8 +129,8 @@ initialState env genesisDelegation = updateDelegation env' is certificates
         { Delegation.aEpoch =
             Annotated
               (Delegation.epoch c)
-              (serialize' byronProtVer $ Delegation.epoch c)
-        , Delegation.annotation = serialize' byronProtVer c
+              (serialize' $ Delegation.epoch c)
+        , Delegation.annotation = serialize' c
         }
 
 -- | Check whether a delegation is valid in the 'State'

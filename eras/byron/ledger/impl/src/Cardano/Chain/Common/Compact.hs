@@ -11,19 +11,10 @@ module Cardano.Chain.Common.Compact (
   unsafeGetCompactAddress,
 ) where
 
+import Cardano.Binary (FromCBOR, ToCBOR, decodeFull', serialize')
 import Cardano.Chain.Common.Address (Address (..))
 import Cardano.HeapWords (HeapWords)
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  byronProtVer,
-  decodeFull',
-  fromByronCBOR,
-  serialize',
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as BSS (fromShort, toShort)
@@ -38,28 +29,19 @@ import NoThunks.Class (NoThunks (..))
 -- Convert using 'toCompactAddress' and 'fromCompactAddress'.
 newtype CompactAddress = CompactAddress ShortByteString
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (HeapWords, NoThunks)
+  deriving newtype (HeapWords, NoThunks, ToCBOR, FromCBOR)
   deriving anyclass (NFData)
 
-instance ToCBOR CompactAddress where
-  toCBOR = toByronCBOR
+instance DecCBOR CompactAddress
 
-instance FromCBOR CompactAddress where
-  fromCBOR = fromByronCBOR
-
-instance DecCBOR CompactAddress where
-  decCBOR = CompactAddress . BSS.toShort <$> decCBOR
-
-instance EncCBOR CompactAddress where
-  encCBOR (CompactAddress sbs) = encCBOR (BSS.fromShort sbs)
+instance EncCBOR CompactAddress
 
 toCompactAddress :: Address -> CompactAddress
-toCompactAddress addr =
-  CompactAddress (BSS.toShort (serialize' byronProtVer addr))
+toCompactAddress addr = CompactAddress (BSS.toShort (serialize' addr))
 
 fromCompactAddress :: CompactAddress -> Address
 fromCompactAddress (CompactAddress addr) =
-  case decodeFull' byronProtVer (BSS.fromShort addr) of
+  case decodeFull' (BSS.fromShort addr) of
     Left err -> panic ("fromCompactAddress: impossible: " <> show err)
     Right decAddr -> decAddr
 

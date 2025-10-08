@@ -13,6 +13,18 @@ module Cardano.Chain.Delegation.Validation.Scheduling (
   scheduleCertificate,
 ) where
 
+import Cardano.Binary (
+  Decoder,
+  DecoderError (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  decodeWord8,
+  encodeListLen,
+  enforceSize,
+  matchSize,
+ )
 import Cardano.Chain.Common (BlockCount, KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (ACertificate)
 import qualified Cardano.Chain.Delegation.Certificate as Certificate
@@ -26,19 +38,7 @@ import Cardano.Crypto (ProtocolMagicId)
 import Cardano.Ledger.Binary (
   Annotated (..),
   DecCBOR (..),
-  Decoder,
-  DecoderError (..),
   EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  cborError,
-  decodeListLen,
-  decodeWord8,
-  encodeListLen,
-  enforceSize,
-  fromByronCBOR,
-  matchSize,
-  toByronCBOR,
  )
 import Cardano.Prelude hiding (State, cborError)
 import Data.Sequence ((|>))
@@ -66,23 +66,21 @@ data State = State
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance ToCBOR State where
-  toCBOR = toByronCBOR
+  toCBOR s =
+    encodeListLen 2
+      <> toCBOR (toList (scheduledDelegations s))
+      <> toCBOR (keyEpochDelegations s)
 
 instance FromCBOR State where
-  fromCBOR = fromByronCBOR
-
-instance DecCBOR State where
-  decCBOR = do
+  fromCBOR = do
     enforceSize "State" 2
     State
-      <$> (Seq.fromList <$> decCBOR)
-      <*> decCBOR
+      <$> (Seq.fromList <$> fromCBOR)
+      <*> fromCBOR
 
-instance EncCBOR State where
-  encCBOR s =
-    encodeListLen 2
-      <> encCBOR (toList (scheduledDelegations s))
-      <> encCBOR (keyEpochDelegations s)
+instance DecCBOR State
+
+instance EncCBOR State
 
 data ScheduledDelegation = ScheduledDelegation
   { sdSlot :: !SlotNumber
@@ -92,25 +90,23 @@ data ScheduledDelegation = ScheduledDelegation
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance ToCBOR ScheduledDelegation where
-  toCBOR = toByronCBOR
+  toCBOR sd =
+    encodeListLen 3
+      <> toCBOR (sdSlot sd)
+      <> toCBOR (sdDelegator sd)
+      <> toCBOR (sdDelegate sd)
 
 instance FromCBOR ScheduledDelegation where
-  fromCBOR = fromByronCBOR
-
-instance DecCBOR ScheduledDelegation where
-  decCBOR = do
+  fromCBOR = do
     enforceSize "ScheduledDelegation" 3
     ScheduledDelegation
-      <$> decCBOR
-      <*> decCBOR
-      <*> decCBOR
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
-instance EncCBOR ScheduledDelegation where
-  encCBOR sd =
-    encodeListLen 3
-      <> encCBOR (sdSlot sd)
-      <> encCBOR (sdDelegator sd)
-      <> encCBOR (sdDelegate sd)
+instance DecCBOR ScheduledDelegation
+
+instance EncCBOR ScheduledDelegation
 
 data Error
   = -- | The delegation certificate has an invalid signature
@@ -126,49 +122,47 @@ data Error
   deriving (Eq, Show)
 
 instance ToCBOR Error where
-  toCBOR = toByronCBOR
-
-instance FromCBOR Error where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR Error where
-  encCBOR err = case err of
+  toCBOR err = case err of
     InvalidCertificate ->
       encodeListLen 1
-        <> encCBOR (0 :: Word8)
+        <> toCBOR (0 :: Word8)
     MultipleDelegationsForEpoch epochNumber keyHash ->
       encodeListLen 3
-        <> encCBOR (1 :: Word8)
-        <> encCBOR epochNumber
-        <> encCBOR keyHash
+        <> toCBOR (1 :: Word8)
+        <> toCBOR epochNumber
+        <> toCBOR keyHash
     MultipleDelegationsForSlot slotNumber keyHash ->
       encodeListLen 3
-        <> encCBOR (2 :: Word8)
-        <> encCBOR slotNumber
-        <> encCBOR keyHash
+        <> toCBOR (2 :: Word8)
+        <> toCBOR slotNumber
+        <> toCBOR keyHash
     NonGenesisDelegator keyHash ->
       encodeListLen 2
-        <> encCBOR (3 :: Word8)
-        <> encCBOR keyHash
+        <> toCBOR (3 :: Word8)
+        <> toCBOR keyHash
     WrongEpoch currentEpoch delegationEpoch ->
       encodeListLen 3
-        <> encCBOR (4 :: Word8)
-        <> encCBOR currentEpoch
-        <> encCBOR delegationEpoch
+        <> toCBOR (4 :: Word8)
+        <> toCBOR currentEpoch
+        <> toCBOR delegationEpoch
 
-instance DecCBOR Error where
-  decCBOR = do
+instance FromCBOR Error where
+  fromCBOR = do
     len <- decodeListLen
     let checkSize :: Int -> Decoder s ()
         checkSize size = matchSize "Scheduling.Error" size len
     tag <- decodeWord8
     case tag of
       0 -> checkSize 1 >> pure InvalidCertificate
-      1 -> checkSize 3 >> MultipleDelegationsForEpoch <$> decCBOR <*> decCBOR
-      2 -> checkSize 3 >> MultipleDelegationsForSlot <$> decCBOR <*> decCBOR
-      3 -> checkSize 2 >> NonGenesisDelegator <$> decCBOR
-      4 -> checkSize 3 >> WrongEpoch <$> decCBOR <*> decCBOR
+      1 -> checkSize 3 >> MultipleDelegationsForEpoch <$> fromCBOR <*> fromCBOR
+      2 -> checkSize 3 >> MultipleDelegationsForSlot <$> fromCBOR <*> fromCBOR
+      3 -> checkSize 2 >> NonGenesisDelegator <$> fromCBOR
+      4 -> checkSize 3 >> WrongEpoch <$> fromCBOR <*> fromCBOR
       _ -> cborError $ DecoderErrorUnknownTag "Scheduling.Error" tag
+
+instance EncCBOR Error where
+
+instance DecCBOR Error where
 
 -- | Update the delegation 'State' with a 'Certificate' if it passes
 --   all the validation rules. This is an implementation of the delegation

@@ -16,12 +16,13 @@ module Cardano.Chain.Genesis.Delegation (
   mkGenesisDelegation,
 ) where
 
+import Cardano.Binary
 import Cardano.Chain.Common (KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (
   ACertificate (delegateVK, issuerVK),
   Certificate,
  )
-import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude
 import Data.List (nub)
 import qualified Data.Map.Strict as M
@@ -58,20 +59,18 @@ instance MonadError SchemaError m => FromJSON m GenesisDelegation where
       Right delegation -> pure delegation
 
 instance ToCBOR GenesisDelegation where
-  toCBOR = toByronCBOR
+  toCBOR (UnsafeGenesisDelegation gd) =
+    encodeListLen 1
+      <> toCBOR @(Map KeyHash Certificate) gd
 
 instance FromCBOR GenesisDelegation where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR GenesisDelegation where
-  encCBOR (UnsafeGenesisDelegation gd) =
-    encodeListLen 1
-      <> encCBOR @(Map KeyHash Certificate) gd
-
-instance DecCBOR GenesisDelegation where
-  decCBOR = do
+  fromCBOR = do
     enforceSize "GenesisDelegation" 1
-    UnsafeGenesisDelegation <$> decCBOR @(Map KeyHash Certificate)
+    UnsafeGenesisDelegation <$> fromCBOR @(Map KeyHash Certificate)
+
+instance EncCBOR GenesisDelegation
+
+instance DecCBOR GenesisDelegation
 
 data GenesisDelegationError
   = GenesisDelegationDuplicateIssuer
