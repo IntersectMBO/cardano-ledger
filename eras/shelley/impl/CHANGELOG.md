@@ -2,6 +2,8 @@
 
 ## 1.18.0.0
 
+* Change state of `ShelleyDELEG` rule from `DState` to `CertState`
+* Add `EraCertState` constraint to `STS` instance for `ShelleyDELEG`
 * Add `TxLevel` argument to `Tx` and `TxBody`
 * Add `HasEraTxLevel` instances for `Tx` and `TxBody`
 * Add `EraTxLevel` instance

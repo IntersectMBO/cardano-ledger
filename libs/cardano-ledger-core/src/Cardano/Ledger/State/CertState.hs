@@ -35,8 +35,12 @@ module Cardano.Ledger.State.CertState (
   Obligations (..),
   sumObligation,
   -- Lenses
-  dsGenDelegsL,
+  iRReservesL,
   dsIRewardsL,
+  dsGenDelegsL,
+  iRTreasuryL,
+  iRDeltaReservesL,
+  iRDeltaTreasuryL,
   dsFutureGenDelegsL,
   psStakePoolsL,
   psFutureStakePoolsL,
@@ -433,6 +437,18 @@ dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
 
 dsIRewardsL :: Lens' (DState era) InstantaneousRewards
 dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
+
+iRReservesL :: Lens' InstantaneousRewards (Map (Credential 'Staking) Coin)
+iRReservesL = lens iRReserves (\ir m -> ir {iRReserves = m})
+
+iRTreasuryL :: Lens' InstantaneousRewards (Map (Credential 'Staking) Coin)
+iRTreasuryL = lens iRTreasury (\ir m -> ir {iRTreasury = m})
+
+iRDeltaReservesL :: Lens' InstantaneousRewards DeltaCoin
+iRDeltaReservesL = lens deltaReserves (\ir d -> ir {deltaReserves = d})
+
+iRDeltaTreasuryL :: Lens' InstantaneousRewards DeltaCoin
+iRDeltaTreasuryL = lens deltaTreasury (\ir d -> ir {deltaTreasury = d})
 
 dsFutureGenDelegsL ::
   Lens' (DState era) (Map FutureGenDeleg GenDelegPair)
