@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-shelley
-version: 1.17.2.0
+version: 1.17.1.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -109,7 +109,7 @@ library
     cardano-crypto-class,
     cardano-crypto-wrapper,
     cardano-data ^>=1.2.2,
-    cardano-ledger-binary ^>=1.7,
+    cardano-ledger-binary ^>=1.8,
     cardano-ledger-byron,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.19,
     cardano-slotting,

@@ -666,6 +666,10 @@ instance ToJSON a => ToJSON (ABlockSignature a)
 
 instance ToCBOR BlockSignature where
   toCBOR = toByronCBOR
+  encodedSizeExpr size sig =
+    3
+      + encodedSizeExpr size (delegationCertificate <$> sig)
+      + encodedSizeExpr size (signature <$> sig)
 
 instance FromCBOR BlockSignature where
   fromCBOR = fromByronCBOR
@@ -680,11 +684,6 @@ instance EncCBOR BlockSignature where
     encodeListLen 2
       <> encCBOR (2 :: Word8)
       <> (encodeListLen 2 <> encCBOR cert <> encCBOR sig)
-
-  encodedSizeExpr size sig =
-    3
-      + encodedSizeExpr size (delegationCertificate <$> sig)
-      + encodedSizeExpr size (signature <$> sig)
 
 instance DecCBOR BlockSignature where
   decCBOR = void <$> decCBOR @(ABlockSignature ByteSpan)
@@ -736,6 +735,13 @@ data ToSign = ToSign
 
 instance ToCBOR ToSign where
   toCBOR = toByronCBOR
+  encodedSizeExpr size ts =
+    1
+      + encodedSizeExpr size (tsHeaderHash <$> ts)
+      + encodedSizeExpr size (tsBodyProof <$> ts)
+      + encodedSizeExpr size (tsSlot <$> ts)
+      + encodedSizeExpr size (tsDifficulty <$> ts)
+      + encCBORBlockVersionsSize (tsProtocolVersion <$> ts) (tsSoftwareVersion <$> ts)
 
 instance FromCBOR ToSign where
   fromCBOR = fromByronCBOR
@@ -748,14 +754,6 @@ instance EncCBOR ToSign where
       <> encCBOR (tsSlot ts)
       <> encCBOR (tsDifficulty ts)
       <> encCBORBlockVersions (tsProtocolVersion ts) (tsSoftwareVersion ts)
-
-  encodedSizeExpr size ts =
-    1
-      + encodedSizeExpr size (tsHeaderHash <$> ts)
-      + encodedSizeExpr size (tsBodyProof <$> ts)
-      + encodedSizeExpr size (tsSlot <$> ts)
-      + encodedSizeExpr size (tsDifficulty <$> ts)
-      + encCBORBlockVersionsSize (tsProtocolVersion <$> ts) (tsSoftwareVersion <$> ts)
 
 instance DecCBOR ToSign where
   decCBOR = do

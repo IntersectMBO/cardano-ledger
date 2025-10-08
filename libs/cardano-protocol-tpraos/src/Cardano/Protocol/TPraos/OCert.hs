@@ -31,8 +31,6 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   FromCBOR (..),
   ToCBOR (..),
-  encodedSigDSIGNSizeExpr,
-  encodedVerKeyKESSizeExpr,
   fromPlainDecoder,
   fromPlainEncoding,
   runByteBuilder,
@@ -107,15 +105,6 @@ instance Crypto c => NoThunks (OCert c)
 
 instance Crypto c => EncCBORGroup (OCert c) where
   encCBORGroup = fromPlainEncoding . encodeOCertFields
-  encodedGroupSizeExpr size proxy =
-    encodedVerKeyKESSizeExpr (ocertVkHot <$> proxy)
-      + encodedSizeExpr size (toWord . ocertN <$> proxy)
-      + encodedSizeExpr size ((\(KESPeriod p) -> p) . ocertKESPeriod <$> proxy)
-      + encodedSigDSIGNSizeExpr ((\(DSIGN.SignedDSIGN sig) -> sig) . ocertSigma <$> proxy)
-    where
-      toWord :: Word64 -> Word
-      toWord = fromIntegral
-
   listLen _ = 4
   listLenBound _ = 4
 

@@ -139,7 +139,7 @@ roundTripAnnEraTypeExpectation = roundTripAnnEraExpectation @era @(t era)
 -- | QuickCheck property spec that uses `roundTripShareEraExpectation`
 roundTripShareEraSpec ::
   forall era t.
-  (Era era, Show t, Eq t, EncCBOR t, DecShareCBOR t, Arbitrary t, HasCallStack) =>
+  (Era era, Typeable t, Show t, Eq t, EncCBOR t, DecShareCBOR t, Arbitrary t, HasCallStack) =>
   Spec
 roundTripShareEraSpec =
   prop (show (typeRep $ Proxy @t)) $ roundTripShareEraExpectation @era @t
@@ -148,7 +148,7 @@ roundTripShareEraSpec =
 -- EncCBOR/DecShareCBOR. Requires TypeApplication of an @@era@
 roundTripShareEraExpectation ::
   forall era t.
-  (Era era, Show t, Eq t, EncCBOR t, DecShareCBOR t, HasCallStack) =>
+  (Era era, Typeable t, Show t, Eq t, EncCBOR t, DecShareCBOR t, HasCallStack) =>
   t ->
   Expectation
 roundTripShareEraExpectation =
@@ -161,6 +161,7 @@ roundTripShareEraExpectation =
 roundTripShareEraTypeSpec ::
   forall era t.
   ( Era era
+  , Typeable t
   , Show (t era)
   , Eq (t era)
   , EncCBOR (t era)
@@ -177,7 +178,7 @@ roundTripShareEraTypeSpec =
 -- types of this function are unambiguous.
 roundTripShareEraTypeExpectation ::
   forall era t.
-  (Era era, Show (t era), Eq (t era), EncCBOR (t era), DecShareCBOR (t era), HasCallStack) =>
+  (Era era, Typeable t, Show (t era), Eq (t era), EncCBOR (t era), DecShareCBOR (t era), HasCallStack) =>
   t era ->
   Expectation
 roundTripShareEraTypeExpectation = roundTripShareEraExpectation @era @(t era)
@@ -205,6 +206,7 @@ roundTripCoreEraTypesSpec ::
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody era)
   , DecCBOR (Tx era)
+  , Typeable (CertState era)
   , HasCallStack
   ) =>
   Spec

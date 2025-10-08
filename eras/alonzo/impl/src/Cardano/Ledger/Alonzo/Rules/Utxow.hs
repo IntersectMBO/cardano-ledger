@@ -180,9 +180,7 @@ instance
 
 instance
   ( AlonzoEraScript era
-  , EncCBOR (TxCert era)
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
-  , Typeable (TxAuxData era)
   ) =>
   EncCBOR (AlonzoUtxowPredFailure era)
   where

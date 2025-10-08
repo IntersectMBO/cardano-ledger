@@ -63,6 +63,11 @@ instance B.Buildable TxProof where
 
 instance ToCBOR TxProof where
   toCBOR = toByronCBOR
+  encodedSizeExpr size proof =
+    1
+      + encodedSizeExpr size (txpNumber <$> proof)
+      + encodedSizeExpr size (txpRoot <$> proof)
+      + encodedSizeExpr size (txpWitnessesHash <$> proof)
 
 instance FromCBOR TxProof where
   fromCBOR = fromByronCBOR
@@ -73,11 +78,6 @@ instance EncCBOR TxProof where
       <> encCBOR (txpNumber proof)
       <> encCBOR (txpRoot proof)
       <> encCBOR (txpWitnessesHash proof)
-  encodedSizeExpr size proof =
-    1
-      + encodedSizeExpr size (txpNumber <$> proof)
-      + encodedSizeExpr size (txpRoot <$> proof)
-      + encodedSizeExpr size (txpWitnessesHash <$> proof)
 
 instance DecCBOR TxProof where
   decCBOR = do

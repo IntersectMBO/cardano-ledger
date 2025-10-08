@@ -8,6 +8,7 @@ module Test.Cardano.Chain.Block.Size (
   tests,
 ) where
 
+import qualified Cardano.Binary as Plain
 import Cardano.Chain.Block
 import Cardano.Ledger.Binary hiding (label)
 import Cardano.Prelude
@@ -26,7 +27,7 @@ import Test.Options (TSGroup, TSProperty, eachOfTS)
 encodedSizeTest ::
   forall a.
   Show a =>
-  (a -> Encoding) ->
+  (a -> Plain.Encoding) ->
   (Proxy a -> Size) ->
   Gen a ->
   TSProperty
@@ -70,80 +71,80 @@ encodedSizeTest encode encodedSize gen = eachOfTS
             else 1
         s = lo + bucket * ((size - lo) `div` bucket)
 
-encodedSizeTestEncCBOR ::
+encodedSizeTestToCBOR ::
   forall a.
-  (EncCBOR a, Show a) =>
+  (ToCBOR a, Show a) =>
   Gen a ->
   TSProperty
-encodedSizeTestEncCBOR =
-  encodedSizeTest encCBOR szGreedy
+encodedSizeTestToCBOR =
+  encodedSizeTest toCBOR szGreedy
 
 ts_prop_sizeProtocolMagicId :: TSProperty
 ts_prop_sizeProtocolMagicId =
-  encodedSizeTestEncCBOR Crypto.genProtocolMagicId
+  encodedSizeTestToCBOR Crypto.genProtocolMagicId
 
 ts_prop_sizeEpochAndSlotCount :: TSProperty
 ts_prop_sizeEpochAndSlotCount =
-  encodedSizeTestEncCBOR (Slotting.genEpochSlots >>= Slotting.genEpochAndSlotCount)
+  encodedSizeTestToCBOR (Slotting.genEpochSlots >>= Slotting.genEpochAndSlotCount)
 
 ts_prop_sizeChainDifficulty :: TSProperty
-ts_prop_sizeChainDifficulty = encodedSizeTestEncCBOR genChainDifficulty
+ts_prop_sizeChainDifficulty = encodedSizeTestToCBOR genChainDifficulty
 
 ts_prop_sizeHeaderHash :: TSProperty
-ts_prop_sizeHeaderHash = encodedSizeTestEncCBOR genHeaderHash
+ts_prop_sizeHeaderHash = encodedSizeTestToCBOR genHeaderHash
 
 ts_prop_sizeSlotNumber :: TSProperty
-ts_prop_sizeSlotNumber = encodedSizeTestEncCBOR Slotting.genSlotNumber
+ts_prop_sizeSlotNumber = encodedSizeTestToCBOR Slotting.genSlotNumber
 
 ts_prop_sizeProtocolVersion :: TSProperty
-ts_prop_sizeProtocolVersion = encodedSizeTestEncCBOR Update.genProtocolVersion
+ts_prop_sizeProtocolVersion = encodedSizeTestToCBOR Update.genProtocolVersion
 
 ts_prop_sizeApplicationName :: TSProperty
-ts_prop_sizeApplicationName = encodedSizeTestEncCBOR Update.genApplicationName
+ts_prop_sizeApplicationName = encodedSizeTestToCBOR Update.genApplicationName
 
 ts_prop_sizeSoftwareVersion :: TSProperty
-ts_prop_sizeSoftwareVersion = encodedSizeTestEncCBOR Update.genSoftwareVersion
+ts_prop_sizeSoftwareVersion = encodedSizeTestToCBOR Update.genSoftwareVersion
 
 ts_prop_sizeProof :: TSProperty
-ts_prop_sizeProof = encodedSizeTestEncCBOR (Crypto.genProtocolMagicId >>= genProof)
+ts_prop_sizeProof = encodedSizeTestToCBOR (Crypto.genProtocolMagicId >>= genProof)
 
 ts_prop_sizeVerificationKey :: TSProperty
-ts_prop_sizeVerificationKey = encodedSizeTestEncCBOR Crypto.genVerificationKey
+ts_prop_sizeVerificationKey = encodedSizeTestToCBOR Crypto.genVerificationKey
 
 ts_prop_sizeToSign :: TSProperty
 ts_prop_sizeToSign =
-  encodedSizeTestEncCBOR
+  encodedSizeTestToCBOR
     $ ((,) <$> Crypto.genProtocolMagicId <*> Slotting.genEpochSlots)
     >>= uncurry genToSign
 
 ts_prop_sizeBlockVersions :: TSProperty
 ts_prop_sizeBlockVersions =
   encodedSizeTest
-    (uncurry encCBORBlockVersions)
+    (toPlainEncoding byronProtVer . uncurry encCBORBlockVersions)
     (uncurryP encCBORBlockVersionsSize)
     ((,) <$> Update.genProtocolVersion <*> Update.genSoftwareVersion)
 
 ts_prop_sizeEpochNumber :: TSProperty
 ts_prop_sizeEpochNumber =
-  encodedSizeTestEncCBOR Slotting.genEpochNumber
+  encodedSizeTestToCBOR Slotting.genEpochNumber
 
 -- | test @Signature EpochNumber@ which is a part of 'ACertificate'
 ts_prop_sizeEpochNumberSignature :: TSProperty
 ts_prop_sizeEpochNumberSignature =
-  encodedSizeTestEncCBOR
+  encodedSizeTestToCBOR
     $ Crypto.genProtocolMagicId
     >>= flip Crypto.genSignature Slotting.genEpochSlots
 
 ts_prop_sizeToSignSignature :: TSProperty
 ts_prop_sizeToSignSignature =
-  encodedSizeTestEncCBOR $ do
+  encodedSizeTestToCBOR $ do
     pm <- Crypto.genProtocolMagicId
     es <- Slotting.genEpochSlots
     Crypto.genSignature pm (genToSign pm es)
 
 ts_prop_sizeBlockSignature :: TSProperty
 ts_prop_sizeBlockSignature =
-  encodedSizeTestEncCBOR
+  encodedSizeTestToCBOR
     $ ((,) <$> Crypto.genProtocolMagicId <*> Slotting.genEpochSlots)
     >>= uncurry genBlockSignature
 
@@ -154,7 +155,7 @@ ts_prop_sizeBlockSignature =
 ts_prop_sizeHeader :: TSProperty
 ts_prop_sizeHeader =
   encodedSizeTest
-    (uncurry encCBORHeader)
+    (toPlainEncoding byronProtVer . uncurry encCBORHeader)
     (uncurryP encCBORHeaderSize)
     $ do
       protocolMagicId <- Crypto.genProtocolMagicId
@@ -167,12 +168,12 @@ ts_prop_sizeHeader =
 --
 
 ts_prop_sizeGenesisHash :: TSProperty
-ts_prop_sizeGenesisHash = encodedSizeTestEncCBOR Genesis.genGenesisHash
+ts_prop_sizeGenesisHash = encodedSizeTestToCBOR Genesis.genGenesisHash
 
 ts_prop_sizeABoundaryHeader :: TSProperty
 ts_prop_sizeABoundaryHeader =
   encodedSizeTest
-    (uncurry encCBORABoundaryHeader)
+    (toPlainEncoding byronProtVer . uncurry encCBORABoundaryHeader)
     (uncurryP encCBORABoundaryHeaderSize)
     ( (,)
         <$> Crypto.genProtocolMagicId
@@ -186,7 +187,7 @@ ts_prop_sizeABoundaryHeader =
 ts_prop_sizeABlockOrBoundaryHdr :: TSProperty
 ts_prop_sizeABlockOrBoundaryHdr =
   encodedSizeTest
-    encCBORABlockOrBoundaryHdr
+    (toPlainEncoding byronProtVer . encCBORABlockOrBoundaryHdr)
     encCBORABlockOrBoundaryHdrSize
     $ ((,) <$> Crypto.genProtocolMagicId <*> Slotting.genEpochSlots)
     >>= uncurry genABlockOrBoundaryHdr

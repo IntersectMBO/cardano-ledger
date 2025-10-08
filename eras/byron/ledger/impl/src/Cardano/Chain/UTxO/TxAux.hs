@@ -91,14 +91,13 @@ instance B.Buildable TxAux where
 
 instance ToCBOR TxAux where
   toCBOR = toByronCBOR
+  encodedSizeExpr size pxy = 1 + size (taTx <$> pxy) + size (taWitness <$> pxy)
 
 instance FromCBOR TxAux where
   fromCBOR = fromByronCBOR
 
 instance EncCBOR TxAux where
   encCBOR ta = encodeListLen 2 <> encCBOR (taTx ta) <> encCBOR (taWitness ta)
-
-  encodedSizeExpr size pxy = 1 + size (taTx <$> pxy) + size (taWitness <$> pxy)
 
 instance DecCBOR TxAux where
   decCBOR = void <$> decCBOR @(ATxAux ByteSpan)

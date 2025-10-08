@@ -60,7 +60,7 @@ instance NoThunks (ConwayAccountState era)
 instance NFData (ConwayAccountState era) where
   rnf = rwhnf
 
-instance Typeable era => EncCBOR (ConwayAccountState era) where
+instance EncCBOR (ConwayAccountState era) where
   encCBOR cas@(ConwayAccountState _ _ _ _) =
     let ConwayAccountState {..} = cas
      in encodeListLen 4

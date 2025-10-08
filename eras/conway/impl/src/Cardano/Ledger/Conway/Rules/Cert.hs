@@ -265,8 +265,7 @@ instance
   wrapEvent = absurd
 
 instance
-  ( Typeable era
-  , EncCBOR (PredicateFailure (EraRule "DELEG" era))
+  ( EncCBOR (PredicateFailure (EraRule "DELEG" era))
   , EncCBOR (PredicateFailure (EraRule "POOL" era))
   , EncCBOR (PredicateFailure (EraRule "GOVCERT" era))
   ) =>

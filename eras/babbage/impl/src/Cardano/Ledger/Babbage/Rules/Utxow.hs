@@ -157,12 +157,7 @@ deriving instance
 
 instance
   ( AlonzoEraScript era
-  , EncCBOR (TxOut era)
-  , EncCBOR (TxCert era)
-  , EncCBOR (Value era)
-  , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
-  , Typeable (TxAuxData era)
   ) =>
   EncCBOR (BabbageUtxowPredFailure era)
   where
