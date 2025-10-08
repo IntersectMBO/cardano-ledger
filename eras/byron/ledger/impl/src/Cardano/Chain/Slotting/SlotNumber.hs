@@ -15,14 +15,7 @@ module Cardano.Chain.Slotting.SlotNumber (
 ) where
 
 import Cardano.Chain.Slotting.SlotCount (SlotCount (..))
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  fromByronCBOR,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, int)
@@ -45,17 +38,15 @@ newtype SlotNumber = SlotNumber
 instance Aeson.ToJSON SlotNumber
 
 instance ToCBOR SlotNumber where
-  toCBOR = toByronCBOR
+  toCBOR = toCBOR . unSlotNumber
   encodedSizeExpr size = encodedSizeExpr size . fmap unSlotNumber
 
 instance FromCBOR SlotNumber where
-  fromCBOR = fromByronCBOR
+  fromCBOR = SlotNumber <$> fromCBOR
 
 instance EncCBOR SlotNumber where
-  encCBOR = encCBOR . unSlotNumber
 
 instance DecCBOR SlotNumber where
-  decCBOR = SlotNumber <$> decCBOR
 
 instance Monad m => ToJSON m SlotNumber where
   toJSON = toJSON . unSlotNumber
