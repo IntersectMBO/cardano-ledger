@@ -265,23 +265,39 @@ delegationTransition = do
       let compactDeposit = compactCoinOrError (pp ^. ppKeyDepositL)
       pure $ certState & certDStateL . accountsL %~ registerShelleyAccount cred ptr compactDeposit Nothing
     UnRegTxCert cred -> do
-      let !(mAccountState, !accounts) = unregisterShelleyAccount cred (ds ^. accountsL)
+      let !(!mAccountState, !accounts) = unregisterShelleyAccount cred (ds ^. accountsL)
           checkStakeKeyHasZeroRewardBalance = do
             accountState <- mAccountState
             let accountBalance = accountState ^. balanceAccountStateL
             guard (accountBalance /= mempty)
             Just $ fromCompact accountBalance
-      -- (hk ∈ dom (rewards ds))
-      isJust mAccountState ?! StakeKeyNotRegisteredDELEG cred
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyNonZeroAccountBalanceDELEG
-      pure $ certState & certDStateL . accountsL .~ accounts
+      -- (hk ∈ dom (rewards ds))
+      case mAccountState of
+        Nothing -> do
+          failBecause $ StakeKeyNotRegisteredDELEG cred
+          pure certState
+        Just accountState ->
+          pure $
+            certState
+              & certDStateL . accountsL .~ accounts
+              & certPStateL
+                %~ unDelegStakePool cred (accountState ^. stakePoolDelegationAccountStateL) Nothing
     DelegStakeTxCert cred stakePool -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
-      isAccountRegistered cred (ds ^. accountsL) ?! StakeDelegationImpossibleDELEG cred
-      pure $
-        certState
-          & certDStateL . accountsL %~ adjustAccountState (stakePoolDelegationAccountStateL ?~ stakePool) cred
+      case lookupAccountState cred (ds ^. accountsL) of
+        Nothing -> do
+          failBecause $ StakeDelegationImpossibleDELEG cred
+          pure certState
+        Just accountState ->
+          pure $
+            certState
+              & certDStateL . accountsL %~ adjustAccountState (stakePoolDelegationAccountStateL ?~ stakePool) cred
+              & certPStateL %~ \ps ->
+                ps
+                  & unDelegStakePool cred (accountState ^. stakePoolDelegationAccountStateL) (Just stakePool)
+                  & psStakePoolsL %~ Map.adjust (spsDelegatorsL %~ Set.insert cred) stakePool
     GenesisDelegTxCert gkh vkh vrf -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
@@ -404,3 +420,19 @@ updateReservesAndTreasury targetPot combinedMap available certState = do
     case targetPot of
       ReservesMIR -> certState & certDStateL . dsIRewardsL . iRReservesL .~ combinedMap
       TreasuryMIR -> certState & certDStateL . dsIRewardsL . iRTreasuryL .~ combinedMap
+
+unDelegStakePool ::
+  Credential 'Staking ->
+  Maybe (KeyHash 'StakePool) ->
+  Maybe (KeyHash 'StakePool) ->
+  PState era ->
+  PState era
+unDelegStakePool stakeCred mCurStakePool mNewPool =
+  maybe
+    id
+    (\oldPool -> psStakePoolsL %~ Map.adjust (spsDelegatorsL %~ Set.delete stakeCred) oldPool)
+    (mCurStakePool >>= stakePoolToUnDeleg)
+  where
+    stakePoolToUnDeleg oldPool
+      | Just oldPool /= mNewPool = Just oldPool
+      | otherwise = Nothing
