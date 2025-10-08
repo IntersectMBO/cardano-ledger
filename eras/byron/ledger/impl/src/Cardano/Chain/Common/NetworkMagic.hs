@@ -9,26 +9,23 @@ module Cardano.Chain.Common.NetworkMagic (
   makeNetworkMagic,
 ) where
 
-import Cardano.Crypto.ProtocolMagic (
-  AProtocolMagic (..),
-  RequiresNetworkMagic (..),
-  getProtocolMagic,
- )
-import Cardano.HeapWords (HeapWords (..))
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
+import Cardano.Binary (
   DecoderError (..),
-  EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
-  fromByronCBOR,
   matchSize,
-  toByronCBOR,
  )
+import Cardano.Crypto.ProtocolMagic (
+  AProtocolMagic (..),
+  RequiresNetworkMagic (..),
+  getProtocolMagic,
+ )
+import Cardano.HeapWords (HeapWords (..))
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude hiding (cborError, (%))
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build, (%))
@@ -56,26 +53,24 @@ instance HeapWords NetworkMagic where
   heapWords (NetworkTestnet _) = 2
 
 instance ToCBOR NetworkMagic where
-  toCBOR = toByronCBOR
+  toCBOR = \case
+    NetworkMainOrStage ->
+      encodeListLen 1 <> toCBOR @Word8 0
+    NetworkTestnet n ->
+      encodeListLen 2 <> toCBOR @Word8 1 <> toCBOR n
 
 instance FromCBOR NetworkMagic where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR NetworkMagic where
-  encCBOR = \case
-    NetworkMainOrStage ->
-      encodeListLen 1 <> encCBOR @Word8 0
-    NetworkTestnet n ->
-      encodeListLen 2 <> encCBOR @Word8 1 <> encCBOR n
-
-instance DecCBOR NetworkMagic where
-  decCBOR = do
+  fromCBOR = do
     len <- decodeListLen
     tag <- decodeWord8
     case tag of
       0 -> matchSize "NetworkMagic" 1 len $> NetworkMainOrStage
-      1 -> matchSize "NetworkMagic" 2 len >> NetworkTestnet <$> decCBOR
+      1 -> matchSize "NetworkMagic" 2 len >> NetworkTestnet <$> fromCBOR
       _ -> cborError $ DecoderErrorUnknownTag "NetworkMagic" tag
+
+instance EncCBOR NetworkMagic
+
+instance DecCBOR NetworkMagic
 
 makeNetworkMagic :: AProtocolMagic a -> NetworkMagic
 makeNetworkMagic pm = case getRequiresNetworkMagic pm of

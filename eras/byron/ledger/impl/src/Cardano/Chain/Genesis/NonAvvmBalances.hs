@@ -15,6 +15,13 @@ module Cardano.Chain.Genesis.NonAvvmBalances (
   convertNonAvvmDataToBalances,
 ) where
 
+import Cardano.Binary (
+  DecoderError,
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+ )
 import Cardano.Chain.Common (
   Address,
   Lovelace,
@@ -23,17 +30,7 @@ import Cardano.Chain.Common (
   decodeAddressBase58,
   integerToLovelace,
  )
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  DecoderError,
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  encodeListLen,
-  enforceSize,
-  fromByronCBOR,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude
 import qualified Data.Map.Strict as M
 import Formatting (bprint, build)
@@ -62,20 +59,18 @@ instance MonadError SchemaError m => FromJSON m GenesisNonAvvmBalances where
   fromJSON = fmap GenesisNonAvvmBalances . fromJSON
 
 instance ToCBOR GenesisNonAvvmBalances where
-  toCBOR = toByronCBOR
+  toCBOR (GenesisNonAvvmBalances gnab) =
+    encodeListLen 1
+      <> toCBOR @(Map Address Lovelace) gnab
 
 instance FromCBOR GenesisNonAvvmBalances where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR GenesisNonAvvmBalances where
-  encCBOR (GenesisNonAvvmBalances gnab) =
-    encodeListLen 1
-      <> encCBOR @(Map Address Lovelace) gnab
-
-instance DecCBOR GenesisNonAvvmBalances where
-  decCBOR = do
+  fromCBOR = do
     enforceSize "GenesisNonAvvmBalances" 1
-    GenesisNonAvvmBalances <$> decCBOR @(Map Address Lovelace)
+    GenesisNonAvvmBalances <$> fromCBOR @(Map Address Lovelace)
+
+instance EncCBOR GenesisNonAvvmBalances
+
+instance DecCBOR GenesisNonAvvmBalances
 
 data NonAvvmBalancesError
   = NonAvvmBalancesLovelaceError LovelaceError

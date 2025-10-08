@@ -54,12 +54,11 @@ import Cardano.Ledger.Binary (
   annotatedDecoder,
   byronProtVer,
   decCBORAnnotated,
-  encodeListLen,
   enforceSize,
   fromByronCBOR,
   serialize',
-  toByronCBOR,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain (encodeListLen)
 import Cardano.Prelude
 import qualified Data.Aeson as Aeson
 import Data.Coerce (coerce)
@@ -181,7 +180,12 @@ isValid pm UnsafeACertificate {aEpoch, issuerVK, delegateVK, signature} =
 --------------------------------------------------------------------------------
 
 instance ToCBOR Certificate where
-  toCBOR = toByronCBOR
+  toCBOR cert =
+    Plain.encodeListLen 4
+      <> toCBOR (epoch cert)
+      <> toCBOR (issuerVK cert)
+      <> toCBOR (delegateVK cert)
+      <> toCBOR (signature cert)
   encodedSizeExpr size cert =
     1
       + encodedSizeExpr size (epoch <$> cert)
@@ -192,13 +196,7 @@ instance ToCBOR Certificate where
 instance FromCBOR Certificate where
   fromCBOR = fromByronCBOR
 
-instance EncCBOR Certificate where
-  encCBOR cert =
-    encodeListLen 4
-      <> encCBOR (epoch cert)
-      <> encCBOR (issuerVK cert)
-      <> encCBOR (delegateVK cert)
-      <> encCBOR (signature cert)
+instance EncCBOR Certificate
 
 instance DecCBOR Certificate where
   decCBOR = void <$> decCBOR @(ACertificate ByteSpan)

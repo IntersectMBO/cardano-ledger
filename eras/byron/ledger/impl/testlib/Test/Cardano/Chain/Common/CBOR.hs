@@ -8,6 +8,14 @@ module Test.Cardano.Chain.Common.CBOR (
   tests,
 ) where
 
+import Cardano.Binary (
+  Case (..),
+  SizeOverride (..),
+  ToCBOR,
+  decodeFullDecoder,
+  serialize,
+  szCases,
+ )
 import Cardano.Chain.Common (
   AddrAttributes (..),
   AddrSpendingData (..),
@@ -34,15 +42,6 @@ import Cardano.Crypto (
   redeemDeterministicKeyGen,
  )
 import Cardano.Crypto.Raw (Raw (..))
-import Cardano.Ledger.Binary (
-  Case (..),
-  SizeOverride (..),
-  ToCBOR,
-  byronProtVer,
-  decodeFullDecoder,
-  serialize,
-  szCases,
- )
 import Cardano.Prelude hiding (check)
 import qualified Data.Map as M
 import Hedgehog (Gen, Property, cover, forAll, property, (===))
@@ -91,8 +90,8 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 prop_roundTripCrcProtected :: Property
 prop_roundTripCrcProtected = property $ do
   x <- forAll genAddress
-  let crcEncodedBS = serialize byronProtVer . encodeCrcProtected $ x
-  decodeFullDecoder byronProtVer "" decodeCrcProtected crcEncodedBS === Right x
+  let crcEncodedBS = serialize . encodeCrcProtected $ x
+  decodeFullDecoder "" decodeCrcProtected crcEncodedBS === Right x
 
 --------------------------------------------------------------------------------
 -- Address

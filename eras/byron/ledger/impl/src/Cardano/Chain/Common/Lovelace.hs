@@ -48,21 +48,18 @@ module Cardano.Chain.Common.Lovelace (
   modLovelace,
 ) where
 
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
+import Cardano.Binary (
   DecoderError (..),
-  EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
   cborError,
   decodeListLen,
   decodeWord8,
   encodeListLen,
-  fromByronCBOR,
   matchSize,
-  toByronCBOR,
   toCborError,
  )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude hiding (cborError, toCborError)
 import Data.Aeson (ToJSON)
 import Data.Data (Data)
@@ -95,21 +92,19 @@ instance Bounded Lovelace where
 instance ToJSON Lovelace
 
 instance ToCBOR Lovelace where
-  toCBOR = toByronCBOR
+  toCBOR = toCBOR . unsafeGetLovelace
   encodedSizeExpr size pxy = size (unsafeGetLovelace <$> pxy)
 
 instance FromCBOR Lovelace where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR Lovelace where
-  encCBOR = encCBOR . unsafeGetLovelace
-
-instance DecCBOR Lovelace where
-  decCBOR = do
-    l <- decCBOR
+  fromCBOR = do
+    l <- fromCBOR
     toCborError
       . first (DecoderErrorCustom "Lovelace" . sformat build)
       $ mkLovelace l
+
+instance EncCBOR Lovelace
+
+instance DecCBOR Lovelace
 
 instance Monad m => Canonical.ToJSON m Lovelace where
   toJSON = Canonical.toJSON . unsafeGetLovelace
@@ -147,33 +142,31 @@ instance B.Buildable LovelaceError where
         c
 
 instance ToCBOR LovelaceError where
-  toCBOR = toByronCBOR
+  toCBOR = \case
+    LovelaceOverflow c ->
+      encodeListLen 2 <> toCBOR @Word8 0 <> toCBOR c
+    LovelaceTooLarge c ->
+      encodeListLen 2 <> toCBOR @Word8 1 <> toCBOR c
+    LovelaceTooSmall c ->
+      encodeListLen 2 <> toCBOR @Word8 2 <> toCBOR c
+    LovelaceUnderflow c c' ->
+      encodeListLen 3 <> toCBOR @Word8 3 <> toCBOR c <> toCBOR c'
 
 instance FromCBOR LovelaceError where
-  fromCBOR = fromByronCBOR
-
-instance EncCBOR LovelaceError where
-  encCBOR = \case
-    LovelaceOverflow c ->
-      encodeListLen 2 <> encCBOR @Word8 0 <> encCBOR c
-    LovelaceTooLarge c ->
-      encodeListLen 2 <> encCBOR @Word8 1 <> encCBOR c
-    LovelaceTooSmall c ->
-      encodeListLen 2 <> encCBOR @Word8 2 <> encCBOR c
-    LovelaceUnderflow c c' ->
-      encodeListLen 3 <> encCBOR @Word8 3 <> encCBOR c <> encCBOR c'
-
-instance DecCBOR LovelaceError where
-  decCBOR = do
+  fromCBOR = do
     len <- decodeListLen
     let checkSize size = matchSize "LovelaceError" size len
     tag <- decodeWord8
     case tag of
-      0 -> checkSize 2 >> LovelaceOverflow <$> decCBOR
-      1 -> checkSize 2 >> LovelaceTooLarge <$> decCBOR
-      2 -> checkSize 2 >> LovelaceTooSmall <$> decCBOR
-      3 -> checkSize 3 >> LovelaceUnderflow <$> decCBOR <*> decCBOR
+      0 -> checkSize 2 >> LovelaceOverflow <$> fromCBOR
+      1 -> checkSize 2 >> LovelaceTooLarge <$> fromCBOR
+      2 -> checkSize 2 >> LovelaceTooSmall <$> fromCBOR
+      3 -> checkSize 3 >> LovelaceUnderflow <$> fromCBOR <*> fromCBOR
       _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" tag
+
+instance EncCBOR LovelaceError
+
+instance DecCBOR LovelaceError
 
 -- | Maximal possible value of 'Lovelace'
 maxLovelaceVal :: Word64

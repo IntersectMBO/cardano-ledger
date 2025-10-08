@@ -33,6 +33,13 @@ module Cardano.Chain.Block.Validation (
   foldUTxOBlock,
 ) where
 
+import Cardano.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  encodeListLen,
+  enforceSize,
+  serialize',
+ )
 import Cardano.Chain.Block.Block (
   ABlock (..),
   ABlockOrBoundary (..),
@@ -107,19 +114,7 @@ import Cardano.Crypto (
   hashRaw,
  )
 import Cardano.HeapWords (HeapWords (..))
-import Cardano.Ledger.Binary (
-  Annotated (..),
-  DecCBOR (..),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  byronProtVer,
-  encodeListLen,
-  enforceSize,
-  fromByronCBOR,
-  serialize',
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (Annotated (..), DecCBOR, EncCBOR)
 import Cardano.Prelude
 import Control.Monad.Trans.Resource (ResIO)
 import qualified Data.ByteString.Lazy as BSL
@@ -147,29 +142,27 @@ data ChainValidationState = ChainValidationState
   deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance ToCBOR ChainValidationState where
-  toCBOR = toByronCBOR
+  toCBOR c =
+    encodeListLen 5
+      <> toCBOR (cvsLastSlot c)
+      <> toCBOR (cvsPreviousHash c)
+      <> toCBOR (cvsUtxo c)
+      <> toCBOR (cvsUpdateState c)
+      <> toCBOR (cvsDelegationState c)
 
 instance FromCBOR ChainValidationState where
-  fromCBOR = fromByronCBOR
-
-instance DecCBOR ChainValidationState where
-  decCBOR = do
+  fromCBOR = do
     enforceSize "ChainValidationState" 5
     ChainValidationState
-      <$> decCBOR
-      <*> decCBOR
-      <*> decCBOR
-      <*> decCBOR
-      <*> decCBOR
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
-instance EncCBOR ChainValidationState where
-  encCBOR c =
-    encodeListLen 5
-      <> encCBOR (cvsLastSlot c)
-      <> encCBOR (cvsPreviousHash c)
-      <> encCBOR (cvsUtxo c)
-      <> encCBOR (cvsUpdateState c)
-      <> encCBOR (cvsDelegationState c)
+instance DecCBOR ChainValidationState
+
+instance EncCBOR ChainValidationState
 
 -- | Create the state needed to validate the zeroth epoch of the chain. The
 --   zeroth epoch starts with a boundary block where the previous hash is the
@@ -194,7 +187,7 @@ initialChainValidationState config = do
   where
     delegationEnv =
       DI.Environment
-        { DI.protocolMagic = Annotated pm (serialize' byronProtVer pm)
+        { DI.protocolMagic = Annotated pm (serialize' pm)
         , DI.allowedDelegators = unGenesisKeyHashes $ configGenesisKeyHashes config
         , DI.k = configK config
         , DI.currentEpoch = EpochNumber 0

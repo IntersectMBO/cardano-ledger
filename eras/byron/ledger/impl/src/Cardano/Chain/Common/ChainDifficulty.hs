@@ -14,10 +14,11 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   ToCBOR (..),
   dropWord64,
+  enforceSize,
+ )
+import qualified Cardano.Ledger.Binary.Plain as Plain (
   encodeListLen,
   enforceSize,
-  fromByronCBOR,
-  toByronCBOR,
  )
 import Cardano.Prelude
 import Data.Aeson (ToJSON)
@@ -35,19 +36,17 @@ newtype ChainDifficulty = ChainDifficulty
 instance ToJSON ChainDifficulty
 
 instance ToCBOR ChainDifficulty where
-  toCBOR = toByronCBOR
+  toCBOR cd = Plain.encodeListLen 1 <> toCBOR (unChainDifficulty cd)
   encodedSizeExpr f cd = 1 + encodedSizeExpr f (unChainDifficulty <$> cd)
 
 instance FromCBOR ChainDifficulty where
-  fromCBOR = fromByronCBOR
+  fromCBOR = do
+    Plain.enforceSize "ChainDifficulty" 1
+    ChainDifficulty <$> fromCBOR
 
-instance EncCBOR ChainDifficulty where
-  encCBOR cd = encodeListLen 1 <> encCBOR (unChainDifficulty cd)
+instance EncCBOR ChainDifficulty
 
-instance DecCBOR ChainDifficulty where
-  decCBOR = do
-    enforceSize "ChainDifficulty" 1
-    ChainDifficulty <$> decCBOR
+instance DecCBOR ChainDifficulty
 
 dropChainDifficulty :: Dropper s
 dropChainDifficulty = do

@@ -14,6 +14,18 @@ module Cardano.Chain.UTxO.TxWitness (
   recoverSigData,
 ) where
 
+import Cardano.Binary (
+  Case (..),
+  DecoderError (DecoderErrorUnknownTag),
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+  decodeListLen,
+  encodeListLen,
+  matchSize,
+  serialize',
+  szCases,
+ )
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Common.CBOR (
   decodeKnownCborDataItem,
@@ -30,24 +42,7 @@ import Cardano.Crypto (
   hashDecoded,
   shortHashF,
  )
-import Cardano.Ledger.Binary (
-  Annotated (..),
-  Case (..),
-  DecCBOR (..),
-  DecoderError (DecoderErrorUnknownTag),
-  EncCBOR (..),
-  FromCBOR (..),
-  ToCBOR (..),
-  byronProtVer,
-  cborError,
-  decodeListLen,
-  encodeListLen,
-  fromByronCBOR,
-  matchSize,
-  serialize',
-  szCases,
-  toByronCBOR,
- )
+import Cardano.Ledger.Binary (Annotated (..), DecCBOR, EncCBOR)
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Data.Vector (Vector)
@@ -85,7 +80,15 @@ instance B.Buildable TxInWitness where
     bprint ("VKWitness: key = " . build . ", sig = " . build) key sig
 
 instance ToCBOR TxInWitness where
-  toCBOR = toByronCBOR
+  toCBOR input = case input of
+    VKWitness key sig ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> encodeKnownCborDataItem (key, sig)
+    RedeemWitness key sig ->
+      encodeListLen 2
+        <> toCBOR (2 :: Word8)
+        <> encodeKnownCborDataItem (key, sig)
   encodedSizeExpr size _ =
     2
       + szCases
@@ -99,26 +102,9 @@ instance ToCBOR TxInWitness where
         )
 
 instance FromCBOR TxInWitness where
-  fromCBOR = fromByronCBOR
-
--- Used for debugging purposes only
-instance ToJSON TxInWitness
-
-instance EncCBOR TxInWitness where
-  encCBOR input = case input of
-    VKWitness key sig ->
-      encodeListLen 2
-        <> encCBOR (0 :: Word8)
-        <> encodeKnownCborDataItem (key, sig)
-    RedeemWitness key sig ->
-      encodeListLen 2
-        <> encCBOR (2 :: Word8)
-        <> encodeKnownCborDataItem (key, sig)
-
-instance DecCBOR TxInWitness where
-  decCBOR = do
+  fromCBOR = do
     len <- decodeListLen
-    decCBOR @Word8 >>= \case
+    fromCBOR @Word8 >>= \case
       0 -> do
         matchSize "TxInWitness.VKWitness" len 2
         uncurry VKWitness <$> decodeKnownCborDataItem
@@ -126,6 +112,13 @@ instance DecCBOR TxInWitness where
         matchSize "TxInWitness.RedeemWitness" len 2
         uncurry RedeemWitness <$> decodeKnownCborDataItem
       tag -> cborError $ DecoderErrorUnknownTag "TxInWitness" tag
+
+-- Used for debugging purposes only
+instance ToJSON TxInWitness
+
+instance EncCBOR TxInWitness
+
+instance DecCBOR TxInWitness
 
 -- | Data that is being signed when creating a TxSig
 newtype TxSigData = TxSigData
@@ -136,24 +129,22 @@ newtype TxSigData = TxSigData
 recoverSigData :: Annotated Tx ByteString -> Annotated TxSigData ByteString
 recoverSigData atx =
   let txHash = hashDecoded atx
-      signedBytes = serialize' byronProtVer txHash -- TODO: make the prefix bytes explicit
+      signedBytes = serialize' txHash -- TODO: make the prefix bytes explicit
    in Annotated (TxSigData txHash) signedBytes
 
 -- Used for debugging purposes only
 instance ToJSON TxSigData
 
 instance ToCBOR TxSigData where
-  toCBOR = toByronCBOR
+  toCBOR txSigData = toCBOR (txSigTxHash txSigData)
   encodedSizeExpr size pxy = size (txSigTxHash <$> pxy)
 
 instance FromCBOR TxSigData where
-  fromCBOR = fromByronCBOR
+  fromCBOR = TxSigData <$> fromCBOR
 
-instance EncCBOR TxSigData where
-  encCBOR txSigData = encCBOR (txSigTxHash txSigData)
+instance EncCBOR TxSigData
 
-instance DecCBOR TxSigData where
-  decCBOR = TxSigData <$> decCBOR
+instance DecCBOR TxSigData
 
 -- | 'Signature' of addrId
 type TxSig = Signature TxSigData

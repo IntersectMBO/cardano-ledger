@@ -13,7 +13,8 @@ module Cardano.Chain.Genesis.KeyHashes (
 ) where
 
 import Cardano.Chain.Common (KeyHash)
-import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary (EncCBOR,DecCBOR)
+import Cardano.Binary
 import Cardano.Prelude
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
@@ -42,15 +43,13 @@ instance MonadError SchemaError m => FromJSON m GenesisKeyHashes where
     fmap (GenesisKeyHashes . M.keysSet) . fromJSON @m @(Map KeyHash Word16)
 
 instance ToCBOR GenesisKeyHashes where
-  toCBOR = toByronCBOR
+  toCBOR (GenesisKeyHashes gkh) = encodeListLen 1 <> toCBOR @(Set KeyHash) gkh
 
 instance FromCBOR GenesisKeyHashes where
-  fromCBOR = fromByronCBOR
+  fromCBOR = do
+    enforceSize "GenesisKeyHashes" 1
+    GenesisKeyHashes <$> fromCBOR @(Set KeyHash)
 
 instance EncCBOR GenesisKeyHashes where
-  encCBOR (GenesisKeyHashes gkh) = encodeListLen 1 <> encCBOR @(Set KeyHash) gkh
 
 instance DecCBOR GenesisKeyHashes where
-  decCBOR = do
-    enforceSize "GenesisKeyHashes" 1
-    GenesisKeyHashes <$> decCBOR @(Set KeyHash)

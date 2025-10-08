@@ -20,11 +20,18 @@ module Cardano.Chain.Common.Attributes (
   unknownAttributesLength,
   encCBORAttributes,
   decCBORAttributes,
+  toCBORAttributes,
+  fromCBORAttributes,
   mkAttributes,
   dropAttributes,
   dropEmptyAttributes,
 ) where
 
+import Cardano.Binary (
+  FromCBOR (..),
+  ToCBOR (..),
+  cborError,
+ )
 import Cardano.HeapWords (HeapWords (..), heapWords2)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -33,16 +40,16 @@ import Cardano.Ledger.Binary (
   Dropper,
   EncCBOR (..),
   Encoding,
-  FromCBOR (..),
-  ToCBOR (..),
-  cborError,
+  byronProtVer,
   decodeMapLen,
   dropBytes,
   dropMap,
   dropWord8,
-  fromByronCBOR,
-  toByronCBOR,
+  fromPlainDecoder,
+  fromPlainEncoding,
+  toPlainDecoder,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
@@ -118,16 +125,14 @@ instance Buildable (Attributes ()) where
 instance ToJSON a => ToJSON (Attributes a)
 
 instance ToCBOR (Attributes ()) where
-  toCBOR = toByronCBOR
+  toCBOR = toCBORAttributes []
 
 instance FromCBOR (Attributes ()) where
-  fromCBOR = fromByronCBOR
+  fromCBOR = fromCBORAttributes () $ \_ _ _ -> pure Nothing
 
-instance EncCBOR (Attributes ()) where
-  encCBOR = encCBORAttributes []
+instance EncCBOR (Attributes ())
 
-instance DecCBOR (Attributes ()) where
-  decCBOR = decCBORAttributes () $ \_ _ _ -> pure Nothing
+instance DecCBOR (Attributes ())
 
 instance HeapWords h => HeapWords (Attributes h) where
   heapWords (Attributes dat unparsed) = heapWords2 dat unparsed
@@ -189,10 +194,10 @@ version would be able to parse it).
 
 -}
 
-encCBORAttributes ::
-  forall t. [(Word8, t -> LBS.ByteString)] -> Attributes t -> Encoding
-encCBORAttributes encs attr =
-  encCBOR
+toCBORAttributes ::
+  forall t. [(Word8, t -> LBS.ByteString)] -> Attributes t -> Plain.Encoding
+toCBORAttributes encs attr =
+  toCBOR
     $ foldr go (fromUnparsedFields $ attrRemain attr) encs
   where
     go ::
@@ -205,21 +210,25 @@ encCBORAttributes encs attr =
         insertCheck v Nothing = Just v
         insertCheck _ (Just v') =
           panic
-            $ "encCBORAttributes: impossible: field no. "
+            $ "toCBORAttributes: impossible: field no. "
             <> show k
             <> " is already encoded as unparsed field: "
             <> show v'
 
-decCBORAttributes ::
+encCBORAttributes ::
+  forall t. [(Word8, t -> LBS.ByteString)] -> Attributes t -> Encoding
+encCBORAttributes encs = fromPlainEncoding . toCBORAttributes encs
+
+fromCBORAttributes ::
   forall t s.
   t ->
-  (Word8 -> LBS.ByteString -> t -> Decoder s (Maybe t)) ->
-  Decoder s (Attributes t)
-decCBORAttributes initval updater = do
-  raw <- decCBOR @(Map Word8 LBS.ByteString)
+  (Word8 -> LBS.ByteString -> t -> Plain.Decoder s (Maybe t)) ->
+  Plain.Decoder s (Attributes t)
+fromCBORAttributes initval updater = do
+  raw <- fromCBOR @(Map Word8 LBS.ByteString)
   foldrM go (Attributes initval $ UnparsedFields raw) $ M.toList raw
   where
-    go :: (Word8, LBS.ByteString) -> Attributes t -> Decoder s (Attributes t)
+    go :: (Word8, LBS.ByteString) -> Attributes t -> Plain.Decoder s (Attributes t)
     go (k, v) attr = do
       updaterData <- updater k v $ attrData attr
       pure $ case updaterData of
@@ -233,6 +242,15 @@ decCBORAttributes initval updater = do
                   . fromUnparsedFields
                   $ attrRemain attr
             }
+
+decCBORAttributes ::
+  forall t s.
+  t ->
+  (Word8 -> LBS.ByteString -> t -> Decoder s (Maybe t)) ->
+  Decoder s (Attributes t)
+decCBORAttributes initVal updater =
+  fromPlainDecoder
+    $ fromCBORAttributes initVal (\k v attrs -> toPlainDecoder Nothing byronProtVer (updater k v attrs))
 
 dropAttributes :: Dropper s
 dropAttributes = dropMap dropWord8 dropBytes

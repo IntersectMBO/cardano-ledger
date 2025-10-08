@@ -11,24 +11,21 @@ module Cardano.Chain.Common.AddrSpendingData (
   addrSpendingDataToType,
 ) where
 
-import Cardano.Crypto.Signing (RedeemVerificationKey, VerificationKey)
-import Cardano.HeapWords
-import Cardano.Ledger.Binary (
+import Cardano.Binary (
   Case (..),
-  DecCBOR (..),
   DecoderError (..),
-  EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
   cborError,
   decodeListLenCanonical,
   decodeWord8Canonical,
   encodeListLen,
-  fromByronCBOR,
   matchSize,
   szCases,
-  toByronCBOR,
  )
+import Cardano.Crypto.Signing (RedeemVerificationKey, VerificationKey)
+import Cardano.HeapWords
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Prelude hiding (cborError)
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
@@ -53,7 +50,10 @@ instance B.Buildable AddrSpendingData where
     RedeemASD rvk -> bprint ("RedeemASD " . build) rvk
 
 instance ToCBOR AddrSpendingData where
-  toCBOR = toByronCBOR
+  toCBOR = \case
+    VerKeyASD vk -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR vk
+    RedeemASD redeemVK ->
+      encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR redeemVK
   encodedSizeExpr size _ =
     szCases
       [ Case "VerKeyASD" $ size $ Proxy @(Word8, VerificationKey)
@@ -61,23 +61,18 @@ instance ToCBOR AddrSpendingData where
       ]
 
 instance FromCBOR AddrSpendingData where
-  fromCBOR = fromByronCBOR
-
--- Tag 1 was previously used for scripts, but never appeared on the chain
-instance EncCBOR AddrSpendingData where
-  encCBOR = \case
-    VerKeyASD vk -> encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR vk
-    RedeemASD redeemVK ->
-      encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR redeemVK
-
-instance DecCBOR AddrSpendingData where
-  decCBOR = do
+  fromCBOR = do
     len <- decodeListLenCanonical
     matchSize "AddrSpendingData" 2 len
     decodeWord8Canonical >>= \case
-      0 -> VerKeyASD <$> decCBOR
-      2 -> RedeemASD <$> decCBOR
+      0 -> VerKeyASD <$> fromCBOR
+      2 -> RedeemASD <$> fromCBOR
       tag -> cborError $ DecoderErrorUnknownTag "AddrSpendingData" tag
+
+-- Tag 1 was previously used for scripts, but never appeared on the chain
+instance EncCBOR AddrSpendingData
+
+instance DecCBOR AddrSpendingData
 
 -- | Type of an address. It corresponds to constructors of 'AddrSpendingData'.
 --   It's separated, because 'Address' doesn't store 'AddrSpendingData', but we
@@ -92,25 +87,23 @@ data AddrType
 instance ToJSON AddrType
 
 instance ToCBOR AddrType where
-  toCBOR = toByronCBOR
+  toCBOR =
+    toCBOR @Word8 . \case
+      ATVerKey -> 0
+      ATRedeem -> 2
   encodedSizeExpr size _ = encodedSizeExpr size (Proxy @Word8)
 
 instance FromCBOR AddrType where
-  fromCBOR = fromByronCBOR
-
--- Tag 1 was previously used for scripts, but never appeared on the chain
-instance EncCBOR AddrType where
-  encCBOR =
-    encCBOR @Word8 . \case
-      ATVerKey -> 0
-      ATRedeem -> 2
-
-instance DecCBOR AddrType where
-  decCBOR =
+  fromCBOR =
     decodeWord8Canonical >>= \case
       0 -> pure ATVerKey
       2 -> pure ATRedeem
       tag -> cborError $ DecoderErrorUnknownTag "AddrType" tag
+
+-- Tag 1 was previously used for scripts, but never appeared on the chain
+instance EncCBOR AddrType
+
+instance DecCBOR AddrType
 
 instance HeapWords AddrType where
   heapWords = \case
