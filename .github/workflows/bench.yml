@@ -19,9 +19,9 @@ jobs:
       GH_PAGES_BRANCH: benchmark-pages
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
 
-      - uses: cachix/install-nix-action@v15
+      - uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
           extra_nix_config: |
@@ -41,19 +41,6 @@ jobs:
           nix-env -i jq -f '<nixpkgs>'
           jq -f .github/tools/extract_criterion.jq < libs/cardano-ledger-test/bench.json > output.json
 
-      - name: Truncate benchmark git history
-        run: |
-          git fetch origin refs/heads/$GH_PAGES_BRANCH:refs/remotes/origin/$GH_PAGES_BRANCH
-          git checkout -t origin/$GH_PAGES_BRANCH
-          START=$(git rev-parse "@{2 weeks ago}")
-          git checkout --orphan new-root $START
-          git config user.name "$(git log -1 --format=%cn $START)"
-          git config user.email "$(git log -1 --format=%ce $START)"
-          git commit -C $START
-          git rebase --onto new-root $START $GH_PAGES_BRANCH
-          git push -f
-          git checkout --detach
-
       - name: Store benchmark results
         uses: benchmark-action/github-action-benchmark@v1
         with:
@@ -68,3 +55,15 @@ jobs:
           comment-on-alert: true
           fail-on-alert: true
           alert-comment-cc-users: '@lehins'
+
+      - name: Abbreviate git history
+        run: |
+          git branch -D $GH_PAGES_BRANCH || true
+          git fetch origin refs/heads/$GH_PAGES_BRANCH*:refs/remotes/origin/$GH_PAGES_BRANCH*
+          git checkout -t origin/$GH_PAGES_BRANCH
+          git config user.name "$(git log -1 --format=%cn)"
+          git config user.email "$(git log -1 --format=%ce)"
+          git reset --keep origin/$GH_PAGES_BRANCH-base
+          git checkout @{u} .
+          git commit -C @{u}
+          git push -f
