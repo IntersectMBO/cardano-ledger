@@ -3,6 +3,6 @@ let
   type = "github";
   owner = "input-output-hk";
   repo = "cardano-ledger-release-tool";
-  rev = "f52262644af02e6eae54cf5d6021ecebf7f5c1d1";
+  rev = "98b7da19a6e385c62292125a5cede79f444dd9b9"; # git rev-parse 0.1.1.0
 in
 (builtins.getFlake "${type}:${owner}/${repo}/${rev}").packages.${system}.default

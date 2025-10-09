@@ -655,16 +655,16 @@ jobs:
     - name: Install changelog linter
       run: |
         REPO=cardano-ledger-release-tool
-        RELEASE=cardano-ledger-release-tool-0.1.0.0
-        curl -sSfL "https://github.com/input-output-hk/$REPO/releases/download/$RELEASE/$REPO-Linux-x86_64.zip" -o $REPO.zip
+        RELEASE=0.1.1.0 # Should match nix/pkgs/cardano-ledger-release-tool.nix
+        curl -sSfL "https://github.com/input-output-hk/$REPO/releases/download/$RELEASE/$REPO-Linux-x86_64-$RELEASE.tgz" -o $REPO.tgz
         BINDIR=$HOME/.local/bin
         mkdir -p "$BINDIR"
-        unzip -qo $REPO.zip -d "$BINDIR"
-        rm $REPO.zip
+        tar -xvf $REPO.tgz --strip-components=1 -C "$BINDIR"
+        rm $REPO.tgz
         echo "$BINDIR" >> ${GITHUB_PATH-/dev/null}
 
     - name: Run linter
-      run: scripts/format-changelogs.sh || git diff --exit-code
+      run: scripts/format-changelogs.sh || (git diff; false)
 
     - name: Check if changelogs need a bump
       run: scripts/bump-changelogs.sh || (git diff; false)
