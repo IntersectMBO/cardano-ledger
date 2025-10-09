@@ -11,4 +11,12 @@ fi
 
 clrt changelogs -i "${FILES[@]}"
 
-git diff -s --exit-code "${FILES[@]}"
+if ! git diff -s --exit-code "${FILES[@]}"
+then
+  if [ -t 2 ]
+  then
+    # shellcheck disable=SC2016
+    echo 'Some changelogs were modified - use `git diff` to see the changes' >&2
+  fi
+  false
+fi
