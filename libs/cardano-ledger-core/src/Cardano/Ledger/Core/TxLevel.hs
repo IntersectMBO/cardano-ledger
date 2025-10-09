@@ -1,0 +1,84 @@
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeData #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
+
+module Cardano.Ledger.Core.TxLevel (
+  TxLevel (..),
+  STxTopLevel (..),
+  withSTxTopLevelM,
+  STxBothLevels (..),
+  withSTxBothLevels,
+  EraTxLevel (..),
+  HasEraTxLevel (..),
+  mkSTxTopLevelM,
+  mkSTxBothLevelsM,
+) where
+
+import Cardano.Ledger.Core.Era (Era (..))
+import Data.Kind (Type)
+import Data.Typeable
+import GHC.Stack
+
+type data TxLevel = TopTx | SubTx
+
+data STxTopLevel (l :: TxLevel) era where
+  STopTxOnly :: STxTopLevel TopTx era
+
+withSTxTopLevelM ::
+  forall l era a m. (Typeable l, Era era, MonadFail m) => (STxTopLevel l era -> m a) -> m a
+withSTxTopLevelM f =
+  case eqT @l @TopTx of
+    Just Refl -> f STopTxOnly
+    Nothing -> fail $ "SubTx level is not supported in the " <> eraName @era <> " era"
+
+data STxBothLevels (l :: TxLevel) era where
+  STopTx :: STxBothLevels TopTx era
+  SSubTx :: STxBothLevels SubTx era
+
+withSTxBothLevels :: forall l era a. (Typeable l, HasCallStack) => (STxBothLevels l era -> a) -> a
+withSTxBothLevels f =
+  case eqT @l @TopTx of
+    Just Refl -> f STopTx
+    Nothing -> case eqT @l @SubTx of
+      Just Refl -> f SSubTx
+      Nothing -> error $ "Impossible: Unrecognized TxLevel: " <> show (typeRep (Proxy @l))
+
+class Era era => EraTxLevel era where
+  type STxLevel (l :: TxLevel) era = (r :: Type) | r -> era
+  type STxLevel l era = STxBothLevels l era
+
+class EraTxLevel era => HasEraTxLevel (t :: TxLevel -> Type -> Type) era where
+  toSTxLevel :: t l era -> STxLevel l era
+
+mkSTxTopLevelM ::
+  forall (l :: TxLevel) t m era.
+  (Typeable l, MonadFail m, HasEraTxLevel t era, STxLevel l era ~ STxTopLevel l era) =>
+  m (t TopTx era) -> m (t l era)
+mkSTxTopLevelM mkTopTx = do
+  withSTxTopLevelM @l @era $ \level ->
+    case level of
+      STopTxOnly -> do
+        res <- mkTopTx
+        -- Here we tell the compiler that we only expect top level transactions in this function and
+        -- any attempt to construct a sub transaction level will result in a compiler failure,
+        -- instead of a trigger of `fail` in `MonadFail`.
+        let _level = asTypeOf (toSTxLevel res) level
+        pure res
+
+mkSTxBothLevelsM ::
+  forall (l :: TxLevel) t m era.
+  (Typeable l, Monad m, HasEraTxLevel t era, STxLevel l era ~ STxBothLevels l era) =>
+  m (t TopTx era) -> m (t SubTx era) -> m (t l era)
+mkSTxBothLevelsM mkTopTx mkSubTx =
+  withSTxBothLevels @l $ \level -> do
+    res <- case level of
+      STopTx -> mkTopTx
+      SSubTx -> mkSubTx
+    -- Tell the compiler that we expect only `STxBothLevels` in this action
+    let _level = asTypeOf (toSTxLevel res) level
+    pure res
