@@ -1,18 +1,24 @@
 #!/usr/bin/env bash
 
-CHAP=./cardano-haskell-packages
-# Download a shallow copy of CHaP
-git clone --depth 1 git@github.com:IntersectMBO/cardano-haskell-packages.git $CHAP
-
-cd $CHAP || exit
 # Save all the available packages from CHaP
-CHAP_PACKAGES=$(./scripts/list-packages.sh)
-cd - || exit
-echo "The following packages are available in CHaP:"
+CHAP_PACKAGES=$(mktemp)
+trap 'rm -f "$CHAP_PACKAGES"' EXIT
+
+if tar --version | grep -q 'GNU tar'
+then
+  tar () { command tar --wildcards "$@"; }
+fi
+
+curl -sSL https://chap.intersectmbo.org/01-index.tar.gz |
+  tar -tz \*.cabal |
+  cut -d/ -f1-2 |
+  LANG=C sort -t/ -k1,1 -k2,2Vr |
+  LANG=C sort -t/ -k1,1 -u -o "$CHAP_PACKAGES"
+echo "The complete CHaP package index is here:"
 echo "$CHAP_PACKAGES"
 
 # Save the paths to every `cardano-ledger` cabal file
-CABAL_FILES=$(find . -wholename '*/eras/*.cabal' -o -wholename '*/libs/*.cabal')
+CABAL_FILES=$(git ls-files '*.cabal')
 
 for i in $CABAL_FILES;
 do
@@ -29,7 +35,7 @@ do
     # Check if the package had a release with
     # the most recent `CHANGELOG` version number
     printf "Looking for %s with version %s in CHaP\n" "$PACKAGE" "$VERSION"
-    RESULT=$(echo "$CHAP_PACKAGES" | grep -o "$PACKAGE $VERSION")
+    RESULT=$(grep -o "$PACKAGE/$VERSION" "$CHAP_PACKAGES")
     if [[ -n "$RESULT" ]]; then
       # A release was found and thus the `CHANGELOG` has to be bumped
       # with the incremented patch version
@@ -40,7 +46,9 @@ do
   fi
 done
 
-rm -rf $CHAP
-printf "\n!!!!!!\n%s %s\n!!!!!!\n" \
-  "WARNING! DO NOT BUMP THE VERSION NUMBER IN THE CABAL FILES" \
-  "(unless its dependencies were bumped)!"
+if ! git diff -s --exit-code; then
+  printf "\n!!!!!!\n%s %s\n!!!!!!\n" \
+    "WARNING! DO NOT BUMP THE VERSION NUMBER IN THE CABAL FILES" \
+    "(unless their dependencies were bumped)!"
+  exit 1
+fi

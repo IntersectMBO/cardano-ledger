@@ -665,3 +665,6 @@ jobs:
 
     - name: Run linter
       run: scripts/format-changelogs.sh || git diff --exit-code
+
+    - name: Check if changelogs need a bump
+      run: scripts/bump-changelogs.sh || (git diff; false)
