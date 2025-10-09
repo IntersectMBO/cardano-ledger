@@ -253,5 +253,17 @@ instance
   toSpecRep (NewEpochState {..}) =
     Agda.MkNewEpochState
       <$> toSpecRep nesEL
+      <*> toSpecRep nesBprev
+      <*> toSpecRep nesBcur
       <*> toSpecRep nesEs
       <*> toSpecRep nesRu
+      <*> (filterZeroEntries <$> toSpecRep nesPd)
+    where
+      -- The specification does not include zero entries in general
+      -- while the implementation might. So we filter them out here for the sake
+      -- of comparing results.
+      --
+      -- The discrepancy is discussed here:
+      -- https://github.com/IntersectMBO/cardano-ledger/issues/5306
+      filterZeroEntries (Agda.MkHSMap lst) =
+        Agda.MkHSMap $ filter ((/= 0) . snd) lst
