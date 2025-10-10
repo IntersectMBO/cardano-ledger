@@ -16,8 +16,14 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Genesis
+import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Scripts
+import Cardano.Ledger.Shelley.State (ShelleyEraAccounts)
+import Cardano.Ledger.Shelley.Transition (shelleyRegisterInitialAccounts)
+import Cardano.Ledger.State (accountsL, accountsMapL, stakePoolDelegationAccountStateL)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 import Test.Cardano.Ledger.Imp.Common
@@ -26,6 +32,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 
 shelleyEraSpecificSpec ::
   ( ShelleyEraImp era
+  , ShelleyEraAccounts era
   , InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -99,6 +106,34 @@ shelleyEraSpecificSpec = do
             )
     getBalance otherStakeCred `shouldReturn` Coin 0
     expectNotRegisteredRewardAddress rewardAccount
+
+  it "Transition creates the delegations correctly" $ do
+    pool1 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
+    pool2 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
+    pool3 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
+    poolParams <- freshKeyHash >>= \kh -> registerRewardAccount >>= freshPoolParams kh
+    deleg1 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    deleg2 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    deleg3 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    nes <- getsNES id
+    let sgs =
+          ShelleyGenesisStaking
+            { sgsPools = LM.ListMap [(pool1, poolParams), (pool2, poolParams), (pool3, poolParams)]
+            , sgsStake = LM.ListMap [(deleg1, pool1), (deleg2, pool1), (deleg3, pool2)]
+            }
+    let updatedNES = shelleyRegisterInitialAccounts sgs nes
+    delegateStake (KeyHashObj deleg1) pool1
+    delegateStake (KeyHashObj deleg2) pool1
+    delegateStake (KeyHashObj deleg3) pool2
+    getPoolsState <$> (getsNES id) `shouldReturn` getPoolsState updatedNES
+    getDelegs deleg1 updatedNES `shouldReturn` Just pool1
+    getDelegs deleg2 updatedNES `shouldReturn` Just pool1
+    getDelegs deleg3 updatedNES `shouldReturn` Just pool2
+  where
+    getDelegs kh nes = do
+      let accounts = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+      pure $ Map.lookup (KeyHashObj kh) accounts >>= (^. stakePoolDelegationAccountStateL)
+    getPoolsState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
 
 spec ::
   ShelleyEraImp era =>
