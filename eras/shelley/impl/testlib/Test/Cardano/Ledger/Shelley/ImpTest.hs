@@ -425,7 +425,7 @@ class
   , -- For the LEDGER rule
     STS (EraRule "LEDGER" era)
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Eq (PredicateFailure (EraRule "LEDGER" era))
@@ -503,7 +503,7 @@ class
     -- | Set of Witnesses that have already been satisfied
     Set.Set (KeyHash 'Witness) ->
     -- | The transaction body that the script will be applied to
-    TxBody era ->
+    TxBody l era ->
     NativeScript era ->
     ImpTestM era (Maybe (Map (KeyHash 'Witness) (KeyPair 'Witness)))
 
@@ -521,9 +521,9 @@ class
     SpecWith (ImpInit (LedgerSpec era)) ->
     SpecWith (ImpInit (LedgerSpec era))
 
-  fixupTx :: HasCallStack => Tx era -> ImpTestM era (Tx era)
+  fixupTx :: HasCallStack => Tx TopTx era -> ImpTestM era (Tx TopTx era)
 
-  expectTxSuccess :: HasCallStack => Tx era -> ImpTestM era ()
+  expectTxSuccess :: HasCallStack => Tx TopTx era -> ImpTestM era ()
 
   genRegTxCert :: Credential 'Staking -> ImpTestM era (TxCert era)
 
@@ -547,7 +547,7 @@ impSatisfyMNativeScripts ::
   ShelleyEraImp era =>
   Set.Set (KeyHash 'Witness) ->
   -- | Set of Witnesses that have already been satisfied
-  TxBody era ->
+  TxBody l era ->
   -- | The transaction body that the scripts will be applied to
   Int ->
   -- | Number of scripts to satisfy
@@ -832,7 +832,7 @@ instance
 -- KeyHashes for Shelley Key witnesses that are required.
 impWitsVKeyNeeded ::
   EraUTxO era =>
-  TxBody era ->
+  TxBody l era ->
   ImpTestM
     era
     ( Set.Set BootstrapAddress -- Byron Based Addresses
@@ -851,7 +851,7 @@ impWitsVKeyNeeded txBody = do
   pure (bootAddrs, allKeyHashes Set.\\ bootKeyHashes)
 
 data ImpTestEnv era = ImpTestEnv
-  { iteFixup :: Tx era -> ImpTestM era (Tx era)
+  { iteFixup :: Tx TopTx era -> ImpTestM era (Tx TopTx era)
   , itePostSubmitTxHook ::
       forall t.
       Globals ->
@@ -868,7 +868,7 @@ data ImpTestEnv era = ImpTestEnv
       ImpM t ()
   }
 
-iteFixupL :: Lens' (ImpTestEnv era) (Tx era -> ImpTestM era (Tx era))
+iteFixupL :: Lens' (ImpTestEnv era) (Tx TopTx era -> ImpTestM era (Tx TopTx era))
 iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
 
 itePostSubmitTxHookL ::
@@ -976,7 +976,7 @@ impAddNativeScript nativeScript = do
 
 impNativeScriptsRequired ::
   EraUTxO era =>
-  Tx era ->
+  Tx l era ->
   ImpTestM era (Map ScriptHash (NativeScript era))
 impNativeScriptsRequired tx = do
   utxo <- getUTxO
@@ -988,8 +988,8 @@ impNativeScriptsRequired tx = do
 -- | Modifies transaction by adding necessary scripts
 addNativeScriptTxWits ::
   ShelleyEraImp era =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx l era ->
+  ImpTestM era (Tx l era)
 addNativeScriptTxWits tx = impAnn "addNativeScriptTxWits" $ do
   scriptsRequired <- impNativeScriptsRequired tx
   utxo <- getUTxO
@@ -1004,8 +1004,8 @@ updateAddrTxWits ::
   ( HasCallStack
   , ShelleyEraImp era
   ) =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx l era ->
+  ImpTestM era (Tx l era)
 updateAddrTxWits tx = impAnn "updateAddrTxWits" $ do
   let txBody = tx ^. bodyTxL
       txBodyHash = hashAnnotated txBody
@@ -1040,8 +1040,8 @@ updateAddrTxWits tx = impAnn "updateAddrTxWits" $ do
 -- | This fixup step ensures that there are enough funds in the transaction.
 addRootTxIn ::
   ShelleyEraImp era =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx l era ->
+  ImpTestM era (Tx l era)
 addRootTxIn tx = impAnn "addRootTxIn" $ do
   rootTxIn <- fst <$> getImpRootTxOut
   pure $
@@ -1050,10 +1050,8 @@ addRootTxIn tx = impAnn "addRootTxIn" $ do
 
 impNativeScriptKeyPairs ::
   ShelleyEraImp era =>
-  Tx era ->
-  ImpTestM
-    era
-    (Map (KeyHash 'Witness) (KeyPair 'Witness))
+  Tx l era ->
+  ImpTestM era (Map (KeyHash 'Witness) (KeyPair 'Witness))
 impNativeScriptKeyPairs tx = do
   scriptsRequired <- impNativeScriptsRequired tx
   let nativeScripts = Map.elems scriptsRequired
@@ -1061,7 +1059,7 @@ impNativeScriptKeyPairs tx = do
   keyPairs <- mapM (impSatisfyNativeScript curAddrWits $ tx ^. bodyTxL) nativeScripts
   pure . mconcat $ catMaybes keyPairs
 
-fixupTxOuts :: (ShelleyEraImp era, HasCallStack) => Tx era -> ImpTestM era (Tx era)
+fixupTxOuts :: (ShelleyEraImp era, HasCallStack) => Tx TopTx era -> ImpTestM era (Tx TopTx era)
 fixupTxOuts tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let
@@ -1080,8 +1078,8 @@ fixupTxOuts tx = do
 
 fixupFees ::
   (ShelleyEraImp era, HasCallStack) =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 fixupFees txOriginal = impAnn "fixupFees" $ do
   -- Fee will be overwritten later on, unless it wasn't set to zero to begin with:
   let tx = txOriginal & bodyTxL . feeTxBodyL .~ zero
@@ -1130,7 +1128,7 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
   pure txWithFee
 
 -- | Adds an auxiliary data hash if auxiliary data present, while the hash of it is not.
-fixupAuxDataHash :: (EraTx era, Applicative m) => Tx era -> m (Tx era)
+fixupAuxDataHash :: (EraTx era, Applicative m) => Tx l era -> m (Tx l era)
 fixupAuxDataHash tx
   | SNothing <- tx ^. bodyTxL . auxDataHashTxBodyL
   , SJust auxData <- tx ^. auxDataTxL =
@@ -1140,8 +1138,8 @@ fixupAuxDataHash tx
 shelleyFixupTx ::
   forall era.
   (ShelleyEraImp era, HasCallStack) =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 shelleyFixupTx =
   addNativeScriptTxWits
     >=> fixupAuxDataHash
@@ -1154,7 +1152,7 @@ shelleyFixupTx =
 impShelleyExpectTxSuccess ::
   forall era.
   (ShelleyEraImp era, HasCallStack) =>
-  Tx era ->
+  Tx TopTx era ->
   ImpTestM era ()
 impShelleyExpectTxSuccess tx = do
   utxo <- getsNES utxoL
@@ -1165,7 +1163,7 @@ impShelleyExpectTxSuccess tx = do
   impAnn "Outputs should be in UTxO" $
     expectUTxOContent utxo [(txIn, (== Just txOut)) | (txIn, txOut) <- outputs]
 
-logFeeMismatch :: (EraGov era, EraUTxO era, HasCallStack) => Tx era -> ImpTestM era ()
+logFeeMismatch :: (EraGov era, EraUTxO era, HasCallStack) => Tx TopTx era -> ImpTestM era ()
 logFeeMismatch tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getsNES utxoL
@@ -1175,10 +1173,10 @@ logFeeMismatch tx = do
     logDoc $
       "Estimated fee " <> ansiExpr feeUsed <> " while required fee is " <> ansiExpr feeMin
 
-submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era ()
+submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx TopTx era -> ImpTestM era ()
 submitTx_ = void . submitTx
 
-submitTx :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era (Tx era)
+submitTx :: (HasCallStack, ShelleyEraImp era) => Tx TopTx era -> ImpTestM era (Tx TopTx era)
 submitTx tx = trySubmitTx tx >>= expectRightDeepExpr . first fst
 
 trySubmitTx ::
@@ -1186,8 +1184,10 @@ trySubmitTx ::
   ( ShelleyEraImp era
   , HasCallStack
   ) =>
-  Tx era ->
-  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx era) (Tx era))
+  Tx TopTx era ->
+  ImpTestM
+    era
+    (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx TopTx era) (Tx TopTx era))
 trySubmitTx tx = do
   txFixed <- asks iteFixup >>= ($ tx)
   logToExpr txFixed
@@ -1233,7 +1233,7 @@ submitFailingTx ::
   ( HasCallStack
   , ShelleyEraImp era
   ) =>
-  Tx era ->
+  Tx TopTx era ->
   NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingTx tx = submitFailingTxM tx . const . pure
@@ -1245,8 +1245,8 @@ submitFailingTxM ::
   ( HasCallStack
   , ShelleyEraImp era
   ) =>
-  Tx era ->
-  (Tx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
+  Tx TopTx era ->
+  (Tx TopTx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
   ImpTestM era ()
 submitFailingTxM tx mkExpectedFailures = do
   (predFailures, fixedUpTx) <- expectLeftDeepExpr =<< trySubmitTx tx
@@ -1570,12 +1570,12 @@ getProtVer = getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 submitTxAnn ::
   (HasCallStack, ShelleyEraImp era) =>
   String ->
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 submitTxAnn msg tx = impAnn msg (trySubmitTx tx >>= expectRightDeepExpr)
 
 submitTxAnn_ ::
-  (HasCallStack, ShelleyEraImp era) => String -> Tx era -> ImpTestM era ()
+  (HasCallStack, ShelleyEraImp era) => String -> Tx TopTx era -> ImpTestM era ()
 submitTxAnn_ msg = void . submitTxAnn msg
 
 getRewardAccountFor ::
@@ -1727,14 +1727,14 @@ registerAndRetirePoolToMakeReward stakingCred = do
 
 -- | Compose given function with the configured fixup
 withCustomFixup ::
-  ((Tx era -> ImpTestM era (Tx era)) -> Tx era -> ImpTestM era (Tx era)) ->
+  ((Tx TopTx era -> ImpTestM era (Tx TopTx era)) -> Tx TopTx era -> ImpTestM era (Tx TopTx era)) ->
   ImpTestM era a ->
   ImpTestM era a
 withCustomFixup f = local $ iteFixupL %~ f
 
 -- | Replace all fixup with the given function
 withFixup ::
-  (Tx era -> ImpTestM era (Tx era)) ->
+  (Tx TopTx era -> ImpTestM era (Tx TopTx era)) ->
   ImpTestM era a ->
   ImpTestM era a
 withFixup f = withCustomFixup (const f)
@@ -1745,14 +1745,14 @@ withNoFixup = withFixup pure
 
 -- | Apply given fixup function before the configured fixup
 withPreFixup ::
-  (Tx era -> ImpTestM era (Tx era)) ->
+  (Tx TopTx era -> ImpTestM era (Tx TopTx era)) ->
   ImpTestM era a ->
   ImpTestM era a
 withPreFixup f = withCustomFixup (f >=>)
 
 -- | Apply given fixup function after the configured fixup
 withPostFixup ::
-  (Tx era -> ImpTestM era (Tx era)) ->
+  (Tx TopTx era -> ImpTestM era (Tx TopTx era)) ->
   ImpTestM era a ->
   ImpTestM era a
 withPostFixup f = withCustomFixup (>=> f)

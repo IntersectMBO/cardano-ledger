@@ -253,23 +253,6 @@ instance
         !> To stWits
         !> E (encodeNullStrictMaybe encCBOR) stAuxData
 
--- instance
---   ( Era era
---   , Typeable l
---   , DecCBOR (TxBody TopTx era)
---   , DecCBOR (TxWits era)
---   , DecCBOR (TxAuxData era)
---   ) =>
---   DecCBOR (ShelleyTx l era)
---   where
---   decCBOR =
---     applyFullTxType $
---       decode $
---         RecD ShelleyTx
---           <! From
---           <! From
---           <! D (decodeNullStrictMaybe decCBOR)
-
 instance
   (Era era, EncCBOR (TxWits era), EncCBOR (TxBody l era), EncCBOR (TxAuxData era), Typeable l) =>
   ToCBOR (ShelleyTx l era)

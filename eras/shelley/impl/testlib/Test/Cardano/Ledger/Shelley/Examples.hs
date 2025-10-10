@@ -440,7 +440,7 @@ mkWitnessesPreAlonzo ::
 mkWitnessesPreAlonzo _ txBody keyPairWits =
   mempty
     { addrWits =
-        mkWitnessesVKey (coerce (hashAnnotated txBody)) keyPairWits
+        mkWitnessesVKey (coerce (txIdTxBody txBody)) keyPairWits
     }
 
 -- | @mkKeyPair'@ from @Test.Cardano.Ledger.Shelley.Utils@ doesn't work for real
