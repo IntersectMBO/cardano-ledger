@@ -490,7 +490,7 @@ instance Arbitrary StakeProportion where
 newtype StakeProportion = StakeProportion Rational
   deriving (Show)
 
-instance Arbitrary (TxBody ShelleyEra) where
+instance Arbitrary (TxBody TopTx ShelleyEra) where
   arbitrary =
     ShelleyTxBody
       <$> arbitrary
@@ -503,11 +503,11 @@ instance Arbitrary (TxBody ShelleyEra) where
       <*> arbitrary
 
 genTx ::
-  ( Arbitrary (TxBody era)
+  ( Arbitrary (TxBody TopTx era)
   , Arbitrary (TxAuxData era)
   , Arbitrary (TxWits era)
   ) =>
-  Gen (ShelleyTx era)
+  Gen (ShelleyTx TopTx era)
 genTx =
   ShelleyTx
     <$> arbitrary
@@ -699,17 +699,17 @@ instance
 
 instance
   ( EraTx era
-  , Arbitrary (TxBody era)
+  , Arbitrary (TxBody TopTx era)
   , Arbitrary (Value era)
   , Arbitrary (TxAuxData era)
   , Arbitrary (Script era)
   , Arbitrary (TxWits era)
   ) =>
-  Arbitrary (ShelleyTx era)
+  Arbitrary (ShelleyTx TopTx era)
   where
   arbitrary = genTx
 
-deriving newtype instance Arbitrary (Tx ShelleyEra)
+deriving newtype instance Arbitrary (Tx TopTx ShelleyEra)
 
 instance
   ( Era era
@@ -767,7 +767,7 @@ instance EncCBOR RawSeed where
 instance
   ( EraBlockBody era
   , BlockBody era ~ ShelleyBlockBody era
-  , Arbitrary (Tx era)
+  , Arbitrary (Tx TopTx era)
   , SafeToHash (TxWits era)
   ) =>
   Arbitrary (ShelleyBlockBody era)

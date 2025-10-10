@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -88,6 +89,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
+import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
@@ -205,6 +207,7 @@ instance HasEraTxLevel TxBody ShelleyEra where
 
 instance EraTxBody ShelleyEra where
   newtype TxBody l ShelleyEra = MkShelleyTxBody (MemoBytes (ShelleyTxBodyRaw l ShelleyEra))
+    deriving (Generic)
     deriving newtype (SafeToHash, ToCBOR, EncCBOR)
 
   mkBasicTxBody = mkMemoizedEra @ShelleyEra basicShelleyTxBodyRaw

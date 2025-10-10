@@ -58,7 +58,7 @@ produceEqualsConsumed ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  TxBody FullTx era ->
+  TxBody TopTx era ->
   String
 produceEqualsConsumed pp dpstate utxo txb =
   let consumedValue = consumedTxBody txb pp dpstate utxo

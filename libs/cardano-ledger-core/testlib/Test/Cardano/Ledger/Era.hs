@@ -36,8 +36,8 @@ class
   , EraAccounts era
   , EraGenesis era
   , -- Arbitrary Core
-    forall l. Arbitrary (Tx l era)
-  , forall l. Arbitrary (TxBody l era)
+    Arbitrary (Tx TopTx era)
+  , Arbitrary (TxBody TopTx era)
   , Arbitrary (TxWits era)
   , Arbitrary (TxOut era)
   , Arbitrary (TxAuxData era)
@@ -54,8 +54,8 @@ class
   , Arbitrary (Accounts era)
   , Arbitrary (AccountState era)
   , -- ToExpr Core
-    forall l. ToExpr (Tx l era)
-  , forall l. ToExpr (TxBody l era)
+    ToExpr (Tx TopTx era)
+  , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
   , ToExpr (TxOut era)
   , ToExpr (TxAuxData era)
