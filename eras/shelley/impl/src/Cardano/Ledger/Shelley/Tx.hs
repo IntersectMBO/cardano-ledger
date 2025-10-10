@@ -61,7 +61,6 @@ import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Functor.Classes (Eq1 (..))
-import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Typeable
 import Data.Word (Word32)
@@ -143,18 +142,9 @@ auxDataShelleyTxL =
       ShelleyTx {} -> tx {stAuxData = txAuxData}
 {-# INLINEABLE auxDataShelleyTxL #-}
 
--- mkBasicShelleyTx ::
---   forall l era. (HasCallStack, EraTx era, Typeable l) => TxBody l era -> ShelleyTx l era
--- mkBasicShelleyTx txBody = fromMaybe (error "ShelleyTx cannot be used together with TxBody SubTx") $ do
---   fullTxTxBody :: TxBody TopTx era <- cast txBody
---   cast $
---     ShelleyTx
---       { stBody = fullTxTxBody
---       , stWits = mkBasicTxWits
---       , stAuxData = SNothing
---       }
 mkBasicShelleyTx ::
-  forall l era. (HasCallStack, EraTx era) => TxBody l era -> ShelleyTx l era
+  (EraTx era, STxLevel l era ~ STxTopLevel l era) =>
+  TxBody l era -> ShelleyTx l era
 mkBasicShelleyTx txBody =
   case toSTxLevel txBody of
     STopTxOnly ->

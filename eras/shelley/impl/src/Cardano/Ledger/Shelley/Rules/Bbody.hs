@@ -144,7 +144,7 @@ instance
   ( EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx FullTx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   ) =>
   STS (ShelleyBBODY era)
   where
@@ -169,7 +169,7 @@ bbodyTransition ::
   , EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx FullTx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   ) =>
   TransitionRule (ShelleyBBODY era)
 bbodyTransition =

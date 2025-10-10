@@ -38,7 +38,7 @@ import Test.Cardano.Ledger.Shelley.Arbitrary ()
 
 instance
   ( EraTx era
-  , DecCBOR (TxBody era)
+  , DecCBOR (TxBody TopTx era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
   ) =>

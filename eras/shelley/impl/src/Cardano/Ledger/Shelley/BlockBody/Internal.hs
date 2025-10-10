@@ -82,7 +82,7 @@ import Lens.Micro hiding (ix)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 data ShelleyBlockBody era = ShelleyBlockBodyInternal
-  { sbbTxs :: !(StrictSeq (Tx FullTx era))
+  { sbbTxs :: !(StrictSeq (Tx TopTx era))
   , sbbHash :: Hash.Hash HASH EraIndependentBlockBody
   -- ^ Memoized hash to avoid recomputation. Lazy on purpose.
   , sbbTxsBodyBytes :: BSL.ByteString
@@ -116,7 +116,7 @@ txSeqBlockBodyShelleyL ::
   , SafeToHash (TxWits era)
   , BlockBody era ~ ShelleyBlockBody era
   ) =>
-  Lens' (BlockBody era) (StrictSeq (Tx FullTx era))
+  Lens' (BlockBody era) (StrictSeq (Tx TopTx era))
 txSeqBlockBodyShelleyL = lens sbbTxs (\_ s -> ShelleyBlockBody s)
 {-# INLINEABLE txSeqBlockBodyShelleyL #-}
 
@@ -129,14 +129,14 @@ deriving via
      ]
     (ShelleyBlockBody era)
   instance
-    (Typeable era, NoThunks (Tx FullTx era)) => NoThunks (ShelleyBlockBody era)
+    (Typeable era, NoThunks (Tx TopTx era)) => NoThunks (ShelleyBlockBody era)
 
 deriving stock instance
-  Show (Tx FullTx era) =>
+  Show (Tx TopTx era) =>
   Show (ShelleyBlockBody era)
 
 deriving stock instance
-  Eq (Tx FullTx era) =>
+  Eq (Tx TopTx era) =>
   Eq (ShelleyBlockBody era)
 
 -- ===========================
@@ -144,14 +144,14 @@ deriving stock instance
 
 coreWitnessBytes ::
   (EraTx era, SafeToHash (TxWits era)) =>
-  Tx FullTx era ->
+  Tx TopTx era ->
   ByteString
 coreWitnessBytes tx = originalBytes $ tx ^. witsTxL
 
-coreBodyBytes :: EraTx era => Tx FullTx era -> ByteString
+coreBodyBytes :: EraTx era => Tx TopTx era -> ByteString
 coreBodyBytes tx = originalBytes $ tx ^. bodyTxL
 
-coreAuxDataBytes :: EraTx era => Tx FullTx era -> StrictMaybe ByteString
+coreAuxDataBytes :: EraTx era => Tx TopTx era -> StrictMaybe ByteString
 coreAuxDataBytes tx = originalBytes <$> tx ^. auxDataTxL
 
 -- ===========================
@@ -162,7 +162,7 @@ pattern ShelleyBlockBody ::
   ( EraTx era
   , SafeToHash (TxWits era)
   ) =>
-  StrictSeq (Tx FullTx era) ->
+  StrictSeq (Tx TopTx era) ->
   ShelleyBlockBody era
 pattern ShelleyBlockBody xs <-
   ShelleyBlockBodyInternal xs _ _ _ _
@@ -238,7 +238,7 @@ auxDataSeqDecoder bodiesLength auxDataMap = do
 instance
   ( EraTx era
   , DecCBOR (Annotator (TxAuxData era))
-  , DecCBOR (Annotator (TxBody FullTx era))
+  , DecCBOR (Annotator (TxBody TopTx era))
   , DecCBOR (Annotator (TxWits era))
   ) =>
   DecCBOR (Annotator (ShelleyBlockBody era))

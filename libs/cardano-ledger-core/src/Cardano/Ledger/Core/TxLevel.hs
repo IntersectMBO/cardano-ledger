@@ -54,6 +54,7 @@ class Era era => EraTxLevel era where
   -- * `STxTopLevel` - for eras up to and including Conway, that do not support nested transactions.
   -- * `STxBothLevels` - for Dijkstra onwards that do support nested transactions.
   type STxLevel (l :: TxLevel) era = (r :: Type) | r -> era
+
   type STxLevel l era = STxBothLevels l era
 
 -- | Type class for data families that have different definition depending on the level. Currently
@@ -88,3 +89,4 @@ mkSTxBothLevelsM mkTopTx mkSubTx =
     -- Tell the compiler that we expect only `STxBothLevels` in this action
     let _level = asTypeOf (toSTxLevel res) level
     pure res
+
