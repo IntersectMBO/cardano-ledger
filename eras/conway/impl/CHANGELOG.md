@@ -2,6 +2,7 @@
 
 ## 1.21.0.0
 
+* Expose `conwayRegisterInitialAccounts`
 * Add `shelleyToConwayLedgerPredFailure`.
 * Move withdrawal-validation and DRep expiry updates from `CERTS` to `LEDGER` starting protocol version 11.
   - Add `ConwayWithdrawalsMissingAccounts` and `ConwayIncompleteWithdrawals` to `ConwayLedgerPredFailure`.

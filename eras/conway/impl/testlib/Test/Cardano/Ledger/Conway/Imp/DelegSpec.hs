@@ -27,6 +27,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.State hiding (balance)
+import Cardano.Ledger.Conway.Transition (conwayRegisterInitialAccounts)
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
@@ -34,8 +35,10 @@ import Cardano.Ledger.Plutus (
   SLanguage (..),
   hashPlutusScript,
  )
+import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Val (Val (..))
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -238,7 +241,7 @@ spec = do
           & bodyTxL . certsTxBodyL
             .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
 
-          expectDelegatedVote cred (DRepCredential drepCred)
+      expectDelegatedVote cred (DRepCredential drepCred)
 
     it "Delegate vote of registered stake credentials to unregistered drep" $ do
       RewardAccount _ cred <- registerRewardAccount
@@ -532,6 +535,29 @@ spec = do
       expectDelegatedToPool cred poolKh'
       expectNotDelegatedToPool cred poolKh
       expectDelegatedVote cred (DRepCredential drepCred)
+
+  it "Transition creates the delegations correctly" $ do
+    pool1 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
+    pool2 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
+    pool3 <- freshKeyHash >>= \kh -> kh <$ registerPool kh
+    poolParams <- freshKeyHash >>= \kh -> registerRewardAccount >>= freshPoolParams kh
+    deleg1 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    deleg2 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    deleg3 <- freshKeyHash >>= \kh -> kh <$ registerStakeCredential (KeyHashObj kh)
+    nes <- getsNES id
+    let sgs =
+          ShelleyGenesisStaking
+            { sgsPools = LM.ListMap [(pool1, poolParams), (pool2, poolParams), (pool3, poolParams)]
+            , sgsStake = LM.ListMap [(deleg1, pool1), (deleg2, pool1), (deleg3, pool2)]
+            }
+    let updatedNES = conwayRegisterInitialAccounts sgs nes
+    delegateStake (KeyHashObj deleg1) pool1
+    delegateStake (KeyHashObj deleg2) pool1
+    delegateStake (KeyHashObj deleg3) pool2
+    getPoolsState <$> (getsNES id) `shouldReturn` getPoolsState updatedNES
+    getDelegs deleg1 updatedNES `shouldReturn` Just pool1
+    getDelegs deleg2 updatedNES `shouldReturn` Just pool1
+    getDelegs deleg3 updatedNES `shouldReturn` Just pool2
   where
     expectDelegatedVote :: HasCallStack => Credential 'Staking -> DRep -> ImpTestM era ()
     expectDelegatedVote cred drep = do
@@ -562,3 +588,7 @@ spec = do
         assertBool
           ("Expected no drep state delegation to contain the stake credential: " <> show cred)
           (all (Set.notMember cred . drepDelegs) dreps)
+    getDelegs kh nes = do
+      let accounts = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
+      pure $ Map.lookup (KeyHashObj kh) accounts >>= (^. stakePoolDelegationAccountStateL)
+    getPoolsState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
