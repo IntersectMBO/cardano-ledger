@@ -49,9 +49,15 @@ withSTxBothLevels f =
       Nothing -> error $ "Impossible: Unrecognized TxLevel: " <> show (typeRep (Proxy @l))
 
 class Era era => EraTxLevel era where
+  -- | Supported transaction level as a singleton. One of these two should be used:
+  --
+  -- * `STxTopLevel` - for eras up to and including Conway, that do not support nested transactions.
+  -- * `STxBothLevels` - for Dijkstra onwards that do support nested transactions.
   type STxLevel (l :: TxLevel) era = (r :: Type) | r -> era
   type STxLevel l era = STxBothLevels l era
 
+-- | Type class for data families that have different definition depending on the level. Currently
+-- it is only `Cardano.Ledger.Core.Tx` and `Cardano.Ledger.Core.TxBody` that have this distinction.
 class EraTxLevel era => HasEraTxLevel (t :: TxLevel -> Type -> Type) era where
   toSTxLevel :: t l era -> STxLevel l era
 
@@ -66,7 +72,7 @@ mkSTxTopLevelM mkTopTx = do
         res <- mkTopTx
         -- Here we tell the compiler that we only expect top level transactions in this function and
         -- any attempt to construct a sub transaction level will result in a compiler failure,
-        -- instead of a trigger of `fail` in `MonadFail`.
+        -- instead of a trigger of `fail` in `MonadFail`, as `withSTxTopLevelM` would normally do.
         let _level = asTypeOf (toSTxLevel res) level
         pure res
 
