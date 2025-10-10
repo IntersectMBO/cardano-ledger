@@ -49,8 +49,8 @@ decoderEquivalenceEraSpec = decoderEquivalenceSpec @t (eraProtVerLow @era) (eraP
 decoderEquivalenceCoreEraTypesSpec ::
   forall era.
   ( EraTx era
-  , Arbitrary (Tx FullTx era)
-  , Arbitrary (TxBody FullTx era)
+  , Arbitrary (Tx TopTx era)
+  , Arbitrary (TxBody TopTx era)
   , Arbitrary (TxWits era)
   , Arbitrary (TxAuxData era)
   , Arbitrary (Script era)
@@ -63,5 +63,5 @@ decoderEquivalenceCoreEraTypesSpec =
     decoderEquivalenceEraSpec @era @(Script era)
     decoderEquivalenceEraSpec @era @(TxAuxData era)
     decoderEquivalenceEraSpec @era @(TxWits era)
-    decoderEquivalenceEraSpec @era @(TxBody FullTx era)
-    decoderEquivalenceEraSpec @era @(Tx FullTx era)
+    decoderEquivalenceEraSpec @era @(TxBody TopTx era)
+    decoderEquivalenceEraSpec @era @(Tx TopTx era)

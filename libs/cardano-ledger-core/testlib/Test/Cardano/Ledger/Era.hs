@@ -36,8 +36,8 @@ class
   , EraAccounts era
   , EraGenesis era
   , -- Arbitrary Core
-    forall t. Arbitrary (Tx t era)
-  , forall t. Arbitrary (TxBody t era)
+    forall l. Arbitrary (Tx l era)
+  , forall l. Arbitrary (TxBody l era)
   , Arbitrary (TxWits era)
   , Arbitrary (TxOut era)
   , Arbitrary (TxAuxData era)
@@ -54,8 +54,8 @@ class
   , Arbitrary (Accounts era)
   , Arbitrary (AccountState era)
   , -- ToExpr Core
-    forall t. ToExpr (Tx t era)
-  , forall t. ToExpr (TxBody t era)
+    forall l. ToExpr (Tx l era)
+  , forall l. ToExpr (TxBody l era)
   , ToExpr (TxWits era)
   , ToExpr (TxOut era)
   , ToExpr (TxAuxData era)
@@ -76,8 +76,8 @@ class
   , DecCBOR (NativeScript era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
-  , DecCBOR (TxBody FullTx era)
-  , DecCBOR (Tx FullTx era)
+  , DecCBOR (TxBody TopTx era)
+  , DecCBOR (Tx TopTx era)
   , -- TranslationContext
     Eq (TranslationContext era)
   , Show (TranslationContext era)
