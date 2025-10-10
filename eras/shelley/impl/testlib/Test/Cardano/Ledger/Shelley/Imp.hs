@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Shelley.Imp (spec, shelleyEraSpecificSpec) where
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.Shelley.State (ShelleyEraAccounts)
 import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp.DelegSpec as Deleg
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
@@ -41,6 +42,7 @@ spec = do
 shelleyEraSpecificSpec ::
   forall era.
   ( ShelleyEraImp era
+  , ShelleyEraAccounts era
   , InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
