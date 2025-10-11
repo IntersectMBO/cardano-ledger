@@ -67,7 +67,7 @@ import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (InspectHeap (..), NoThunks (..))
 
 -- ========================================================
 
@@ -105,18 +105,10 @@ deriving instance
   ) =>
   Show (ShelleyTx l era)
 
-instance
-  ( Era era
-  , Typeable l
-  , NoThunks (TxBody l era)
-  , NoThunks (TxWits era)
-  , NoThunks (TxAuxData era)
-  ) =>
-  NoThunks (ShelleyTx l era)
-  where
-  noThunks = undefined
-  wNoThunks = undefined
-  showTypeOf = show . typeRep
+deriving via
+  InspectHeap (ShelleyTx l era)
+  instance
+    (Typeable era, Typeable l) => NoThunks (ShelleyTx l era)
 
 -- | `TxBody` setter and getter for `ShelleyTx`.
 bodyShelleyTxL :: Lens' (ShelleyTx l era) (TxBody l era)
@@ -144,7 +136,8 @@ auxDataShelleyTxL =
 
 mkBasicShelleyTx ::
   (EraTx era, STxLevel l era ~ STxTopLevel l era) =>
-  TxBody l era -> ShelleyTx l era
+  TxBody l era ->
+  ShelleyTx l era
 mkBasicShelleyTx txBody =
   case toSTxLevel txBody of
     STopTxOnly ->

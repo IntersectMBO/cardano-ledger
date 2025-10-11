@@ -91,7 +91,7 @@ import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (InspectHeap (..), NoThunks (..))
 
 class (ShelleyEraTxCert era, EraTxBody era, AtMostEra "Babbage" era) => ShelleyEraTxBody era where
   ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (TxBody TopTx era) SlotNo
@@ -117,10 +117,10 @@ data ShelleyTxBodyRaw l era where
 instance HasEraTxLevel ShelleyTxBodyRaw ShelleyEra where
   toSTxLevel ShelleyTxBodyRaw {} = STopTxOnly @ShelleyEra
 
-instance (Typeable l, EraTxBody era) => NoThunks (ShelleyTxBodyRaw l era) where
-  noThunks = undefined
-  wNoThunks = undefined
-  showTypeOf = show . typeRep
+deriving via
+  InspectHeap (ShelleyTxBodyRaw l era)
+  instance
+    (Typeable era, Typeable l) => NoThunks (ShelleyTxBodyRaw l era)
 
 instance EraTxBody era => NFData (ShelleyTxBodyRaw t era) where
   rnf ShelleyTxBodyRaw {stbrWithdrawals, stbrUpdate, stbrAuxDataHash} =
