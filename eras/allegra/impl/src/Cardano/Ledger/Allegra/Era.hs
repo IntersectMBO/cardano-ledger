@@ -24,6 +24,9 @@ import Cardano.Ledger.Shelley.Rules
 
 instance EraGenesis AllegraEra
 
+instance EraTxLevel AllegraEra where
+  type STxLevel l AllegraEra = STxTopLevel l AllegraEra
+
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------

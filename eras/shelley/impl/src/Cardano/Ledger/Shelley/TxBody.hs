@@ -210,7 +210,7 @@ instance EraTxBody ShelleyEra where
     deriving (Generic)
     deriving newtype (SafeToHash, ToCBOR, EncCBOR)
 
-  mkBasicTxBody = mkMemoizedEra @ShelleyEra basicShelleyTxBodyRaw
+  mkBasicTxBody = asSTxTopLevel $ mkMemoizedEra @ShelleyEra basicShelleyTxBodyRaw
 
   spendableInputsTxBodyF = inputsTxBodyL
   {-# INLINE spendableInputsTxBodyF #-}
@@ -220,14 +220,12 @@ instance EraTxBody ShelleyEra where
 
   inputsTxBodyL =
     lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrInputs} -> stbrInputs) $
-      \txBodyRaw inputs -> case txBodyRaw of
-        ShelleyTxBodyRaw {} -> txBodyRaw {stbrInputs = inputs}
+      \txBodyRaw@ShelleyTxBodyRaw {} inputs -> txBodyRaw {stbrInputs = inputs}
   {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
     lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrOutputs} -> stbrOutputs) $
-      \txBodyRaw outputs -> case txBodyRaw of
-        ShelleyTxBodyRaw {} -> txBodyRaw {stbrOutputs = outputs}
+      \txBodyRaw@ShelleyTxBodyRaw {} outputs -> txBodyRaw {stbrOutputs = outputs}
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
@@ -237,20 +235,17 @@ instance EraTxBody ShelleyEra where
 
   auxDataHashTxBodyL =
     lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrAuxDataHash} -> stbrAuxDataHash) $
-      \txBodyRaw auxDataHash -> case txBodyRaw of
-        ShelleyTxBodyRaw {} -> txBodyRaw {stbrAuxDataHash = auxDataHash}
+      \txBodyRaw@ShelleyTxBodyRaw {} auxDataHash -> txBodyRaw {stbrAuxDataHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
   withdrawalsTxBodyL =
     lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrWithdrawals} -> stbrWithdrawals) $
-      \txBodyRaw withdrawals -> case txBodyRaw of
-        ShelleyTxBodyRaw {} -> txBodyRaw {stbrWithdrawals = withdrawals}
+      \txBodyRaw@ShelleyTxBodyRaw {} withdrawals -> txBodyRaw {stbrWithdrawals = withdrawals}
   {-# INLINEABLE withdrawalsTxBodyL #-}
 
   certsTxBodyL =
     lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrCerts} -> stbrCerts) $
-      \txBodyRaw certs -> case txBodyRaw of
-        ShelleyTxBodyRaw {} -> txBodyRaw {stbrCerts = certs}
+      \txBodyRaw@ShelleyTxBodyRaw {} certs -> txBodyRaw {stbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
