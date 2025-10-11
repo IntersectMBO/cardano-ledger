@@ -83,7 +83,7 @@ import Data.Set (Set, empty)
 import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (InspectHeap (..), NoThunks (..))
 
 class EraTxBody era => AllegraEraTxBody era where
   vldtTxBodyL :: Lens' (TxBody l era) ValidityInterval
@@ -127,20 +127,10 @@ instance
                   atbrAuxDataHash `deepseq`
                     rnf atbrMint
 
-instance
-  ( Era era
-  , NoThunks (TxOut era)
-  , NoThunks (TxCert era)
-  , NoThunks (PParamsUpdate era)
-  , NoThunks ma
-  , Typeable ma
-  , Typeable l
-  ) =>
-  NoThunks (AllegraTxBodyRaw ma l era)
-  where
-  noThunks = undefined
-  wNoThunks = undefined
-  showTypeOf = show . typeRep
+deriving via
+  InspectHeap (AllegraTxBodyRaw ma l era)
+  instance
+    (Typeable era, Typeable ma, Typeable l) => NoThunks (AllegraTxBodyRaw ma l era)
 
 instance
   ( DecCBOR ma
