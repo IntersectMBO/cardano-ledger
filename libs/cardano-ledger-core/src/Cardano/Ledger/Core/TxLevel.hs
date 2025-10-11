@@ -15,11 +15,16 @@ module Cardano.Ledger.Core.TxLevel (
   withSTxBothLevels,
   EraTxLevel (..),
   HasEraTxLevel (..),
+  asSTxTopLevel,
   mkSTxTopLevelM,
+  asSTxBothLevels,
   mkSTxBothLevelsM,
 ) where
 
 import Cardano.Ledger.Core.Era (Era (..))
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Fail.String
+import Data.Functor.Identity (runIdentity)
 import Data.Kind (Type)
 import Data.Typeable
 import GHC.Stack
@@ -64,18 +69,24 @@ class EraTxLevel era => HasEraTxLevel (t :: TxLevel -> Type -> Type) era where
 
 mkSTxTopLevelM ::
   forall (l :: TxLevel) t m era.
-  (Typeable l, MonadFail m, HasEraTxLevel t era, STxLevel l era ~ STxTopLevel l era) =>
+  (Typeable l, Monad m, HasEraTxLevel t era, STxLevel l era ~ STxTopLevel l era) =>
   m (t TopTx era) -> m (t l era)
 mkSTxTopLevelM mkTopTx = do
-  withSTxTopLevelM @l @era $ \level ->
+  fmap (either error id) $ runFailT $ withSTxTopLevelM @l @era $ \level ->
     case level of
       STopTxOnly -> do
-        res <- mkTopTx
+        res <- lift mkTopTx
         -- Here we tell the compiler that we only expect top level transactions in this function and
-        -- any attempt to construct a sub transaction level will result in a compiler failure,
+        -- any attempt to construct a sub transaction level will result in a compiler error,
         -- instead of a trigger of `fail` in `MonadFail`, as `withSTxTopLevelM` would normally do.
         let _level = asTypeOf (toSTxLevel res) level
         pure res
+
+asSTxTopLevel ::
+  forall (l :: TxLevel) t era.
+  (Typeable l, HasEraTxLevel t era, STxLevel l era ~ STxTopLevel l era) =>
+  t TopTx era -> t l era
+asSTxTopLevel = runIdentity . mkSTxTopLevelM . pure
 
 mkSTxBothLevelsM ::
   forall (l :: TxLevel) t m era.
@@ -90,3 +101,8 @@ mkSTxBothLevelsM mkTopTx mkSubTx =
     let _level = asTypeOf (toSTxLevel res) level
     pure res
 
+asSTxBothLevels ::
+  forall (l :: TxLevel) t era.
+  (Typeable l, HasEraTxLevel t era, STxLevel l era ~ STxBothLevels l era) =>
+  t TopTx era -> t SubTx era -> t l era
+asSTxBothLevels mkTopTx mkSubTx = runIdentity $ mkSTxBothLevelsM (pure mkTopTx) (pure mkSubTx)

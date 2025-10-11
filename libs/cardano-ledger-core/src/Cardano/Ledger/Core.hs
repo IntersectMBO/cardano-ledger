@@ -211,7 +211,7 @@ class
   -- | The body of a transaction.
   data TxBody (l :: TxLevel) era
 
-  mkBasicTxBody :: TxBody TopTx era
+  mkBasicTxBody :: Typeable l => TxBody l era
 
   inputsTxBodyL :: Lens' (TxBody l era) (Set TxIn)
 
