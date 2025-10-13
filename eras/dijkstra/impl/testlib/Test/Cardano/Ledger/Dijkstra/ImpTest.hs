@@ -80,6 +80,7 @@ instance ShelleyEraImp DijkstraEra where
   modifyImpInitProtVer = conwayModifyImpInitProtVer
   genRegTxCert = dijkstraGenRegTxCert
   genUnRegTxCert = dijkstraGenUnRegTxCert
+  delegStakeTxCert = conwayDelegStakeTxCert
 
 instance MaryEraImp DijkstraEra
 

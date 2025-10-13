@@ -71,6 +71,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   delegateStake,
   registerRewardAccount,
   registerStakeCredential,
+  expectNotDelegatedToPool,
+  expectStakeCredRegistered,
+  expectStakeCredNotRegistered,
+  expectDelegatedToPool,
   getRewardAccountFor,
   getReward,
   lookupReward,
@@ -125,6 +129,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impSatisfySignature,
   shelleyGenRegTxCert,
   shelleyGenUnRegTxCert,
+  shelleyDelegStakeTxCert,
 
   -- * Logging
   Doc,
@@ -524,6 +529,8 @@ class
 
   genUnRegTxCert :: Credential 'Staking -> ImpTestM era (TxCert era)
 
+  delegStakeTxCert :: Credential 'Staking -> KeyHash 'StakePool -> TxCert era
+
 impSatisfySignature ::
   KeyHash 'Witness ->
   Set.Set (KeyHash 'Witness) ->
@@ -819,6 +826,7 @@ instance
   modifyImpInitProtVer = shelleyModifyImpInitProtVer
   genRegTxCert = shelleyGenRegTxCert
   genUnRegTxCert = shelleyGenUnRegTxCert
+  delegStakeTxCert = shelleyDelegStakeTxCert
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -1594,16 +1602,55 @@ registerStakeCredential cred = do
   pure $ RewardAccount networkId cred
 
 delegateStake ::
-  (ShelleyEraImp era, ShelleyEraTxCert era) =>
+  ShelleyEraImp era =>
   Credential 'Staking ->
   KeyHash 'StakePool ->
   ImpTestM era ()
 delegateStake cred poolKH = do
   submitTxAnn_ ("Delegate Staking Credential: " <> T.unpack (credToText cred)) $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList
-          [DelegStakeTxCert cred poolKH]
+      & bodyTxL . certsTxBodyL .~ [delegStakeTxCert cred poolKH]
+
+expectStakeCredRegistered ::
+  (HasCallStack, ShelleyEraImp era) =>
+  Credential 'Staking ->
+  ImpTestM era ()
+expectStakeCredRegistered cred = do
+  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+  expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+  accountState <- expectJust $ lookupAccountState cred accounts
+  impAnn (show cred <> " expected to be in Accounts with the correct deposit") $ do
+    accountState ^. depositAccountStateL `shouldBe` compactCoinOrError expectedDeposit
+
+expectStakeCredNotRegistered ::
+  (HasCallStack, ShelleyEraImp era) =>
+  Credential 'Staking ->
+  ImpTestM era ()
+expectStakeCredNotRegistered cred = do
+  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+  impAnn (show cred <> " expected to not be in Accounts") $ do
+    expectNothingExpr $ lookupAccountState cred accounts
+
+expectDelegatedToPool ::
+  (HasCallStack, ShelleyEraImp era) =>
+  Credential 'Staking ->
+  KeyHash 'StakePool ->
+  ImpTestM era ()
+expectDelegatedToPool cred poolKh = do
+  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+  impAnn (show cred <> " expected to have delegated to " <> show poolKh) $ do
+    accountState <- expectJust $ lookupAccountState cred accounts
+    accountState ^. stakePoolDelegationAccountStateL `shouldBe` Just poolKh
+
+expectNotDelegatedToPool ::
+  (HasCallStack, ShelleyEraImp era) =>
+  Credential 'Staking ->
+  ImpTestM era ()
+expectNotDelegatedToPool cred = do
+  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
+  impAnn (show cred <> " expected to not have delegated to a stake pool") $ do
+    accountState <- expectJust $ lookupAccountState cred accounts
+    expectNothingExpr (accountState ^. stakePoolDelegationAccountStateL)
 
 registerRewardAccount ::
   forall era.
@@ -1865,15 +1912,20 @@ simulateThenRestore sim = do
   pure result
 
 shelleyGenRegTxCert ::
-  forall era.
   ShelleyEraTxCert era =>
   Credential 'Staking ->
   ImpTestM era (TxCert era)
 shelleyGenRegTxCert = pure . RegTxCert
 
 shelleyGenUnRegTxCert ::
-  forall era.
   ShelleyEraTxCert era =>
   Credential 'Staking ->
   ImpTestM era (TxCert era)
 shelleyGenUnRegTxCert = pure . UnRegTxCert
+
+shelleyDelegStakeTxCert ::
+  ShelleyEraTxCert era =>
+  Credential 'Staking ->
+  KeyHash 'StakePool ->
+  TxCert era
+shelleyDelegStakeTxCert cred pool = DelegStakeTxCert cred pool

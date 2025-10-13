@@ -22,7 +22,7 @@ import Cardano.Ledger.BaseTypes (
   addEpochInterval,
   natVersion,
  )
-import Cardano.Ledger.Coin (Coin (..), compactCoinOrError)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -52,51 +52,24 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
   describe "Register stake credential" $ do
-    it "With correct deposit or without any deposit" $ do
+    it "With correct deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-
-      cred <- KeyHashObj <$> freshKeyHash
-      -- NOTE: This will always generate certs with deposits post-Conway
-      regTxCert <- genRegTxCert cred
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL .~ [regTxCert]
-      expectRegistered cred
-
       freshKeyHash >>= \kh -> do
         submitTx_ $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ [RegDepositTxCert (KeyHashObj kh) expectedDeposit]
-        expectRegistered (KeyHashObj kh)
+        expectStakeCredRegistered (KeyHashObj kh)
 
     it "Twice the same certificate in the same transaction" $ do
       -- This is expected behavior because `certsTxBodyL` removes duplicates
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       freshKeyHash >>= \kh -> do
+        regTxCert <- genRegTxCert (KeyHashObj kh)
         submitTx_ $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
-              .~ [ RegDepositTxCert (KeyHashObj kh) expectedDeposit
-                 , RegDepositTxCert (KeyHashObj kh) expectedDeposit
-                 ]
-        expectRegistered (KeyHashObj kh)
-
-    it "When already already registered" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-      let sh = hashPlutusScript $ evenRedeemerNoDatum SPlutusV3
-      let tx =
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL
-                .~ [RegDepositTxCert (ScriptHashObj sh) expectedDeposit]
-      submitTx_ tx
-
-      submitFailingTx
-        tx
-        [ injectFailure $ StakeKeyRegisteredDELEG (ScriptHashObj sh)
-        ]
-      expectRegistered (ScriptHashObj sh)
-
+              .~ [regTxCert, regTxCert]
+        expectStakeCredRegistered (KeyHashObj kh)
     it "With incorrect deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       pv <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
@@ -120,39 +93,14 @@ spec = do
                       }
                 else IncorrectDepositDELEG wrongDeposit
           ]
-        expectNotRegistered (KeyHashObj kh)
+        expectStakeCredNotRegistered (KeyHashObj kh)
 
   describe "Unregister stake credentials" $ do
-    it "When registered" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-      let sh = ScriptHashObj $ hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [RegDepositTxCert sh expectedDeposit]
-
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [UnRegDepositTxCert sh expectedDeposit]
-      expectNotRegistered sh
-
-    it "When not registered" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-      freshKeyHash >>= \kh ->
-        submitFailingTx
-          ( mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL
-                .~ [UnRegDepositTxCert (KeyHashObj kh) expectedDeposit]
-          )
-          [ injectFailure $ StakeKeyNotRegisteredDELEG (KeyHashObj kh)
-          ]
-
     it "With incorrect refund" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       pv <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 
-      cred <- KeyHashObj <$> freshKeyHash
+      let cred = ScriptHashObj $ hashPlutusScript $ evenRedeemerNoDatum SPlutusV3
 
       submitTx_ $
         mkBasicTx mkBasicTxBody
@@ -177,40 +125,9 @@ spec = do
               else IncorrectDepositDELEG wrongDeposit
         ]
 
-      expectRegistered cred
+      expectStakeCredRegistered cred
 
-    it "With non-zero reward balance" $ do
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-
-      cred <- KeyHashObj <$> freshKeyHash
-
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL .~ [RegDepositTxCert cred expectedDeposit]
-
-      submitAndExpireProposalToMakeReward cred
-
-      balance <- getBalance cred
-      submitFailingTx
-        ( mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL .~ [UnRegDepositTxCert cred expectedDeposit]
-        )
-        [injectFailure $ StakeKeyHasNonZeroRewardAccountBalanceDELEG balance]
-      expectRegistered cred
-
-    it "Register and unregister in the same transaction" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-      freshKeyHash >>= \kh -> do
-        submitTx_ $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL
-              .~ [ RegDepositTxCert (KeyHashObj kh) expectedDeposit
-                 , UnRegDepositTxCert (KeyHashObj kh) expectedDeposit
-                 ]
-        expectNotRegistered (KeyHashObj kh)
-
-    it "deregistering returns the deposit" $ do
+    it "Deregistering returns the deposit" $ do
       let
         keyDeposit = Coin 2
         -- This is paid out as the reward
@@ -251,50 +168,6 @@ spec = do
       expectNotRegisteredRewardAddress rewardAccount
 
   describe "Delegate stake" $ do
-    it "Delegate registered stake credentials to registered pool" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-
-      cred <- KeyHashObj <$> freshKeyHash
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [RegDepositTxCert cred expectedDeposit]
-
-      poolKh <- freshKeyHash
-      registerPool poolKh
-
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [DelegTxCert cred (DelegStake poolKh)]
-
-      expectDelegatedToPool cred poolKh
-
-    it "Register and delegate in the same transaction" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-
-      poolKh <- freshKeyHash
-      registerPool poolKh
-      freshKeyHash >>= \kh -> do
-        submitTx_ $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL
-              .~ [RegDepositDelegTxCert (KeyHashObj kh) (DelegStake poolKh) expectedDeposit]
-        expectDelegatedToPool (KeyHashObj kh) poolKh
-
-    it "Delegate unregistered stake credentials" $ do
-      cred <- KeyHashObj <$> freshKeyHash
-      poolKh <- freshKeyHash
-      registerPool poolKh
-      submitFailingTx
-        ( mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL
-              .~ [DelegTxCert cred (DelegStake poolKh)]
-        )
-        [injectFailure $ StakeKeyNotRegisteredDELEG cred]
-
-      expectNotRegistered cred
-
     it "Delegate to unregistered pool" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
@@ -311,63 +184,7 @@ spec = do
               .~ [DelegTxCert cred (DelegStake poolKh)]
         )
         [injectFailure $ DelegateeStakePoolNotRegisteredDELEG poolKh]
-
       expectNotDelegatedToPool cred
-
-    it "Delegate already delegated credentials" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-
-      cred <- KeyHashObj <$> freshKeyHash
-      poolKh <- freshKeyHash
-      registerPool poolKh
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [ RegDepositTxCert cred expectedDeposit
-               , DelegTxCert cred (DelegStake poolKh)
-               ]
-      expectDelegatedToPool cred poolKh
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [DelegTxCert cred (DelegStake poolKh)]
-      expectDelegatedToPool cred poolKh
-
-      poolKh1 <- freshKeyHash
-      registerPool poolKh1
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [DelegTxCert cred (DelegStake poolKh1)]
-      expectDelegatedToPool cred poolKh1
-
-      poolKh2 <- freshKeyHash
-      registerPool poolKh2
-      poolKh3 <- freshKeyHash
-      registerPool poolKh3
-
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [ DelegTxCert cred (DelegStake poolKh2)
-               , DelegTxCert cred (DelegStake poolKh3)
-               ]
-
-      expectDelegatedToPool cred poolKh3
-
-    it "Delegate and unregister" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-
-      cred <- KeyHashObj <$> freshKeyHash
-      poolKh <- freshKeyHash
-      registerPool poolKh
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [ RegDepositDelegTxCert cred (DelegStake poolKh) expectedDeposit
-               , UnRegDepositTxCert cred expectedDeposit
-               ]
-      expectNotRegistered cred
 
   describe "Delegate vote" $ do
     it "Delegate vote of registered stake credentials to registered drep" $ do
@@ -442,7 +259,7 @@ spec = do
         )
         [injectFailure $ StakeKeyNotRegisteredDELEG cred]
 
-      expectNotRegistered cred
+      expectStakeCredNotRegistered cred
 
     it "Redelegate vote" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -481,7 +298,7 @@ spec = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [UnRegDepositTxCert cred expectedDeposit]
-      expectNotRegistered cred
+      expectStakeCredNotRegistered cred
       expectNotDelegatedVote cred
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/917
     -- TODO: Re-enable after issue is resolved, by removing this override
@@ -511,7 +328,7 @@ spec = do
           & bodyTxL . certsTxBodyL
             .~ [RegDepositDelegTxCert cred (DelegVote DRepAlwaysAbstain) expectedDeposit]
       registerAndRetirePoolToMakeReward cred
-      expectRegistered cred
+      expectStakeCredRegistered cred
       expectDelegatedVote cred DRepAlwaysAbstain
       impAnn "Version should be unchanged" $
         getProtVer `shouldReturn` initialProtVer
@@ -532,7 +349,7 @@ spec = do
           & bodyTxL . certsTxBodyL .~ [UnRegDepositTxCert cred expectedDeposit]
           & bodyTxL . withdrawalsTxBodyL
             .~ Withdrawals (Map.singleton rewardAccount withdrawalAmount)
-      expectNotRegistered cred
+      expectStakeCredNotRegistered cred
       expectNotDelegatedVote cred
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/916
     -- TODO: Re-enable after issue is resolved, by removing this override
@@ -545,7 +362,7 @@ spec = do
           & bodyTxL . certsTxBodyL
             .~ [RegDepositDelegTxCert cred (DelegVote DRepAlwaysAbstain) expectedDeposit]
       registerAndRetirePoolToMakeReward cred
-      expectRegistered cred
+      expectStakeCredRegistered cred
       expectDelegatedVote cred DRepAlwaysAbstain
       forM_ @[] [1 .. 3 :: Int] $ \_ -> do
         submitTx_ $
@@ -561,7 +378,7 @@ spec = do
             .~ [UnRegDepositTxCert cred expectedDeposit]
           & bodyTxL . withdrawalsTxBodyL
             .~ Withdrawals (Map.singleton rewardAccount withdrawalAmount)
-      expectNotRegistered cred
+      expectStakeCredNotRegistered cred
       expectNotDelegatedVote cred
 
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/640
@@ -657,7 +474,7 @@ spec = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [UnRegDepositTxCert cred expectedDeposit]
-      expectNotRegistered cred
+      expectStakeCredNotRegistered cred
 
     it "Delegate to DRep and SPO and change delegation to a different SPO" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -687,19 +504,6 @@ spec = do
       expectDelegatedToPool cred poolKh'
       expectDelegatedVote cred (DRepCredential drepCred)
   where
-    expectNotRegistered :: Credential 'Staking -> ImpTestM era ()
-    expectNotRegistered cred = do
-      accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
-      impAnn (show cred <> " expected to not be in Accounts") $ do
-        expectNothingExpr $ lookupAccountState cred accounts
-
-    expectNotDelegatedToPool :: Credential 'Staking -> ImpTestM era ()
-    expectNotDelegatedToPool cred = do
-      accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
-      impAnn (show cred <> " expected to not have delegated to a stake pool") $ do
-        accountState <- expectJust $ lookupAccountState cred accounts
-        expectNothingExpr (accountState ^. stakePoolDelegationAccountStateL)
-
     expectDelegatedVote :: HasCallStack => Credential 'Staking -> DRep -> ImpTestM era ()
     expectDelegatedVote cred drep = do
       accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
@@ -751,20 +555,3 @@ conwayEraSpecificSpec = do
                , DelegStakeTxCert cred2 poolKh -- using the pattern from Shelley
                ]
       expectDelegatedToPool cred2 poolKh
-
-expectRegistered :: (HasCallStack, ConwayEraImp era) => Credential 'Staking -> ImpTestM era ()
-expectRegistered cred = do
-  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
-  expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-
-  accountState <- expectJust $ lookupAccountState cred accounts
-  impAnn (show cred <> " expected to be in Accounts with the correct deposit") $ do
-    accountState ^. depositAccountStateL `shouldBe` compactCoinOrError expectedDeposit
-
-expectDelegatedToPool ::
-  (HasCallStack, ConwayEraImp era) => Credential 'Staking -> KeyHash 'StakePool -> ImpTestM era ()
-expectDelegatedToPool cred poolKh = do
-  accounts <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
-  impAnn (show cred <> " expected to have delegated to " <> show poolKh) $ do
-    accountState <- expectJust $ lookupAccountState cred accounts
-    accountState ^. stakePoolDelegationAccountStateL `shouldBe` Just poolKh

@@ -16,6 +16,7 @@ import qualified Test.Cardano.Ledger.Babbage.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Babbage.ImpTest (BabbageEraImp)
 import Test.Cardano.Ledger.Imp.Common
+import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
 spec :: forall era. (BabbageEraImp era, EraSpecificSpec era) => Spec
 spec = do
@@ -28,4 +29,4 @@ spec = do
 
 instance EraSpecificSpec BabbageEra where
   eraSpecificSpec =
-    AlonzoImp.alonzoEraSpecificSpec
+    ShelleyImp.shelleyEraSpecificSpec >> AlonzoImp.alonzoEraSpecificSpec

@@ -133,6 +133,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   FailBoth (..),
   delegateSPORewardAddressToDRep_,
   getCommittee,
+  conwayDelegStakeTxCert,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
@@ -313,6 +314,7 @@ instance ShelleyEraImp ConwayEra where
   modifyImpInitProtVer = conwayModifyImpInitProtVer
   genRegTxCert = conwayGenRegTxCert
   genUnRegTxCert = conwayGenUnRegTxCert
+  delegStakeTxCert = conwayDelegStakeTxCert
 
 conwayModifyImpInitProtVer ::
   forall era.
@@ -417,7 +419,6 @@ unRegisterDRep drep = do
         .~ SSeq.singleton (UnRegDRepTxCert drep refund)
 
 conwayGenUnRegTxCert ::
-  forall era.
   ( ShelleyEraImp era
   , ConwayEraTxCert era
   , ShelleyEraTxCert era
@@ -435,7 +436,6 @@ conwayGenUnRegTxCert stakingCredential = do
         ]
 
 conwayGenRegTxCert ::
-  forall era.
   ( ShelleyEraImp era
   , ConwayEraTxCert era
   , ShelleyEraTxCert era
@@ -448,6 +448,13 @@ conwayGenRegTxCert stakingCredential =
     , RegDepositTxCert stakingCredential
         <$> getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
     ]
+
+conwayDelegStakeTxCert ::
+  ConwayEraTxCert era =>
+  Credential 'Staking ->
+  KeyHash 'StakePool ->
+  TxCert era
+conwayDelegStakeTxCert cred pool = DelegTxCert cred (DelegStake pool)
 
 -- | Submit a transaction that updates a given DRep
 updateDRep ::

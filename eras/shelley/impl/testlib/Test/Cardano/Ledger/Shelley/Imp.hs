@@ -5,10 +5,13 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Shelley.Imp (spec) where
+module Test.Cardano.Ledger.Shelley.Imp (spec, shelleyEraSpecificSpec) where
 
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Rules
 import Test.Cardano.Ledger.Imp.Common
+import qualified Test.Cardano.Ledger.Shelley.Imp.DelegSpec as Deleg
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Shelley.Imp.PoolSpec as Pool
@@ -26,6 +29,7 @@ spec ::
 spec = do
   describe "Era specific tests" . withEachEraVersion @era $ eraSpecificSpec
   describe "ShelleyImpSpec" $ withEachEraVersion @era $ do
+    describe "DELEG" Deleg.spec
     Epoch.spec
     Ledger.spec
     Pool.spec
@@ -34,4 +38,17 @@ spec = do
   describe "ShelleyPureTests" $ do
     Instant.spec @era
 
-instance EraSpecificSpec ShelleyEra
+shelleyEraSpecificSpec ::
+  forall era.
+  ( ShelleyEraImp era
+  , InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure era
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+shelleyEraSpecificSpec = do
+  describe "Shelley era specific Imp spec" $
+    describe "DELEG" $
+      Deleg.shelleyEraSpecificSpec
+
+instance EraSpecificSpec ShelleyEra where
+  eraSpecificSpec =
+    describe "DELEG" Deleg.shelleyEraSpecificSpec

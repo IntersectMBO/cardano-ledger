@@ -73,10 +73,9 @@ conwayEraGenericSpec = do
 
 conwayEraSpecificSpec :: SpecWith (ImpInit (LedgerSpec ConwayEra))
 conwayEraSpecificSpec = do
-  describe "Conway era specific Imp spec" $
-    describe "Certificates without deposits" $ do
-      describe "DELEG" Deleg.conwayEraSpecificSpec
-      describe "UTXO" Utxo.conwayEraSpecificSpec
+  describe "Conway era specific Imp spec" $ do
+    describe "DELEG" Deleg.conwayEraSpecificSpec
+    describe "UTXO" Utxo.conwayEraSpecificSpec
 
 instance EraSpecificSpec ConwayEra where
   eraSpecificSpec =
