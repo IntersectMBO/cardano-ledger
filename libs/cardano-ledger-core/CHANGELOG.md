@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `ppDefaultVote` to `PoolParams`
 * Add `FromJSON` instance to `Vote`
 * Move `Vote` to `BaseTypes` module
 * Add `poolParamsCount`, `decCBORGroupPoolParams`, `encCBORGroupPoolParams` to `StakePool` module

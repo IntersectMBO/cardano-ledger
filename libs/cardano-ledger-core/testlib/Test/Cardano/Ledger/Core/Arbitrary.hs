@@ -449,6 +449,7 @@ instance Arbitrary PoolParams where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary StakePoolState where
   arbitrary =

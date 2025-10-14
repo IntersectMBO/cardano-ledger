@@ -67,6 +67,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
   Url,
+  Vote,
   invalidKey,
   maybeToStrictMaybe,
   strictMaybeToMaybe,
@@ -242,6 +243,8 @@ stakePoolStateToPoolParams poolId sps =
     , ppOwners = spsOwners sps
     , ppRelays = spsRelays sps
     , ppMetadata = spsMetadata sps
+    , --  TODO: spsDefaultVote
+      ppDefaultVote = SNothing
     }
 
 data PoolMetadata = PoolMetadata
@@ -382,6 +385,7 @@ data PoolParams = PoolParams
   , ppOwners :: !(Set (KeyHash 'Staking))
   , ppRelays :: !(StrictSeq StakePoolRelay)
   , ppMetadata :: !(StrictMaybe PoolMetadata)
+  , ppDefaultVote :: !(StrictMaybe Vote)
   }
   deriving (Show, Generic, Eq, Ord)
 
@@ -395,7 +399,7 @@ ppMetadataL :: Lens' PoolParams (StrictMaybe PoolMetadata)
 ppMetadataL = lens ppMetadata (\pp u -> pp {ppMetadata = u})
 
 instance Default PoolParams where
-  def = PoolParams def def (Coin 0) (Coin 0) def def def def def
+  def = PoolParams def def (Coin 0) (Coin 0) def def def def def def
 
 instance NoThunks PoolParams
 
@@ -403,7 +407,7 @@ deriving instance NFData PoolParams
 
 instance ToJSON PoolParams where
   toJSON pp =
-    Aeson.object
+    Aeson.object $
       [ "publicKey" .= ppId pp -- TODO publicKey is an unfortunate name, should be poolId
       , "vrf" .= ppVrf pp
       , "pledge" .= ppPledge pp
@@ -414,6 +418,7 @@ instance ToJSON PoolParams where
       , "relays" .= ppRelays pp
       , "metadata" .= ppMetadata pp
       ]
+        ++ ["defaultVote" .= v | SJust v <- [ppDefaultVote pp]]
 
 instance FromJSON PoolParams where
   parseJSON =
@@ -428,6 +433,7 @@ instance FromJSON PoolParams where
         <*> obj .: "owners"
         <*> obj .: "relays"
         <*> obj .: "metadata"
+        <*> obj .:? "defaultVote" .!= SNothing
 
 instance EncCBOR PoolMetadata where
   encCBOR (PoolMetadata u h) =
@@ -502,4 +508,5 @@ decCBORGroupPoolParams = do
       , ppOwners = owners
       , ppRelays = relays
       , ppMetadata = maybeToStrictMaybe md
+      , ppDefaultVote = SNothing
       }

@@ -362,6 +362,7 @@ mkPoolParameters keys =
     , ppOwners = Set.singleton $ hashKey (vKey stakeKeyOne)
     , ppRelays = StrictSeq.empty
     , ppMetadata = SNothing
+    , ppDefaultVote = SNothing
     }
 
 -- Create stake pool registration certs
