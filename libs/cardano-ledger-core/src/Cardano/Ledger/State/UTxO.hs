@@ -70,7 +70,6 @@ import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import Data.Set (Set)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, (^.))
 import NoThunks.Class (NoThunks (..))
@@ -142,7 +141,7 @@ txins = (^. inputsTxBodyL)
 -- | Compute the transaction outputs of a transaction.
 txouts ::
   forall era l.
-  (Typeable l, EraTxBody era) =>
+  EraTxBody era =>
   TxBody l era ->
   UTxO era
 txouts txBody =

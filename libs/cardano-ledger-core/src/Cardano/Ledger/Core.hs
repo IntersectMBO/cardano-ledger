@@ -196,15 +196,15 @@ class
   , EraTxCert era
   , EraPParams era
   , HasEraTxLevel TxBody era
-  , forall l. Typeable l => HashAnnotated (TxBody l era) EraIndependentTxBody
-  , forall l. Typeable l => EncCBOR (TxBody l era)
+  , forall l. HashAnnotated (TxBody l era) EraIndependentTxBody
+  , forall l. EncCBOR (TxBody l era)
   , forall l. Typeable l => DecCBOR (Annotator (TxBody l era))
   , forall l. Typeable l => ToCBOR (TxBody l era)
   , forall l. Typeable l => NoThunks (TxBody l era)
-  , forall l. Typeable l => NFData (TxBody l era)
-  , forall l. Typeable l => Show (TxBody l era)
-  , forall l. Typeable l => Eq (TxBody l era)
-  , forall l. Typeable l => EqRaw (TxBody l era)
+  , forall l. NFData (TxBody l era)
+  , forall l. Show (TxBody l era)
+  , forall l. Eq (TxBody l era)
+  , forall l. EqRaw (TxBody l era)
   ) =>
   EraTxBody era
   where
@@ -631,10 +631,10 @@ class
 bBodySize :: forall era. EraBlockBody era => ProtVer -> BlockBody era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
-txIdTx :: (EraTx era, Typeable l) => Tx l era -> TxId
+txIdTx :: EraTx era => Tx l era -> TxId
 txIdTx tx = txIdTxBody (tx ^. bodyTxL)
 
-txIdTxBody :: (EraTxBody era, Typeable l) => TxBody l era -> TxId
+txIdTxBody :: EraTxBody era => TxBody l era -> TxId
 txIdTxBody = TxId . hashAnnotated
 
 -- | txsize computes the length of the serialised bytes (actual size)
