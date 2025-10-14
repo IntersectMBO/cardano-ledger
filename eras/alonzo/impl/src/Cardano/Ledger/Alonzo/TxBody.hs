@@ -197,13 +197,7 @@ deriving instance Show AlonzoTxBodyRaw
 instance Memoized (TxBody AlonzoEra) where
   type RawType (TxBody AlonzoEra) = AlonzoTxBodyRaw
 
-instance EraTxBody AlonzoEra where
-  newtype TxBody AlonzoEra = MkAlonzoTxBody (MemoBytes AlonzoTxBodyRaw)
-    deriving (ToCBOR, Generic)
-    deriving newtype (SafeToHash)
-
-  mkBasicTxBody = mkMemoizedEra @AlonzoEra emptyAlonzoTxBodyRaw
-
+instance EraTxBodyCommon AlonzoEra TxBody where
   inputsTxBodyL =
     lensMemoRawType @AlonzoEra atbrInputs $
       \txBodyRaw inputs_ -> txBodyRaw {atbrInputs = inputs_}
@@ -240,6 +234,13 @@ instance EraTxBody AlonzoEra where
     lensMemoRawType @AlonzoEra atbrCerts $
       \txBodyRaw certs_ -> txBodyRaw {atbrCerts = certs_}
   {-# INLINEABLE certsTxBodyL #-}
+
+instance EraTxBody AlonzoEra where
+  newtype TxBody AlonzoEra = MkAlonzoTxBody (MemoBytes AlonzoTxBodyRaw)
+    deriving (ToCBOR, Generic)
+    deriving newtype (SafeToHash)
+
+  mkBasicTxBody = mkMemoizedEra @AlonzoEra emptyAlonzoTxBodyRaw
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
 

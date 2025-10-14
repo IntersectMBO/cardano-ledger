@@ -446,12 +446,7 @@ instance DecCBOR (Annotator DijkstraTxBodyRaw) where
 
 deriving via Mem DijkstraTxBodyRaw instance DecCBOR (Annotator (TxBody DijkstraEra))
 
-instance EraTxBody DijkstraEra where
-  newtype TxBody DijkstraEra = MkDijkstraTxBody (MemoBytes DijkstraTxBodyRaw)
-    deriving (Generic, SafeToHash, ToCBOR)
-
-  mkBasicTxBody = mkMemoizedEra @DijkstraEra basicDijkstraTxBodyRaw
-
+instance EraTxBodyCommon DijkstraEra TxBody where
   inputsTxBodyL = lensMemoRawType @DijkstraEra dtbrSpendInputs $
     \txb x -> txb {dtbrSpendInputs = x}
   {-# INLINE inputsTxBodyL #-}
@@ -487,6 +482,49 @@ instance EraTxBody DijkstraEra where
 
   getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
+
+instance EraTxBodyCommon DijkstraEra SubTxBody where
+  inputsTxBodyL = lensMemoRawType @DijkstraEra dtbrSpendInputs $
+    \txb x -> txb {dtbrSpendInputs = x}
+  {-# INLINE inputsTxBodyL #-}
+
+  outputsTxBodyL =
+    lensMemoRawType @DijkstraEra (fmap sizedValue . dtbrOutputs) $
+      \txb x -> txb {dtbrOutputs = mkSized (eraProtVerLow @DijkstraEra) <$> x}
+  {-# INLINE outputsTxBodyL #-}
+
+  feeTxBodyL = lensMemoRawType @DijkstraEra dtbrFee (\txb x -> txb {dtbrFee = x})
+  {-# INLINE feeTxBodyL #-}
+
+  auxDataHashTxBodyL = lensMemoRawType @DijkstraEra dtbrAuxDataHash $
+    \txb x -> txb {dtbrAuxDataHash = x}
+  {-# INLINE auxDataHashTxBodyL #-}
+
+  spendableInputsTxBodyF = babbageSpendableInputsTxBodyF
+  {-# INLINE spendableInputsTxBodyF #-}
+
+  allInputsTxBodyF = babbageAllInputsTxBodyF
+  {-# INLINE allInputsTxBodyF #-}
+
+  withdrawalsTxBodyL = lensMemoRawType @DijkstraEra dtbrWithdrawals $
+    \txb x -> txb {dtbrWithdrawals = x}
+  {-# INLINE withdrawalsTxBodyL #-}
+
+  certsTxBodyL =
+    lensMemoRawType @DijkstraEra (OSet.toStrictSeq . dtbrCerts) $
+      \txb x -> txb {dtbrCerts = OSet.fromStrictSeq x}
+  {-# INLINE certsTxBodyL #-}
+
+  getTotalDepositsTxBody = dijkstraTotalDepositsTxBody
+
+  getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
+    getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
+
+instance EraTxBody DijkstraEra where
+  newtype TxBody DijkstraEra = MkDijkstraTxBody (MemoBytes DijkstraTxBodyRaw)
+    deriving (Generic, SafeToHash, ToCBOR)
+
+  mkBasicTxBody = mkMemoizedEra @DijkstraEra basicDijkstraTxBodyRaw
 
 upgradeGovAction ::
   forall era.
@@ -662,7 +700,12 @@ instance ConwayEraTxBody DijkstraEra where
       \txb x -> txb {dtbrTreasuryDonation = x}
   {-# INLINE treasuryDonationTxBodyL #-}
 
-class ConwayEraTxBody era => DijkstraEraTxBody era where
+class
+  ( ConwayEraTxBody era
+  , EraTxBodyCommon era SubTxBody
+  ) =>
+  DijkstraEraTxBody era
+  where
   data SubTxBody era :: Type
 
   guardsTxBodyL :: Lens' (TxBody era) (OSet (Credential Guard))

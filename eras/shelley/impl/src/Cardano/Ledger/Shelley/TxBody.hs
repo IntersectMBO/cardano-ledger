@@ -190,13 +190,7 @@ instance Memoized (TxBody ShelleyEra) where
 
 instance EqRaw (TxBody ShelleyEra)
 
-instance EraTxBody ShelleyEra where
-  newtype TxBody ShelleyEra = MkShelleyTxBody (MemoBytes ShelleyTxBodyRaw)
-    deriving (Generic)
-    deriving newtype (SafeToHash, ToCBOR)
-
-  mkBasicTxBody = mkMemoizedEra @ShelleyEra basicShelleyTxBodyRaw
-
+instance EraTxBodyCommon ShelleyEra TxBody where
   spendableInputsTxBodyF = inputsTxBodyL
   {-# INLINE spendableInputsTxBodyF #-}
 
@@ -232,6 +226,13 @@ instance EraTxBody ShelleyEra where
     lensMemoRawType @ShelleyEra stbrCerts $
       \txBodyRaw certs -> txBodyRaw {stbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
+
+instance EraTxBody ShelleyEra where
+  newtype TxBody ShelleyEra = MkShelleyTxBody (MemoBytes ShelleyTxBodyRaw)
+    deriving (Generic)
+    deriving newtype (SafeToHash, ToCBOR)
+
+  mkBasicTxBody = mkMemoizedEra @ShelleyEra basicShelleyTxBodyRaw
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
 

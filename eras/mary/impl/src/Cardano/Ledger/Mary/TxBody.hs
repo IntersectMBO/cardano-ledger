@@ -171,12 +171,7 @@ pattern MaryTxBody
 
 {-# COMPLETE MaryTxBody #-}
 
-instance EraTxBody MaryEra where
-  newtype TxBody MaryEra = MkMaryTxBody (MemoBytes MaryTxBodyRaw)
-    deriving newtype (SafeToHash, ToCBOR)
-
-  mkBasicTxBody = mkMemoizedEra @MaryEra emptyAllegraTxBodyRaw
-
+instance EraTxBodyCommon MaryEra TxBody where
   inputsTxBodyL =
     lensMemoRawType @MaryEra atbrInputs $ \txBodyRaw inputs -> txBodyRaw {atbrInputs = inputs}
   {-# INLINEABLE inputsTxBodyL #-}
@@ -207,6 +202,12 @@ instance EraTxBody MaryEra where
   certsTxBodyL =
     lensMemoRawType @MaryEra atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
+
+instance EraTxBody MaryEra where
+  newtype TxBody MaryEra = MkMaryTxBody (MemoBytes MaryTxBodyRaw)
+    deriving newtype (SafeToHash, ToCBOR)
+
+  mkBasicTxBody = mkMemoizedEra @MaryEra emptyAllegraTxBodyRaw
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
 
