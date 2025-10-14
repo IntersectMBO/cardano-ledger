@@ -31,6 +31,7 @@ import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
+import Data.Typeable (Typeable)
 
 --------------------------------------------------------------------------------
 -- Translation from Shelley to Allegra
@@ -71,8 +72,8 @@ instance TranslateEra AllegraEra NewEpochState where
           stashedAVVMAddresses = ()
         }
 
-instance TranslateEra AllegraEra Tx where
-  type TranslationError AllegraEra Tx = DecoderError
+instance Typeable l => TranslateEra AllegraEra (Tx l) where
+  type TranslationError AllegraEra (Tx l) = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
 
 --------------------------------------------------------------------------------

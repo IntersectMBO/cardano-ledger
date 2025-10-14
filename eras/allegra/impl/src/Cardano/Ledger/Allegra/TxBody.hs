@@ -36,6 +36,7 @@ module Cardano.Ledger.Allegra.TxBody (
     atbWithdrawals
   ),
   basicAllegraTxBody,
+  emptyAllegraTxBodyRaw,
   AllegraTxBodyRaw (..),
   StrictMaybe (..),
   ValidityInterval (..),
@@ -221,7 +222,6 @@ bodyFields 9 = field (\x tx -> tx {atbrMint = x}) From
 bodyFields n = invalidField n
 
 basicAllegraTxBody ::
-  -- (Monoid ma, HasEraTxLevel (RawType (TxBodyRaw ma) era, STxLevel l era ~ STxTopLevel l era, Typeable l) =>
   forall era l ma.
   ( EraTxBody era
   , Memoized (TxBody l era)

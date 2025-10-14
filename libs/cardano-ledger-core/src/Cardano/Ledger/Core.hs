@@ -73,7 +73,6 @@ module Cardano.Ledger.Core (
   module Cardano.Ledger.Core.Translation,
 ) where
 
-import Cardano.Ledger.Core.TxLevel
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (
   Addr (..),
@@ -107,6 +106,7 @@ import Cardano.Ledger.Core.Era
 import Cardano.Ledger.Core.PParams
 import Cardano.Ledger.Core.Translation
 import Cardano.Ledger.Core.TxCert
+import Cardano.Ledger.Core.TxLevel
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Hashes hiding (GenDelegPair (..), GenDelegs (..), unsafeMakeSafeHash)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness, bootstrapWitKeyHash)
@@ -171,7 +171,7 @@ class
 
   -- | For fee calculation and estimations of impact on block space
   -- To replace `sizeTxF` after it has been proved equivalent to it .
-  sizeTxForFeeCalculation :: (HasCallStack, SafeToHash (TxWits era)) => Tx l era -> Word32
+  sizeTxForFeeCalculation :: (HasCallStack, SafeToHash (TxWits era), Typeable l) => Tx l era -> Word32
   sizeTxForFeeCalculation tx =
     errorFail $
       integralToBounded @Int @Word32 $
@@ -196,15 +196,15 @@ class
   , EraTxCert era
   , EraPParams era
   , HasEraTxLevel TxBody era
-  , forall l. HashAnnotated (TxBody l era) EraIndependentTxBody
-  , forall l. EncCBOR (TxBody l era)
+  , forall l. Typeable l => HashAnnotated (TxBody l era) EraIndependentTxBody
+  , forall l. Typeable l => EncCBOR (TxBody l era)
   , forall l. Typeable l => DecCBOR (Annotator (TxBody l era))
   , forall l. Typeable l => ToCBOR (TxBody l era)
   , forall l. Typeable l => NoThunks (TxBody l era)
-  , forall l. NFData (TxBody l era)
-  , forall l. Show (TxBody l era)
-  , forall l. Eq (TxBody l era)
-  , forall l. EqRaw (TxBody l era)
+  , forall l. Typeable l => NFData (TxBody l era)
+  , forall l. Typeable l => Show (TxBody l era)
+  , forall l. Typeable l => Eq (TxBody l era)
+  , forall l. Typeable l => EqRaw (TxBody l era)
   ) =>
   EraTxBody era
   where
@@ -631,10 +631,10 @@ class
 bBodySize :: forall era. EraBlockBody era => ProtVer -> BlockBody era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
-txIdTx :: EraTx era => Tx l era -> TxId
+txIdTx :: (EraTx era, Typeable l) => Tx l era -> TxId
 txIdTx tx = txIdTxBody (tx ^. bodyTxL)
 
-txIdTxBody :: EraTxBody era => TxBody l era -> TxId
+txIdTxBody :: (EraTxBody era, Typeable l) => TxBody l era -> TxId
 txIdTxBody = TxId . hashAnnotated
 
 -- | txsize computes the length of the serialised bytes (actual size)

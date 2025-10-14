@@ -61,51 +61,49 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 class AllegraEraTxBody era => MaryEraTxBody era where
-  mintTxBodyL :: Lens' (TxBody era) MultiAsset
+  mintTxBodyL :: Lens' (TxBody l era) MultiAsset
 
-  mintedTxBodyF :: SimpleGetter (TxBody era) (Set PolicyID)
+  mintedTxBodyF :: SimpleGetter (TxBody l era) (Set PolicyID)
 
-  mintValueTxBodyF :: SimpleGetter (TxBody era) (Value era)
-  default mintValueTxBodyF :: Value era ~ MaryValue => SimpleGetter (TxBody era) (Value era)
+  mintValueTxBodyF :: SimpleGetter (TxBody l era) (Value era)
+  default mintValueTxBodyF :: Value era ~ MaryValue => SimpleGetter (TxBody l era) (Value era)
   mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
   {-# INLINE mintValueTxBodyF #-}
 
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern constructor.
 
-type MaryTxBodyRaw = AllegraTxBodyRaw MultiAsset MaryEra
+type MaryTxBodyRaw l = AllegraTxBodyRaw MultiAsset l MaryEra
 
 -- | Encodes memoized bytes created upon construction.
-instance EncCBOR (TxBody MaryEra)
+instance EncCBOR (TxBody l MaryEra)
 
-instance EqRaw (TxBody MaryEra)
+instance EqRaw (TxBody l MaryEra)
 
-instance Memoized (TxBody MaryEra) where
-  type RawType (TxBody MaryEra) = MaryTxBodyRaw
+deriving newtype instance Eq (TxBody l MaryEra)
 
-deriving newtype instance Eq (TxBody MaryEra)
+deriving newtype instance Show (TxBody l MaryEra)
 
-deriving newtype instance Show (TxBody MaryEra)
+deriving instance Generic (TxBody l MaryEra)
 
-deriving instance Generic (TxBody MaryEra)
+deriving newtype instance Typeable l => NoThunks (TxBody l MaryEra)
 
-deriving newtype instance NoThunks (TxBody MaryEra)
-
-deriving newtype instance NFData (TxBody MaryEra)
+deriving newtype instance NFData (TxBody l MaryEra)
 
 deriving via
-  Mem MaryTxBodyRaw
+  Mem (MaryTxBodyRaw l)
   instance
-    DecCBOR (Annotator (TxBody MaryEra))
+    Typeable l => DecCBOR (Annotator (TxBody l MaryEra))
 
-type instance MemoHashIndex MaryTxBodyRaw = EraIndependentTxBody
+type instance MemoHashIndex (MaryTxBodyRaw l) = EraIndependentTxBody
 
-instance HashAnnotated (TxBody MaryEra) EraIndependentTxBody where
+instance HashAnnotated (TxBody l MaryEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
@@ -120,7 +118,7 @@ pattern MaryTxBody ::
   StrictMaybe (Update MaryEra) ->
   StrictMaybe TxAuxDataHash ->
   MultiAsset ->
-  TxBody MaryEra
+  TxBody TopTx MaryEra
 pattern MaryTxBody
   { mtbInputs
   , mtbOutputs
@@ -171,11 +169,22 @@ pattern MaryTxBody
 
 {-# COMPLETE MaryTxBody #-}
 
+instance EraTxLevel MaryEra where type STxLevel l MaryEra = STxTopLevel l MaryEra
+
+instance HasEraTxLevel (AllegraTxBodyRaw ma) MaryEra where
+  toSTxLevel AllegraTxBodyRaw {} = STopTxOnly
+
+instance HasEraTxLevel TxBody MaryEra where
+  toSTxLevel = toSTxLevel . getMemoRawType
+
+instance Memoized (TxBody l MaryEra) where
+  type RawType (TxBody l MaryEra) = AllegraTxBodyRaw MultiAsset l MaryEra
+
 instance EraTxBody MaryEra where
-  newtype TxBody MaryEra = MkMaryTxBody (MemoBytes MaryTxBodyRaw)
+  newtype TxBody l MaryEra = MkMaryTxBody (MemoBytes (MaryTxBodyRaw l))
     deriving newtype (SafeToHash, ToCBOR)
 
-  mkBasicTxBody = mkMemoizedEra @MaryEra emptyAllegraTxBodyRaw
+  mkBasicTxBody = MkMaryTxBody . mkMemoizedEra @MaryEra $ emptyAllegraTxBodyRaw
 
   inputsTxBodyL =
     lensMemoRawType @MaryEra atbrInputs $ \txBodyRaw inputs -> txBodyRaw {atbrInputs = inputs}

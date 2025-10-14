@@ -22,6 +22,7 @@ import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Rational (unsafeBoundRational)
@@ -45,7 +46,7 @@ testGlobals =
 mkDummySafeHash :: forall a. Int -> SafeHash a
 mkDummySafeHash = unsafeMakeSafeHash . mkDummyHash @HASH
 
-txInAt :: (HasCallStack, EraTx era) => Int -> Tx t era -> TxIn
+txInAt :: (HasCallStack, EraTx era, Typeable l) => Int -> Tx l era -> TxIn
 txInAt index tx =
   let txId = txIdTx tx
    in mkTxInPartial txId (toInteger index)
