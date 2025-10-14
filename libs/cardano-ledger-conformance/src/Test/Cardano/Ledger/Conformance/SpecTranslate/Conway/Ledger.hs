@@ -24,6 +24,7 @@ import Cardano.Ledger.Conway.Core (
   EraPParams (..),
   EraTx (..),
   EraTxBody (..),
+  EraTxBodyCommon (..),
   ScriptHash,
   txIdTx,
  )

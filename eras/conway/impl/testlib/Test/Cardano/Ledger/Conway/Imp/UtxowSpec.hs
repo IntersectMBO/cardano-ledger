@@ -25,6 +25,7 @@ import Cardano.Ledger.Conway.Core (
   EraIndependentScriptIntegrity,
   EraTx (..),
   EraTxBody (..),
+  EraTxBodyCommon (..),
   EraTxOut (..),
   EraTxWits (..),
   InjectRuleFailure (..),

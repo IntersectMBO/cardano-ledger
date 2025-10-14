@@ -484,38 +484,31 @@ instance EraTxBodyCommon DijkstraEra TxBody where
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
 
 instance EraTxBodyCommon DijkstraEra SubTxBody where
-  inputsTxBodyL = lensMemoRawType @DijkstraEra dtbrSpendInputs $
-    \txb x -> txb {dtbrSpendInputs = x}
+  inputsTxBodyL = undefined
   {-# INLINE inputsTxBodyL #-}
 
-  outputsTxBodyL =
-    lensMemoRawType @DijkstraEra (fmap sizedValue . dtbrOutputs) $
-      \txb x -> txb {dtbrOutputs = mkSized (eraProtVerLow @DijkstraEra) <$> x}
+  outputsTxBodyL = undefined
   {-# INLINE outputsTxBodyL #-}
 
-  feeTxBodyL = lensMemoRawType @DijkstraEra dtbrFee (\txb x -> txb {dtbrFee = x})
+  feeTxBodyL = undefined
   {-# INLINE feeTxBodyL #-}
 
-  auxDataHashTxBodyL = lensMemoRawType @DijkstraEra dtbrAuxDataHash $
-    \txb x -> txb {dtbrAuxDataHash = x}
+  auxDataHashTxBodyL = undefined
   {-# INLINE auxDataHashTxBodyL #-}
 
-  spendableInputsTxBodyF = babbageSpendableInputsTxBodyF
+  spendableInputsTxBodyF = undefined
   {-# INLINE spendableInputsTxBodyF #-}
 
-  allInputsTxBodyF = babbageAllInputsTxBodyF
+  allInputsTxBodyF = undefined
   {-# INLINE allInputsTxBodyF #-}
 
-  withdrawalsTxBodyL = lensMemoRawType @DijkstraEra dtbrWithdrawals $
-    \txb x -> txb {dtbrWithdrawals = x}
+  withdrawalsTxBodyL = undefined
   {-# INLINE withdrawalsTxBodyL #-}
 
-  certsTxBodyL =
-    lensMemoRawType @DijkstraEra (OSet.toStrictSeq . dtbrCerts) $
-      \txb x -> txb {dtbrCerts = OSet.fromStrictSeq x}
+  certsTxBodyL = undefined
   {-# INLINE certsTxBodyL #-}
 
-  getTotalDepositsTxBody = dijkstraTotalDepositsTxBody
+  getTotalDepositsTxBody = undefined
 
   getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)

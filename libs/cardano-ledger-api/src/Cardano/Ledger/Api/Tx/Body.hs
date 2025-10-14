@@ -106,6 +106,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Core (
   EraTxBody (..),
+  EraTxBodyCommon (..),
   PParams,
   TxAuxDataHash (..),
   Value,
