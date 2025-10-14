@@ -562,10 +562,6 @@ instance Arbitrary Voter where
       ]
   shrink = genericShrink
 
-instance Arbitrary Vote where
-  arbitrary = arbitraryBoundedEnum
-  shrink = shrinkBoundedEnum
-
 instance Arbitrary (TxBody ConwayEra) where
   arbitrary =
     ConwayTxBody

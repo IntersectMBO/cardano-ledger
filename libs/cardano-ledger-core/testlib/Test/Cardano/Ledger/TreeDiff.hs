@@ -179,6 +179,8 @@ instance ToExpr TxId
 
 instance ToExpr ChainAccountState
 
+instance ToExpr Vote
+
 -- CertState
 instance ToExpr DRep
 

@@ -517,6 +517,10 @@ deriving instance (Era era, Arbitrary (PParamsHKD Identity era)) => Arbitrary (P
 
 deriving instance (Era era, Arbitrary (PParamsHKD StrictMaybe era)) => Arbitrary (PParamsUpdate era)
 
+instance Arbitrary BaseTypes.Vote where
+  arbitrary = arbitraryBoundedEnum
+  shrink = shrinkBoundedEnum
+
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.DRep -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------

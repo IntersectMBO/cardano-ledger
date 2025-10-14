@@ -90,6 +90,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer,
   ToKeyValuePairs (..),
   UnitInterval,
+  Vote (..),
   maybeToStrictMaybe,
  )
 import Cardano.Ledger.Binary (
@@ -100,12 +101,10 @@ import Cardano.Ledger.Binary (
   Interns,
   ToCBOR (toCBOR),
   decNoShareCBOR,
-  decodeEnumBounded,
   decodeMapByKey,
   decodeNullStrictMaybe,
   decodeRecordNamed,
   decodeRecordNamedT,
-  encodeEnum,
   encodeListLen,
   encodeNullStrictMaybe,
   encodeWord8,
@@ -372,24 +371,6 @@ instance EncCBOR Voter where
 instance NoThunks Voter
 
 instance NFData Voter
-
-data Vote
-  = VoteNo
-  | VoteYes
-  | Abstain
-  deriving (Ord, Generic, Eq, Show, Enum, Bounded)
-
-instance ToJSON Vote
-
-instance NoThunks Vote
-
-instance NFData Vote
-
-instance DecCBOR Vote where
-  decCBOR = decodeEnumBounded
-
-instance EncCBOR Vote where
-  encCBOR = encodeEnum
 
 newtype VotingProcedures era = VotingProcedures
   { unVotingProcedures :: Map Voter (Map GovActionId (VotingProcedure era))
