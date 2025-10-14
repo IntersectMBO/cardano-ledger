@@ -22,7 +22,7 @@ import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Transition (TransitionConfig (..))
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
-import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..), DijkstraSubTxBodyRaw, TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
@@ -40,6 +40,13 @@ instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
 instance Arbitrary (DijkstraPParams StrictMaybe DijkstraEra) where
   arbitrary = genericArbitraryU
 
+-- TODO we probably want to scale the validity interval and multiasset here as well
+instance Arbitrary DijkstraSubTxBodyRaw where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary (SubTxBody DijkstraEra) where
+  arbitrary = genericArbitraryU
+
 instance Arbitrary (TxBody DijkstraEra) where
   arbitrary =
     DijkstraTxBody
@@ -55,6 +62,7 @@ instance Arbitrary (TxBody DijkstraEra) where
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
       <*> scale (`div` 15) arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

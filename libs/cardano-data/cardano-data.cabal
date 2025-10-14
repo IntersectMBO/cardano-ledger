@@ -73,7 +73,6 @@ library testlib
     cardano-ledger-binary:testlib,
     containers,
     hspec,
-    microlens,
 
 test-suite cardano-data-tests
   type: exitcode-stdio-1.0

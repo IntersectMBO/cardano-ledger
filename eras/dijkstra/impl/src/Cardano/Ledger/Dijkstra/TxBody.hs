@@ -13,6 +13,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -40,11 +41,13 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dtbProposalProcedures,
     dtbCurrentTreasuryValue,
     dtbTreasuryDonation,
-    dtbGuards
+    dtbGuards,
+    dtbSubTransactions
   ),
   upgradeProposals,
   upgradeGovAction,
   DijkstraTxBodyRaw (..),
+  DijkstraSubTxBodyRaw (..),
 ) where
 
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
@@ -110,10 +113,12 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoizedEra,
  )
-import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.TxIn (TxId, TxIn)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Coerce (coerce)
+import Data.Kind (Type)
+import qualified Data.OMap.Strict as OMap
 import Data.OSet.Strict (OSet, decodeOSet)
 import qualified Data.OSet.Strict as OSet
 import Data.STRef (newSTRef, readSTRef, writeSTRef)
@@ -121,7 +126,7 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, foldr')
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', to, (^.))
+import Lens.Micro (Lens', lens, to, (^.))
 import NoThunks.Class (NoThunks)
 
 data DijkstraTxBodyRaw = DijkstraTxBodyRaw
@@ -144,6 +149,7 @@ data DijkstraTxBodyRaw = DijkstraTxBodyRaw
   , dtbrProposalProcedures :: !(OSet.OSet (ProposalProcedure DijkstraEra))
   , dtbrCurrentTreasuryValue :: !(StrictMaybe Coin)
   , dtbrTreasuryDonation :: !Coin
+  , dtbrSubTransactions :: !(OMap.OMap TxId (SubTxBody DijkstraEra))
   }
   deriving (Generic)
 
@@ -178,6 +184,7 @@ basicDijkstraTxBodyRaw =
     (VotingProcedures mempty)
     OSet.empty
     SNothing
+    mempty
     mempty
 
 instance DecCBOR DijkstraTxBodyRaw where
@@ -273,8 +280,8 @@ encodeTxBodyRaw ::
 encodeTxBodyRaw DijkstraTxBodyRaw {..} =
   let ValidityInterval bot top = dtbrVldt
    in Keyed
-        ( \i ci ri o cr tc f t c w b ->
-            DijkstraTxBodyRaw i ci ri o cr tc c w f (ValidityInterval b t)
+        ( \i ci ri o cr tc f t c w b stxs ->
+            DijkstraTxBodyRaw i ci ri o cr tc c w f (ValidityInterval b t) stxs
         )
         !> Key 0 (To dtbrSpendInputs)
         !> Omit null (Key 13 (To dtbrCollateralInputs))
@@ -296,6 +303,7 @@ encodeTxBodyRaw DijkstraTxBodyRaw {..} =
         !> Omit OSet.null (Key 20 (To dtbrProposalProcedures))
         !> encodeKeyedStrictMaybe 21 dtbrCurrentTreasuryValue
         !> Omit (== mempty) (Key 22 $ To dtbrTreasuryDonation)
+        !> undefined
 
 instance EncCBOR DijkstraTxBodyRaw where
   encCBOR = encode . encodeTxBodyRaw
@@ -328,6 +336,7 @@ pattern DijkstraTxBody ::
   OSet.OSet (ProposalProcedure DijkstraEra) ->
   StrictMaybe Coin ->
   Coin ->
+  OMap.OMap TxId (SubTxBody DijkstraEra) ->
   TxBody DijkstraEra
 pattern DijkstraTxBody
   { dtbSpendInputs
@@ -349,6 +358,7 @@ pattern DijkstraTxBody
   , dtbProposalProcedures
   , dtbCurrentTreasuryValue
   , dtbTreasuryDonation
+  , dtbSubTransactions
   } <-
   ( getMemoRawType ->
       DijkstraTxBodyRaw
@@ -371,6 +381,7 @@ pattern DijkstraTxBody
         , dtbrProposalProcedures = dtbProposalProcedures
         , dtbrCurrentTreasuryValue = dtbCurrentTreasuryValue
         , dtbrTreasuryDonation = dtbTreasuryDonation
+        , dtbrSubTransactions = dtbSubTransactions
         }
     )
   where
@@ -393,7 +404,8 @@ pattern DijkstraTxBody
       votingProcedures
       proposalProcedures
       currentTreasuryValue
-      treasuryDonation =
+      treasuryDonation
+      subTransactions =
         mkMemoizedEra @DijkstraEra $
           DijkstraTxBodyRaw
             inputsX
@@ -415,6 +427,7 @@ pattern DijkstraTxBody
             proposalProcedures
             currentTreasuryValue
             treasuryDonation
+            subTransactions
 
 {-# COMPLETE DijkstraTxBody #-}
 
@@ -650,9 +663,14 @@ instance ConwayEraTxBody DijkstraEra where
   {-# INLINE treasuryDonationTxBodyL #-}
 
 class ConwayEraTxBody era => DijkstraEraTxBody era where
+  data SubTxBody era :: Type
+
   guardsTxBodyL :: Lens' (TxBody era) (OSet (Credential Guard))
 
 instance DijkstraEraTxBody DijkstraEra where
+  newtype SubTxBody DijkstraEra = MkDijkstraSubTxBody DijkstraSubTxBodyRaw
+    deriving (Generic, Eq, NoThunks, NFData, Show)
+
   {-# INLINE guardsTxBodyL #-}
   guardsTxBodyL =
     lensMemoRawType @DijkstraEra dtbrGuards $
@@ -679,3 +697,32 @@ decodeGuards = do
         Just True -> decCBOR
         Just False -> KeyHashObj <$> decCBOR
   decodeOSet decodeElement
+
+data DijkstraSubTxBodyRaw = DijkstraSubTxBodyRaw
+  { dstbrSpendInputs :: !(Set TxIn)
+  , dstbrCollateralInputs :: !(Set TxIn)
+  , dstbrReferenceInputs :: !(Set TxIn)
+  , dstbrOutputs :: !(StrictSeq (Sized (TxOut DijkstraEra)))
+  , dstbrCollateralReturn :: !(StrictMaybe (Sized (TxOut DijkstraEra)))
+  , dstbrTotalCollateral :: !(StrictMaybe Coin)
+  , dstbrCerts :: !(OSet.OSet (TxCert DijkstraEra))
+  , dstbrWithdrawals :: !Withdrawals
+  , dstbrFee :: !Coin
+  , dstbrVldt :: !ValidityInterval
+  , dstbrMint :: !MultiAsset
+  , dstbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
+  , dstbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
+  , dstbrNetworkId :: !(StrictMaybe Network)
+  , dstbrVotingProcedures :: !(VotingProcedures DijkstraEra)
+  , dstbrProposalProcedures :: !(OSet.OSet (ProposalProcedure DijkstraEra))
+  , dstbrCurrentTreasuryValue :: !(StrictMaybe Coin)
+  , dstbrTreasuryDonation :: !Coin
+  }
+  deriving (Generic, Eq, Show)
+
+instance NoThunks DijkstraSubTxBodyRaw
+
+instance NFData DijkstraSubTxBodyRaw
+
+instance OMap.HasOKey TxId (SubTxBody DijkstraEra) where
+  okeyL = lens undefined undefined
