@@ -86,8 +86,10 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   EncCBORGroup (..),
+  Interns,
   decodeNullStrictMaybe,
   decodeRecordNamed,
+  decodeRecordNamedT,
   decodeRecordSum,
   encodeListLen,
   encodeNullStrictMaybe,
@@ -106,6 +108,7 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
+import Control.Monad.Trans (lift)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser, explicitParseField)
@@ -211,7 +214,20 @@ instance DecCBOR StakePoolState where
         <! From
 
 instance DecShareCBOR StakePoolState where
-  decShareCBOR _ = decCBOR
+  type Share StakePoolState = Interns (Credential 'Staking)
+  decSharePlusCBOR =
+    decodeRecordNamedT "StakePoolState" (const 10) $
+      StakePoolState
+        <$> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> lift decCBOR
+        <*> decSharePlusCBOR
 
 instance Default StakePoolState where
   def =
