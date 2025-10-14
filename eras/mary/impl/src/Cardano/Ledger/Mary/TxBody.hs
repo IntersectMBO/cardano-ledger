@@ -81,20 +81,9 @@ class AllegraEraTxBody era => MaryEraTxBody era where
 
 type MaryTxBodyRaw l = AllegraTxBodyRaw MultiAsset l MaryEra
 
--- | Encodes memoized bytes created upon construction.
-instance EncCBOR (TxBody l MaryEra)
-
 instance EqRaw (TxBody l MaryEra)
 
-deriving newtype instance Eq (TxBody l MaryEra)
-
-deriving newtype instance Show (TxBody l MaryEra)
-
 deriving instance Generic (TxBody l MaryEra)
-
-deriving newtype instance Typeable l => NoThunks (TxBody l MaryEra)
-
-deriving newtype instance NFData (TxBody l MaryEra)
 
 deriving via
   Mem (MaryTxBodyRaw l)
@@ -182,7 +171,7 @@ instance Memoized (TxBody l MaryEra) where
 
 instance EraTxBody MaryEra where
   newtype TxBody l MaryEra = MkMaryTxBody (MemoBytes (MaryTxBodyRaw l))
-    deriving newtype (SafeToHash, ToCBOR)
+    deriving newtype (SafeToHash, ToCBOR, EncCBOR, Eq, Show, NoThunks, NFData)
 
   mkBasicTxBody = MkMaryTxBody . mkMemoizedEra @MaryEra $ emptyAllegraTxBodyRaw
 
