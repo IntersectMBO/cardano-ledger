@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -112,7 +113,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (..))
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData (..))
 import Data.Coerce (coerce)
 import Data.OSet.Strict (OSet, decodeOSet)
 import qualified Data.OSet.Strict as OSet
@@ -120,44 +121,68 @@ import Data.STRef (newSTRef, readSTRef, writeSTRef)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, foldr')
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', to, (^.))
-import NoThunks.Class (NoThunks)
+import Lens.Micro (Lens', lens, to, (^.))
+import NoThunks.Class (InspectHeap (..), NoThunks)
 
-data DijkstraTxBodyRaw = DijkstraTxBodyRaw
-  { dtbrSpendInputs :: !(Set TxIn)
-  , dtbrCollateralInputs :: !(Set TxIn)
-  , dtbrReferenceInputs :: !(Set TxIn)
-  , dtbrOutputs :: !(StrictSeq (Sized (TxOut DijkstraEra)))
-  , dtbrCollateralReturn :: !(StrictMaybe (Sized (TxOut DijkstraEra)))
-  , dtbrTotalCollateral :: !(StrictMaybe Coin)
-  , dtbrCerts :: !(OSet.OSet (TxCert DijkstraEra))
-  , dtbrWithdrawals :: !Withdrawals
-  , dtbrFee :: !Coin
-  , dtbrVldt :: !ValidityInterval
-  , dtbrGuards :: !(OSet (Credential Guard))
-  , dtbrMint :: !MultiAsset
-  , dtbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
-  , dtbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
-  , dtbrNetworkId :: !(StrictMaybe Network)
-  , dtbrVotingProcedures :: !(VotingProcedures DijkstraEra)
-  , dtbrProposalProcedures :: !(OSet.OSet (ProposalProcedure DijkstraEra))
-  , dtbrCurrentTreasuryValue :: !(StrictMaybe Coin)
-  , dtbrTreasuryDonation :: !Coin
-  }
-  deriving (Generic)
+data DijkstraTxBodyRaw l era where
+  DijkstraTxBodyRaw ::
+    { dtbrSpendInputs :: !(Set TxIn)
+    , dtbrCollateralInputs :: !(Set TxIn)
+    , dtbrReferenceInputs :: !(Set TxIn)
+    , dtbrOutputs :: !(StrictSeq (Sized (TxOut DijkstraEra)))
+    , dtbrCollateralReturn :: !(StrictMaybe (Sized (TxOut DijkstraEra)))
+    , dtbrTotalCollateral :: !(StrictMaybe Coin)
+    , dtbrCerts :: !(OSet.OSet (TxCert DijkstraEra))
+    , dtbrWithdrawals :: !Withdrawals
+    , dtbrFee :: !Coin
+    , dtbrVldt :: !ValidityInterval
+    , dtbrGuards :: !(OSet (Credential Guard))
+    , dtbrMint :: !MultiAsset
+    , dtbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
+    , dtbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
+    , dtbrNetworkId :: !(StrictMaybe Network)
+    , dtbrVotingProcedures :: !(VotingProcedures DijkstraEra)
+    , dtbrProposalProcedures :: !(OSet.OSet (ProposalProcedure DijkstraEra))
+    , dtbrCurrentTreasuryValue :: !(StrictMaybe Coin)
+    , dtbrTreasuryDonation :: !Coin
+    } ->
+    DijkstraTxBodyRaw TopTx era
+  DijkstraSubTxBodyRaw ::
+    { dstbrSpendInputs :: !(Set TxIn)
+    , dstbrReferenceInputs :: !(Set TxIn)
+    , dstbrOutputs :: !(StrictSeq (Sized (TxOut DijkstraEra)))
+    , dstbrCerts :: !(OSet.OSet (TxCert DijkstraEra))
+    , dstbrWithdrawals :: !Withdrawals
+    , dstbrVldt :: !ValidityInterval
+    , dstbrGuards :: !(OSet (Credential Guard))
+    , dstbrMint :: !MultiAsset
+    , dstbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
+    , dstbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
+    , dstbrNetworkId :: !(StrictMaybe Network)
+    , dstbrVotingProcedures :: !(VotingProcedures DijkstraEra)
+    , dstbrProposalProcedures :: !(OSet.OSet (ProposalProcedure DijkstraEra))
+    , dstbrCurrentTreasuryValue :: !(StrictMaybe Coin)
+    , dstbrTreasuryDonation :: !Coin
+    } ->
+    DijkstraTxBodyRaw SubTx era
 
-deriving instance Eq DijkstraTxBodyRaw
+deriving instance Eq (DijkstraTxBodyRaw l DijkstraEra)
 
-instance EqRaw (TxBody DijkstraEra)
+instance EqRaw (TxBody l DijkstraEra)
 
-instance NoThunks DijkstraTxBodyRaw
+deriving via
+  InspectHeap (DijkstraTxBodyRaw l DijkstraEra)
+  instance
+    Typeable l => NoThunks (DijkstraTxBodyRaw l DijkstraEra)
 
-instance NFData DijkstraTxBodyRaw
+instance NFData (DijkstraTxBodyRaw l DijkstraEra) where
+  rnf = undefined
 
-deriving instance Show DijkstraTxBodyRaw
+deriving instance Show (DijkstraTxBodyRaw l DijkstraEra)
 
-basicDijkstraTxBodyRaw :: DijkstraTxBodyRaw
+basicDijkstraTxBodyRaw :: DijkstraTxBodyRaw TopTx DijkstraEra
 basicDijkstraTxBodyRaw =
   DijkstraTxBodyRaw
     mempty
@@ -180,96 +205,98 @@ basicDijkstraTxBodyRaw =
     SNothing
     mempty
 
-instance DecCBOR DijkstraTxBodyRaw where
-  decCBOR =
-    decode $
-      SparseKeyed
-        "TxBodyRaw"
-        basicDijkstraTxBodyRaw
-        bodyFields
-        requiredFields
-    where
-      bodyFields :: Word -> Field DijkstraTxBodyRaw
-      bodyFields 0 = field (\x tx -> tx {dtbrSpendInputs = x}) From
-      bodyFields 1 = field (\x tx -> tx {dtbrOutputs = x}) From
-      bodyFields 2 = field (\x tx -> tx {dtbrFee = x}) From
-      bodyFields 3 =
-        ofield
-          (\x tx -> tx {dtbrVldt = (dtbrVldt tx) {invalidHereafter = x}})
-          From
-      bodyFields 4 =
-        fieldGuarded
-          (emptyFailure "Certificates" "non-empty")
-          OSet.null
-          (\x tx -> tx {dtbrCerts = x})
-          From
-      bodyFields 5 =
-        fieldGuarded
-          (emptyFailure "Withdrawals" "non-empty")
-          (null . unWithdrawals)
-          (\x tx -> tx {dtbrWithdrawals = x})
-          From
-      bodyFields 7 = ofield (\x tx -> tx {dtbrAuxDataHash = x}) From
-      bodyFields 8 =
-        ofield
-          (\x tx -> tx {dtbrVldt = (dtbrVldt tx) {invalidBefore = x}})
-          From
-      bodyFields 9 =
-        fieldGuarded
-          (emptyFailure "Mint" "non-empty")
-          (== mempty)
-          (\x tx -> tx {dtbrMint = x})
-          From
-      bodyFields 11 = ofield (\x tx -> tx {dtbrScriptIntegrityHash = x}) From
-      bodyFields 13 =
-        fieldGuarded
-          (emptyFailure "Collateral Inputs" "non-empty")
-          null
-          (\x tx -> tx {dtbrCollateralInputs = x})
-          From
-      bodyFields 14 =
-        ofield
-          (\x tx -> tx {dtbrGuards = fromSMaybe mempty x})
-          (D decodeGuards)
-      bodyFields 15 = ofield (\x tx -> tx {dtbrNetworkId = x}) From
-      bodyFields 16 = ofield (\x tx -> tx {dtbrCollateralReturn = x}) From
-      bodyFields 17 = ofield (\x tx -> tx {dtbrTotalCollateral = x}) From
-      bodyFields 18 =
-        fieldGuarded
-          (emptyFailure "Reference Inputs" "non-empty")
-          null
-          (\x tx -> tx {dtbrReferenceInputs = x})
-          From
-      bodyFields 19 =
-        fieldGuarded
-          (emptyFailure "VotingProcedures" "non-empty")
-          (null . unVotingProcedures)
-          (\x tx -> tx {dtbrVotingProcedures = x})
-          From
-      bodyFields 20 =
-        fieldGuarded
-          (emptyFailure "ProposalProcedures" "non-empty")
-          OSet.null
-          (\x tx -> tx {dtbrProposalProcedures = x})
-          From
-      bodyFields 21 = ofield (\x tx -> tx {dtbrCurrentTreasuryValue = x}) From
-      bodyFields 22 =
-        ofield
-          (\x tx -> tx {dtbrTreasuryDonation = fromSMaybe zero x})
-          (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
-      bodyFields n = invalidField n
-      requiredFields :: [(Word, String)]
-      requiredFields =
-        [ (0, "inputs")
-        , (1, "outputs")
-        , (2, "fee")
-        ]
-      emptyFailure fieldName requirement =
-        "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
+instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
+  decCBOR = withSTxBothLevels @l $ \case
+    STopTx ->
+      decode $
+        SparseKeyed
+          "TxBodyRaw"
+          basicDijkstraTxBodyRaw
+          bodyFields
+          requiredFields
+      where
+        bodyFields :: Word -> Field (DijkstraTxBodyRaw l DijkstraEra)
+        bodyFields 0 = field (\x tx -> tx {dtbrSpendInputs = x}) From
+        bodyFields 1 = field (\x tx -> tx {dtbrOutputs = x}) From
+        bodyFields 2 = field (\x tx -> tx {dtbrFee = x}) From
+        bodyFields 3 =
+          ofield
+            (\x tx -> tx {dtbrVldt = (dtbrVldt tx) {invalidHereafter = x}})
+            From
+        bodyFields 4 =
+          fieldGuarded
+            (emptyFailure "Certificates" "non-empty")
+            OSet.null
+            (\x tx -> tx {dtbrCerts = x})
+            From
+        bodyFields 5 =
+          fieldGuarded
+            (emptyFailure "Withdrawals" "non-empty")
+            (null . unWithdrawals)
+            (\x tx -> tx {dtbrWithdrawals = x})
+            From
+        bodyFields 7 = ofield (\x tx -> tx {dtbrAuxDataHash = x}) From
+        bodyFields 8 =
+          ofield
+            (\x tx -> tx {dtbrVldt = (dtbrVldt tx) {invalidBefore = x}})
+            From
+        bodyFields 9 =
+          fieldGuarded
+            (emptyFailure "Mint" "non-empty")
+            (== mempty)
+            (\x tx -> tx {dtbrMint = x})
+            From
+        bodyFields 11 = ofield (\x tx -> tx {dtbrScriptIntegrityHash = x}) From
+        bodyFields 13 =
+          fieldGuarded
+            (emptyFailure "Collateral Inputs" "non-empty")
+            null
+            (\x tx -> tx {dtbrCollateralInputs = x})
+            From
+        bodyFields 14 =
+          ofield
+            (\x tx -> tx {dtbrGuards = fromSMaybe mempty x})
+            (D decodeGuards)
+        bodyFields 15 = ofield (\x tx -> tx {dtbrNetworkId = x}) From
+        bodyFields 16 = ofield (\x tx -> tx {dtbrCollateralReturn = x}) From
+        bodyFields 17 = ofield (\x tx -> tx {dtbrTotalCollateral = x}) From
+        bodyFields 18 =
+          fieldGuarded
+            (emptyFailure "Reference Inputs" "non-empty")
+            null
+            (\x tx -> tx {dtbrReferenceInputs = x})
+            From
+        bodyFields 19 =
+          fieldGuarded
+            (emptyFailure "VotingProcedures" "non-empty")
+            (null . unVotingProcedures)
+            (\x tx -> tx {dtbrVotingProcedures = x})
+            From
+        bodyFields 20 =
+          fieldGuarded
+            (emptyFailure "ProposalProcedures" "non-empty")
+            OSet.null
+            (\x tx -> tx {dtbrProposalProcedures = x})
+            From
+        bodyFields 21 = ofield (\x tx -> tx {dtbrCurrentTreasuryValue = x}) From
+        bodyFields 22 =
+          ofield
+            (\x tx -> tx {dtbrTreasuryDonation = fromSMaybe zero x})
+            (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
+        bodyFields n = invalidField n
+        requiredFields :: [(Word, String)]
+        requiredFields =
+          [ (0, "inputs")
+          , (1, "outputs")
+          , (2, "fee")
+          ]
+        emptyFailure fieldName requirement =
+          "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
+    SSubTx -> undefined
 
 encodeTxBodyRaw ::
-  DijkstraTxBodyRaw ->
-  Encode ('Closed 'Sparse) DijkstraTxBodyRaw
+  DijkstraTxBodyRaw l DijkstraEra ->
+  Encode ('Closed 'Sparse) (DijkstraTxBodyRaw l DijkstraEra)
 encodeTxBodyRaw DijkstraTxBodyRaw {..} =
   let ValidityInterval bot top = dtbrVldt
    in Keyed
@@ -296,17 +323,19 @@ encodeTxBodyRaw DijkstraTxBodyRaw {..} =
         !> Omit OSet.null (Key 20 (To dtbrProposalProcedures))
         !> encodeKeyedStrictMaybe 21 dtbrCurrentTreasuryValue
         !> Omit (== mempty) (Key 22 $ To dtbrTreasuryDonation)
+encodeTxBodyRaw DijkstraSubTxBodyRaw {..} =
+  undefined
 
-instance EncCBOR DijkstraTxBodyRaw where
+instance EncCBOR (DijkstraTxBodyRaw l DijkstraEra) where
   encCBOR = encode . encodeTxBodyRaw
 
-deriving instance NoThunks (TxBody DijkstraEra)
+deriving instance Typeable l => NoThunks (TxBody l DijkstraEra)
 
-deriving instance Eq (TxBody DijkstraEra)
+deriving instance Eq (TxBody l DijkstraEra)
 
-deriving newtype instance NFData (TxBody DijkstraEra)
+deriving newtype instance NFData (TxBody l DijkstraEra)
 
-deriving instance Show (TxBody DijkstraEra)
+deriving instance Show (TxBody l DijkstraEra)
 
 pattern DijkstraTxBody ::
   Set TxIn ->
@@ -328,7 +357,7 @@ pattern DijkstraTxBody ::
   OSet.OSet (ProposalProcedure DijkstraEra) ->
   StrictMaybe Coin ->
   Coin ->
-  TxBody DijkstraEra
+  TxBody TopTx DijkstraEra
 pattern DijkstraTxBody
   { dtbSpendInputs
   , dtbCollateralInputs
@@ -418,34 +447,49 @@ pattern DijkstraTxBody
 
 {-# COMPLETE DijkstraTxBody #-}
 
-instance Memoized (TxBody DijkstraEra) where
-  type RawType (TxBody DijkstraEra) = DijkstraTxBodyRaw
+instance Memoized (TxBody l DijkstraEra) where
+  type RawType (TxBody l DijkstraEra) = DijkstraTxBodyRaw l DijkstraEra
 
-instance EncCBOR (TxBody DijkstraEra)
+deriving newtype instance EncCBOR (TxBody l DijkstraEra)
 
-type instance MemoHashIndex DijkstraTxBodyRaw = EraIndependentTxBody
+type instance MemoHashIndex (DijkstraTxBodyRaw l DijkstraEra) = EraIndependentTxBody
 
-instance HashAnnotated (TxBody DijkstraEra) EraIndependentTxBody where
+instance HashAnnotated (TxBody l DijkstraEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
-instance DecCBOR (Annotator DijkstraTxBodyRaw) where
+instance Typeable l => DecCBOR (Annotator (DijkstraTxBodyRaw l DijkstraEra)) where
   decCBOR = pure <$> decCBOR
 
-deriving via Mem DijkstraTxBodyRaw instance DecCBOR (Annotator (TxBody DijkstraEra))
+deriving via
+  Mem (DijkstraTxBodyRaw l DijkstraEra)
+  instance
+    Typeable l => DecCBOR (Annotator (TxBody l DijkstraEra))
+
+instance HasEraTxLevel TxBody DijkstraEra where
+  toSTxLevel = undefined
 
 instance EraTxBody DijkstraEra where
-  newtype TxBody DijkstraEra = MkDijkstraTxBody (MemoBytes DijkstraTxBodyRaw)
+  newtype TxBody l DijkstraEra = MkDijkstraTxBody (MemoBytes (DijkstraTxBodyRaw l DijkstraEra))
     deriving (Generic, SafeToHash, ToCBOR)
 
-  mkBasicTxBody = mkMemoizedEra @DijkstraEra basicDijkstraTxBodyRaw
+  mkBasicTxBody =
+    asSTxBothLevels
+      (mkMemoizedEra @DijkstraEra basicDijkstraTxBodyRaw)
+      undefined
 
-  inputsTxBodyL = lensMemoRawType @DijkstraEra dtbrSpendInputs $
-    \txb x -> txb {dtbrSpendInputs = x}
+  inputsTxBodyL = bothTxLensMemoRawType undefined undefined undefined undefined
+  -- lensMemoRawType @DijkstraEra dtbrSpendInputs $
+  --  \txb x -> txb {dtbrSpendInputs = x}
   {-# INLINE inputsTxBodyL #-}
 
   outputsTxBodyL =
-    lensMemoRawType @DijkstraEra (fmap sizedValue . dtbrOutputs) $
-      \txb x -> txb {dtbrOutputs = mkSized (eraProtVerLow @DijkstraEra) <$> x}
+    bothTxLensMemoRawType
+      (fmap sizedValue . dtbrOutputs)
+      (\x y -> x {dtbrOutputs = mkSized (eraProtVerLow @DijkstraEra) <$> y})
+      (fmap sizedValue . dstbrOutputs)
+      (\x y -> x {dstbrOutputs = mkSized (eraProtVerLow @DijkstraEra) <$> y})
+  -- lensMemoRawType @DijkstraEra (fmap sizedValue . dtbrOutputs) $
+  --   \txb x -> txb {dtbrOutputs = mkSized (eraProtVerLow @DijkstraEra) <$> x}
   {-# INLINE outputsTxBodyL #-}
 
   feeTxBodyL = lensMemoRawType @DijkstraEra dtbrFee (\txb x -> txb {dtbrFee = x})
@@ -499,7 +543,7 @@ upgradeProposals ProposalProcedure {..} =
     }
 
 dijkstraTotalDepositsTxBody ::
-  PParams DijkstraEra -> (KeyHash StakePool -> Bool) -> TxBody DijkstraEra -> Coin
+  PParams DijkstraEra -> (KeyHash StakePool -> Bool) -> TxBody l DijkstraEra -> Coin
 dijkstraTotalDepositsTxBody pp isPoolRegisted txBody =
   getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
     <+> conwayProposalsDeposits pp txBody
@@ -519,9 +563,9 @@ instance Indexable ScriptHash GuardsScriptHashView where
       toScriptHash _ = SNothing
 
 dijkstraRedeemerPointer ::
-  forall era.
+  forall era l.
   DijkstraEraTxBody era =>
-  TxBody era ->
+  TxBody l era ->
   DijkstraPlutusPurpose AsItem era ->
   StrictMaybe (DijkstraPlutusPurpose AsIx era)
 dijkstraRedeemerPointer txBody = \case
@@ -543,7 +587,7 @@ dijkstraRedeemerPointer txBody = \case
 
 dijkstraRedeemerPointerInverse ::
   DijkstraEraTxBody era =>
-  TxBody era ->
+  TxBody l era ->
   DijkstraPlutusPurpose AsIx era ->
   StrictMaybe (DijkstraPlutusPurpose AsIxItem era)
 dijkstraRedeemerPointerInverse txBody = \case
@@ -562,14 +606,34 @@ dijkstraRedeemerPointerInverse txBody = \case
   DijkstraGuarding idx ->
     DijkstraGuarding <$> fromIndex idx (GuardsScriptHashView $ txBody ^. guardsTxBodyL)
 
+bothTxLensMemoRawType ::
+  forall era a l.
+  ( Era era
+  , Typeable l
+  , EncCBOR (RawType (TxBody TopTx era))
+  , Memoized (TxBody TopTx era)
+  , EncCBOR (RawType (TxBody SubTx era))
+  , Memoized (TxBody SubTx era)
+  ) =>
+  (RawType (TxBody TopTx era) -> a) ->
+  (RawType (TxBody TopTx era) -> a -> RawType (TxBody TopTx era)) ->
+  (RawType (TxBody SubTx era) -> a) ->
+  (RawType (TxBody SubTx era) -> a -> RawType (TxBody SubTx era)) ->
+  Lens' (TxBody l era) a
+bothTxLensMemoRawType getTop setTop getSub setSub = withSTxBothLevels @l $ \case
+  STopTx -> lensMemoRawType @era getTop setTop
+  SSubTx -> lensMemoRawType @era getSub setSub
+
 instance AllegraEraTxBody DijkstraEra where
-  vldtTxBodyL = lensMemoRawType @DijkstraEra dtbrVldt $
-    \txb x -> txb {dtbrVldt = x}
+  vldtTxBodyL = bothTxLensMemoRawType dtbrVldt undefined dstbrVldt undefined
+  -- lensMemoRawType @DijkstraEra dtbrVldt $
+  --  \txb x -> txb {dtbrVldt = x}
   {-# INLINE vldtTxBodyL #-}
 
 instance MaryEraTxBody DijkstraEra where
-  mintTxBodyL = lensMemoRawType @DijkstraEra dtbrMint $
-    \txb x -> txb {dtbrMint = x}
+  mintTxBodyL =
+    lensMemoRawType @DijkstraEra dtbrMint $
+      \txb x -> txb {dtbrMint = x}
   {-# INLINE mintTxBodyL #-}
 
   mintedTxBodyF = to $ \txBody -> policies (dtbrMint (getMemoRawType txBody))
@@ -650,7 +714,7 @@ instance ConwayEraTxBody DijkstraEra where
   {-# INLINE treasuryDonationTxBodyL #-}
 
 class ConwayEraTxBody era => DijkstraEraTxBody era where
-  guardsTxBodyL :: Lens' (TxBody era) (OSet (Credential Guard))
+  guardsTxBodyL :: Lens' (TxBody l era) (OSet (Credential Guard))
 
 instance DijkstraEraTxBody DijkstraEra where
   {-# INLINE guardsTxBodyL #-}

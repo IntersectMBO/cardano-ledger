@@ -18,6 +18,8 @@ import Cardano.Ledger.Mary (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules
 
+instance EraTxLevel DijkstraEra
+
 -------------------------------------------------------------------------------
 -- Deprecated rules
 -------------------------------------------------------------------------------
