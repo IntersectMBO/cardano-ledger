@@ -48,9 +48,10 @@ instance
   ToExpr (BabbageTxOut era)
 
 -- TxBody
-instance ToExpr BabbageTxBodyRaw
+instance ToExpr (BabbageTxBodyRaw TopTx BabbageEra) where
+  toExpr = undefined
 
-instance ToExpr (TxBody BabbageEra)
+instance ToExpr (TxBody TopTx BabbageEra)
 
 -- Rules/Utxo
 instance
@@ -69,4 +70,4 @@ instance
   ) =>
   ToExpr (BabbageUtxowPredFailure era)
 
-instance ToExpr (Tx BabbageEra)
+instance ToExpr (Tx TopTx BabbageEra)

@@ -228,7 +228,7 @@ babbageMissingScripts _ sNeeded sRefs sReceived =
 {-  ∀ s ∈ (txscripts txw utxo ∩ Scriptnative), validateScript s tx   -}
 validateFailedBabbageScripts ::
   EraTx era =>
-  Tx era ->
+  Tx TopTx era ->
   ScriptsProvided era ->
   Set ScriptHash ->
   Test (ShelleyUtxowPredFailure era)
@@ -257,7 +257,7 @@ validateScriptsWellFormed ::
   , BabbageEraTxBody era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   Test (BabbageUtxowPredFailure era)
 validateScriptsWellFormed pp tx =
   sequenceA_
@@ -292,7 +292,7 @@ babbageUtxowMirTransition ::
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , EraCertState era
   ) =>
   Rule (EraRule "UTXOW" era) 'Transition ()
@@ -315,7 +315,7 @@ babbageUtxowTransition ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
@@ -323,7 +323,7 @@ babbageUtxowTransition ::
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , State (EraRule "UTXO" era) ~ UTxOState era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
@@ -408,7 +408,7 @@ instance
     Embed (EraRule "UTXO" era) (BabbageUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   , EraCertState era
@@ -416,7 +416,7 @@ instance
   STS (BabbageUTXOW era)
   where
   type State (BabbageUTXOW era) = UTxOState era
-  type Signal (BabbageUTXOW era) = Tx era
+  type Signal (BabbageUTXOW era) = Tx TopTx era
   type Environment (BabbageUTXOW era) = UtxoEnv era
   type BaseM (BabbageUTXOW era) = ShelleyBase
   type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPredFailure era

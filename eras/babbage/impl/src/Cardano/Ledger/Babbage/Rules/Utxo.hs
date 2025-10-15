@@ -201,7 +201,7 @@ feesOK ::
   , InjectRuleFailure rule BabbageUtxoPredFailure era
   ) =>
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
   Test (EraRuleFailure rule era)
 feesOK pp tx u@(UTxO utxo) =
@@ -245,7 +245,7 @@ validateTotalCollateral ::
   , InjectRuleFailure rule BabbageUtxoPredFailure era
   ) =>
   PParams era ->
-  TxBody era ->
+  TxBody TopTx era ->
   Map.Map TxIn (TxOut era) ->
   Test (EraRuleFailure rule era)
 validateTotalCollateral pp txBody utxoCollateral =
@@ -278,7 +278,7 @@ validateTotalCollateral pp txBody utxoCollateral =
 validateCollateralContainsNonADA ::
   forall era.
   BabbageEraTxBody era =>
-  TxBody era ->
+  TxBody TopTx era ->
   Map.Map TxIn (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateCollateralContainsNonADA txBody utxoCollateral =
@@ -359,14 +359,14 @@ utxoTransition ::
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
   , -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
-  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXO" era)
@@ -462,14 +462,14 @@ instance
     Embed (EraRule "UTXOS" era) (BabbageUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
-  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , EraCertState era
   , SafeToHash (TxWits era)
   ) =>
   STS (BabbageUTXO era)
   where
   type State (BabbageUTXO era) = UTxOState era
-  type Signal (BabbageUTXO era) = Tx era
+  type Signal (BabbageUTXO era) = Tx TopTx era
   type Environment (BabbageUTXO era) = UtxoEnv era
   type BaseM (BabbageUTXO era) = ShelleyBase
   type PredicateFailure (BabbageUTXO era) = BabbageUtxoPredFailure era

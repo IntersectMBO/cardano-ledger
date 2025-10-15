@@ -33,6 +33,7 @@ import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Typeable (Typeable)
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
@@ -40,7 +41,6 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   VersionedTxInfo (..),
  )
 import Test.Cardano.Ledger.Common
-import Data.Typeable (Typeable)
 
 class (EraTx era, EraPlutusContext era, Arbitrary (Script era)) => TranslatableGen era where
   tgRedeemers :: Gen (Redeemers era)

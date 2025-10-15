@@ -113,7 +113,7 @@ instance
   , Embed (EraRule "UTXOW" era) (BabbageLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
@@ -126,7 +126,7 @@ instance
   STS (BabbageLEDGER era)
   where
   type State (BabbageLEDGER era) = LedgerState era
-  type Signal (BabbageLEDGER era) = Tx era
+  type Signal (BabbageLEDGER era) = Tx TopTx era
   type Environment (BabbageLEDGER era) = LedgerEnv era
   type BaseM (BabbageLEDGER era) = ShelleyBase
   type PredicateFailure (BabbageLEDGER era) = ShelleyLedgerPredFailure era
