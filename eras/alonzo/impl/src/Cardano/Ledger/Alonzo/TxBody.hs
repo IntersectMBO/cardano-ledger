@@ -17,6 +17,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -157,44 +158,47 @@ class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
 
 -- ======================================
 
-data AlonzoTxBodyRaw l where
+data AlonzoTxBodyRaw l era where
   AlonzoTxBodyRaw ::
     { atbrInputs :: !(Set TxIn)
     , atbrCollateral :: !(Set TxIn)
-    , atbrOutputs :: !(StrictSeq (TxOut AlonzoEra))
-    , atbrCerts :: !(StrictSeq (TxCert AlonzoEra))
+    , atbrOutputs :: !(StrictSeq (TxOut era))
+    , atbrCerts :: !(StrictSeq (TxCert era))
     , atbrWithdrawals :: !Withdrawals
     , atbrTxFee :: !Coin
     , atbrValidityInterval :: !ValidityInterval
-    , atbrUpdate :: !(StrictMaybe (Update AlonzoEra))
+    , atbrUpdate :: !(StrictMaybe (Update era))
     , atbrReqSignerHashes :: Set (KeyHash 'Guard)
     , atbrMint :: !MultiAsset
     , atbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
     , atbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
     , atbrTxNetworkId :: !(StrictMaybe Network)
     } ->
-    AlonzoTxBodyRaw TopTx
+    AlonzoTxBodyRaw TopTx era
 
-deriving instance Eq (AlonzoTxBodyRaw l)
+deriving instance Eq (AlonzoTxBodyRaw l AlonzoEra)
 
 deriving via
-  InspectHeap (AlonzoTxBodyRaw l)
+  InspectHeap (AlonzoTxBodyRaw l AlonzoEra)
   instance
-    Typeable l => NoThunks (AlonzoTxBodyRaw l)
+    Typeable l => NoThunks (AlonzoTxBodyRaw l AlonzoEra)
 
-instance NFData (AlonzoTxBodyRaw TopTx) where
+instance NFData (AlonzoTxBodyRaw l era) where
   rnf = undefined
 
-deriving instance Show (AlonzoTxBodyRaw l)
+deriving instance Show (AlonzoTxBodyRaw l AlonzoEra)
 
 instance Memoized (TxBody l AlonzoEra) where
-  type RawType (TxBody l AlonzoEra) = AlonzoTxBodyRaw l
+  type RawType (TxBody l AlonzoEra) = AlonzoTxBodyRaw l AlonzoEra
+
+instance HasEraTxLevel AlonzoTxBodyRaw AlonzoEra where
+  toSTxLevel AlonzoTxBodyRaw {} = STopTxOnly
 
 instance HasEraTxLevel TxBody AlonzoEra where
   toSTxLevel = toSTxLevel . getMemoRawType
 
 instance EraTxBody AlonzoEra where
-  newtype TxBody l AlonzoEra = MkAlonzoTxBody (MemoBytes (AlonzoTxBodyRaw l))
+  newtype TxBody l AlonzoEra = MkAlonzoTxBody (MemoBytes (AlonzoTxBodyRaw l AlonzoEra))
     deriving (ToCBOR, Generic)
     deriving newtype (SafeToHash)
 
@@ -259,7 +263,7 @@ instance MaryEraTxBody AlonzoEra where
       \txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_}
   {-# INLINEABLE mintTxBodyL #-}
 
-  mintedTxBodyF = to (policies . atbrMint . getMemoRawType)
+  mintedTxBodyF = to $ \txBody -> policies ((\AlonzoTxBodyRaw {atbrMint} -> atbrMint) (getMemoRawType txBody))
   {-# INLINEABLE mintedTxBodyF #-}
 
 instance AlonzoEraTxBody AlonzoEra where
@@ -295,7 +299,10 @@ deriving instance NFData (TxBody l AlonzoEra)
 
 deriving instance Show (TxBody l AlonzoEra)
 
-deriving via Mem (AlonzoTxBodyRaw l) instance DecCBOR (Annotator (TxBody l AlonzoEra))
+deriving via
+  Mem (AlonzoTxBodyRaw l AlonzoEra)
+  instance
+    Typeable l => DecCBOR (Annotator (TxBody l AlonzoEra))
 
 pattern AlonzoTxBody ::
   Set TxIn ->
@@ -378,7 +385,7 @@ pattern AlonzoTxBody
 
 {-# COMPLETE AlonzoTxBody #-}
 
-type instance MemoHashIndex (AlonzoTxBodyRaw l) = EraIndependentTxBody
+type instance MemoHashIndex (AlonzoTxBodyRaw l era) = EraIndependentTxBody
 
 instance HashAnnotated (TxBody l AlonzoEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
@@ -390,9 +397,9 @@ instance EqRaw (TxBody l AlonzoEra)
 --------------------------------------------------------------------------------
 
 -- | Encodes memoized bytes created upon construction.
-instance EncCBOR (TxBody l AlonzoEra)
+deriving newtype instance EncCBOR (TxBody l AlonzoEra)
 
-instance EncCBOR (AlonzoTxBodyRaw l) where
+instance EncCBOR (AlonzoTxBodyRaw l AlonzoEra) where
   encCBOR
     AlonzoTxBodyRaw
       { atbrInputs
@@ -429,16 +436,19 @@ instance EncCBOR (AlonzoTxBodyRaw l) where
           !> encodeKeyedStrictMaybe 7 atbrAuxDataHash
           !> encodeKeyedStrictMaybe 15 atbrTxNetworkId
 
-instance DecCBOR (AlonzoTxBodyRaw l) where
+instance
+  Typeable l =>
+  DecCBOR (AlonzoTxBodyRaw l AlonzoEra)
+  where
   decCBOR =
     decode $
       SparseKeyed
         "AlonzoTxBodyRaw"
-        emptyAlonzoTxBodyRaw
-        bodyFields
+        (asSTxTopLevel emptyAlonzoTxBodyRaw)
+        (undefined bodyFields)
         requiredFields
     where
-      bodyFields :: Word -> Field (AlonzoTxBodyRaw l)
+      bodyFields :: Word -> Field (AlonzoTxBodyRaw TopTx AlonzoEra)
       bodyFields 0 = field (\x tx -> tx {atbrInputs = x}) From
       bodyFields 1 = field (\x tx -> tx {atbrOutputs = x}) From
       bodyFields 2 = field (\x tx -> tx {atbrTxFee = x}) From
@@ -466,10 +476,10 @@ instance DecCBOR (AlonzoTxBodyRaw l) where
         , (2, "fee")
         ]
 
-instance DecCBOR (Annotator (AlonzoTxBodyRaw l)) where
+instance Typeable l => DecCBOR (Annotator (AlonzoTxBodyRaw l AlonzoEra)) where
   decCBOR = pure <$> decCBOR
 
-emptyAlonzoTxBodyRaw :: AlonzoTxBodyRaw TopTx
+emptyAlonzoTxBodyRaw :: AlonzoTxBodyRaw TopTx era
 emptyAlonzoTxBodyRaw =
   AlonzoTxBodyRaw
     mempty

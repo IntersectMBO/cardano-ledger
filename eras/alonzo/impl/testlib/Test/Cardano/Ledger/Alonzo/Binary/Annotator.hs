@@ -45,7 +45,7 @@ import Test.Cardano.Ledger.Shelley.Arbitrary ()
 
 instance
   ( AlonzoEraTx era
-  , DecCBOR (TxBody era)
+  , DecCBOR (TxBody TopTx era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
   , DecCBOR (NativeScript era)
@@ -93,15 +93,15 @@ instance
         auxDataBytes
         isValidBytes
 
-deriving newtype instance DecCBOR (TxBody AlonzoEra)
+deriving newtype instance DecCBOR (TxBody TopTx AlonzoEra)
 
 instance
   ( Typeable era
-  , DecCBOR (TxBody era)
+  , DecCBOR (TxBody TopTx era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxAuxData era)
   ) =>
-  DecCBOR (AlonzoTx era)
+  DecCBOR (AlonzoTx TopTx era)
   where
   decCBOR =
     decode $
@@ -265,4 +265,4 @@ instance Era era => DecCBOR (TxDatsRaw era) where
 
 deriving newtype instance Era era => DecCBOR (TxDats era)
 
-deriving newtype instance DecCBOR (Tx AlonzoEra)
+deriving newtype instance DecCBOR (Tx TopTx AlonzoEra)
