@@ -45,7 +45,6 @@ import qualified Data.Map.Merge.Strict as Map
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
@@ -164,7 +163,7 @@ isAccountRegistered cred accounts = Map.member cred (accounts ^. accountsMapL)
 adjustAccountState ::
   EraAccounts era =>
   (AccountState era -> AccountState era) -> Credential 'Staking -> Accounts era -> Accounts era
-adjustAccountState cred f = accountsMapL %~ Map.adjust cred f
+adjustAccountState f cred = accountsMapL %~ Map.adjust f cred
 
 -- | In case when account state is registered and it is delegated to a stake pool this function
 -- will return that delegation.
@@ -238,18 +237,15 @@ drainAccounts (Withdrawals withdrawalsMap) accounts =
         accountsMap
         withdrawalsMap
 
--- TODO: This is an expensive operation, since it iterates over the whole accountsMap. We need to
--- start keeping track of all delegations to the stake pool in its state, then we would be able to
--- switch from `Set (KeyHash 'StakePool)` to `Map (KeyHash 'StakePool) (Set (Credential Staking))`
--- and drastically speed up this operation.
-
--- | Remove delegations for the supplied Stake
+-- | Remove delegations of supplied credentials
 removeStakePoolDelegations ::
-  EraAccounts era => Set (KeyHash 'StakePool) -> Accounts era -> Accounts era
-removeStakePoolDelegations stakeDelegationsToRemove accounts =
-  accounts & accountsMapL %~ Map.map clearAccountStateDelegation
-  where
-    clearAccountStateDelegation =
-      stakePoolDelegationAccountStateL %~ \case
-        Just poolId | poolId `Set.member` stakeDelegationsToRemove -> Nothing
-        delegation -> delegation
+  EraAccounts era => Set (Credential 'Staking) -> Accounts era -> Accounts era
+removeStakePoolDelegations creds accounts =
+  accounts
+    & accountsMapL
+      %~ ( \accountsMap ->
+             foldr
+               (Map.adjust (stakePoolDelegationAccountStateL .~ Nothing))
+               accountsMap
+               creds
+         )

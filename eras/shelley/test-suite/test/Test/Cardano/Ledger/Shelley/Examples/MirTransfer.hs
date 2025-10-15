@@ -39,9 +39,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 ignoreAllButIRWD ::
-  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyEra))) (DState ShelleyEra) ->
+  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyEra))) (CertState ShelleyEra) ->
   Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyEra))) InstantaneousRewards
-ignoreAllButIRWD = fmap dsIRewards
+ignoreAllButIRWD = fmap (dsIRewards . shelleyCertDState)
 
 env :: ProtVer -> ChainAccountState -> DelegEnv ShelleyEra
 env pv chainAccountState =
@@ -72,22 +72,24 @@ testMirTransfer ::
   Assertion
 testMirTransfer pv pot target ir acnt (Right expected) = do
   checkTrace @(ShelleyDELEG ShelleyEra) runShelleyBase (env pv acnt) $
-    pure (dStateWithRewards ir) .- MirTxCert (MIRCert pot target) .->> dStateWithRewards expected
+    pure (certStateWithRewards ir) .- MirTxCert (MIRCert pot target) .->> certStateWithRewards expected
 testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyDELEG ShelleyEra)
-            (TRC (env pv acnt, dStateWithRewards ir, MirTxCert (MIRCert pot target)))
+            (TRC (env pv acnt, certStateWithRewards ir, MirTxCert (MIRCert pot target)))
   ignoreAllButIRWD st @?= predicateFailure
 
-dStateWithRewards :: InstantaneousRewards -> DState ShelleyEra
-dStateWithRewards ir =
-  DState
-    { dsAccounts = def
-    , dsFutureGenDelegs = Map.empty
-    , dsGenDelegs = GenDelegs Map.empty
-    , dsIRewards = ir
-    }
+certStateWithRewards :: InstantaneousRewards -> CertState ShelleyEra
+certStateWithRewards ir =
+  def
+    & certDStateL
+      .~ DState
+        { dsAccounts = def
+        , dsFutureGenDelegs = Map.empty
+        , dsGenDelegs = GenDelegs Map.empty
+        , dsIRewards = ir
+        }
 
 alice :: Credential 'Staking
 alice = (KeyHashObj . hashKey . snd) $ mkKeyPair (RawSeed 0 0 0 0 1)

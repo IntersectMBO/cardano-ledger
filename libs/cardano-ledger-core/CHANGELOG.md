@@ -2,6 +2,10 @@
 
 ## 1.19.0.0
 
+* Add `iRReservesL`, `iRTreasuryL`, `iRDeltaReservesL`, `iRDeltaTreasuryL`
+* Add `spsDelegs` field to `StakePool`
+* Add `spsDelegsL`
+* Change parameter type of `removeStakePoolDelegations` from `Set (KeyHash 'StakePool)` to `Set (Credential 'Staking)`
 * Remove the `UMap` module and the `umap` benchmarks cabal target.
 * Export `dRepToText`
 * Deprecated `bheader` and `bbody`

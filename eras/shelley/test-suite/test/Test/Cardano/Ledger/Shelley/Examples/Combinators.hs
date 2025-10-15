@@ -94,7 +94,7 @@ import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, maybeToList)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
@@ -212,12 +212,19 @@ deregStakeCred cred cs = cs {chainNes = nes}
       chainNes cs
         & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL .~ accounts'
         & nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL %~ (<-> refund)
+        & nesEsL . esLStateL . lsCertStateL . certPStateL %~ adjustPState
     accounts =
       chainNes cs
         ^. nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL
     (mAccountState, accounts') =
       unregisterShelleyAccount cred accounts
     refund = fromCompact (fromJust mAccountState ^. depositAccountStateL)
+    currentDeleg = Map.lookup cred (accounts ^. accountsMapL) >>= (^. stakePoolDelegationAccountStateL)
+    adjustPState =
+      maybe
+        id
+        (\oldPool -> psStakePoolsL %~ Map.adjust (spsDelegsL %~ Set.delete cred) oldPool)
+        currentDeleg
 
 -- | = New Delegation
 --
@@ -235,6 +242,8 @@ delegation cred poolId cs = cs {chainNes = nes}
       chainNes cs
         & nesEsL . esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL
           %~ Map.adjust (stakePoolDelegationAccountStateL .~ Just poolId) cred
+        & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL
+          %~ Map.adjust (spsDelegsL %~ Set.insert cred) poolId
 
 -- | Register a stake pool.
 regPool ::
@@ -260,7 +269,7 @@ regPool pool cs = cs {chainNes = nes'}
             { psStakePools =
                 Map.insert
                   (ppId pool)
-                  (mkStakePoolState poolDeposit pool)
+                  (mkStakePoolState poolDeposit mempty pool)
                   (psStakePools ps)
             }
         Just sps ->
@@ -268,7 +277,7 @@ regPool pool cs = cs {chainNes = nes'}
             { psFutureStakePools =
                 Map.insert
                   (ppId pool)
-                  (mkStakePoolState (spsDeposit sps) pool)
+                  (mkStakePoolState (spsDeposit sps) mempty pool)
                   (psFutureStakePools ps)
             }
     dps' = dps & certPStateL .~ ps'
@@ -301,7 +310,7 @@ updatePoolParams pool cs = cs {chainNes = nes'}
         { psStakePools =
             Map.insert
               (ppId pool)
-              (mkStakePoolState (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) pool)
+              (mkStakePoolState (es ^. curPParamsEpochStateL . ppPoolDepositCompactL) mempty pool)
               (psStakePools ps)
         , psFutureStakePools = Map.delete (ppId pool) (psStakePools ps)
         }
@@ -369,7 +378,11 @@ reapPool pool cs = cs {chainNes = nes'}
            in ( accounts & accountsMapL %~ Map.insert poolAccountCred accountState'
               , mempty
               )
-    ds' = ds {dsAccounts = removeStakePoolDelegations (Set.singleton poolId) accounts'}
+    delegsToClear =
+      foldMap spsDelegs $
+        maybeToList $
+          Map.lookup poolId (dps ^. certPStateL . psStakePoolsL)
+    ds' = ds {dsAccounts = removeStakePoolDelegations delegsToClear accounts'}
     chainAccountState = esChainAccountState es
     chainAccountState' = chainAccountState {casTreasury = casTreasury chainAccountState <+> fromCompact unclaimed}
     utxoSt = lsUTxOState ls
