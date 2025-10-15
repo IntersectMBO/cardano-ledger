@@ -101,16 +101,17 @@ instance ToExpr DataHash32
 instance ToExpr (CompactForm (Value era)) => ToExpr (AlonzoTxOut era)
 
 -- TxBody
-instance ToExpr AlonzoTxBodyRaw
+instance ToExpr (AlonzoTxBodyRaw TopTx AlonzoEra) where
+  toExpr = undefined
 
-instance ToExpr (TxBody AlonzoEra)
+instance ToExpr (TxBody TopTx AlonzoEra)
 
 -- Tx
 instance ToExpr IsValid
 
 instance
-  (ToExpr (TxBody era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
-  ToExpr (AlonzoTx era)
+  (ToExpr (TxBody TopTx era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
+  ToExpr (AlonzoTx TopTx era)
 
 -- Plutus/TxInfo
 instance ToExpr (AlonzoContextError era)
@@ -204,4 +205,4 @@ instance
   ) =>
   ToExpr (TransactionScriptFailure era)
 
-deriving newtype instance ToExpr (Tx AlonzoEra)
+deriving newtype instance ToExpr (Tx TopTx AlonzoEra)

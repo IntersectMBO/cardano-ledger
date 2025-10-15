@@ -40,15 +40,16 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   VersionedTxInfo (..),
  )
 import Test.Cardano.Ledger.Common
+import Data.Typeable (Typeable)
 
 class (EraTx era, EraPlutusContext era, Arbitrary (Script era)) => TranslatableGen era where
   tgRedeemers :: Gen (Redeemers era)
-  tgTx :: SupportedLanguage era -> Gen (Core.Tx era)
-  tgUtxo :: SupportedLanguage era -> Core.Tx era -> Gen (UTxO era)
+  tgTx :: forall l. Typeable l => SupportedLanguage era -> Gen (Core.Tx l era)
+  tgUtxo :: SupportedLanguage era -> Core.Tx l era -> Gen (UTxO era)
 
 instance TranslatableGen AlonzoEra where
   tgRedeemers = arbitrary
-  tgTx _ = arbitrary :: Gen (Tx AlonzoEra)
+  tgTx _ = asSTxTopLevel <$> arbitrary @(Tx TopTx AlonzoEra)
   tgUtxo _ tx = do
     let ins = tx ^. bodyTxL ^. inputsTxBodyL
     outs <- vectorOf (length ins) (arbitrary :: Gen (TxOut AlonzoEra))

@@ -125,7 +125,7 @@ instance
   type BaseM (AlonzoUTXOS era) = ShelleyBase
   type Environment (AlonzoUTXOS era) = UtxoEnv era
   type State (AlonzoUTXOS era) = UTxOState era
-  type Signal (AlonzoUTXOS era) = Tx era
+  type Signal (AlonzoUTXOS era) = Tx TopTx era
   type PredicateFailure (AlonzoUTXOS era) = AlonzoUtxosPredFailure era
   type Event (AlonzoUTXOS era) = AlonzoUtxosEvent era
   transitionRules = [utxosTransition]
@@ -211,7 +211,7 @@ scriptsTransition ::
   ) =>
   SlotNo ->
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
   (ScriptResult -> Rule sts ctx ()) ->
   Rule sts ctx ()

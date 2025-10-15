@@ -148,7 +148,7 @@ collectPlutusScriptsWithContext ::
   EpochInfo (Either Text) ->
   SystemStart ->
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
   Either [CollectError era] [PlutusWithContext]
 collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
@@ -314,7 +314,7 @@ evalTxExUnits ::
   ) =>
   PParams era ->
   -- | The transaction.
-  Tx era ->
+  Tx TopTx era ->
   -- | The current UTxO set (or the relevant portion for the transaction).
   UTxO era ->
   -- | The epoch info, used to translate slots to POSIX time for plutus.
@@ -341,7 +341,7 @@ evalTxExUnitsWithLogs ::
   ) =>
   PParams era ->
   -- | The transaction.
-  Tx era ->
+  Tx TopTx era ->
   -- | The current UTxO set (or the relevant portion for the transaction).
   UTxO era ->
   -- | The epoch info, used to translate slots to POSIX time for plutus.

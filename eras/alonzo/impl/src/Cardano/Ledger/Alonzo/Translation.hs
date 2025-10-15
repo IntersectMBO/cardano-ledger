@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -69,8 +70,8 @@ instance TranslateEra AlonzoEra FuturePParams where
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
     PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
-instance TranslateEra AlonzoEra Tx where
-  type TranslationError AlonzoEra Tx = DecoderError
+instance TranslateEra AlonzoEra (Tx TopTx) where
+  type TranslationError AlonzoEra (Tx TopTx) = DecoderError
   translateEra _ctxt tx = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are

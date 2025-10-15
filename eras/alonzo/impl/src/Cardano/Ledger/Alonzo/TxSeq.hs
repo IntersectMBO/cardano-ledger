@@ -21,10 +21,10 @@ pattern AlonzoTxSeq ::
   ( AlonzoEraTx era
   , SafeToHash (TxWits era)
   ) =>
-  StrictSeq (Tx era) -> AlonzoBlockBody era
+  StrictSeq (Tx TopTx era) -> AlonzoBlockBody era
 pattern AlonzoTxSeq s = AlonzoBlockBody s
 
-txSeqTxns :: AlonzoBlockBody era -> StrictSeq (Tx era)
+txSeqTxns :: AlonzoBlockBody era -> StrictSeq (Tx TopTx era)
 txSeqTxns = alonzoBlockBodyTxs
 
 hashAlonzoTxSeq :: AlonzoBlockBody era -> Hash HASH EraIndependentBlockBody
