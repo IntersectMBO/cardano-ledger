@@ -65,7 +65,7 @@ instance AlonzoEraUTxO BabbageEra where
 getBabbageSupplementalDataHashes ::
   BabbageEraTxBody era =>
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   Set.Set DataHash
 getBabbageSupplementalDataHashes (UTxO utxo) txBody =
   Set.fromList [dh | txOut <- outs, SJust dh <- [txOut ^. dataHashTxOutL]]
@@ -81,7 +81,7 @@ getBabbageSpendingDatum ::
   , BabbageEraTxOut era
   ) =>
   UTxO era ->
-  Tx era ->
+  Tx l era ->
   PlutusPurpose AsItem era ->
   Maybe (Data era)
 getBabbageSpendingDatum (UTxO utxo) tx sp = do
@@ -129,7 +129,7 @@ getBabbageScriptsProvided ::
   , BabbageEraTxBody era
   ) =>
   UTxO era ->
-  Tx era ->
+  Tx l era ->
   ScriptsProvided era
 getBabbageScriptsProvided utxo tx = ScriptsProvided ans
   where
