@@ -1,9 +1,9 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
@@ -32,6 +32,7 @@ module Cardano.Ledger.Core (
   compactCoinTxOutL,
   isAdaOnlyTxOutF,
   EraTxBody (..),
+  EraTxBodyCommon (..),
   txIdTxBody,
   EraTxAuxData (..),
   hashTxAuxData,
@@ -183,9 +184,58 @@ class
     Int ->
     Coin
 
+class EraTxCert era => EraTxBodyCommon era tx where
+  inputsTxBodyL :: Lens' (tx era) (Set TxIn)
+
+  outputsTxBodyL :: Lens' (tx era) (StrictSeq (TxOut era))
+
+  feeTxBodyL :: Lens' (tx era) Coin
+
+  withdrawalsTxBodyL :: Lens' (tx era) Withdrawals
+
+  auxDataHashTxBodyL :: Lens' (tx era) (StrictMaybe TxAuxDataHash)
+
+  -- | This getter will produce all inputs from the UTxO map that this transaction might
+  -- spend, which ones will depend on the validity of the transaction itself. Starting in
+  -- Alonzo this will include collateral inputs.
+  spendableInputsTxBodyF :: SimpleGetter (tx era) (Set TxIn)
+
+  -- | This getter will produce all inputs from the UTxO map that this transaction is
+  -- referencing, even if some of them cannot be spent by the transaction. For example
+  -- starting with Babbage era it will also include reference inputs.
+  allInputsTxBodyF :: SimpleGetter (tx era) (Set TxIn)
+
+  certsTxBodyL :: Lens' (tx era) (StrictSeq (TxCert era))
+
+  -- | Compute the total deposits from the certificates in a TxBody.
+  --
+  -- This is the contribution of a TxBody towards the consumed amount by the transaction
+  getTotalDepositsTxBody ::
+    PParams era ->
+    -- | Check whether stake pool is registered or not
+    (KeyHash 'StakePool -> Bool) ->
+    tx era ->
+    Coin
+  getTotalDepositsTxBody pp isPoolRegisted txBody =
+    getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
+
+  -- | Compute the total refunds from the Certs of a TxBody.
+  --
+  -- This is the contribution of a TxBody towards produced amount by the transaction
+  getTotalRefundsTxBody ::
+    PParams era ->
+    -- | Lookup current deposit for Staking credential if one is registered
+    (Credential 'Staking -> Maybe Coin) ->
+    -- | Lookup current deposit for DRep credential if one is registered
+    (Credential 'DRepRole -> Maybe Coin) ->
+    tx era ->
+    Coin
+  getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
+    getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
+
 class
-  ( EraTxOut era
-  , EraTxCert era
+  ( EraTxBodyCommon era TxBody
+  , EraTxOut era
   , EraPParams era
   , HashAnnotated (TxBody era) EraIndependentTxBody
   , DecCBOR (Annotator (TxBody era))
@@ -203,54 +253,6 @@ class
   data TxBody era
 
   mkBasicTxBody :: TxBody era
-
-  inputsTxBodyL :: Lens' (TxBody era) (Set TxIn)
-
-  outputsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxOut era))
-
-  feeTxBodyL :: Lens' (TxBody era) Coin
-
-  withdrawalsTxBodyL :: Lens' (TxBody era) Withdrawals
-
-  auxDataHashTxBodyL :: Lens' (TxBody era) (StrictMaybe TxAuxDataHash)
-
-  -- | This getter will produce all inputs from the UTxO map that this transaction might
-  -- spend, which ones will depend on the validity of the transaction itself. Starting in
-  -- Alonzo this will include collateral inputs.
-  spendableInputsTxBodyF :: SimpleGetter (TxBody era) (Set TxIn)
-
-  -- | This getter will produce all inputs from the UTxO map that this transaction is
-  -- referencing, even if some of them cannot be spent by the transaction. For example
-  -- starting with Babbage era it will also include reference inputs.
-  allInputsTxBodyF :: SimpleGetter (TxBody era) (Set TxIn)
-
-  certsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxCert era))
-
-  -- | Compute the total deposits from the certificates in a TxBody.
-  --
-  -- This is the contribution of a TxBody towards the consumed amount by the transaction
-  getTotalDepositsTxBody ::
-    PParams era ->
-    -- | Check whether stake pool is registered or not
-    (KeyHash 'StakePool -> Bool) ->
-    TxBody era ->
-    Coin
-  getTotalDepositsTxBody pp isPoolRegisted txBody =
-    getTotalDepositsTxCerts pp isPoolRegisted (txBody ^. certsTxBodyL)
-
-  -- | Compute the total refunds from the Certs of a TxBody.
-  --
-  -- This is the contribution of a TxBody towards produced amount by the transaction
-  getTotalRefundsTxBody ::
-    PParams era ->
-    -- | Lookup current deposit for Staking credential if one is registered
-    (Credential 'Staking -> Maybe Coin) ->
-    -- | Lookup current deposit for DRep credential if one is registered
-    (Credential 'DRepRole -> Maybe Coin) ->
-    TxBody era ->
-    Coin
-  getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
-    getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
 
   -- | This function is not used in the ledger rules. It is only used by the downstream
   -- tooling to figure out how many witnesses should be supplied for Genesis keys.

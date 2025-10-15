@@ -8,7 +8,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core (
   EraTx (..),
   EraTxBody (..),
-  EraTxOut (..),
+  EraTxOut (..), EraTxBodyCommon (..),
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo (..), LedgerTxInfo (..))
 import Cardano.Ledger.BaseTypes

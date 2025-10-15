@@ -238,12 +238,7 @@ allSizedOutputsBabbageTxBodyF =
           SJust collTxOut -> txOuts |> collTxOut
 {-# INLINEABLE allSizedOutputsBabbageTxBodyF #-}
 
-instance EraTxBody BabbageEra where
-  newtype TxBody BabbageEra = MkBabbageTxBody (MemoBytes BabbageTxBodyRaw)
-    deriving newtype (Generic, SafeToHash, ToCBOR)
-
-  mkBasicTxBody = mkMemoizedEra @BabbageEra basicBabbageTxBodyRaw
-
+instance EraTxBodyCommon BabbageEra TxBody where
   inputsTxBodyL =
     lensMemoRawType @BabbageEra btbrInputs $ \txBodyRaw inputs -> txBodyRaw {btbrInputs = inputs}
   {-# INLINE inputsTxBodyL #-}
@@ -276,6 +271,12 @@ instance EraTxBody BabbageEra where
   certsTxBodyL =
     lensMemoRawType @BabbageEra btbrCerts $ \txBodyRaw certs -> txBodyRaw {btbrCerts = certs}
   {-# INLINE certsTxBodyL #-}
+
+instance EraTxBody BabbageEra where
+  newtype TxBody BabbageEra = MkBabbageTxBody (MemoBytes BabbageTxBodyRaw)
+    deriving newtype (Generic, SafeToHash, ToCBOR)
+
+  mkBasicTxBody = mkMemoizedEra @BabbageEra basicBabbageTxBodyRaw
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
 

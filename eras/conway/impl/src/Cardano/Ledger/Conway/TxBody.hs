@@ -282,12 +282,7 @@ basicConwayTxBodyRaw =
     SNothing
     mempty
 
-instance EraTxBody ConwayEra where
-  newtype TxBody ConwayEra = MkConwayTxBody (MemoBytes ConwayTxBodyRaw)
-    deriving (Generic, SafeToHash, ToCBOR)
-
-  mkBasicTxBody = mkConwayTxBody
-
+instance EraTxBodyCommon ConwayEra TxBody where
   inputsTxBodyL = lensMemoRawType @ConwayEra ctbrSpendInputs $
     \txb x -> txb {ctbrSpendInputs = x}
   {-# INLINE inputsTxBodyL #-}
@@ -323,6 +318,12 @@ instance EraTxBody ConwayEra where
 
   getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
+
+instance EraTxBody ConwayEra where
+  newtype TxBody ConwayEra = MkConwayTxBody (MemoBytes ConwayTxBodyRaw)
+    deriving (Generic, SafeToHash, ToCBOR)
+
+  mkBasicTxBody = mkConwayTxBody
 
 -- ==========================================
 -- Deposits and Refunds for Conway TxBody

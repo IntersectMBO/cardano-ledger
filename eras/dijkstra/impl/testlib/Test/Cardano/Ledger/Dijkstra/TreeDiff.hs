@@ -17,7 +17,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraNativeScriptRaw,
   DijkstraPlutusPurpose,
  )
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw)
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw, DijkstraSubTxBodyRaw, SubTxBody)
 import Cardano.Ledger.Dijkstra.TxCert
 import Data.Functor.Identity (Identity)
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
@@ -38,9 +38,13 @@ instance ToExpr (DijkstraPParams StrictMaybe DijkstraEra)
 
 instance ToExpr DijkstraTxBodyRaw
 
+instance ToExpr DijkstraSubTxBodyRaw
+
 instance ToExpr (TxBody DijkstraEra)
 
 instance ToExpr (Tx DijkstraEra)
+
+instance ToExpr (SubTxBody DijkstraEra)
 
 instance ToExpr DijkstraDelegCert
 

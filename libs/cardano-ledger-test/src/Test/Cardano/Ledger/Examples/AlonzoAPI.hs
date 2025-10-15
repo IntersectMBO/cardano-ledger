@@ -38,7 +38,14 @@ import Cardano.Ledger.Conway.Core (
   ppMinFeeAL,
   pattern SpendingPurpose,
  )
-import Cardano.Ledger.Core (EraScript (..), EraTx (..), EraTxBody (..), EraTxWits (..), hashScript)
+import Cardano.Ledger.Core (
+  EraScript (..),
+  EraTx (..),
+  EraTxBody (..),
+  EraTxBodyCommon (..),
+  EraTxWits (..),
+  hashScript,
+ )
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))

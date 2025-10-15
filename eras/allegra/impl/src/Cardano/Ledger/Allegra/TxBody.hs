@@ -285,11 +285,7 @@ pattern AllegraTxBody
 
 {-# COMPLETE AllegraTxBody #-}
 
-instance EraTxBody AllegraEra where
-  newtype TxBody AllegraEra = MkAllegraTxBody (MemoBytes (AllegraTxBodyRaw () AllegraEra))
-    deriving newtype (SafeToHash, ToCBOR)
-
-  mkBasicTxBody = mkMemoizedEra @AllegraEra emptyAllegraTxBodyRaw
+instance EraTxBodyCommon AllegraEra TxBody where
 
   inputsTxBodyL =
     lensMemoRawType @AllegraEra atbrInputs $
@@ -325,6 +321,12 @@ instance EraTxBody AllegraEra where
     lensMemoRawType @AllegraEra atbrCerts $
       \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
+
+instance EraTxBody AllegraEra where
+  newtype TxBody AllegraEra = MkAllegraTxBody (MemoBytes (AllegraTxBodyRaw () AllegraEra))
+    deriving newtype (SafeToHash, ToCBOR)
+
+  mkBasicTxBody = mkMemoizedEra @AllegraEra emptyAllegraTxBodyRaw
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
 
