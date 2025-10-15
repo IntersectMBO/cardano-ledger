@@ -30,6 +30,7 @@ import Cardano.Ledger.Conway.Core (
   InjectRuleFailure (..),
   SafeHash,
   SafeToHash (..),
+  TxLevel (..),
   ppCoinsPerUTxOByteL,
   txIdTx,
  )
@@ -89,7 +90,7 @@ spec = do
 setupBadPPViewHashTx ::
   forall era.
   ConwayEraImp era =>
-  ImpTestM era (Tx era)
+  ImpTestM era (Tx TopTx era)
 setupBadPPViewHashTx = do
   modifyPParams $ ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
   someKeyHash <- arbitrary @StakeReference
@@ -114,8 +115,8 @@ substituteIntegrityHashAndFixWits ::
   forall era.
   ConwayEraImp era =>
   StrictMaybe (SafeHash EraIndependentScriptIntegrity) ->
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 substituteIntegrityHashAndFixWits hash tx =
   let txWithNewHash =
         tx

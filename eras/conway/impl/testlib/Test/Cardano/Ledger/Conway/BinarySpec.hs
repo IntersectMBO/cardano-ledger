@@ -80,12 +80,12 @@ spec = do
       prop "Completely empty mint MultiAsset fails deserialisation since Conway" $
         -- Cannot use standard serialization because Conway TxBody encoder omits empty
         -- mint fields via 'Omit (== mempty) (Key 9 (To ctbrMint))', preventing decoder testing
-        testMultiAssetRejection @era @(TxBody era) (natVersion @9) "Conway" $ \version ->
+        testMultiAssetRejection @era @(TxBody TopTx era) (natVersion @9) "Conway" $ \version ->
           buildTxBodyCborWithMint @era (MultiAsset Map.empty) version
 
       prop "Empty nested asset maps in mint MultiAsset fails deserialisation since Conway" $
         forAll arbitrary $ \policyId ->
-          testMultiAssetRejection @era @(TxBody era) (natVersion @9) "Conway" $ \version ->
+          testMultiAssetRejection @era @(TxBody TopTx era) (natVersion @9) "Conway" $ \version ->
             buildTxBodyCborWithMint @era (MultiAsset $ Map.singleton policyId Map.empty) version
   where
     -- The expectation used in this spec allows for the deserialization to fail, in which case

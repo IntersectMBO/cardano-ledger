@@ -75,12 +75,12 @@ instance
   , Show (PredicateFailure (EraRule "GOV" era))
   , Show (PredicateFailure (EraRule "UTXOW" era))
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Tx era ~ Signal (EraRule "LEDGER" era)
+  , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
   ) =>
   STS (ConwayMEMPOOL era)
   where
   type State (ConwayMEMPOOL era) = LedgerState era
-  type Signal (ConwayMEMPOOL era) = Tx era
+  type Signal (ConwayMEMPOOL era) = Tx TopTx era
   type Environment (ConwayMEMPOOL era) = LedgerEnv era
   type BaseM (ConwayMEMPOOL era) = ShelleyBase
   type PredicateFailure (ConwayMEMPOOL era) = ConwayLedgerPredFailure era
@@ -97,7 +97,7 @@ mempoolTransition ::
   , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Tx era ~ Signal (EraRule "LEDGER" era)
+  , Tx TopTx era ~ Signal (EraRule "LEDGER" era)
   ) =>
   TransitionRule (ConwayMEMPOOL era)
 mempoolTransition = do
@@ -157,8 +157,8 @@ instance
   , GovState era ~ ConwayGovState era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , ConwayEraCertState era
   , EraRule "LEDGER" era ~ ConwayLEDGER era
   , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era

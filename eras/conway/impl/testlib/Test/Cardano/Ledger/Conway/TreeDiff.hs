@@ -194,9 +194,10 @@ instance
   ToExpr (ConwayUtxosPredFailure era)
 
 -- TxBody
-instance ToExpr ConwayTxBodyRaw
+instance ToExpr (ConwayTxBodyRaw TopTx ConwayEra) where
+  toExpr = undefined
 
-instance ToExpr (TxBody ConwayEra)
+instance ToExpr (TxBody TopTx ConwayEra)
 
 -- Rules/Cert
 instance
@@ -312,7 +313,7 @@ instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (EnactSignal era)
 instance
   ( ToExpr (PParamsHKD Identity era)
   , ToExpr (PParamsHKD StrictMaybe era)
-  , ToExpr (Tx era)
+  , ToExpr (Tx TopTx era)
   ) =>
   ToExpr (CertsEnv era)
 
@@ -328,4 +329,4 @@ instance
   ToExpr (PredicateFailure (EraRule "LEDGERS" era)) =>
   ToExpr (ConwayBbodyPredFailure era)
 
-instance ToExpr (Tx ConwayEra)
+instance ToExpr (Tx TopTx ConwayEra)

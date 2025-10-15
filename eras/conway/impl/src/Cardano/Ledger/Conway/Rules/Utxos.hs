@@ -205,7 +205,7 @@ instance
   , EraPlutusContext era
   , GovState era ~ ConwayGovState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (ConwayUTXOS era) ~ Tx era
+  , Signal (ConwayUTXOS era) ~ Tx TopTx era
   , EraRule "UTXOS" era ~ ConwayUTXOS era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
@@ -216,7 +216,7 @@ instance
   type BaseM (ConwayUTXOS era) = Cardano.Ledger.BaseTypes.ShelleyBase
   type Environment (ConwayUTXOS era) = UtxoEnv era
   type State (ConwayUTXOS era) = UTxOState era
-  type Signal (ConwayUTXOS era) = Tx era
+  type Signal (ConwayUTXOS era) = Tx TopTx era
   type PredicateFailure (ConwayUTXOS era) = ConwayUtxosPredFailure era
   type Event (ConwayUTXOS era) = ConwayUtxosEvent era
 
@@ -234,7 +234,7 @@ instance
   , GovState era ~ ConwayGovState era
   , PredicateFailure (EraRule "UTXOS" era) ~ ConwayUtxosPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (ConwayUTXOS era) ~ Tx era
+  , Signal (ConwayUTXOS era) ~ Tx TopTx era
   , EraRule "UTXOS" era ~ ConwayUTXOS era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
@@ -254,7 +254,7 @@ utxosTransition ::
   , EraStake era
   , EraCertState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , STS (EraRule "UTXOS" era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
@@ -279,7 +279,7 @@ conwayEvalScriptsTxValid ::
   , EraStake era
   , EraCertState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Signal (EraRule "UTXOS" era) ~ Tx TopTx era
   , STS (EraRule "UTXOS" era)
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era

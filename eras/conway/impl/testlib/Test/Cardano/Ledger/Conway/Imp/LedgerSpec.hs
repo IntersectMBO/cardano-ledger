@@ -60,7 +60,7 @@ spec = do
         maxRefScriptSizePerTx = fromIntegral @Word32 @Int $ pp ^. ppMaxRefScriptSizePerTxG
         n = maxRefScriptSizePerTx `div` size + 1
     txIns <- replicateM n (produceRefScript script)
-    let tx :: Tx era
+    let tx :: Tx TopTx era
         tx = mkBasicTx (mkBasicTxBody & referenceInputsTxBodyL .~ Set.fromList txIns)
     submitFailingTx
       tx
