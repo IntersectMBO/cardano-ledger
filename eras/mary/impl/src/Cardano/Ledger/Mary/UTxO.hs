@@ -70,7 +70,7 @@ getConsumedMaryValue ::
   (Credential 'Staking -> Maybe Coin) ->
   (Credential 'DRepRole -> Maybe Coin) ->
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   MaryValue
 getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
   consumedValue <> MaryValue mempty mintedMultiAsset
@@ -84,11 +84,11 @@ getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 getProducedMaryValue ::
-  (MaryEraTxBody era, Value era ~ MaryValue) =>
+  (MaryEraTxBody era, Value era ~ MaryValue, STxLevel l era ~ STxTopLevel l era) =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
   (KeyHash 'StakePool -> Bool) ->
-  TxBody era ->
+  TxBody l era ->
   MaryValue
 getProducedMaryValue pp isPoolRegistered txBody =
   shelleyProducedValue pp isPoolRegistered txBody <> MaryValue mempty burnedMultiAsset
@@ -101,9 +101,9 @@ getProducedMaryValue pp isPoolRegistered txBody =
 -- withdrawals. Unlike the one from Shelley, this one also includes script hashes needed
 -- for minting multi-assets in the transaction.
 getMaryScriptsNeeded ::
-  (ShelleyEraTxBody era, MaryEraTxBody era) =>
+  (ShelleyEraTxBody era, MaryEraTxBody era, STxLevel l era ~ STxTopLevel l era) =>
   UTxO era ->
-  TxBody era ->
+  TxBody l era ->
   ShelleyScriptsNeeded era
 getMaryScriptsNeeded u txBody =
   case getShelleyScriptsNeeded u txBody of
