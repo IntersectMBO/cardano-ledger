@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -84,8 +85,8 @@ instance TranslateEra ConwayEra NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-instance TranslateEra ConwayEra Tx where
-  type TranslationError ConwayEra Tx = DecoderError
+instance TranslateEra ConwayEra (Tx TopTx) where
+  type TranslationError ConwayEra (Tx TopTx) = DecoderError
   translateEra _ctxt tx = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are

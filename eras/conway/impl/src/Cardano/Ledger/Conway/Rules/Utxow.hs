@@ -211,14 +211,14 @@ instance
     Embed (EraRule "UTXO" era) (ConwayUTXOW era)
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , State (EraRule "UTXO" era) ~ Shelley.UTxOState era
-  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Signal (EraRule "UTXO" era) ~ Tx TopTx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   STS (ConwayUTXOW era)
   where
   type State (ConwayUTXOW era) = Shelley.UTxOState era
-  type Signal (ConwayUTXOW era) = Tx era
+  type Signal (ConwayUTXOW era) = Tx TopTx era
   type Environment (ConwayUTXOW era) = Shelley.UtxoEnv era
   type BaseM (ConwayUTXOW era) = ShelleyBase
   type PredicateFailure (ConwayUTXOW era) = ConwayUtxowPredFailure era
