@@ -28,14 +28,13 @@ source-repository-package
   type: git
   location: https://github.com/IntersectMBO/plutus.git
   -- Candidate for Plutus release 1.53.1.0
-  tag: 9e57d691fed8a4a8c7f6dc32f07e80a6dd271d36
-  --sha256: sha256-TIKoJJoebIEbsgk5olrKcfb6upgmyhU5cXgP2TmfFO8=
+  tag: 549399f1b3d77f75d9fe6b2e2fbd0a5f1c3b0829
+  --sha256: sha256-4vSqK+3QJanTUBEQDLMFRn2N2VjAZzjWNQXMSbv6L4s=
   subdir:
     plutus-core
     plutus-ledger-api
     plutus-tx
     plutus-tx-plugin
-    plutus-metatheory
 
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
