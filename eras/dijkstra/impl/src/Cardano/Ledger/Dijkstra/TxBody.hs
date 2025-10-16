@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -477,26 +478,43 @@ instance EraTxBody DijkstraEra where
       (mkMemoizedEra @DijkstraEra basicDijkstraTxBodyRaw)
       undefined
 
-  inputsTxBodyL = bothTxLensMemoRawType undefined undefined undefined undefined
-  -- lensMemoRawType @DijkstraEra dtbrSpendInputs $
-  --  \txb x -> txb {dtbrSpendInputs = x}
+  inputsTxBodyL =
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrSpendInputs
+          DijkstraSubTxBodyRaw {..} -> dstbrSpendInputs
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrSpendInputs = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrSpendInputs = y}
+      )
   {-# INLINE inputsTxBodyL #-}
 
   outputsTxBodyL =
-    bothTxLensMemoRawType
-      (fmap sizedValue . dtbrOutputs)
-      (\x y -> x {dtbrOutputs = mkSized (eraProtVerLow @DijkstraEra) <$> y})
-      (fmap sizedValue . dstbrOutputs)
-      (\x y -> x {dstbrOutputs = mkSized (eraProtVerLow @DijkstraEra) <$> y})
-  -- lensMemoRawType @DijkstraEra (fmap sizedValue . dtbrOutputs) $
-  --   \txb x -> txb {dtbrOutputs = mkSized (eraProtVerLow @DijkstraEra) <$> x}
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> sizedValue <$> dtbrOutputs
+          DijkstraSubTxBodyRaw {..} -> sizedValue <$> dstbrOutputs
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrOutputs = mkSized (eraProtVerLow @DijkstraEra) <$> y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrOutputs = mkSized (eraProtVerLow @DijkstraEra) <$> y}
+      )
   {-# INLINE outputsTxBodyL #-}
 
   feeTxBodyL = lensMemoRawType @DijkstraEra dtbrFee (\txb x -> txb {dtbrFee = x})
   {-# INLINE feeTxBodyL #-}
 
-  auxDataHashTxBodyL = lensMemoRawType @DijkstraEra dtbrAuxDataHash $
-    \txb x -> txb {dtbrAuxDataHash = x}
+  auxDataHashTxBodyL =
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrAuxDataHash
+          DijkstraSubTxBodyRaw {..} -> dstbrAuxDataHash
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrAuxDataHash = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrAuxDataHash = y}
+      )
   {-# INLINE auxDataHashTxBodyL #-}
 
   spendableInputsTxBodyF = babbageSpendableInputsTxBodyF
@@ -505,13 +523,28 @@ instance EraTxBody DijkstraEra where
   allInputsTxBodyF = babbageAllInputsTxBodyF
   {-# INLINE allInputsTxBodyF #-}
 
-  withdrawalsTxBodyL = lensMemoRawType @DijkstraEra dtbrWithdrawals $
-    \txb x -> txb {dtbrWithdrawals = x}
+  withdrawalsTxBodyL =
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrWithdrawals
+          DijkstraSubTxBodyRaw {..} -> dstbrWithdrawals
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrWithdrawals = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrWithdrawals = y}
+      )
   {-# INLINE withdrawalsTxBodyL #-}
 
   certsTxBodyL =
-    lensMemoRawType @DijkstraEra (OSet.toStrictSeq . dtbrCerts) $
-      \txb x -> txb {dtbrCerts = OSet.fromStrictSeq x}
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> OSet.toStrictSeq dtbrCerts
+          DijkstraSubTxBodyRaw {..} -> OSet.toStrictSeq dstbrCerts
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrCerts = OSet.fromStrictSeq y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrCerts = OSet.fromStrictSeq y}
+      )
   {-# INLINE certsTxBodyL #-}
 
   getTotalDepositsTxBody = dijkstraTotalDepositsTxBody
@@ -625,15 +658,29 @@ bothTxLensMemoRawType getTop setTop getSub setSub = withSTxBothLevels @l $ \case
   SSubTx -> lensMemoRawType @era getSub setSub
 
 instance AllegraEraTxBody DijkstraEra where
-  vldtTxBodyL = bothTxLensMemoRawType dtbrVldt undefined dstbrVldt undefined
-  -- lensMemoRawType @DijkstraEra dtbrVldt $
-  --  \txb x -> txb {dtbrVldt = x}
+  vldtTxBodyL =
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrVldt
+          DijkstraSubTxBodyRaw {..} -> dstbrVldt
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrVldt = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrVldt = y}
+      )
   {-# INLINE vldtTxBodyL #-}
 
 instance MaryEraTxBody DijkstraEra where
   mintTxBodyL =
-    lensMemoRawType @DijkstraEra dtbrMint $
-      \txb x -> txb {dtbrMint = x}
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrMint
+          DijkstraSubTxBodyRaw {..} -> dstbrMint
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrMint = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrMint = y}
+      )
   {-# INLINE mintTxBodyL #-}
 
   mintedTxBodyF = to $ \txBody -> policies (dtbrMint (getMemoRawType txBody))
@@ -655,12 +702,27 @@ instance AlonzoEraTxBody DijkstraEra where
   {-# INLINE reqSignerHashesTxBodyG #-}
 
   scriptIntegrityHashTxBodyL =
-    lensMemoRawType @DijkstraEra dtbrScriptIntegrityHash $
-      \txb x -> txb {dtbrScriptIntegrityHash = x}
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrScriptIntegrityHash
+          DijkstraSubTxBodyRaw {..} -> dstbrScriptIntegrityHash
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrScriptIntegrityHash = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrScriptIntegrityHash = y}
+      )
   {-# INLINE scriptIntegrityHashTxBodyL #-}
 
-  networkIdTxBodyL = lensMemoRawType @DijkstraEra dtbrNetworkId $
-    \txb x -> txb {dtbrNetworkId = x}
+  networkIdTxBodyL =
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrNetworkId
+          DijkstraSubTxBodyRaw {..} -> dstbrNetworkId
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrNetworkId = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrNetworkId = y}
+      )
   {-# INLINE networkIdTxBodyL #-}
 
   redeemerPointer = dijkstraRedeemerPointer
@@ -668,13 +730,28 @@ instance AlonzoEraTxBody DijkstraEra where
   redeemerPointerInverse = dijkstraRedeemerPointerInverse
 
 instance BabbageEraTxBody DijkstraEra where
-  sizedOutputsTxBodyL = lensMemoRawType @DijkstraEra dtbrOutputs $
-    \txb x -> txb {dtbrOutputs = x}
+  sizedOutputsTxBodyL =
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrOutputs
+          DijkstraSubTxBodyRaw {..} -> dstbrOutputs
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrOutputs = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrOutputs = y}
+      )
   {-# INLINE sizedOutputsTxBodyL #-}
 
   referenceInputsTxBodyL =
-    lensMemoRawType @DijkstraEra dtbrReferenceInputs $
-      \txb x -> txb {dtbrReferenceInputs = x}
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrReferenceInputs
+          DijkstraSubTxBodyRaw {..} -> dstbrReferenceInputs
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrReferenceInputs = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrReferenceInputs = y}
+      )
   {-# INLINE referenceInputsTxBodyL #-}
 
   totalCollateralTxBodyL =
@@ -697,20 +774,48 @@ instance BabbageEraTxBody DijkstraEra where
 
 instance ConwayEraTxBody DijkstraEra where
   votingProceduresTxBodyL =
-    lensMemoRawType @DijkstraEra dtbrVotingProcedures $
-      \txb x -> txb {dtbrVotingProcedures = x}
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrVotingProcedures
+          DijkstraSubTxBodyRaw {..} -> dstbrVotingProcedures
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrVotingProcedures = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrVotingProcedures = y}
+      )
   {-# INLINE votingProceduresTxBodyL #-}
   proposalProceduresTxBodyL =
-    lensMemoRawType @DijkstraEra dtbrProposalProcedures $
-      \txb x -> txb {dtbrProposalProcedures = x}
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrProposalProcedures
+          DijkstraSubTxBodyRaw {..} -> dstbrProposalProcedures
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrProposalProcedures = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrProposalProcedures = y}
+      )
   {-# INLINE proposalProceduresTxBodyL #-}
   currentTreasuryValueTxBodyL =
-    lensMemoRawType @DijkstraEra dtbrCurrentTreasuryValue $
-      \txb x -> txb {dtbrCurrentTreasuryValue = x}
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrCurrentTreasuryValue
+          DijkstraSubTxBodyRaw {..} -> dstbrCurrentTreasuryValue
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrCurrentTreasuryValue = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrCurrentTreasuryValue = y}
+      )
   {-# INLINE currentTreasuryValueTxBodyL #-}
   treasuryDonationTxBodyL =
-    lensMemoRawType @DijkstraEra dtbrTreasuryDonation $
-      \txb x -> txb {dtbrTreasuryDonation = x}
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrTreasuryDonation
+          DijkstraSubTxBodyRaw {..} -> dstbrTreasuryDonation
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrTreasuryDonation = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrTreasuryDonation = y}
+      )
   {-# INLINE treasuryDonationTxBodyL #-}
 
 class ConwayEraTxBody era => DijkstraEraTxBody era where
