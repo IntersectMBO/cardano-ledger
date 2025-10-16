@@ -98,8 +98,8 @@ import qualified Data.Map as Map
 import Lens.Micro
 
 class (EraTx era, AnyEraTxBody era, AnyEraTxWits era, AnyEraTxAuxData era) => AnyEraTx era where
-  isValidTxG :: SimpleGetter (Tx era) (Maybe IsValid)
-  default isValidTxG :: AlonzoEraTx era => SimpleGetter (Tx era) (Maybe IsValid)
+  isValidTxG :: SimpleGetter (Tx l era) (Maybe IsValid)
+  default isValidTxG :: AlonzoEraTx era => SimpleGetter (Tx l era) (Maybe IsValid)
   isValidTxG = isValidTxL . to Just
 
 instance AnyEraTx ShelleyEra where
@@ -120,7 +120,7 @@ instance AnyEraTx ConwayEra
 instance AnyEraTx DijkstraEra
 
 -- | Construct all of the unspent outputs that will be produced by this transaction
-producedTxOuts :: AnyEraTx era => Tx era -> UTxO era
+producedTxOuts :: AnyEraTx era => Tx l era -> UTxO era
 producedTxOuts tx =
   case tx ^. isValidTxG of
     Just (IsValid False) ->
