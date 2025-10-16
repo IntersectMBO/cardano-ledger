@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -31,8 +32,13 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.PParams (
   Update (..),
+#if __GLASGOW_HASKELL__ >= 914
+  data ProposedPPUpdates,
+  data Update,
+#else
   pattern ProposedPPUpdates,
   pattern Update,
+#endif
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxCert (

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -26,9 +27,15 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (
+#if __GLASGOW_HASKELL__ >= 914
+  data KeyHashObj,
+  data ScriptHashObj,
+  data StakeRefBase,
+#else
   pattern KeyHashObj,
   pattern ScriptHashObj,
   pattern StakeRefBase,
+#endif
  )
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -42,10 +49,17 @@ import Cardano.Ledger.Shelley.Rules (ShelleyUTXOW, UtxoEnv (..))
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
   ShelleyEraScript,
+#if __GLASGOW_HASKELL__ >= 914
+  data RequireAllOf,
+  data RequireAnyOf,
+  data RequireMOf,
+  data RequireSignature,
+#else
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
   pattern RequireSignature,
+#endif
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)

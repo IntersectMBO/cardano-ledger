@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -65,10 +66,17 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript (..),
+#if __GLASGOW_HASKELL__ < 914
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
   pattern RequireSignature,
+#else
+  data RequireAllOf,
+  data RequireAnyOf,
+  data RequireMOf,
+  data RequireSignature,
+#endif
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Transition
@@ -126,12 +134,16 @@ instance (EraTxOut era, Arbitrary (Value era)) => Arbitrary (ShelleyTxOut era) w
 instance
   ( EraTxOut era
   , Arbitrary (TxOut era)
-  , Arbitrary (Value era)
-  , Arbitrary (PParams era)
   , Arbitrary (StashedAVVMAddresses era)
   , Arbitrary (GovState era)
   , Arbitrary (CertState era)
   , Arbitrary (InstantStake era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Arbitrary (PParams era)
+  , Arbitrary (Value era)
+#endif
   ) =>
   Arbitrary (NewEpochState era)
   where
@@ -586,7 +598,12 @@ sizedNativeScriptGens n =
   ]
 
 instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+
   Arbitrary (PParams ShelleyEra) =>
+#endif
   Arbitrary ShelleyGenesis
   where
   arbitrary = do
@@ -700,10 +717,14 @@ instance
 instance
   ( EraTx era
   , Arbitrary (TxBody era)
-  , Arbitrary (Value era)
   , Arbitrary (TxAuxData era)
-  , Arbitrary (Script era)
   , Arbitrary (TxWits era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Arbitrary (Value era)
+  , Arbitrary (Script era)
+#endif
   ) =>
   Arbitrary (ShelleyTx era)
   where

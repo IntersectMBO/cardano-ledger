@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -36,14 +37,22 @@ import Cardano.Ledger.Conway.Core (
   ppMaxTxExUnitsL,
   ppMaxValSizeL,
   ppMinFeeAL,
+#if __GLASGOW_HASKELL__ >= 914
+  data SpendingPurpose,
+#else
   pattern SpendingPurpose,
+#endif
  )
 import Cardano.Ledger.Core (EraScript (..), EraTx (..), EraTxBody (..), EraTxWits (..), hashScript)
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
+#if __GLASGOW_HASKELL__ >= 914
+import Cardano.Ledger.Shelley.Scripts (data RequireAllOf)
+#else
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAllOf)
+#endif
 import Cardano.Ledger.Tools (estimateMinFeeTx)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set

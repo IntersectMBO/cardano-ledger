@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -86,7 +87,11 @@ import Data.Coerce (Coercible, coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Word (Word64)
+#if __GLASGOW_HASKELL__ >= 914
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair, data KeyPair)
+#else
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
+#endif
 import Test.Cardano.Ledger.Core.Utils as CoreUtils
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
