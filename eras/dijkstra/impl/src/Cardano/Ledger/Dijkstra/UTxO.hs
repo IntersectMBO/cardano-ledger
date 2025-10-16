@@ -56,7 +56,7 @@ instance EraUTxO DijkstraEra where
   getMinFeeTxUtxo = getConwayMinFeeTxUtxo
 
 getDijkstraScriptsNeeded ::
-  (DijkstraEraTxBody era, DijkstraEraScript era) => UTxO era -> TxBody era -> AlonzoScriptsNeeded era
+  (DijkstraEraTxBody era, DijkstraEraScript era) => UTxO era -> TxBody l era -> AlonzoScriptsNeeded era
 getDijkstraScriptsNeeded utxo txb =
   getConwayScriptsNeeded utxo txb
     <> guardingScriptsNeeded
