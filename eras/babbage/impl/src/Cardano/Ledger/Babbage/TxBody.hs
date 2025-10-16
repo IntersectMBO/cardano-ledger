@@ -13,6 +13,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -65,7 +66,7 @@ import Cardano.Ledger.Alonzo.TxBody (alonzoRedeemerPointer, alonzoRedeemerPointe
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Scripts ()
 import Cardano.Ledger.Babbage.TxCert ()
-import Cardano.Ledger.Babbage.TxOut hiding (TxOut)
+import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
@@ -80,7 +81,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Mary.Value (MultiAsset, policies)
+import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -90,7 +91,6 @@ import Cardano.Ledger.MemoBytes (
   eqRaw,
   getMemoRawType,
   getMemoSafeHash,
-  getterMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
   zipMemoRawType,
@@ -118,11 +118,7 @@ class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
 
   collateralReturnTxBodyL :: Lens' (TxBody TopTx era) (StrictMaybe (TxOut era))
 
-  collateralReturnTxBodyF :: SimpleGetter (TxBody l era) (StrictMaybe (TxOut era))
-
   sizedCollateralReturnTxBodyL :: Lens' (TxBody TopTx era) (StrictMaybe (Sized (TxOut era)))
-
-  sizedCollateralReturnTxBodyF :: SimpleGetter (TxBody l era) (StrictMaybe (Sized (TxOut era)))
 
   allSizedOutputsTxBodyF :: SimpleGetter (TxBody l era) (StrictSeq (Sized (TxOut era)))
 
@@ -211,29 +207,30 @@ instance Memoized (TxBody l BabbageEra) where
 deriving newtype instance NFData (TxBody l BabbageEra)
 
 babbageSpendableInputsTxBodyF ::
-  BabbageEraTxBody era => SimpleGetter (TxBody l era) (Set TxIn)
+  BabbageEraTxBody era => SimpleGetter (TxBody TopTx era) (Set TxIn)
 babbageSpendableInputsTxBodyF =
   to $ \txBody ->
     (txBody ^. inputsTxBodyL)
-      `Set.union` (txBody ^. collateralInputsTxBodyF)
+      `Set.union` (txBody ^. collateralInputsTxBodyL)
 {-# INLINEABLE babbageSpendableInputsTxBodyF #-}
 
 babbageAllInputsTxBodyF ::
-  BabbageEraTxBody era => SimpleGetter (TxBody l era) (Set TxIn)
+  BabbageEraTxBody era => SimpleGetter (TxBody TopTx era) (Set TxIn)
 babbageAllInputsTxBodyF =
-  to $ \txBody ->
-    (txBody ^. inputsTxBodyL)
-      `Set.union` (txBody ^. collateralInputsTxBodyF)
-      `Set.union` (txBody ^. referenceInputsTxBodyL)
+  to $
+    \txBody ->
+      (txBody ^. inputsTxBodyL)
+        `Set.union` (txBody ^. collateralInputsTxBodyL)
+        `Set.union` (txBody ^. referenceInputsTxBodyL)
 {-# INLINEABLE babbageAllInputsTxBodyF #-}
 
 allSizedOutputsBabbageTxBodyF ::
   BabbageEraTxBody era =>
-  SimpleGetter (TxBody l era) (StrictSeq (Sized (TxOut era)))
+  SimpleGetter (TxBody TopTx era) (StrictSeq (Sized (TxOut era)))
 allSizedOutputsBabbageTxBodyF =
   to $ \txBody ->
     let txOuts = txBody ^. sizedOutputsTxBodyL
-     in case txBody ^. sizedCollateralReturnTxBodyF of
+     in case txBody ^. sizedCollateralReturnTxBodyL of
           SNothing -> txOuts
           SJust collTxOut -> txOuts |> collTxOut
 {-# INLINEABLE allSizedOutputsBabbageTxBodyF #-}
@@ -266,15 +263,12 @@ instance EraTxBody BabbageEra where
     lensMemoRawType @BabbageEra (\BabbageTxBodyRaw {btbrFee} -> btbrFee) $ \txBodyRaw fee -> txBodyRaw {btbrFee = fee}
   {-# INLINE feeTxBodyL #-}
 
-  feeTxBodyF =
-    getterMemoRawType (\BabbageTxBodyRaw {btbrFee} -> btbrFee)
-
   auxDataHashTxBodyL =
     lensMemoRawType @BabbageEra (\BabbageTxBodyRaw {btbrAuxDataHash} -> btbrAuxDataHash) $ \txBodyRaw auxDataHash ->
       txBodyRaw {btbrAuxDataHash = auxDataHash}
   {-# INLINE auxDataHashTxBodyL #-}
 
-  spendableInputsTxBodyF = babbageSpendableInputsTxBodyF
+  spendableInputsTxBodyF = to (`withTopTxLevelOnly` (^. babbageSpendableInputsTxBodyF))
   {-# INLINE spendableInputsTxBodyF #-}
 
   allInputsTxBodyF = babbageAllInputsTxBodyF
@@ -310,17 +304,11 @@ instance MaryEraTxBody BabbageEra where
     lensMemoRawType @BabbageEra (\BabbageTxBodyRaw {btbrMint} -> btbrMint) $ \txBodyRaw mint -> txBodyRaw {btbrMint = mint}
   {-# INLINE mintTxBodyL #-}
 
-  mintedTxBodyF = to (policies . (\BabbageTxBodyRaw {btbrMint} -> btbrMint) . getMemoRawType)
-  {-# INLINE mintedTxBodyF #-}
-
 instance AlonzoEraTxBody BabbageEra where
   collateralInputsTxBodyL =
     lensMemoRawType @BabbageEra (\BabbageTxBodyRaw {btbrCollateralInputs} -> btbrCollateralInputs) $ \txBodyRaw collateral ->
       txBodyRaw {btbrCollateralInputs = collateral}
   {-# INLINE collateralInputsTxBodyL #-}
-
-  collateralInputsTxBodyF =
-    getterMemoRawType (\BabbageTxBodyRaw {btbrCollateralInputs} -> btbrCollateralInputs)
 
   reqSignerHashesTxBodyL =
     lensMemoRawType @BabbageEra (\BabbageTxBodyRaw {btbrReqSignerHashes} -> btbrReqSignerHashes) $ \txBodyRaw reqSignerHashes ->
@@ -362,19 +350,12 @@ instance BabbageEraTxBody BabbageEra where
         txBodyRaw {btbrCollateralReturn = mkSized (eraProtVerLow @BabbageEra) <$> collateralReturn}
   {-# INLINE collateralReturnTxBodyL #-}
 
-  collateralReturnTxBodyF =
-    getterMemoRawType (\BabbageTxBodyRaw {btbrCollateralReturn} -> sizedValue <$> btbrCollateralReturn)
-
   sizedCollateralReturnTxBodyL =
     lensMemoRawType @BabbageEra (\BabbageTxBodyRaw {btbrCollateralReturn} -> btbrCollateralReturn) $ \txBodyRaw collateralReturn ->
       txBodyRaw {btbrCollateralReturn = collateralReturn}
   {-# INLINE sizedCollateralReturnTxBodyL #-}
 
-  sizedCollateralReturnTxBodyF =
-    getterMemoRawType (\BabbageTxBodyRaw {btbrCollateralReturn} -> btbrCollateralReturn)
-  {-# INLINE sizedCollateralReturnTxBodyF #-}
-
-  allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
+  allSizedOutputsTxBodyF = to (`withTopTxLevelOnly` (^. allSizedOutputsBabbageTxBodyF))
   {-# INLINE allSizedOutputsTxBodyF #-}
 
 instance EqRaw (TxBody l BabbageEra) where

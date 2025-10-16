@@ -57,7 +57,6 @@ module Cardano.Ledger.MemoBytes.Internal (
   eqRawType,
   getMemoRawBytes,
   lensMemoRawType,
-  getterMemoRawType,
 
   -- * MemoBytes MemPack instance definitions
   byteCountMemoBytes,
@@ -335,15 +334,6 @@ lensMemoRawType ::
 lensMemoRawType getter setter =
   lens (getter . getMemoRawType) (\t b -> mkMemoizedEra @era $ setter (getMemoRawType t) b)
 {-# INLINEABLE lensMemoRawType #-}
-
--- | This is a helper SimpleGetter creator for any Memoized type
-getterMemoRawType ::
-  Memoized t =>
-  (RawType t -> a) ->
-  SimpleGetter t a
-getterMemoRawType getter =
-  to (getter . getMemoRawType)
-{-# INLINEABLE getterMemoRawType #-}
 
 -- | Type class that implements equality on the Haskell type, ignoring any of the
 -- potentially memoized binary representation of the type.

@@ -53,7 +53,6 @@ import Cardano.Ledger.MemoBytes (
   Memoized (RawType),
   getMemoRawType,
   getMemoSafeHash,
-  getterMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
  )
@@ -71,7 +70,10 @@ import NoThunks.Class (NoThunks (..))
 class AllegraEraTxBody era => MaryEraTxBody era where
   mintTxBodyL :: Lens' (TxBody l era) MultiAsset
 
+  -- TODO: extract away from this type class into a standalone getter
   mintedTxBodyF :: SimpleGetter (TxBody l era) (Set PolicyID)
+  mintedTxBodyF = mintTxBodyL . to policies
+  {-# INLINE mintedTxBodyF #-}
 
   mintValueTxBodyF :: SimpleGetter (TxBody l era) (Value era)
   default mintValueTxBodyF :: Value era ~ MaryValue => SimpleGetter (TxBody l era) (Value era)
@@ -195,10 +197,6 @@ instance EraTxBody MaryEra where
     lensMemoRawType @MaryEra atbrFee $ \txBodyRaw fee -> txBodyRaw {atbrFee = fee}
   {-# INLINEABLE feeTxBodyL #-}
 
-  feeTxBodyF =
-    getterMemoRawType (\AllegraTxBodyRaw {atbrFee} -> atbrFee)
-  {-# INLINEABLE feeTxBodyF #-}
-
   auxDataHashTxBodyL =
     lensMemoRawType @MaryEra (\AllegraTxBodyRaw {atbrAuxDataHash} -> atbrAuxDataHash) $
       \txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash}
@@ -240,6 +238,3 @@ instance MaryEraTxBody MaryEra where
       (\AllegraTxBodyRaw {atbrMint} -> atbrMint)
       (\txBodyRaw mint -> txBodyRaw {atbrMint = mint})
   {-# INLINEABLE mintTxBodyL #-}
-
-  mintedTxBodyF = to $ \txBody -> policies ((\AllegraTxBodyRaw {atbrMint} -> atbrMint) (getMemoRawType txBody))
-  {-# INLINEABLE mintedTxBodyF #-}

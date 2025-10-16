@@ -92,11 +92,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Core
-import Cardano.Ledger.Mary.Value (
-  MultiAsset (..),
-  PolicyID (..),
-  policies,
- )
+import Cardano.Ledger.Mary.Value (MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -105,7 +101,6 @@ import Cardano.Ledger.MemoBytes (
   Memoized (..),
   getMemoRawType,
   getMemoSafeHash,
-  getterMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
  )
@@ -130,8 +125,6 @@ type ScriptIntegrityHash = SafeHash EraIndependentScriptIntegrity
 
 class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
   collateralInputsTxBodyL :: Lens' (TxBody TopTx era) (Set TxIn)
-
-  collateralInputsTxBodyF :: SimpleGetter (TxBody l era) (Set TxIn)
 
   reqSignerHashesTxBodyL :: AtMostEra "Conway" era => Lens' (TxBody l era) (Set (KeyHash 'Witness))
 
@@ -222,20 +215,16 @@ instance EraTxBody AlonzoEra where
       \txBodyRaw fee_ -> txBodyRaw {atbrTxFee = fee_}
   {-# INLINEABLE feeTxBodyL #-}
 
-  feeTxBodyF =
-    getterMemoRawType (\AlonzoTxBodyRaw {atbrTxFee} -> atbrTxFee)
-  {-# INLINEABLE feeTxBodyF #-}
-
   auxDataHashTxBodyL =
     lensMemoRawType @AlonzoEra (\AlonzoTxBodyRaw {atbrAuxDataHash} -> atbrAuxDataHash) $
       \txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
-  spendableInputsTxBodyF = allInputsTxBodyF
+  spendableInputsTxBodyF = to (`withTopTxLevelOnly` (^. allInputsTxBodyF))
   {-# INLINE spendableInputsTxBodyF #-}
 
   allInputsTxBodyF =
-    to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyF)
+    to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL)
   {-# INLINEABLE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL =
@@ -270,18 +259,11 @@ instance MaryEraTxBody AlonzoEra where
       \txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_}
   {-# INLINEABLE mintTxBodyL #-}
 
-  mintedTxBodyF = to $ \txBody -> policies ((\AlonzoTxBodyRaw {atbrMint} -> atbrMint) (getMemoRawType txBody))
-  {-# INLINEABLE mintedTxBodyF #-}
-
 instance AlonzoEraTxBody AlonzoEra where
   collateralInputsTxBodyL =
     lensMemoRawType @AlonzoEra (\AlonzoTxBodyRaw {atbrCollateral} -> atbrCollateral) $
       \txBodyRaw collateral_ -> txBodyRaw {atbrCollateral = collateral_}
   {-# INLINEABLE collateralInputsTxBodyL #-}
-
-  collateralInputsTxBodyF =
-    getterMemoRawType (\AlonzoTxBodyRaw {atbrCollateral} -> atbrCollateral)
-  {-# INLINEABLE collateralInputsTxBodyF #-}
 
   reqSignerHashesTxBodyL =
     lensMemoRawType @AlonzoEra (\AlonzoTxBodyRaw {atbrReqSignerHashes} -> atbrReqSignerHashes) $

@@ -120,7 +120,7 @@ conwayProducedValue ::
   ) =>
   PParams era ->
   (KeyHash 'StakePool -> Bool) ->
-  TxBody l era ->
+  TxBody TopTx era ->
   Value era
 conwayProducedValue pp isStakePool txBody =
   getProducedMaryValue pp isStakePool txBody
@@ -133,7 +133,8 @@ instance EraUTxO ConwayEra where
 
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue = conwayProducedValue
+  getProducedValue pp isRegPoolId txBody =
+    withTopTxLevelOnly txBody (conwayProducedValue pp isRegPoolId)
 
   getScriptsProvided = getBabbageScriptsProvided
 

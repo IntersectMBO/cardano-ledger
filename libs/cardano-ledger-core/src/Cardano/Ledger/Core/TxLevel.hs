@@ -17,8 +17,10 @@ module Cardano.Ledger.Core.TxLevel (
   HasEraTxLevel (..),
   asSTxTopLevel,
   mkSTxTopLevelM,
+  withTopTxLevelOnly,
   asSTxBothLevels,
   mkSTxBothLevelsM,
+  withBothTxLevels,
 ) where
 
 import Cardano.Ledger.Core.Era (Era (..))
@@ -88,6 +90,13 @@ asSTxTopLevel ::
   t TopTx era -> t l era
 asSTxTopLevel = runIdentity . mkSTxTopLevelM . pure
 
+withTopTxLevelOnly ::
+  (HasEraTxLevel t era, STxLevel l era ~ STxTopLevel l era) =>
+  t l era -> (t TopTx era -> a) -> a
+withTopTxLevelOnly t f =
+  case toSTxLevel t of
+    STopTxOnly -> f t
+
 mkSTxBothLevelsM ::
   forall (l :: TxLevel) t m era.
   (Typeable l, Monad m, HasEraTxLevel t era, STxLevel l era ~ STxBothLevels l era) =>
@@ -106,3 +115,11 @@ asSTxBothLevels ::
   (Typeable l, HasEraTxLevel t era, STxLevel l era ~ STxBothLevels l era) =>
   t TopTx era -> t SubTx era -> t l era
 asSTxBothLevels mkTopTx mkSubTx = runIdentity $ mkSTxBothLevelsM (pure mkTopTx) (pure mkSubTx)
+
+withBothTxLevels ::
+  (HasEraTxLevel t era, STxLevel l era ~ STxBothLevels l era) =>
+  t l era -> (t TopTx era -> a) -> (t SubTx era -> a) -> a
+withBothTxLevels t fTop fSub =
+  case toSTxLevel t of
+    STopTx -> fTop t
+    SSubTx -> fSub t

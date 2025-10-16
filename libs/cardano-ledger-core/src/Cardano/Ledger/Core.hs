@@ -219,8 +219,6 @@ class
 
   feeTxBodyL :: Lens' (TxBody TopTx era) Coin
 
-  feeTxBodyF :: SimpleGetter (TxBody l era) Coin
-
   withdrawalsTxBodyL :: Lens' (TxBody l era) Withdrawals
 
   auxDataHashTxBodyL :: Lens' (TxBody l era) (StrictMaybe TxAuxDataHash)
@@ -233,7 +231,7 @@ class
   -- | This getter will produce all inputs from the UTxO map that this transaction is
   -- referencing, even if some of them cannot be spent by the transaction. For example
   -- starting with Babbage era it will also include reference inputs.
-  allInputsTxBodyF :: SimpleGetter (TxBody l era) (Set TxIn)
+  allInputsTxBodyF :: SimpleGetter (TxBody TopTx era) (Set TxIn)
 
   certsTxBodyL :: Lens' (TxBody l era) (StrictSeq (TxCert era))
 

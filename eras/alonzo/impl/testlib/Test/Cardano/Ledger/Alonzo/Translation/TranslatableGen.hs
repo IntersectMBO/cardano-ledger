@@ -24,7 +24,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.BaseTypes (ProtVer (ProtVer))
-import Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
@@ -33,7 +33,6 @@ import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Data.Typeable (Typeable)
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
@@ -44,12 +43,12 @@ import Test.Cardano.Ledger.Common
 
 class (EraTx era, EraPlutusContext era, Arbitrary (Script era)) => TranslatableGen era where
   tgRedeemers :: Gen (Redeemers era)
-  tgTx :: forall l. Typeable l => SupportedLanguage era -> Gen (Core.Tx l era)
-  tgUtxo :: SupportedLanguage era -> Core.Tx l era -> Gen (UTxO era)
+  tgTx :: SupportedLanguage era -> Gen (Tx TopTx era)
+  tgUtxo :: SupportedLanguage era -> Tx TopTx era -> Gen (UTxO era)
 
 instance TranslatableGen AlonzoEra where
   tgRedeemers = arbitrary
-  tgTx _ = asSTxTopLevel <$> arbitrary @(Tx TopTx AlonzoEra)
+  tgTx _ = arbitrary
   tgUtxo _ tx = do
     let ins = tx ^. bodyTxL ^. inputsTxBodyL
     outs <- vectorOf (length ins) (arbitrary :: Gen (TxOut AlonzoEra))

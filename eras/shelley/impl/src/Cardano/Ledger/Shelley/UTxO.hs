@@ -151,12 +151,12 @@ shelleyProducedValue ::
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
   (KeyHash 'StakePool -> Bool) ->
-  TxBody l era ->
+  TxBody TopTx era ->
   Value era
 shelleyProducedValue pp isRegPoolId txBody =
   sumAllValue (txBody ^. outputsTxBodyL)
     <+> Val.inject
-      (txBody ^. feeTxBodyF <+> getTotalDepositsTxBody pp isRegPoolId txBody)
+      (txBody ^. feeTxBodyL <+> getTotalDepositsTxBody pp isRegPoolId txBody)
 
 -- | Compute the lovelace which are destroyed by the transaction. This implementation is
 -- suitable for Shelley and Allegra only.
@@ -186,7 +186,8 @@ instance EraUTxO ShelleyEra where
 
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 
-  getProducedValue pp isRegPoolId txBody = shelleyProducedValue pp isRegPoolId txBody
+  getProducedValue pp isRegPoolId txBody =
+    withTopTxLevelOnly txBody (shelleyProducedValue pp isRegPoolId)
 
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 

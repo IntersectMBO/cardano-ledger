@@ -53,14 +53,14 @@ instance TranslatableGen BabbageEra where
   tgUtxo = utxoWithTx @BabbageEra
 
 utxoWithTx ::
-  forall era l.
+  forall era .
   ( EraTx era
   , Arbitrary (Value era)
   , Arbitrary (Script era)
   , TxOut era ~ BabbageTxOut era
   ) =>
   SupportedLanguage era ->
-  Tx l era ->
+  Tx TopTx era ->
   Gen (UTxO era)
 utxoWithTx l tx = do
   let allIns = tx ^. bodyTxL ^. allInputsTxBodyF

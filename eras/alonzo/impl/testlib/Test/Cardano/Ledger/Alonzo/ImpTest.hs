@@ -522,11 +522,11 @@ impAlonzoExpectTxSuccess ::
   ( HasCallStack
   , AlonzoEraImp era
   ) =>
-  Tx l era -> ImpTestM era ()
+  Tx TopTx era -> ImpTestM era ()
 impAlonzoExpectTxSuccess tx = do
   utxo <- getsNES utxoL
   let inputs = tx ^. bodyTxL . inputsTxBodyL
-      collaterals = tx ^. bodyTxL . collateralInputsTxBodyF
+      collaterals = tx ^. bodyTxL . collateralInputsTxBodyL
       outputs = Map.toList . unUTxO . txouts $ tx ^. bodyTxL
   if tx ^. isValidTxL == IsValid True
     then do
