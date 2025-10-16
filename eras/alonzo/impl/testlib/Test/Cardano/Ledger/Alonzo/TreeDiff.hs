@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -75,7 +76,11 @@ instance ToExpr (PlutusPurpose AsIx era) => ToExpr (Redeemers era)
 
 instance
   ( Era era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , ToExpr (TxDats era)
+#endif
   , ToExpr (Redeemers era)
   , ToExpr (Script era)
   ) =>
@@ -83,16 +88,32 @@ instance
 
 instance
   ( Era era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , ToExpr (TxDats era)
+#endif
   , ToExpr (Redeemers era)
   , ToExpr (Script era)
   ) =>
   ToExpr (AlonzoTxWits era)
 
-instance ToExpr (Data era) => ToExpr (TxDatsRaw era)
+instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  ToExpr (Data era) =>
+#endif
+  ToExpr (TxDatsRaw era)
 
-instance ToExpr (Data era) => ToExpr (TxDats era)
-
+instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  ToExpr (Data era) =>
+#endif
+  ToExpr (TxDats era)
+ 
 -- TxOut
 instance ToExpr Addr28Extra
 
@@ -160,12 +181,20 @@ instance ToExpr (Event (EraRule "UTXOS" era)) => ToExpr (AlonzoUtxoEvent era)
 instance
   ( ToExpr (EraRuleEvent "PPUP" era)
   , ToExpr (TxOut era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , ToExpr PlutusWithContext
+#endif
   ) =>
   ToExpr (AlonzoUtxosEvent era)
 
 instance
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   ToExpr ScriptHash =>
+#endif
   ToExpr PlutusWithContext
   where
   toExpr PlutusWithContext {..} =

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -45,7 +46,9 @@ import Cardano.Ledger.Shelley.TxCert (GenesisDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Slot (SlotNo)
 import Control.DeepSeq
 import Control.State.Transition
+#if __GLASGOW_HASKELL__ < 914
 import Data.Typeable (Typeable)
+#endif
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
@@ -162,7 +165,11 @@ instance
   ( Era era
   , DecCBOR (PredicateFailure (EraRule "POOL" era))
   , DecCBOR (PredicateFailure (EraRule "DELEG" era))
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
   , Typeable (Script era)
+#endif
   ) =>
   DecCBOR (ShelleyDelplPredFailure era)
   where

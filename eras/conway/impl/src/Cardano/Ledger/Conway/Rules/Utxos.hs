@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -164,17 +165,25 @@ instance
 
 deriving stock instance
   ( ConwayEraScript era
-  , Show (TxCert era)
   , Show (ContextError era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Show (TxCert era)
   , Show (UTxOState era)
+#endif
   ) =>
   Show (ConwayUtxosPredFailure era)
 
 deriving stock instance
   ( ConwayEraScript era
-  , Eq (TxCert era)
   , Eq (ContextError era)
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Eq (TxCert era)
   , Eq (UTxOState era)
+#endif
   ) =>
   Eq (ConwayUtxosPredFailure era)
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -34,6 +35,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core (
   ConwayEraTxCert,
   poolCertKeyHashWitness,
+#if __GLASGOW_HASKELL__ < 914
   pattern AuthCommitteeHotKeyTxCert,
   pattern DelegTxCert,
   pattern RegDRepTxCert,
@@ -47,6 +49,21 @@ import Cardano.Ledger.Conway.Core (
   pattern UnRegDepositTxCert,
   pattern UnRegTxCert,
   pattern UpdateDRepTxCert,
+#else
+  data AuthCommitteeHotKeyTxCert,
+  data DelegTxCert,
+  data RegDRepTxCert,
+  data RegDepositDelegTxCert,
+  data RegDepositTxCert,
+  data RegPoolTxCert,
+  data RegTxCert,
+  data ResignCommitteeColdTxCert,
+  data RetirePoolTxCert,
+  data UnRegDRepTxCert,
+  data UnRegDepositTxCert,
+  data UnRegTxCert,
+  data UpdateDRepTxCert,
+#endif
  )
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert (..),
@@ -64,7 +81,9 @@ import Cardano.Ledger.Core (
   KeyRole (..),
   PoolCert (..),
   ScriptHash,
+#if __GLASGOW_HASKELL__ < 914
   Value,
+#endif
   eraProtVerLow,
   fromEraCBOR,
  )
@@ -77,7 +96,9 @@ import Cardano.Ledger.Shelley.TxCert (
   encodeShelleyDelegCert,
   poolTxCertDecoder,
  )
+#if __GLASGOW_HASKELL__ < 914
 import Cardano.Ledger.Val (Val)
+#endif
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue ((.=)), ToJSON (..))
 import GHC.Generics (Generic)
@@ -214,7 +235,13 @@ instance
       | 7 <= t -> conwayTxCertDelegDecoder t
     t -> invalidKey t
 
-instance (Era era, Val (Value era)) => ToCBOR (DijkstraTxCert era) where
+instance (Era era
+#if __GLASGOW_HASKELL__ < 914
+  -- These constraints are REQUIRED for ghc < 9.14 but REDUNDANT for ghc >= 9.14
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26381#note_637863
+  , Val (Value era)
+#endif
+  ) => ToCBOR (DijkstraTxCert era) where
   toCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
 
 instance Era era => EncCBOR (DijkstraTxCert era) where
