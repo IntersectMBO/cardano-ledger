@@ -102,7 +102,7 @@ impBabbageExpectTxSuccess ::
   , AlonzoEraImp era
   , BabbageEraTxBody era
   ) =>
-  Tx l era -> ImpTestM era ()
+  Tx TopTx era -> ImpTestM era ()
 impBabbageExpectTxSuccess tx = do
   impAlonzoExpectTxSuccess tx
   -- Check that the balance of the collateral was returned

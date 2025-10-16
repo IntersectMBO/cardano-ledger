@@ -457,7 +457,7 @@ validateExUnitsTooBigUTxO pp tx =
 validateTooManyCollateralInputs ::
   AlonzoEraTxBody era =>
   PParams era ->
-  TxBody l era ->
+  TxBody TopTx era ->
   Test (AlonzoUtxoPredFailure era)
 validateTooManyCollateralInputs pp txBody =
   failureUnless (numColl <= maxColl) $
@@ -465,7 +465,7 @@ validateTooManyCollateralInputs pp txBody =
   where
     maxColl, numColl :: Natural
     maxColl = pp ^. ppMaxCollateralInputsL
-    numColl = fromIntegral . Set.size $ txBody ^. collateralInputsTxBodyF
+    numColl = fromIntegral . Set.size $ txBody ^. collateralInputsTxBodyL
 
 -- ================================================================
 

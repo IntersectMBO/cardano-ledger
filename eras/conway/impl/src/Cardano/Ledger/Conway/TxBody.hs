@@ -90,11 +90,9 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppGovActionDepositL)
 import Cardano.Ledger.Conway.Scripts (ConwayEraScript, ConwayPlutusPurpose (..))
-import Cardano.Ledger.Conway.TxCert (
-  ConwayEraTxCert,
- )
+import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert)
 import Cardano.Ledger.Conway.TxOut (upgradeBabbageTxOut)
-import Cardano.Ledger.Mary.Value (MultiAsset (..), policies)
+import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -103,7 +101,6 @@ import Cardano.Ledger.MemoBytes (
   Memoized (..),
   getMemoRawType,
   getMemoSafeHash,
-  getterMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
  )
@@ -318,13 +315,11 @@ instance EraTxBody ConwayEra where
   feeTxBodyL = lensMemoRawType @ConwayEra ctbrFee (\txb x -> txb {ctbrFee = x})
   {-# INLINE feeTxBodyL #-}
 
-  feeTxBodyF = getterMemoRawType (\ConwayTxBodyRaw {ctbrFee} -> ctbrFee)
-
   auxDataHashTxBodyL = lensMemoRawType @ConwayEra (\ConwayTxBodyRaw {ctbrAuxDataHash} -> ctbrAuxDataHash) $
     \txb x -> txb {ctbrAuxDataHash = x}
   {-# INLINE auxDataHashTxBodyL #-}
 
-  spendableInputsTxBodyF = babbageSpendableInputsTxBodyF
+  spendableInputsTxBodyF = to (`withTopTxLevelOnly` (^. babbageSpendableInputsTxBodyF))
   {-# INLINE spendableInputsTxBodyF #-}
 
   allInputsTxBodyF = babbageAllInputsTxBodyF
@@ -386,18 +381,11 @@ instance MaryEraTxBody ConwayEra where
     \txb x -> txb {ctbrMint = x}
   {-# INLINE mintTxBodyL #-}
 
-  mintedTxBodyF = to $ \txBody -> policies ((\ConwayTxBodyRaw {ctbrMint} -> ctbrMint) (getMemoRawType txBody))
-  {-# INLINE mintedTxBodyF #-}
-
 instance AlonzoEraTxBody ConwayEra where
   collateralInputsTxBodyL =
     lensMemoRawType @ConwayEra (\ConwayTxBodyRaw {ctbrCollateralInputs} -> ctbrCollateralInputs) $
       \txb x -> txb {ctbrCollateralInputs = x}
   {-# INLINE collateralInputsTxBodyL #-}
-
-  collateralInputsTxBodyF =
-    getterMemoRawType (\ConwayTxBodyRaw {ctbrCollateralInputs} -> ctbrCollateralInputs)
-  {-# INLINE collateralInputsTxBodyF #-}
 
   reqSignerHashesTxBodyL =
     lensMemoRawType @ConwayEra (\ConwayTxBodyRaw {ctbrReqSignerHashes} -> ctbrReqSignerHashes) $
@@ -438,21 +426,12 @@ instance BabbageEraTxBody ConwayEra where
       $ \txb x -> txb {ctbrCollateralReturn = mkSized (eraProtVerLow @ConwayEra) <$> x}
   {-# INLINE collateralReturnTxBodyL #-}
 
-  collateralReturnTxBodyF =
-    getterMemoRawType
-      (fmap sizedValue . (\ConwayTxBodyRaw {ctbrCollateralReturn} -> ctbrCollateralReturn))
-  {-# INLINE collateralReturnTxBodyF #-}
-
   sizedCollateralReturnTxBodyL =
     lensMemoRawType @ConwayEra (\ConwayTxBodyRaw {ctbrCollateralReturn} -> ctbrCollateralReturn) $
       \txb x -> txb {ctbrCollateralReturn = x}
   {-# INLINE sizedCollateralReturnTxBodyL #-}
 
-  sizedCollateralReturnTxBodyF =
-    getterMemoRawType (\ConwayTxBodyRaw {ctbrCollateralReturn} -> ctbrCollateralReturn)
-  {-# INLINE sizedCollateralReturnTxBodyF #-}
-
-  allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
+  allSizedOutputsTxBodyF = to (`withTopTxLevelOnly` (^. allSizedOutputsBabbageTxBodyF))
   {-# INLINE allSizedOutputsTxBodyF #-}
 
 instance ConwayEraTxBody ConwayEra where

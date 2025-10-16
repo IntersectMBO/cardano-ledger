@@ -100,7 +100,7 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra.TxOut ()
 import Cardano.Ledger.Keys (HasKeyRole (..))
-import Cardano.Ledger.Mary.Value (MultiAsset, policies)
+import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -109,7 +109,6 @@ import Cardano.Ledger.MemoBytes (
   Memoized (..),
   getMemoRawType,
   getMemoSafeHash,
-  getterMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
  )
@@ -526,10 +525,6 @@ instance EraTxBody DijkstraEra where
   feeTxBodyL = lensMemoRawType @DijkstraEra dtbrFee (\txb x -> txb {dtbrFee = x})
   {-# INLINE feeTxBodyL #-}
 
-  feeTxBodyF = getterMemoRawType $ \case
-    DijkstraTxBodyRaw {dtbrFee} -> dtbrFee
-    DijkstraSubTxBodyRaw {} -> zero
-
   auxDataHashTxBodyL =
     lensMemoRawType @DijkstraEra
       ( \case
@@ -542,7 +537,8 @@ instance EraTxBody DijkstraEra where
       )
   {-# INLINE auxDataHashTxBodyL #-}
 
-  spendableInputsTxBodyF = babbageSpendableInputsTxBodyF
+  spendableInputsTxBodyF = to $ \txBody ->
+    withBothTxLevels txBody (^. babbageSpendableInputsTxBodyF) (^. inputsTxBodyL)
   {-# INLINE spendableInputsTxBodyF #-}
 
   allInputsTxBodyF = babbageAllInputsTxBodyF
@@ -690,24 +686,11 @@ instance MaryEraTxBody DijkstraEra where
       )
   {-# INLINE mintTxBodyL #-}
 
-  mintedTxBodyF = getterMemoRawType $ \case
-    DijkstraTxBodyRaw {dtbrMint} -> policies dtbrMint
-    DijkstraSubTxBodyRaw {dstbrMint} -> policies dstbrMint
-  {-# INLINE mintedTxBodyF #-}
-
-dijkstraCollateralInputsTxBody :: DijkstraTxBodyRaw l era -> Set TxIn
-dijkstraCollateralInputsTxBody = \case
-  DijkstraTxBodyRaw {dtbrCollateralInputs} -> dtbrCollateralInputs
-  DijkstraSubTxBodyRaw {} -> mempty
-
 instance AlonzoEraTxBody DijkstraEra where
   collateralInputsTxBodyL =
     lensMemoRawType @DijkstraEra dtbrCollateralInputs $
       \txb x -> txb {dtbrCollateralInputs = x}
   {-# INLINE collateralInputsTxBodyL #-}
-
-  collateralInputsTxBodyF =
-    getterMemoRawType dijkstraCollateralInputsTxBody
 
   reqSignerHashesTxBodyL = notSupportedInThisEraL
   {-# INLINE reqSignerHashesTxBodyL #-}
@@ -781,23 +764,13 @@ instance BabbageEraTxBody DijkstraEra where
       \txb x -> txb {dtbrCollateralReturn = mkSized (eraProtVerLow @DijkstraEra) <$> x}
   {-# INLINE collateralReturnTxBodyL #-}
 
-  collateralReturnTxBodyF =
-    getterMemoRawType $ \case
-      DijkstraTxBodyRaw {dtbrCollateralReturn} -> sizedValue <$> dtbrCollateralReturn
-      DijkstraSubTxBodyRaw {} -> SNothing
-  {-# INLINE collateralReturnTxBodyF #-}
-
   sizedCollateralReturnTxBodyL =
     lensMemoRawType @DijkstraEra dtbrCollateralReturn $
       \txb x -> txb {dtbrCollateralReturn = x}
   {-# INLINE sizedCollateralReturnTxBodyL #-}
 
-  sizedCollateralReturnTxBodyF =
-    getterMemoRawType $ \case
-      DijkstraTxBodyRaw {dtbrCollateralReturn} -> dtbrCollateralReturn
-      DijkstraSubTxBodyRaw {} -> SNothing
-
-  allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
+  allSizedOutputsTxBodyF = to $ \txBody ->
+    withBothTxLevels txBody (^. allSizedOutputsBabbageTxBodyF) (^. sizedOutputsTxBodyL)
   {-# INLINE allSizedOutputsTxBodyF #-}
 
 instance ConwayEraTxBody DijkstraEra where

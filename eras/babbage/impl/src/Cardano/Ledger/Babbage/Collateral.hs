@@ -28,13 +28,13 @@ import Lens.Micro
 -- ============================================================
 
 collAdaBalance ::
-  forall era l.
+  forall era.
   BabbageEraTxBody era =>
-  TxBody l era ->
+  TxBody TopTx era ->
   Map.Map TxIn (TxOut era) ->
   DeltaCoin
 collAdaBalance txBody utxoCollateral = toDeltaCoin $
-  case txBody ^. collateralReturnTxBodyF of
+  case txBody ^. collateralReturnTxBodyL of
     SNothing -> colbal
     SJust txOut -> colbal <-> (txOut ^. coinTxOutL @era)
   where
@@ -42,10 +42,10 @@ collAdaBalance txBody utxoCollateral = toDeltaCoin $
 
 collOuts ::
   BabbageEraTxBody era =>
-  TxBody l era ->
+  TxBody TopTx era ->
   UTxO era
 collOuts txBody =
-  case txBody ^. collateralReturnTxBodyF of
+  case txBody ^. collateralReturnTxBodyL of
     SNothing -> UTxO Map.empty
     SJust txOut -> UTxO (Map.singleton (mkCollateralTxIn txBody) txOut)
 

@@ -44,7 +44,8 @@ instance EraUTxO BabbageEra where
 
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue = getProducedMaryValue
+  getProducedValue pp isRegPoolId txBody =
+    withTopTxLevelOnly txBody (getProducedMaryValue pp isRegPoolId)
 
   getScriptsProvided = getBabbageScriptsProvided
 
