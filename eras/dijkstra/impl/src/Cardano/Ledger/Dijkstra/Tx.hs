@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -43,12 +44,16 @@ import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq (NFData)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks)
 
+instance HasEraTxLevel Tx DijkstraEra where
+  toSTxLevel = undefined
+
 instance EraTx DijkstraEra where
-  newtype Tx DijkstraEra = MkDijkstraTx {unDijkstraTx :: AlonzoTx DijkstraEra}
+  newtype Tx l DijkstraEra = MkDijkstraTx {unDijkstraTx :: AlonzoTx l DijkstraEra}
     deriving newtype (Eq, Show, NFData, NoThunks, ToCBOR, EncCBOR)
     deriving (Generic)
 
@@ -71,17 +76,17 @@ instance EraTx DijkstraEra where
 
   getMinFeeTx = getConwayMinFeeTx
 
-instance EqRaw (Tx DijkstraEra) where
+instance EqRaw (Tx l DijkstraEra) where
   eqRaw = alonzoTxEqRaw
 
-dijkstraTxL :: Lens' (Tx DijkstraEra) (AlonzoTx DijkstraEra)
+dijkstraTxL :: Lens' (Tx l DijkstraEra) (AlonzoTx l DijkstraEra)
 dijkstraTxL = lens unDijkstraTx (\x y -> x {unDijkstraTx = y})
 
 instance AlonzoEraTx DijkstraEra where
   isValidTxL = dijkstraTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance DecCBOR (Annotator (Tx DijkstraEra)) where
+instance Typeable l => DecCBOR (Annotator (Tx l DijkstraEra)) where
   decCBOR = fmap MkDijkstraTx <$> decCBOR
 
 validateDijkstraNativeScript ::
@@ -90,7 +95,7 @@ validateDijkstraNativeScript ::
   , DijkstraEraScript era
   , NativeScript era ~ DijkstraNativeScript era
   ) =>
-  Tx era -> NativeScript era -> Bool
+  Tx l era -> NativeScript era -> Bool
 validateDijkstraNativeScript tx =
   evalDijkstraNativeScript vhks (tx ^. bodyTxL . vldtTxBodyL) (tx ^. bodyTxL . guardsTxBodyL)
   where

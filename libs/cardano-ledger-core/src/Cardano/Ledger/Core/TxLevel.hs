@@ -24,7 +24,7 @@ module Cardano.Ledger.Core.TxLevel (
 import Cardano.Ledger.Core.Era (Era (..))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Fail.String
-import Data.Functor.Identity (runIdentity)
+import Data.Functor.Identity (Identity (..), runIdentity)
 import Data.Kind (Type)
 import Data.Typeable
 import GHC.Stack

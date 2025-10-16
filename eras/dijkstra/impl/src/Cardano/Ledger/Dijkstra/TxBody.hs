@@ -109,6 +109,7 @@ import Cardano.Ledger.MemoBytes (
   Memoized (..),
   getMemoRawType,
   getMemoSafeHash,
+  getterMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
  )
@@ -124,7 +125,7 @@ import Data.Set (Set, foldr')
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, to, (^.))
+import Lens.Micro (Lens', to, (^.))
 import NoThunks.Class (InspectHeap (..), NoThunks)
 
 data DijkstraTxBodyRaw l era where
@@ -325,7 +326,27 @@ encodeTxBodyRaw DijkstraTxBodyRaw {..} =
         !> encodeKeyedStrictMaybe 21 dtbrCurrentTreasuryValue
         !> Omit (== mempty) (Key 22 $ To dtbrTreasuryDonation)
 encodeTxBodyRaw DijkstraSubTxBodyRaw {..} =
-  undefined
+  let ValidityInterval bot top = dstbrVldt
+   in Keyed
+        ( \i ri o t c w b ->
+            DijkstraSubTxBodyRaw i ri o c w (ValidityInterval b t)
+        )
+        !> Key 0 (To dstbrSpendInputs)
+        !> Omit null (Key 18 (To dstbrReferenceInputs))
+        !> Key 1 (To dstbrOutputs)
+        !> encodeKeyedStrictMaybe 3 top
+        !> Omit OSet.null (Key 4 (To dstbrCerts))
+        !> Omit (null . unWithdrawals) (Key 5 (To dstbrWithdrawals))
+        !> encodeKeyedStrictMaybe 8 bot
+        !> Omit null (Key 14 (To dstbrGuards))
+        !> Omit (== mempty) (Key 9 (To dstbrMint))
+        !> encodeKeyedStrictMaybe 11 dstbrScriptIntegrityHash
+        !> encodeKeyedStrictMaybe 7 dstbrAuxDataHash
+        !> encodeKeyedStrictMaybe 15 dstbrNetworkId
+        !> Omit (null . unVotingProcedures) (Key 19 (To dstbrVotingProcedures))
+        !> Omit OSet.null (Key 20 (To dstbrProposalProcedures))
+        !> encodeKeyedStrictMaybe 21 dstbrCurrentTreasuryValue
+        !> Omit (== mempty) (Key 22 $ To dstbrTreasuryDonation)
 
 instance EncCBOR (DijkstraTxBodyRaw l DijkstraEra) where
   encCBOR = encode . encodeTxBodyRaw
@@ -639,24 +660,6 @@ dijkstraRedeemerPointerInverse txBody = \case
   DijkstraGuarding idx ->
     DijkstraGuarding <$> fromIndex idx (GuardsScriptHashView $ txBody ^. guardsTxBodyL)
 
-bothTxLensMemoRawType ::
-  forall era a l.
-  ( Era era
-  , Typeable l
-  , EncCBOR (RawType (TxBody TopTx era))
-  , Memoized (TxBody TopTx era)
-  , EncCBOR (RawType (TxBody SubTx era))
-  , Memoized (TxBody SubTx era)
-  ) =>
-  (RawType (TxBody TopTx era) -> a) ->
-  (RawType (TxBody TopTx era) -> a -> RawType (TxBody TopTx era)) ->
-  (RawType (TxBody SubTx era) -> a) ->
-  (RawType (TxBody SubTx era) -> a -> RawType (TxBody SubTx era)) ->
-  Lens' (TxBody l era) a
-bothTxLensMemoRawType getTop setTop getSub setSub = withSTxBothLevels @l $ \case
-  STopTx -> lensMemoRawType @era getTop setTop
-  SSubTx -> lensMemoRawType @era getSub setSub
-
 instance AllegraEraTxBody DijkstraEra where
   vldtTxBodyL =
     lensMemoRawType @DijkstraEra
@@ -683,14 +686,24 @@ instance MaryEraTxBody DijkstraEra where
       )
   {-# INLINE mintTxBodyL #-}
 
-  mintedTxBodyF = to $ \txBody -> policies (dtbrMint (getMemoRawType txBody))
+  mintedTxBodyF = getterMemoRawType $ \case
+    DijkstraTxBodyRaw {dtbrMint} -> policies dtbrMint
+    DijkstraSubTxBodyRaw {dstbrMint} -> policies dstbrMint
   {-# INLINE mintedTxBodyF #-}
+
+dijkstraCollateralInputsTxBody :: DijkstraTxBodyRaw l era -> Set TxIn
+dijkstraCollateralInputsTxBody = \case
+  DijkstraTxBodyRaw {dtbrCollateralInputs} -> dtbrCollateralInputs
+  DijkstraSubTxBodyRaw {} -> mempty
 
 instance AlonzoEraTxBody DijkstraEra where
   collateralInputsTxBodyL =
     lensMemoRawType @DijkstraEra dtbrCollateralInputs $
       \txb x -> txb {dtbrCollateralInputs = x}
   {-# INLINE collateralInputsTxBodyL #-}
+
+  collateralInputsTxBodyF =
+    getterMemoRawType dijkstraCollateralInputsTxBody
 
   reqSignerHashesTxBodyL = notSupportedInThisEraL
   {-# INLINE reqSignerHashesTxBodyL #-}
@@ -764,10 +777,21 @@ instance BabbageEraTxBody DijkstraEra where
       \txb x -> txb {dtbrCollateralReturn = mkSized (eraProtVerLow @DijkstraEra) <$> x}
   {-# INLINE collateralReturnTxBodyL #-}
 
+  collateralReturnTxBodyF =
+    getterMemoRawType $ \case
+      DijkstraTxBodyRaw {dtbrCollateralReturn} -> sizedValue <$> dtbrCollateralReturn
+      DijkstraSubTxBodyRaw {} -> SNothing
+  {-# INLINE collateralReturnTxBodyF #-}
+
   sizedCollateralReturnTxBodyL =
     lensMemoRawType @DijkstraEra dtbrCollateralReturn $
       \txb x -> txb {dtbrCollateralReturn = x}
   {-# INLINE sizedCollateralReturnTxBodyL #-}
+
+  sizedCollateralReturnTxBodyF =
+    getterMemoRawType $ \case
+      DijkstraTxBodyRaw {dtbrCollateralReturn} -> dtbrCollateralReturn
+      DijkstraSubTxBodyRaw {} -> SNothing
 
   allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
   {-# INLINE allSizedOutputsTxBodyF #-}
@@ -824,8 +848,15 @@ class ConwayEraTxBody era => DijkstraEraTxBody era where
 instance DijkstraEraTxBody DijkstraEra where
   {-# INLINE guardsTxBodyL #-}
   guardsTxBodyL =
-    lensMemoRawType @DijkstraEra dtbrGuards $
-      \txb x -> txb {dtbrGuards = x}
+    lensMemoRawType @DijkstraEra
+      ( \case
+          DijkstraTxBodyRaw {..} -> dtbrGuards
+          DijkstraSubTxBodyRaw {..} -> dstbrGuards
+      )
+      ( \case
+          x@DijkstraTxBodyRaw {} -> \y -> x {dtbrGuards = y}
+          x@DijkstraSubTxBodyRaw {} -> \y -> x {dstbrGuards = y}
+      )
 
 -- | Decoder for decoding guards in a backwards-compatible manner. It peeks at
 -- the first element and if it's a credential, it decodes the rest of the

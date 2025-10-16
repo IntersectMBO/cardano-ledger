@@ -105,6 +105,7 @@ import Cardano.Ledger.MemoBytes (
   Memoized (..),
   getMemoRawType,
   getMemoSafeHash,
+  getterMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
  )
@@ -128,7 +129,9 @@ import NoThunks.Class (InspectHeap (..), NoThunks (..))
 type ScriptIntegrityHash = SafeHash EraIndependentScriptIntegrity
 
 class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
-  collateralInputsTxBodyL :: Lens' (TxBody l era) (Set TxIn)
+  collateralInputsTxBodyL :: Lens' (TxBody TopTx era) (Set TxIn)
+
+  collateralInputsTxBodyF :: SimpleGetter (TxBody l era) (Set TxIn)
 
   reqSignerHashesTxBodyL :: AtMostEra "Conway" era => Lens' (TxBody l era) (Set (KeyHash 'Witness))
 
@@ -228,7 +231,7 @@ instance EraTxBody AlonzoEra where
   {-# INLINE spendableInputsTxBodyF #-}
 
   allInputsTxBodyF =
-    to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyL)
+    to $ \txBody -> (txBody ^. inputsTxBodyL) `Set.union` (txBody ^. collateralInputsTxBodyF)
   {-# INLINEABLE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL =
@@ -271,6 +274,10 @@ instance AlonzoEraTxBody AlonzoEra where
     lensMemoRawType @AlonzoEra (\AlonzoTxBodyRaw {atbrCollateral} -> atbrCollateral) $
       \txBodyRaw collateral_ -> txBodyRaw {atbrCollateral = collateral_}
   {-# INLINEABLE collateralInputsTxBodyL #-}
+
+  collateralInputsTxBodyF =
+    getterMemoRawType (\AlonzoTxBodyRaw {atbrCollateral} -> atbrCollateral)
+  {-# INLINEABLE collateralInputsTxBodyF #-}
 
   reqSignerHashesTxBodyL =
     lensMemoRawType @AlonzoEra (\AlonzoTxBodyRaw {atbrReqSignerHashes} -> atbrReqSignerHashes) $

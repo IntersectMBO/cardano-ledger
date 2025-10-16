@@ -103,6 +103,7 @@ import Cardano.Ledger.MemoBytes (
   Memoized (..),
   getMemoRawType,
   getMemoSafeHash,
+  getterMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
  )
@@ -392,6 +393,10 @@ instance AlonzoEraTxBody ConwayEra where
       \txb x -> txb {ctbrCollateralInputs = x}
   {-# INLINE collateralInputsTxBodyL #-}
 
+  collateralInputsTxBodyF =
+    getterMemoRawType (\ConwayTxBodyRaw {ctbrCollateralInputs} -> ctbrCollateralInputs)
+  {-# INLINE collateralInputsTxBodyF #-}
+
   reqSignerHashesTxBodyL =
     lensMemoRawType @ConwayEra (\ConwayTxBodyRaw {ctbrReqSignerHashes} -> ctbrReqSignerHashes) $
       \txb x -> txb {ctbrReqSignerHashes = x}
@@ -431,10 +436,19 @@ instance BabbageEraTxBody ConwayEra where
       $ \txb x -> txb {ctbrCollateralReturn = mkSized (eraProtVerLow @ConwayEra) <$> x}
   {-# INLINE collateralReturnTxBodyL #-}
 
+  collateralReturnTxBodyF =
+    getterMemoRawType
+      (fmap sizedValue . (\ConwayTxBodyRaw {ctbrCollateralReturn} -> ctbrCollateralReturn))
+  {-# INLINE collateralReturnTxBodyF #-}
+
   sizedCollateralReturnTxBodyL =
     lensMemoRawType @ConwayEra (\ConwayTxBodyRaw {ctbrCollateralReturn} -> ctbrCollateralReturn) $
       \txb x -> txb {ctbrCollateralReturn = x}
   {-# INLINE sizedCollateralReturnTxBodyL #-}
+
+  sizedCollateralReturnTxBodyF =
+    getterMemoRawType (\ConwayTxBodyRaw {ctbrCollateralReturn} -> ctbrCollateralReturn)
+  {-# INLINE sizedCollateralReturnTxBodyF #-}
 
   allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
   {-# INLINE allSizedOutputsTxBodyF #-}

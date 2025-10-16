@@ -90,8 +90,8 @@ fixupCollateralReturn ::
   ( ShelleyEraImp era
   , BabbageEraTxBody era
   ) =>
-  Tx l era ->
-  ImpTestM era (Tx l era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 fixupCollateralReturn tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   pure $ tx & bodyTxL . collateralReturnTxBodyL %~ fmap (ensureMinCoinTxOut pp)

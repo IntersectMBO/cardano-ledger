@@ -141,8 +141,8 @@ makeCollateralInput = do
 
 addCollateralInput ::
   AlonzoEraImp era =>
-  Tx l era ->
-  ImpTestM era (Tx l era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 addCollateralInput tx
   | not (null (tx ^. bodyTxL . collateralInputsTxBodyL)) = pure tx
   | otherwise = do
@@ -526,7 +526,7 @@ impAlonzoExpectTxSuccess ::
 impAlonzoExpectTxSuccess tx = do
   utxo <- getsNES utxoL
   let inputs = tx ^. bodyTxL . inputsTxBodyL
-      collaterals = tx ^. bodyTxL . collateralInputsTxBodyL
+      collaterals = tx ^. bodyTxL . collateralInputsTxBodyF
       outputs = Map.toList . unUTxO . txouts $ tx ^. bodyTxL
   if tx ^. isValidTxL == IsValid True
     then do

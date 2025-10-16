@@ -465,7 +465,7 @@ validateTooManyCollateralInputs pp txBody =
   where
     maxColl, numColl :: Natural
     maxColl = pp ^. ppMaxCollateralInputsL
-    numColl = fromIntegral . Set.size $ txBody ^. collateralInputsTxBodyL
+    numColl = fromIntegral . Set.size $ txBody ^. collateralInputsTxBodyF
 
 -- ================================================================
 

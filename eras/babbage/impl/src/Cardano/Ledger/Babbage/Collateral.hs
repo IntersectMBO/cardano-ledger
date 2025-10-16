@@ -34,7 +34,7 @@ collAdaBalance ::
   Map.Map TxIn (TxOut era) ->
   DeltaCoin
 collAdaBalance txBody utxoCollateral = toDeltaCoin $
-  case txBody ^. collateralReturnTxBodyL of
+  case txBody ^. collateralReturnTxBodyF of
     SNothing -> colbal
     SJust txOut -> colbal <-> (txOut ^. coinTxOutL @era)
   where
@@ -45,7 +45,7 @@ collOuts ::
   TxBody l era ->
   UTxO era
 collOuts txBody =
-  case txBody ^. collateralReturnTxBodyL of
+  case txBody ^. collateralReturnTxBodyF of
     SNothing -> UTxO Map.empty
     SJust txOut -> UTxO (Map.singleton (mkCollateralTxIn txBody) txOut)
 
