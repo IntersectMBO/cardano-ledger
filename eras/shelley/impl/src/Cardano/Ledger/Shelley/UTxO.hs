@@ -147,18 +147,16 @@ produced pp certState =
   getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolsL)
 
 shelleyProducedValue ::
-  (EraTxBody era, STxLevel l era ~ STxTopLevel l era) =>
+  EraTxBody era =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
   (KeyHash 'StakePool -> Bool) ->
   TxBody l era ->
   Value era
 shelleyProducedValue pp isRegPoolId txBody =
-  case toSTxLevel txBody of
-    STopTxOnly ->
-      sumAllValue (txBody ^. outputsTxBodyL)
-        <+> Val.inject
-          (txBody ^. feeTxBodyL <+> getTotalDepositsTxBody pp isRegPoolId txBody)
+  sumAllValue (txBody ^. outputsTxBodyL)
+    <+> Val.inject
+      (txBody ^. feeTxBodyF <+> getTotalDepositsTxBody pp isRegPoolId txBody)
 
 -- | Compute the lovelace which are destroyed by the transaction. This implementation is
 -- suitable for Shelley and Allegra only.

@@ -117,7 +117,6 @@ conwayConsumed pp certState =
 conwayProducedValue ::
   ( ConwayEraTxBody era
   , Value era ~ MaryValue
-  , STxLevel l era ~ STxTopLevel l era
   ) =>
   PParams era ->
   (KeyHash 'StakePool -> Bool) ->

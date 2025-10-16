@@ -526,6 +526,10 @@ instance EraTxBody DijkstraEra where
   feeTxBodyL = lensMemoRawType @DijkstraEra dtbrFee (\txb x -> txb {dtbrFee = x})
   {-# INLINE feeTxBodyL #-}
 
+  feeTxBodyF = getterMemoRawType $ \case
+    DijkstraTxBodyRaw {dtbrFee} -> dtbrFee
+    DijkstraSubTxBodyRaw {} -> zero
+
   auxDataHashTxBodyL =
     lensMemoRawType @DijkstraEra
       ( \case

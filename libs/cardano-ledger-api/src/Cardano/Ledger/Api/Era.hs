@@ -103,7 +103,7 @@ import Cardano.Ledger.Mary (MaryEra, TxBody (..))
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.MemoBytes (mkMemoizedEra)
 import Cardano.Ledger.Plutus.Data (upgradeData)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (ShelleyEra, TxBody (..))
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData (..))
@@ -196,16 +196,16 @@ class
   -- Use `binaryUpgradeTx` instead, if you need to preserve the serialised form.
   upgradeTx ::
     EraTx (PreviousEra era) =>
-    Tx (PreviousEra era) ->
-    Either (TxUpgradeError era) (Tx era)
+    Tx l (PreviousEra era) ->
+    Either (TxUpgradeError era) (Tx l era)
 
   -- | Upgrade a transaction body from the previous era.
   -- /Warning/ - This may not preserve the underlying binary representation.
   -- Use `binaryUpgradeTxBody` instead, if you need to preserve the serialised form.
   upgradeTxBody ::
     EraTxBody (PreviousEra era) =>
-    TxBody (PreviousEra era) ->
-    Either (TxBodyUpgradeError era) (TxBody era)
+    TxBody l (PreviousEra era) ->
+    Either (TxBodyUpgradeError era) (TxBody l era)
 
   -- | Upgrade txAuxData from the previous era.
   -- /Warning/ - This may not preserve the underlying binary representation.
@@ -252,13 +252,13 @@ instance EraApi AllegraEra where
 
   upgradeTxBody txBody = do
     certs <- traverse upgradeTxCert (txBody ^. certsTxBodyL)
-    pure $
+    pure . asSTxTopLevel $
       Allegra.AllegraTxBody
         { Allegra.atbInputs = txBody ^. inputsTxBodyL
         , Allegra.atbOutputs = upgradeTxOut <$> (txBody ^. outputsTxBodyL)
         , Allegra.atbCerts = certs
         , Allegra.atbWithdrawals = txBody ^. withdrawalsTxBodyL
-        , Allegra.atbTxFee = txBody ^. feeTxBodyL
+        , Allegra.atbTxFee = txBody ^. feeTxBodyF
         , Allegra.atbValidityInterval = ttlToValidityInterval (txBody ^. ttlTxBodyL)
         , Allegra.atbUpdate = upgradeUpdate () <$> (txBody ^. updateTxBodyL)
         , Allegra.atbAuxDataHash = txBody ^. auxDataHashTxBodyL

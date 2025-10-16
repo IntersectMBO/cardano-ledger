@@ -318,6 +318,8 @@ instance EraTxBody ConwayEra where
   feeTxBodyL = lensMemoRawType @ConwayEra ctbrFee (\txb x -> txb {ctbrFee = x})
   {-# INLINE feeTxBodyL #-}
 
+  feeTxBodyF = getterMemoRawType (\ConwayTxBodyRaw {ctbrFee} -> ctbrFee)
+
   auxDataHashTxBodyL = lensMemoRawType @ConwayEra (\ConwayTxBodyRaw {ctbrAuxDataHash} -> ctbrAuxDataHash) $
     \txb x -> txb {ctbrAuxDataHash = x}
   {-# INLINE auxDataHashTxBodyL #-}

@@ -84,7 +84,7 @@ getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 getProducedMaryValue ::
-  (MaryEraTxBody era, Value era ~ MaryValue, STxLevel l era ~ STxTopLevel l era) =>
+  (MaryEraTxBody era, Value era ~ MaryValue) =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
   (KeyHash 'StakePool -> Bool) ->
