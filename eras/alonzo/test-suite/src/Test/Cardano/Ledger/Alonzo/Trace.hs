@@ -60,7 +60,7 @@ instance
   , Embed (EraRule "UTXOW" era) (AlonzoLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "UTXOW" era) ~ Tx TopTx era
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)

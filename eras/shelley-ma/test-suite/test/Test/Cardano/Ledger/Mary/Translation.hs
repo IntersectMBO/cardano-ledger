@@ -53,7 +53,7 @@ maryTranslationTests =
   testGroup
     "Mary translation binary compatibiliby tests"
     [ testProperty "Tx compatibility" $
-        translateEraEncoding @MaryEra @Tx NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @(Tx TopTx) NoGenesis toCBOR toCBOR
     , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
     , testProperty "ShelleyGovState compatibility" $
         translateEraEncoding @MaryEra @S.ShelleyGovState NoGenesis toCBOR toCBOR

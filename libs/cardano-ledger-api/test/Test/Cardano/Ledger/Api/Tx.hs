@@ -23,17 +23,18 @@ import Numeric.Natural
 import Test.Cardano.Ledger.Api.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..), KeyPair (..), mkWitnessVKey)
+import Cardano.Ledger.Core (TxLevel(..))
 
 txSpec ::
   forall era.
   ( EraTx era
-  , Arbitrary (Tx era)
+  , Arbitrary (Tx TopTx era)
   , Arbitrary (PParams era)
   ) =>
   Spec
 txSpec = describe (eraName @era) $ do
   describe "estimateMinFeeTx" $ do
-    prop "no Bootstrap" $ \(pp :: PParams era) (tx :: Tx era) keyPairsList ->
+    prop "no Bootstrap" $ \(pp :: PParams era) (tx :: Tx TopTx era) keyPairsList ->
       let
         txBody = tx ^. bodyTxL
         txBodyHash = hashAnnotated txBody
@@ -45,7 +46,7 @@ txSpec = describe (eraName @era) $ do
        in
         estimateMinFeeTx pp tx (Map.size keyPairs) 0 0
           === (setMinFeeTx pp txSigned 0 ^. bodyTxL . feeTxBodyL)
-    prop "with Bootstrap" $ \(pp :: PParams era) (tx :: Tx era) keyPairsList byronKeyPairsList ->
+    prop "with Bootstrap" $ \(pp :: PParams era) (tx :: Tx TopTx era) keyPairsList byronKeyPairsList ->
       let
         txBody = tx ^. bodyTxL
         txBodyHash = hashAnnotated txBody

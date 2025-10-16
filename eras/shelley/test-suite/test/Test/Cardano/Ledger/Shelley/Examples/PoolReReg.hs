@@ -84,7 +84,7 @@ feeTx1 = Coin 3
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> Coin 250 <-> feeTx1
 
-txbodyEx1 :: TxBody ShelleyEra
+txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -96,7 +96,7 @@ txbodyEx1 =
     SNothing
     SNothing
 
-txEx1 :: ShelleyTx ShelleyEra
+txEx1 :: ShelleyTx TopTx ShelleyEra
 txEx1 =
   ShelleyTx
     txbodyEx1
@@ -154,7 +154,7 @@ aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 newPoolParams :: PoolParams
 newPoolParams = Cast.alicePoolParams {ppCost = Coin 500}
 
-txbodyEx2 :: TxBody ShelleyEra
+txbodyEx2 :: TxBody TopTx ShelleyEra
 txbodyEx2 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])
@@ -170,7 +170,7 @@ txbodyEx2 =
     SNothing
     SNothing
 
-txEx2 :: ShelleyTx ShelleyEra
+txEx2 :: ShelleyTx TopTx ShelleyEra
 txEx2 =
   ShelleyTx
     txbodyEx2

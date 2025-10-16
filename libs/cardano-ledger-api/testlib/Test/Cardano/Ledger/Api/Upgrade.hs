@@ -16,13 +16,13 @@ import Cardano.Ledger.Binary (DecCBOR, decNoShareCBOR, encodeMemPack)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Data.Default (Default (def))
+import Data.Typeable (Typeable)
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Api.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.TreeDiff (AnsiStyle, Doc)
-import Data.Typeable (Typeable)
 
 data BinaryUpgradeOpts = BinaryUpgradeOpts
   { isScriptUpgradeable :: Bool
@@ -244,28 +244,27 @@ specTxUpgrade = do
         | otherwise -> expectationFailure "Expected upgradeTx to succeed"
 
 spec ::
-  forall era l.
-  ( Typeable l
-  , EraApi era
+  forall era.
+  ( EraApi era
   , Arbitrary (TxOut (PreviousEra era))
   , Arbitrary (TxCert (PreviousEra era))
   , Arbitrary (TxAuxData (PreviousEra era))
   , Arbitrary (TxWits (PreviousEra era))
-  , Arbitrary (TxBody l (PreviousEra era))
+  , Arbitrary (TxBody TopTx (PreviousEra era))
   , EraTx (PreviousEra era)
-  , Arbitrary (Tx l (PreviousEra era))
+  , Arbitrary (Tx TopTx (PreviousEra era))
   , Arbitrary (Script (PreviousEra era))
   , HasCallStack
-  , ToExpr (Tx l era)
-  , ToExpr (TxBody l era)
+  , ToExpr (Tx TopTx era)
+  , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (Script era)
   , DecCBOR (TxWits era)
-  , DecCBOR (TxBody l era)
-  , DecCBOR (Tx l era)
-  , EqRaw (Tx l era)
+  , DecCBOR (TxBody TopTx era)
+  , DecCBOR (Tx TopTx era)
+  , EqRaw (Tx TopTx era)
   ) =>
   BinaryUpgradeOpts ->
   Spec
@@ -275,9 +274,9 @@ spec BinaryUpgradeOpts {isScriptUpgradeable, isTxUpgradeable} =
     specTxCertUpgrade @era
     specTxAuxDataUpgrade @era
     specTxWitsUpgrade @era
-    specTxBodyUpgrade @era @l
+    specTxBodyUpgrade @era @TopTx
     when isTxUpgradeable $
-      specTxUpgrade @era @l
+      specTxUpgrade @era @TopTx
     when isScriptUpgradeable $
       specScriptUpgrade @era
     -- This is a test that ensures that binary version of a TxOut is backwards compatible as it is
