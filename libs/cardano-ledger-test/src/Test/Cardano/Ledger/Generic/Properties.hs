@@ -84,12 +84,12 @@ import Test.Tasty (TestTree, testGroup)
 -- Top level generators of TRC
 
 genTxAndUTXOState ::
-  ( Signal (EraRule "LEDGER" era) ~ Tx era
+  ( Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Tx era ~ Signal (EraRule "UTXOW" era)
+  , Tx TopTx era ~ Signal (EraRule "UTXOW" era)
   , EraGenericGen era
   ) =>
   GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
@@ -99,7 +99,7 @@ genTxAndUTXOState gsize = do
 
 genTxAndLEDGERState ::
   forall era.
-  ( Signal (EraRule "LEDGER" era) ~ Tx era
+  ( Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , EraGenericGen era
@@ -127,7 +127,7 @@ genTxAndLEDGERState sizes = do
 testTxValidForLEDGER ::
   forall era.
   ( Reflect era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
   , EraTest era
@@ -276,9 +276,9 @@ adaIsPreservedInEachEpoch ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
   , Signal (EraRule "RUPD" era) ~ SlotNo
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , BaseM (EraRule "NEWEPOCH" era) ~ ShelleyBase
   , Embed (EraRule "TICK" era) (MOCKCHAIN era)
   , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
@@ -318,6 +318,6 @@ twiddleInvariantHoldsEras :: TestTree
 twiddleInvariantHoldsEras =
   testGroup
     "Twiddle invariant holds for TxBody"
-    [ twiddleInvariantHolds @(TxBody AlonzoEra) "Alonzo"
-    , twiddleInvariantHolds @(TxBody BabbageEra) "Babbage"
+    [ twiddleInvariantHolds @(TxBody TopTx AlonzoEra) "Alonzo"
+    , twiddleInvariantHolds @(TxBody TopTx BabbageEra) "Babbage"
     ]

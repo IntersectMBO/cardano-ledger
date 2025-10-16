@@ -30,6 +30,7 @@ import Cardano.Ledger.Conway.Core (
   EraTx (..),
   EraTxAuxData (..),
   EraTxWits (..),
+  TxLevel (..),
   ppMaxTxSizeL,
  )
 import Cardano.Ledger.Conway.Governance (GovActionId)
@@ -146,7 +147,7 @@ utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, ueCertState} =
     curEpoch = runReader (epochFromSlot ueSlot) testGlobals
 
 data UtxoExecContext era = UtxoExecContext
-  { uecTx :: !(Tx era)
+  { uecTx :: !(Tx TopTx era)
   , uecUTxO :: !(UTxO era)
   , uecUtxoEnv :: !(UtxoEnv era)
   }
@@ -163,20 +164,20 @@ instance
 instance
   ( EraTx era
   , ToExpr (TxOut era)
-  , ToExpr (TxBody era)
+  , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
   , ToExpr (PParamsHKD Identity era)
   , EraCertState era
   , ToExpr (CertState era)
-  , ToExpr (Tx era)
+  , ToExpr (Tx TopTx era)
   ) =>
   ToExpr (UtxoExecContext era)
 
 instance
   ( EraPParams era
   , EncCBOR (TxOut era)
-  , EncCBOR (Tx era)
+  , EncCBOR (Tx TopTx era)
   , EraCertState era
   ) =>
   EncCBOR (UtxoExecContext era)
@@ -193,9 +194,9 @@ instance CertState era ~ ConwayCertState era => Inject (UtxoExecContext era) (Co
   inject ctx = (uecUtxoEnv ctx) ^. utxoEnvCertStateL
 
 utxoTxSpec ::
-  HasSpec (Tx era) =>
+  HasSpec (Tx TopTx era) =>
   UtxoExecContext era ->
-  Specification (Tx era)
+  Specification (Tx TopTx era)
 utxoTxSpec UtxoExecContext {uecTx} =
   constrained $ \tx -> tx ==. lit uecTx
 
