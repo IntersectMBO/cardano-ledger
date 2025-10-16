@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -26,6 +27,9 @@
 module Cardano.Ledger.State.StakePool (
   -- * Stake Pool State
   StakePoolState (..),
+  decCBORGroupPoolParams,
+  encCBORGroupPoolParams,
+  poolParamsCount,
 
   -- * Lenses
   spsVrfL,
@@ -68,12 +72,11 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
-  CBORGroup (..),
   DecCBOR (..),
-  DecCBORGroup (..),
   DecShareCBOR (..),
+  Decoder,
   EncCBOR (..),
-  EncCBORGroup (..),
+  Encoding,
   decodeNullMaybe,
   decodeRecordNamed,
   decodeRecordSum,
@@ -381,8 +384,6 @@ data PoolParams = PoolParams
   , ppMetadata :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
-  deriving (EncCBOR) via CBORGroup PoolParams
-  deriving (DecCBOR) via CBORGroup PoolParams
 
 ppVrfL :: Lens' PoolParams (VRFVerKeyHash 'StakePoolVRF)
 ppVrfL = lens ppVrf (\pp u -> pp {ppVrf = u})
@@ -452,40 +453,53 @@ data SizeOfPoolRelays = SizeOfPoolRelays
 instance EncCBOR SizeOfPoolRelays where
   encCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
-instance EncCBORGroup PoolParams where
-  encCBORGroup poolParams =
-    encCBOR (ppId poolParams)
-      <> encCBOR (ppVrf poolParams)
-      <> encCBOR (ppPledge poolParams)
-      <> encCBOR (ppCost poolParams)
-      <> encCBOR (ppMargin poolParams)
-      <> encCBOR (ppRewardAccount poolParams)
-      <> encCBOR (ppOwners poolParams)
-      <> encCBOR (ppRelays poolParams)
-      <> encodeNullMaybe encCBOR (strictMaybeToMaybe (ppMetadata poolParams))
-  listLen _ = 9
-  listLenBound _ = 9
+instance EncCBOR PoolParams where
+  encCBOR poolParams =
+    encodeListLen poolParamsCount
+      <> encCBORGroupPoolParams poolParams
 
-instance DecCBORGroup PoolParams where
-  decCBORGroup = do
-    hk <- decCBOR
-    vrf <- decCBOR
-    pledge <- decCBOR
-    cost <- decCBOR
-    margin <- decCBOR
-    ra <- decCBOR
-    owners <- decCBOR
-    relays <- decCBOR
-    md <- decodeNullMaybe decCBOR
-    pure $
-      PoolParams
-        { ppId = hk
-        , ppVrf = vrf
-        , ppPledge = pledge
-        , ppCost = cost
-        , ppMargin = margin
-        , ppRewardAccount = ra
-        , ppOwners = owners
-        , ppRelays = relays
-        , ppMetadata = maybeToStrictMaybe md
-        }
+instance DecCBOR PoolParams where
+  decCBOR =
+    decodeRecordNamed
+      "CBORGroup"
+      (const (fromIntegral poolParamsCount))
+      decCBORGroupPoolParams
+
+poolParamsCount :: Word
+poolParamsCount = 9
+
+encCBORGroupPoolParams :: PoolParams -> Encoding
+encCBORGroupPoolParams PoolParams {..} =
+  encCBOR ppId
+    <> encCBOR ppVrf
+    <> encCBOR ppPledge
+    <> encCBOR ppCost
+    <> encCBOR ppMargin
+    <> encCBOR ppRewardAccount
+    <> encCBOR ppOwners
+    <> encCBOR ppRelays
+    <> encodeNullMaybe encCBOR (strictMaybeToMaybe ppMetadata)
+
+decCBORGroupPoolParams :: Decoder s PoolParams
+decCBORGroupPoolParams = do
+  hk <- decCBOR
+  vrf <- decCBOR
+  pledge <- decCBOR
+  cost <- decCBOR
+  margin <- decCBOR
+  ra <- decCBOR
+  owners <- decCBOR
+  relays <- decCBOR
+  md <- decodeNullMaybe decCBOR
+  pure $
+    PoolParams
+      { ppId = hk
+      , ppVrf = vrf
+      , ppPledge = pledge
+      , ppCost = cost
+      , ppMargin = margin
+      , ppRewardAccount = ra
+      , ppOwners = owners
+      , ppRelays = relays
+      , ppMetadata = maybeToStrictMaybe md
+      }
