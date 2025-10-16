@@ -134,7 +134,7 @@ impDijkstraSatisfyNativeScript ::
   , NativeScript era ~ DijkstraNativeScript era
   ) =>
   Set.Set (KeyHash 'Witness) ->
-  TxBody era ->
+  TxBody l era ->
   NativeScript era ->
   ImpTestM era (Maybe (Map.Map (KeyHash 'Witness) (KeyPair 'Witness)))
 impDijkstraSatisfyNativeScript providedVKeyHashes txBody script = do

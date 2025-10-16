@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -40,7 +41,7 @@ instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
 instance Arbitrary (DijkstraPParams StrictMaybe DijkstraEra) where
   arbitrary = genericArbitraryU
 
-instance Arbitrary (TxBody DijkstraEra) where
+instance Arbitrary (TxBody TopTx DijkstraEra) where
   arbitrary =
     DijkstraTxBody
       <$> arbitrary
@@ -94,7 +95,7 @@ sizedDijkstraNativeScript n =
          , RequireGuard <$> arbitrary
          ]
 
-deriving newtype instance Arbitrary (Tx DijkstraEra)
+deriving newtype instance Arbitrary (TxBody l DijkstraEra) => Arbitrary (Tx l DijkstraEra)
 
 instance Era era => Arbitrary (DijkstraTxCert era) where
   arbitrary =
