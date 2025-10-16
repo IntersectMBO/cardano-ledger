@@ -23,6 +23,7 @@ import Cardano.Ledger.Shelley.Rules (
   DelplEnv,
   LedgerEnv (..),
   ShelleyDelplPredFailure,
+  ShelleyLedgerPredFailure,
   UtxoEnv,
  )
 import Cardano.Ledger.Shelley.State
@@ -66,6 +67,8 @@ instance
   , AtMostEra "Babbage" era
   , EraCertState era
   , Crypto c
+  , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
+  , EraRule "LEDGER" era ~ AlonzoLEDGER era
   ) =>
   TQC.HasTrace (AlonzoLEDGER era) (GenEnv c era)
   where

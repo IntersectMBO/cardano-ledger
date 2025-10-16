@@ -23,12 +23,14 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUtxoPredFailure,
   ConwayUtxosPredFailure,
   ConwayUtxowPredFailure,
+  shelleyToConwayLedgerPredFailure,
  )
 import Cardano.Ledger.Dijkstra.Core (EraRuleEvent, EraRuleFailure, InjectRuleFailure (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Rules.Certs ()
 import Cardano.Ledger.Dijkstra.Rules.Utxow ()
 import Cardano.Ledger.Shelley.Rules (
+  ShelleyLedgerPredFailure,
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
@@ -39,6 +41,9 @@ type instance EraRuleFailure "LEDGER" DijkstraEra = ConwayLedgerPredFailure Dijk
 type instance EraRuleEvent "LEDGER" DijkstraEra = ConwayLedgerEvent DijkstraEra
 
 instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure DijkstraEra
+
+instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure DijkstraEra where
+  injectFailure = shelleyToConwayLedgerPredFailure
 
 instance InjectRuleFailure "LEDGER" ConwayUtxowPredFailure DijkstraEra where
   injectFailure = ConwayUtxowFailure

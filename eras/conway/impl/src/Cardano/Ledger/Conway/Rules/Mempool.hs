@@ -34,7 +34,7 @@ import Cardano.Ledger.Conway.Rules.Gov (GovEnv, GovSignal, unelectedCommitteeVot
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerEvent, ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv, ledgerPpL)
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLedgerPredFailure, UtxoEnv, ledgerPpL)
 import Control.Monad (unless)
 import Control.State.Transition (
   BaseM,
@@ -149,14 +149,20 @@ instance
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
   , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "LEDGER" era) ~ LedgerState era
   , GovState era ~ ConwayGovState era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , Signal (EraRule "UTXOW" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx era
   , ConwayEraCertState era
+  , EraRule "LEDGER" era ~ ConwayLEDGER era
+  , EraRuleFailure "LEDGER" era ~ ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   Embed (ConwayLEDGER era) (ConwayMEMPOOL era)
   where

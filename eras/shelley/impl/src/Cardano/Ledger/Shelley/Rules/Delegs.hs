@@ -7,7 +7,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -31,7 +30,6 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   TxIx (..),
   invalidKey,
-  networkId,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -55,16 +53,13 @@ import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.DeepSeq
-import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈))
 import Control.State.Transition (
   Embed (..),
   STS (..),
   TRC (..),
   TransitionRule,
-  failOnJust,
   judgmentContext,
-  liftSTS,
   trans,
   validateTrans,
  )
@@ -96,9 +91,6 @@ data ShelleyDelegsPredFailure era
   = -- | Target pool which is not registered
     DelegateeNotRegisteredDELEG
       (KeyHash 'StakePool)
-  | -- | Withdrawals that are missing or do not withdrawal the entire amount
-    WithdrawalsNotInRewardsDELEGS
-      Withdrawals
   | -- | Subtransition Failures
     DelplFailure (PredicateFailure (EraRule "DELPL" era))
   deriving (Generic)
@@ -173,13 +165,9 @@ instance
       encodeListLen 2
         <> encCBOR (0 :: Word8)
         <> encCBOR kh
-    WithdrawalsNotInRewardsDELEGS ws ->
-      encodeListLen 2
-        <> encCBOR (1 :: Word8)
-        <> encCBOR ws
     (DelplFailure a) ->
       encodeListLen 2
-        <> encCBOR (2 :: Word8)
+        <> encCBOR (1 :: Word8)
         <> encCBOR a
 
 instance
@@ -196,9 +184,6 @@ instance
           kh <- decCBOR
           pure (2, DelegateeNotRegisteredDELEG kh)
         1 -> do
-          ws <- decCBOR
-          pure (2, WithdrawalsNotInRewardsDELEGS ws)
-        2 -> do
           a <- decCBOR
           pure (2, DelplFailure a)
         k -> invalidKey k
@@ -217,21 +202,13 @@ delegsTransition ::
   TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
   TRC
-    (env@(DelegsEnv slot@(SlotNo slot64) epochNo txIx pp tx chainAccountState), certState, certificates) <-
+    ( env@(DelegsEnv slot@(SlotNo slot64) epochNo txIx pp _tx chainAccountState)
+      , certState
+      , certificates
+      ) <-
     judgmentContext
-  network <- liftSTS $ asks networkId
-
   case certificates of
-    Empty -> do
-      let dState = certState ^. certDStateL
-          withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
-          accounts = dState ^. accountsL
-      failOnJust
-        (withdrawalsThatDoNotDrainAccounts withdrawals network accounts)
-        ( \(invalid, incomplete) ->
-            WithdrawalsNotInRewardsDELEGS $ Withdrawals $ unWithdrawals invalid <> unWithdrawals incomplete
-        )
-      pure $ certState & certDStateL . accountsL %~ drainAccounts withdrawals
+    Empty -> pure certState
     gamma :|> txCert -> do
       certState' <-
         trans @(ShelleyDELEGS era) $ TRC (env, certState, gamma)

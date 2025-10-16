@@ -43,6 +43,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
   UtxoEnv (..),
   shelleyLedgerAssertions,
+  testIncompleteAndMissingWithdrawals,
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (
   LedgerEnv (..),
@@ -53,7 +54,7 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   renderDepositEqualsObligationViolation,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
-import Cardano.Ledger.State (EraCertState)
+import Cardano.Ledger.State (EraCertState, accountsL, certDStateL, drainAccounts)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -125,6 +126,9 @@ ledgerTransition ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , AlonzoEraTx era
+  , EraCertState era
+  , EraRule "LEDGER" era ~ someLEDGER era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -136,11 +140,13 @@ ledgerTransition = do
 
   certState' <-
     if tx ^. isValidTxL == IsValid True
-      then
+      then do
+        let withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+        testIncompleteAndMissingWithdrawals (certState ^. certDStateL . accountsL) withdrawals
         trans @(EraRule "DELEGS" era) $
           TRC
             ( DelegsEnv slot curEpochNo txIx pp tx account
-            , certState
+            , certState & certDStateL . accountsL %~ drainAccounts withdrawals
             , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
             )
       else pure certState
@@ -166,6 +172,9 @@ instance
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , AtMostEra "Babbage" era
+  , EraRule "LEDGER" era ~ AlonzoLEDGER era
+  , EraRuleFailure "LEDGER" era ~ ShelleyLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure era
   , EraCertState era
   ) =>
   STS (AlonzoLEDGER era)
