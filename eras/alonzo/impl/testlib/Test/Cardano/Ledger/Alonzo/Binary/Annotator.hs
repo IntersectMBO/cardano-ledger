@@ -97,11 +97,12 @@ deriving newtype instance DecCBOR (TxBody TopTx AlonzoEra)
 
 instance
   ( Typeable era
-  , DecCBOR (TxBody TopTx era)
+  , Typeable l
+  , DecCBOR (TxBody l era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxAuxData era)
   ) =>
-  DecCBOR (AlonzoTx TopTx era)
+  DecCBOR (AlonzoTx l era)
   where
   decCBOR =
     decode $

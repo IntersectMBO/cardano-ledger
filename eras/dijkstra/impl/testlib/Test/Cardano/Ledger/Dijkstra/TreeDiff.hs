@@ -21,6 +21,7 @@ import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw)
 import Cardano.Ledger.Dijkstra.TxCert
 import Data.Functor.Identity (Identity)
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
+import Test.Cardano.Ledger.TreeDiff (ToExpr (..))
 
 instance
   (forall a b. (ToExpr a, ToExpr b) => ToExpr (f a b)) =>
@@ -36,11 +37,13 @@ instance ToExpr (DijkstraPParams Identity DijkstraEra)
 
 instance ToExpr (DijkstraPParams StrictMaybe DijkstraEra)
 
-instance ToExpr DijkstraTxBodyRaw
+instance ToExpr (DijkstraTxBodyRaw l DijkstraEra) where
+  toExpr = undefined
 
-instance ToExpr (TxBody DijkstraEra)
+instance ToExpr (TxBody l DijkstraEra)
 
-instance ToExpr (Tx DijkstraEra)
+instance ToExpr (Tx l DijkstraEra) where
+  toExpr = undefined
 
 instance ToExpr DijkstraDelegCert
 
