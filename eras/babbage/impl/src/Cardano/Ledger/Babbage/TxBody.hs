@@ -113,11 +113,11 @@ class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
 
   referenceInputsTxBodyL :: Lens' (TxBody l era) (Set TxIn)
 
-  totalCollateralTxBodyL :: Lens' (TxBody l era) (StrictMaybe Coin)
+  totalCollateralTxBodyL :: Lens' (TxBody TopTx era) (StrictMaybe Coin)
 
-  collateralReturnTxBodyL :: Lens' (TxBody l era) (StrictMaybe (TxOut era))
+  collateralReturnTxBodyL :: Lens' (TxBody TopTx era) (StrictMaybe (TxOut era))
 
-  sizedCollateralReturnTxBodyL :: Lens' (TxBody l era) (StrictMaybe (Sized (TxOut era)))
+  sizedCollateralReturnTxBodyL :: Lens' (TxBody TopTx era) (StrictMaybe (Sized (TxOut era)))
 
   allSizedOutputsTxBodyF :: SimpleGetter (TxBody l era) (StrictSeq (Sized (TxOut era)))
 
