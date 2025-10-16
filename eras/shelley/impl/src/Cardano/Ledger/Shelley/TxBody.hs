@@ -73,6 +73,7 @@ import Cardano.Ledger.MemoBytes (
   Memoized (..),
   getMemoRawType,
   getMemoSafeHash,
+  getterMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
  )
@@ -232,6 +233,9 @@ instance EraTxBody ShelleyEra where
     lensMemoRawType @ShelleyEra stbrFee $
       \txBodyRaw fee -> txBodyRaw {stbrFee = fee}
   {-# INLINEABLE feeTxBodyL #-}
+
+  feeTxBodyF = getterMemoRawType (\ShelleyTxBodyRaw {stbrFee} -> stbrFee)
+  {-# INLINEABLE feeTxBodyF #-}
 
   auxDataHashTxBodyL =
     lensMemoRawType @ShelleyEra (\ShelleyTxBodyRaw {stbrAuxDataHash} -> stbrAuxDataHash) $

@@ -219,6 +219,8 @@ class
 
   feeTxBodyL :: Lens' (TxBody TopTx era) Coin
 
+  feeTxBodyF :: SimpleGetter (TxBody l era) Coin
+
   withdrawalsTxBodyL :: Lens' (TxBody l era) Withdrawals
 
   auxDataHashTxBodyL :: Lens' (TxBody l era) (StrictMaybe TxAuxDataHash)

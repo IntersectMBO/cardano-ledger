@@ -266,6 +266,9 @@ instance EraTxBody BabbageEra where
     lensMemoRawType @BabbageEra (\BabbageTxBodyRaw {btbrFee} -> btbrFee) $ \txBodyRaw fee -> txBodyRaw {btbrFee = fee}
   {-# INLINE feeTxBodyL #-}
 
+  feeTxBodyF =
+    getterMemoRawType (\BabbageTxBodyRaw {btbrFee} -> btbrFee)
+
   auxDataHashTxBodyL =
     lensMemoRawType @BabbageEra (\BabbageTxBodyRaw {btbrAuxDataHash} -> btbrAuxDataHash) $ \txBodyRaw auxDataHash ->
       txBodyRaw {btbrAuxDataHash = auxDataHash}

@@ -222,6 +222,10 @@ instance EraTxBody AlonzoEra where
       \txBodyRaw fee_ -> txBodyRaw {atbrTxFee = fee_}
   {-# INLINEABLE feeTxBodyL #-}
 
+  feeTxBodyF =
+    getterMemoRawType (\AlonzoTxBodyRaw {atbrTxFee} -> atbrTxFee)
+  {-# INLINEABLE feeTxBodyF #-}
+
   auxDataHashTxBodyL =
     lensMemoRawType @AlonzoEra (\AlonzoTxBodyRaw {atbrAuxDataHash} -> atbrAuxDataHash) $
       \txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash}
