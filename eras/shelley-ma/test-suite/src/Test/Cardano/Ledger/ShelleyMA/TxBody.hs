@@ -38,7 +38,7 @@ import Test.Tasty.HUnit
 -- ====================================================================================================
 -- Make a TxBody to test with
 
-txM :: TxBody MaryEra
+txM :: TxBody TopTx MaryEra
 txM =
   mkBasicTxBody
     & feeTxBodyL .~ Coin 6

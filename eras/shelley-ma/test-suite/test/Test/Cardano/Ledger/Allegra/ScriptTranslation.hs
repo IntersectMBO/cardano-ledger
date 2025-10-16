@@ -31,7 +31,7 @@ import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
 
 bootstrapTxId :: S.TxId
-bootstrapTxId = txIdTxBody @ShelleyEra mkBasicTxBody
+bootstrapTxId = txIdTxBody $ mkBasicTxBody @ShelleyEra @TopTx
 
 fromRight :: HasCallStack => Either e a -> a
 fromRight (Right x) = x

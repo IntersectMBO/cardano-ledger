@@ -167,7 +167,7 @@ dariaMIR = Coin 99
 feeTx1 :: Coin
 feeTx1 = Coin 3
 
-txbodyEx1 :: TxBody ShelleyEra
+txbodyEx1 :: TxBody TopTx ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -197,7 +197,7 @@ txbodyEx1 =
     SNothing
     SNothing
 
-txEx1 :: ShelleyTx ShelleyEra
+txEx1 :: ShelleyTx TopTx ShelleyEra
 txEx1 =
   ShelleyTx
     txbodyEx1
@@ -273,7 +273,7 @@ aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
 
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
-txbodyEx2 :: TxBody ShelleyEra
+txbodyEx2 :: TxBody TopTx ShelleyEra
 txbodyEx2 =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound]
@@ -294,7 +294,7 @@ txbodyEx2 =
     , stbMDHash = SNothing
     }
 
-txEx2 :: ShelleyTx ShelleyEra
+txEx2 :: ShelleyTx TopTx ShelleyEra
 txEx2 =
   ShelleyTx
     txbodyEx2
@@ -423,7 +423,7 @@ feeTx4 = Coin 5
 aliceCoinEx4Base :: Coin
 aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
 
-txbodyEx4 :: TxBody ShelleyEra
+txbodyEx4 :: TxBody TopTx ShelleyEra
 txbodyEx4 =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound]
@@ -438,7 +438,7 @@ txbodyEx4 =
     , stbMDHash = SNothing
     }
 
-txEx4 :: ShelleyTx ShelleyEra
+txEx4 :: ShelleyTx TopTx ShelleyEra
 txEx4 =
   ShelleyTx
     txbodyEx4
@@ -817,7 +817,7 @@ bobAda10 =
     <+> Coin 7
     <-> feeTx10
 
-txbodyEx10 :: TxBody ShelleyEra
+txbodyEx10 :: TxBody TopTx ShelleyEra
 txbodyEx10 =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
@@ -829,7 +829,7 @@ txbodyEx10 =
     SNothing
     SNothing
 
-txEx10 :: ShelleyTx ShelleyEra
+txEx10 :: ShelleyTx TopTx ShelleyEra
 txEx10 =
   ShelleyTx
     txbodyEx10
@@ -882,7 +882,7 @@ aliceCoinEx11Ptr = aliceCoinEx4Base <-> feeTx11
 aliceRetireEpoch :: EpochNo
 aliceRetireEpoch = EpochNo 5
 
-txbodyEx11 :: TxBody ShelleyEra
+txbodyEx11 :: TxBody TopTx ShelleyEra
 txbodyEx11 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx4) minBound])
@@ -894,7 +894,7 @@ txbodyEx11 =
     SNothing
     SNothing
 
-txEx11 :: ShelleyTx ShelleyEra
+txEx11 :: ShelleyTx TopTx ShelleyEra
 txEx11 =
   ShelleyTx
     txbodyEx11

@@ -159,7 +159,7 @@ addFees newFees cs = cs {chainNes = nes}
 newUTxO ::
   forall era.
   (EraTx era, EraStake era) =>
-  TxBody era ->
+  TxBody TopTx era ->
   ChainState era ->
   ChainState era
 newUTxO txb cs = cs {chainNes = nes'}

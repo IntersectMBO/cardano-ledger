@@ -144,7 +144,7 @@ ledgerTraceFromBlock ::
   , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
@@ -167,7 +167,7 @@ ledgerTraceFromBlockWithRestrictedUTxO ::
   , BaseM (EraRule "LEDGER" era) ~ ReaderT Globals Identity
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
@@ -251,7 +251,7 @@ ledgerTraceBase ::
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
-  (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
+  (ChainState era, LedgerEnv era, LedgerState era, [Tx TopTx era])
 ledgerTraceBase chainSt Block {blockHeader = BHeader bhb _, blockBody} =
   ( tickedChainSt
   , LedgerEnv slot Nothing minBound pp_ (esChainAccountState nes)

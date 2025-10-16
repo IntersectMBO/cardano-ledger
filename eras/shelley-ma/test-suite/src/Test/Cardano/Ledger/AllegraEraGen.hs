@@ -105,7 +105,7 @@ genTxBody ::
   Coin ->
   StrictMaybe (Update AllegraEra) ->
   StrictMaybe TxAuxDataHash ->
-  Gen (TxBody AllegraEra, [Timelock AllegraEra])
+  Gen (TxBody TopTx AllegraEra, [Timelock AllegraEra])
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
   pure

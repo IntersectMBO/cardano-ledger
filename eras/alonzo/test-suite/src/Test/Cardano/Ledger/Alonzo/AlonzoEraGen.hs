@@ -300,7 +300,7 @@ genAlonzoTxBody ::
   Coin ->
   StrictMaybe (Update AlonzoEra) ->
   StrictMaybe TxAuxDataHash ->
-  Gen (TxBody AlonzoEra, [Script AlonzoEra])
+  Gen (TxBody TopTx AlonzoEra, [Script AlonzoEra])
 genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs withdrawals fee updates auxDHash = do
   netid <- genM $ pure Testnet -- frequency [(2, pure Mainnet), (1, pure Testnet)]
   startvalue <- genMint
@@ -543,7 +543,7 @@ instance EraGen AlonzoEra where
       IsValid True -> tx ^. bodyTxL . feeTxBodyL
       IsValid False -> sumCollateral tx utxo
 
-sumCollateral :: (EraTx era, AlonzoEraTxBody era) => Tx era -> UTxO era -> Coin
+sumCollateral :: (EraTx era, AlonzoEraTxBody era) => Tx TopTx era -> UTxO era -> Coin
 sumCollateral tx utxo =
   sumCoinUTxO $ txInsFilter utxo $ tx ^. bodyTxL . collateralInputsTxBodyL
 
