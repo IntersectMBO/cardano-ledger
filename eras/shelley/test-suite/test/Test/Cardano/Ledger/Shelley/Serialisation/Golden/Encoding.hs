@@ -196,7 +196,7 @@ testVRF = mkVRFKeyPair (RawSeed 0 0 0 0 5)
 testVRFKH :: VRFVerKeyHash r
 testVRFKH = hashVerKeyVRF @MockCrypto $ vrfVerKey testVRF
 
-testTxb :: TxBody ShelleyEra
+testTxb :: TxBody TopTx ShelleyEra
 testTxb =
   ShelleyTxBody
     Set.empty
@@ -981,7 +981,7 @@ tests =
           sig = unsoundPureSignedKES () 0 (testBHB @ShelleyEra) (kesSignKey testKESKeys)
           bh = BHeader (testBHB @ShelleyEra) sig
           tout = StrictSeq.singleton $ ShelleyTxOut @ShelleyEra testAddrE (Coin 2)
-          txb :: Word64 -> TxBody ShelleyEra
+          txb :: Word64 -> TxBody TopTx ShelleyEra
           txb s =
             ShelleyTxBody
               (Set.fromList [genesisTxIn1])
@@ -992,7 +992,7 @@ tests =
               (SlotNo s)
               SNothing
               SNothing
-          txb1, txb2, txb3, txb4, txb5 :: TxBody ShelleyEra
+          txb1, txb2, txb3, txb4, txb5 :: TxBody TopTx ShelleyEra
           txb1 = txb 500
           txb2 = txb 501
           txb3 = txb 502
@@ -1001,7 +1001,7 @@ tests =
           w1 = mkWitnessVKey (hashAnnotated txb1) testKey1
           w2 = mkWitnessVKey (hashAnnotated txb1) testKey2
           ws = Set.fromList [w1, w2]
-          tx1, tx2, tx3, tx4, tx5 :: Tx ShelleyEra
+          tx1, tx2, tx3, tx4, tx5 :: Tx TopTx ShelleyEra
           tx1 =
             mkBasicTx txb1
               & witsTxL @ShelleyEra .~ (mkBasicTxWits @ShelleyEra & addrTxWitsL .~ Set.singleton w1)

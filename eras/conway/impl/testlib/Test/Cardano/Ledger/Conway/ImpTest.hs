@@ -719,7 +719,9 @@ trySubmitProposals ::
   , ConwayEraTxBody era
   ) =>
   NE.NonEmpty (ProposalProcedure era) ->
-  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx era) (Tx era))
+  ImpTestM
+    era
+    (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx TopTx era) (Tx TopTx era))
 trySubmitProposals proposals = do
   trySubmitTx $
     mkBasicTx mkBasicTxBody
@@ -771,7 +773,9 @@ submitAndExpireProposalToMakeReward stakingC = do
 trySubmitGovActions ::
   ConwayEraImp era =>
   NE.NonEmpty (GovAction era) ->
-  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx era) (Tx era))
+  ImpTestM
+    era
+    (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx TopTx era) (Tx TopTx era))
 trySubmitGovActions gas = do
   proposals <- traverse mkProposal gas
   trySubmitProposals proposals
@@ -1719,7 +1723,7 @@ showConwayTxBalance ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  Tx era ->
+  Tx TopTx era ->
   String
 showConwayTxBalance pp certState utxo tx =
   unlines
@@ -1754,7 +1758,7 @@ logConwayTxBalance ::
   , ConwayEraTxBody era
   , ConwayEraCertState era
   ) =>
-  Tx era ->
+  Tx TopTx era ->
   ImpTestM era ()
 logConwayTxBalance tx = do
   pp <- getsPParams id

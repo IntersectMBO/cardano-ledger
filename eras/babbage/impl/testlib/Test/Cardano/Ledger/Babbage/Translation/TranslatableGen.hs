@@ -49,18 +49,18 @@ import Test.QuickCheck (
 
 instance TranslatableGen BabbageEra where
   tgRedeemers = genRedeemers
-  tgTx l = MkBabbageTx <$> genTx @BabbageEra (genTxBody l)
+  tgTx l = MkBabbageTx <$> genTx @BabbageEra (asSTxTopLevel <$> genTxBody l)
   tgUtxo = utxoWithTx @BabbageEra
 
 utxoWithTx ::
-  forall era.
+  forall era .
   ( EraTx era
   , Arbitrary (Value era)
   , Arbitrary (Script era)
   , TxOut era ~ BabbageTxOut era
   ) =>
   SupportedLanguage era ->
-  Tx era ->
+  Tx TopTx era ->
   Gen (UTxO era)
 utxoWithTx l tx = do
   let allIns = tx ^. bodyTxL ^. allInputsTxBodyF
@@ -68,13 +68,13 @@ utxoWithTx l tx = do
   pure $ UTxO (Map.fromList $ Set.toList allIns `zip` outs)
 
 genTx ::
-  forall era.
+  forall era l.
   ( TranslatableGen era
   , Arbitrary (TxAuxData era)
   , AlonzoTxWits era ~ TxWits era
   ) =>
-  Gen (TxBody era) ->
-  Gen (AlonzoTx era)
+  Gen (TxBody l era) ->
+  Gen (AlonzoTx l era)
 genTx txbGen =
   AlonzoTx
     <$> txbGen
@@ -101,7 +101,7 @@ genTxOut (SupportedLanguage slang) = do
     _ -> arbitrary
   pure $ BabbageTxOut addr value datum script
 
-genTxBody :: SupportedLanguage BabbageEra -> Gen (TxBody BabbageEra)
+genTxBody :: SupportedLanguage BabbageEra -> Gen (TxBody TopTx BabbageEra)
 genTxBody l@(SupportedLanguage slang) = do
   let genTxOuts = fromList <$> listOf1 (mkSized (eraProtVerLow @BabbageEra) <$> genTxOut @BabbageEra l)
   let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen TxIn)

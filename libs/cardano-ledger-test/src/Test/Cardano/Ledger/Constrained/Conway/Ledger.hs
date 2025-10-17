@@ -11,5 +11,5 @@ import Test.Cardano.Ledger.Constrained.Conway.Utxo
 
 ledgerTxSpec ::
   UtxoExecContext ConwayEra ->
-  Specification (Tx ConwayEra)
+  Specification (Tx TopTx ConwayEra)
 ledgerTxSpec = utxoTxSpec

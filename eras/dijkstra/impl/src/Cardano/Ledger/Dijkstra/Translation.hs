@@ -51,11 +51,12 @@ import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((&), (.~), (^.))
+import Data.Typeable (Typeable)
 
 type instance TranslationContext DijkstraEra = DijkstraGenesis
 
-instance TranslateEra DijkstraEra Tx where
-  type TranslationError DijkstraEra Tx = DecoderError
+instance Typeable l => TranslateEra DijkstraEra (Tx l) where
+  type TranslationError DijkstraEra (Tx l) = DecoderError
   translateEra _ctxt tx = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are

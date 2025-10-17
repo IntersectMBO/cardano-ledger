@@ -18,9 +18,10 @@ import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.MemoBytes (decodeMemoized)
+import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 
-deriving newtype instance DecCBOR (TxBody DijkstraEra)
+deriving newtype instance Typeable l => DecCBOR (TxBody l DijkstraEra)
 
 instance Era era => DecCBOR (DijkstraNativeScriptRaw era) where
   decCBOR = decode $ Summands "DijkstraNativeScriptRaw" $ \case
@@ -36,4 +37,4 @@ instance Era era => DecCBOR (DijkstraNativeScriptRaw era) where
 instance Era era => DecCBOR (DijkstraNativeScript era) where
   decCBOR = MkDijkstraNativeScript <$> decodeMemoized decCBOR
 
-deriving newtype instance DecCBOR (Tx DijkstraEra)
+deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)

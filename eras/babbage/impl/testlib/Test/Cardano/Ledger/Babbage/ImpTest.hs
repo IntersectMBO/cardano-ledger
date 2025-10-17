@@ -69,8 +69,8 @@ babbageFixupTx ::
   , AlonzoEraImp era
   , BabbageEraTxBody era
   ) =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 babbageFixupTx =
   addNativeScriptTxWits
     >=> fixupAuxDataHash
@@ -91,8 +91,8 @@ fixupCollateralReturn ::
   ( ShelleyEraImp era
   , BabbageEraTxBody era
   ) =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 fixupCollateralReturn tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   pure $ tx & bodyTxL . collateralReturnTxBodyL %~ fmap (ensureMinCoinTxOut pp)
@@ -102,7 +102,7 @@ impBabbageExpectTxSuccess ::
   , AlonzoEraImp era
   , BabbageEraTxBody era
   ) =>
-  Tx era -> ImpTestM era ()
+  Tx TopTx era -> ImpTestM era ()
 impBabbageExpectTxSuccess tx = do
   impAlonzoExpectTxSuccess tx
   -- Check that the balance of the collateral was returned
@@ -140,7 +140,7 @@ produceRefScripts scripts = do
 produceRefScriptsTx ::
   (ShelleyEraImp era, BabbageEraTxOut era) =>
   NonEmpty (Script era) ->
-  ImpTestM era (Tx era)
+  ImpTestM era (Tx TopTx era)
 produceRefScriptsTx scripts = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   txOuts <- forM scripts $ \script -> do
@@ -155,7 +155,7 @@ mkTxWithRefInputs ::
   (ShelleyEraImp era, BabbageEraTxBody era) =>
   TxIn ->
   NonEmpty TxIn ->
-  Tx era
+  Tx TopTx era
 mkTxWithRefInputs txIn refIns =
   mkBasicTx $
     mkBasicTxBody
@@ -166,7 +166,7 @@ submitTxWithRefInputs ::
   (ShelleyEraImp era, BabbageEraTxBody era) =>
   TxIn ->
   NonEmpty TxIn ->
-  ImpTestM era (Tx era)
+  ImpTestM era (Tx TopTx era)
 submitTxWithRefInputs txIn refIns = submitTx $ mkTxWithRefInputs txIn refIns
 
 class

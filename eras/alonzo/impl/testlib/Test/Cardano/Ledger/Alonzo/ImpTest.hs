@@ -141,8 +141,8 @@ makeCollateralInput = do
 
 addCollateralInput ::
   AlonzoEraImp era =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 addCollateralInput tx
   | not (null (tx ^. bodyTxL . collateralInputsTxBodyL)) = pure tx
   | otherwise = do
@@ -164,9 +164,9 @@ impLookupPlutusScript sh = do
   mkPlutusScript plutus
 
 impGetPlutusContexts ::
-  forall era.
+  forall era l.
   AlonzoEraImp era =>
-  Tx era ->
+  Tx l era ->
   ImpTestM era [(PlutusPurpose AsIxItem era, ScriptHash, ScriptTestContext)]
 impGetPlutusContexts tx = do
   let txBody = tx ^. bodyTxL
@@ -177,10 +177,10 @@ impGetPlutusContexts tx = do
   pure $ catMaybes mbyContexts
 
 fixupRedeemerIndices ::
-  forall era.
+  forall era l.
   AlonzoEraImp era =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx l era ->
+  ImpTestM era (Tx l era)
 fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
   (rootTxIn, _) <- getImpRootTxOut
   let
@@ -194,8 +194,8 @@ fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
 fixupRedeemers ::
   forall era.
   (AlonzoEraImp era, HasCallStack) =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 fixupRedeemers tx = impAnn "fixupRedeemers" $ do
   contexts <- impGetPlutusContexts tx
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
@@ -230,10 +230,10 @@ fixupRedeemers tx = impAnn "fixupRedeemers" $ do
       & witsTxL . rdmrsTxWitsL . unRedeemersL .~ Map.unions [oldRedeemers, newRedeemers, newMaxRedeemers]
 
 txWithMaxRedeemers ::
-  forall era.
+  forall era l.
   AlonzoEraImp era =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx l era ->
+  ImpTestM era (Tx l era)
 txWithMaxRedeemers tx = do
   contexts <- impGetPlutusContexts tx
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
@@ -245,10 +245,10 @@ txWithMaxRedeemers tx = do
   pure $ tx & witsTxL . rdmrsTxWitsL . unRedeemersL .~ newMaxRedeemers
 
 fixupScriptWits ::
-  forall era.
+  forall era l.
   AlonzoEraImp era =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx l era ->
+  ImpTestM era (Tx l era)
 fixupScriptWits tx = impAnn "fixupScriptWits" $ do
   contexts <- impGetPlutusContexts tx
   utxo <- getUTxO
@@ -261,12 +261,12 @@ fixupScriptWits tx = impAnn "fixupScriptWits" $ do
       & witsTxL . scriptTxWitsL <>~ Map.fromList scriptWits
 
 fixupDatums ::
-  forall era.
+  forall era l.
   ( HasCallStack
   , AlonzoEraImp era
   ) =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx l era ->
+  ImpTestM era (Tx l era)
 fixupDatums tx = impAnn "fixupDatums" $ do
   contexts <- impGetPlutusContexts tx
   let purposes = (^. _1) <$> contexts
@@ -306,10 +306,10 @@ fixupDatums tx = impAnn "fixupDatums" $ do
     spendDatum _ = error "Context does not have a spending datum"
 
 fixupPPHash ::
-  forall era.
+  forall era l.
   AlonzoEraImp era =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx l era ->
+  ImpTestM era (Tx l era)
 fixupPPHash tx = impAnn "fixupPPHash" $ do
   integrityHash <- computeScriptIntegrityHash tx
   pure $
@@ -317,10 +317,10 @@ fixupPPHash tx = impAnn "fixupPPHash" $ do
       & bodyTxL . scriptIntegrityHashTxBodyL .~ integrityHash
 
 fixupOutputDatums ::
-  forall era.
+  forall era l.
   AlonzoEraImp era =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx l era ->
+  ImpTestM era (Tx l era)
 fixupOutputDatums tx = impAnn "fixupOutputDatums" $ do
   let
     addDatum txOut =
@@ -336,8 +336,8 @@ alonzoFixupTx ::
   ( HasCallStack
   , AlonzoEraImp era
   ) =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 alonzoFixupTx =
   addNativeScriptTxWits
     >=> fixupAuxDataHash
@@ -355,7 +355,8 @@ alonzoFixupTx =
     >=> fixupPPHash
     >=> updateAddrTxWits
 
-alonzoFixupFees :: forall era. (HasCallStack, AlonzoEraImp era) => Tx era -> ImpTestM era (Tx era)
+alonzoFixupFees ::
+  forall era. (HasCallStack, AlonzoEraImp era) => Tx TopTx era -> ImpTestM era (Tx TopTx era)
 alonzoFixupFees tx = do
   let originalRedeemers = tx ^. witsTxL . rdmrsTxWitsL
   txWithMax <- txWithMaxRedeemers tx
@@ -464,7 +465,7 @@ impGetScriptContext sh =
     $ impLookupScriptContext @era sh
 
 impPlutusWithContexts ::
-  (HasCallStack, AlonzoEraImp era) => Tx era -> ImpTestM era [PlutusWithContext]
+  (HasCallStack, AlonzoEraImp era) => Tx TopTx era -> ImpTestM era [PlutusWithContext]
 impPlutusWithContexts tx = do
   globals <- use impGlobalsL
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
@@ -475,7 +476,7 @@ impPlutusWithContexts tx = do
     Right pwcs -> pure pwcs
 
 impScriptPredicateFailure ::
-  (HasCallStack, AlonzoEraImp era) => Tx era -> ImpTestM era (AlonzoUtxosPredFailure era)
+  (HasCallStack, AlonzoEraImp era) => Tx TopTx era -> ImpTestM era (AlonzoUtxosPredFailure era)
 impScriptPredicateFailure tx = do
   plutusWithContexts <- impPlutusWithContexts tx
   when (null plutusWithContexts) $
@@ -497,7 +498,7 @@ submitPhase2Invalid_ ::
   ( HasCallStack
   , AlonzoEraImp era
   ) =>
-  Tx era ->
+  Tx TopTx era ->
   ImpTestM era ()
 submitPhase2Invalid_ = void . submitPhase2Invalid
 
@@ -505,8 +506,8 @@ submitPhase2Invalid ::
   ( HasCallStack
   , AlonzoEraImp era
   ) =>
-  Tx era ->
-  ImpTestM era (Tx era)
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
 submitPhase2Invalid tx = do
   fixedUpTx <-
     impAnn "Check that tx fails with IsValid True" $ do
@@ -522,7 +523,7 @@ impAlonzoExpectTxSuccess ::
   ( HasCallStack
   , AlonzoEraImp era
   ) =>
-  Tx era -> ImpTestM era ()
+  Tx TopTx era -> ImpTestM era ()
 impAlonzoExpectTxSuccess tx = do
   utxo <- getsNES utxoL
   let inputs = tx ^. bodyTxL . inputsTxBodyL
@@ -548,7 +549,7 @@ computeScriptIntegrity ::
   AlonzoEraImp era =>
   PParams era ->
   UTxO era ->
-  Tx era ->
+  Tx l era ->
   StrictMaybe (ScriptIntegrity era)
 computeScriptIntegrity pp utxo tx = mkScriptIntegrity pp tx scriptsProvided scriptsNeeded
   where
@@ -557,11 +558,11 @@ computeScriptIntegrity pp utxo tx = mkScriptIntegrity pp tx scriptsProvided scri
 
 impComputeScriptIntegrity ::
   AlonzoEraImp era =>
-  Tx era ->
+  Tx l era ->
   ImpTestM era (StrictMaybe (ScriptIntegrity era))
 impComputeScriptIntegrity tx =
   computeScriptIntegrity <$> getsPParams id <*> getUTxO <*> pure tx
 
 computeScriptIntegrityHash ::
-  AlonzoEraImp era => Tx era -> ImpTestM era (StrictMaybe ScriptIntegrityHash)
+  AlonzoEraImp era => Tx l era -> ImpTestM era (StrictMaybe ScriptIntegrityHash)
 computeScriptIntegrityHash tx = fmap hashScriptIntegrity <$> impComputeScriptIntegrity tx

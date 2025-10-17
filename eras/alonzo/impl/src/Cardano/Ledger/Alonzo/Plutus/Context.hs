@@ -86,7 +86,7 @@ data LedgerTxInfo era = LedgerTxInfo
   , ltiEpochInfo :: !(EpochInfo (Either Text))
   , ltiSystemStart :: !SystemStart
   , ltiUTxO :: !(UTxO era)
-  , ltiTx :: !(Tx era)
+  , ltiTx :: !(Tx TopTx era)
   }
 
 class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language) era where

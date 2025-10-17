@@ -41,9 +41,10 @@ instance
   , ToExpr (TxCert era)
   , ToExpr (Update era)
   ) =>
-  ToExpr (AllegraTxBodyRaw ma era)
+  ToExpr (AllegraTxBodyRaw ma TopTx era) where
+  toExpr = undefined
 
-instance ToExpr (TxBody AllegraEra)
+instance ToExpr (TxBody TopTx AllegraEra)
 
 -- Rules/Utxo
 instance
@@ -60,4 +61,4 @@ instance
   ) =>
   ToExpr (AllegraUtxoEvent era)
 
-deriving newtype instance ToExpr (Tx AllegraEra)
+deriving newtype instance ToExpr (Tx TopTx AllegraEra)

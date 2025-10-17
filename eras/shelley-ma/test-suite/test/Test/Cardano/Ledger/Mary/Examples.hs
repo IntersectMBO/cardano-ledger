@@ -29,7 +29,7 @@ ignoreAllButUTxO = fmap (\(LedgerState (UTxOState utxo _ _ _ _ _) _) -> utxo)
 testMaryNoDelegLEDGER ::
   HasCallStack =>
   UTxO MaryEra ->
-  Tx MaryEra ->
+  Tx TopTx MaryEra ->
   LedgerEnv MaryEra ->
   Either (NonEmpty (PredicateFailure (ShelleyLEDGER MaryEra))) (UTxO MaryEra) ->
   Assertion

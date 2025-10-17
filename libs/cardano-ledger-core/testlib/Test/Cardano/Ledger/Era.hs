@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Test.Cardano.Ledger.Era (
@@ -35,11 +36,11 @@ class
   , EraAccounts era
   , EraGenesis era
   , -- Arbitrary Core
-    Arbitrary (Tx era)
-  , Arbitrary (TxOut era)
-  , Arbitrary (TxBody era)
-  , Arbitrary (TxAuxData era)
+    Arbitrary (Tx TopTx era)
+  , Arbitrary (TxBody TopTx era)
   , Arbitrary (TxWits era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (TxAuxData era)
   , Arbitrary (Script era)
   , Arbitrary (PParamsHKD Identity era)
   , Arbitrary (PParamsHKD StrictMaybe era)
@@ -53,11 +54,11 @@ class
   , Arbitrary (Accounts era)
   , Arbitrary (AccountState era)
   , -- ToExpr Core
-    ToExpr (Tx era)
-  , ToExpr (TxOut era)
-  , ToExpr (TxBody era)
-  , ToExpr (TxAuxData era)
+    ToExpr (Tx TopTx era)
+  , ToExpr (TxBody TopTx era)
   , ToExpr (TxWits era)
+  , ToExpr (TxOut era)
+  , ToExpr (TxAuxData era)
   , ToExpr (Script era)
   , ToExpr (PParamsHKD Identity era)
   , ToExpr (PParamsHKD StrictMaybe era)
@@ -75,8 +76,8 @@ class
   , DecCBOR (NativeScript era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
+  , DecCBOR (TxBody TopTx era)
+  , DecCBOR (Tx TopTx era)
   , -- TranslationContext
     Eq (TranslationContext era)
   , Show (TranslationContext era)

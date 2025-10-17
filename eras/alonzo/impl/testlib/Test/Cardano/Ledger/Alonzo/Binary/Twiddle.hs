@@ -61,7 +61,7 @@ instance Twiddle TxIn where
 instance Twiddle Coin where
   twiddle v = twiddle v . toTerm v
 
-instance Twiddle (TxBody AlonzoEra) where
+instance Twiddle (TxBody TopTx AlonzoEra) where
   twiddle v txBody = do
     inputs' <- twiddle v $ atbInputs txBody
     outputs' <- twiddle v $ atbOutputs txBody

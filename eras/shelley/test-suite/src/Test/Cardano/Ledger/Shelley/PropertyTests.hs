@@ -68,7 +68,7 @@ commonTests ::
   , State (EraRule "TICKN" era) ~ TicknState
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Environment (EraRule "TICKN" era) ~ TicknEnv
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   , Signal (EraRule "TICKN" era) ~ Bool
   , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
   , AtMostEra "Alonzo" era
@@ -82,7 +82,7 @@ commonTests ::
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Environment (EraRule "TICK" era) ~ ()
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , Signal (EraRule "LEDGER" era) ~ Tx TopTx era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , Signal (EraRule "TICK" era) ~ SlotNo

@@ -108,6 +108,7 @@ import Cardano.Ledger.Core (
   EraTxBody (..),
   PParams,
   TxAuxDataHash (..),
+  TxLevel (..),
   Value,
   binaryUpgradeTxBody,
   txIdTxBody,
@@ -131,93 +132,93 @@ import qualified Data.Set as Set (map)
 import Lens.Micro (Lens', SimpleGetter, lens, to)
 
 class (EraTxBody era, AnyEraTxOut era, AnyEraTxCert era) => AnyEraTxBody era where
-  updateTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe (Update era)))
+  updateTxBodyG :: SimpleGetter (TxBody TopTx era) (Maybe (Maybe (Update era)))
   updateTxBodyG = to (const Nothing)
 
-  vldtTxBodyG :: SimpleGetter (TxBody era) ValidityInterval
+  vldtTxBodyG :: SimpleGetter (TxBody TopTx era) ValidityInterval
   default vldtTxBodyG ::
-    AllegraEraTxBody era => SimpleGetter (TxBody era) ValidityInterval
+    AllegraEraTxBody era => SimpleGetter (TxBody TopTx era) ValidityInterval
   vldtTxBodyG = vldtTxBodyL
 
-  mintTxBodyG :: SimpleGetter (TxBody era) (Maybe MultiAsset)
+  mintTxBodyG :: SimpleGetter (TxBody l era) (Maybe MultiAsset)
   default mintTxBodyG ::
-    MaryEraTxBody era => SimpleGetter (TxBody era) (Maybe MultiAsset)
+    MaryEraTxBody era => SimpleGetter (TxBody l era) (Maybe MultiAsset)
   mintTxBodyG = mintTxBodyL . to Just
 
-  collateralInputsTxBodyG :: SimpleGetter (TxBody era) (Maybe (Set TxIn))
+  collateralInputsTxBodyG :: SimpleGetter (TxBody TopTx era) (Maybe (Set TxIn))
   default collateralInputsTxBodyG ::
-    AlonzoEraTxBody era => SimpleGetter (TxBody era) (Maybe (Set TxIn))
+    AlonzoEraTxBody era => SimpleGetter (TxBody TopTx era) (Maybe (Set TxIn))
   collateralInputsTxBodyG = collateralInputsTxBodyL . to Just
 
   scriptIntegrityHashTxBodyG ::
-    SimpleGetter (TxBody era) (Maybe (Maybe ScriptIntegrityHash))
+    SimpleGetter (TxBody l era) (Maybe (Maybe ScriptIntegrityHash))
   default scriptIntegrityHashTxBodyG ::
     AlonzoEraTxBody era =>
-    SimpleGetter (TxBody era) (Maybe (Maybe ScriptIntegrityHash))
+    SimpleGetter (TxBody l era) (Maybe (Maybe ScriptIntegrityHash))
   scriptIntegrityHashTxBodyG = scriptIntegrityHashTxBodyL . to (Just . strictMaybeToMaybe)
 
-  networkIdTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe Network))
+  networkIdTxBodyG :: SimpleGetter (TxBody l era) (Maybe (Maybe Network))
   default networkIdTxBodyG ::
     AlonzoEraTxBody era =>
-    SimpleGetter (TxBody era) (Maybe (Maybe Network))
+    SimpleGetter (TxBody l era) (Maybe (Maybe Network))
   networkIdTxBodyG = networkIdTxBodyL . to (Just . strictMaybeToMaybe)
 
-  sizedOutputsTxBodyG :: SimpleGetter (TxBody era) (Maybe (StrictSeq (Sized (TxOut era))))
+  sizedOutputsTxBodyG :: SimpleGetter (TxBody l era) (Maybe (StrictSeq (Sized (TxOut era))))
   default sizedOutputsTxBodyG ::
     BabbageEraTxBody era =>
-    SimpleGetter (TxBody era) (Maybe (StrictSeq (Sized (TxOut era))))
+    SimpleGetter (TxBody l era) (Maybe (StrictSeq (Sized (TxOut era))))
   sizedOutputsTxBodyG = sizedOutputsTxBodyL . to Just
 
-  referenceInputsTxBodyG :: SimpleGetter (TxBody era) (Maybe (Set TxIn))
+  referenceInputsTxBodyG :: SimpleGetter (TxBody l era) (Maybe (Set TxIn))
   default referenceInputsTxBodyG ::
     BabbageEraTxBody era =>
-    SimpleGetter (TxBody era) (Maybe (Set TxIn))
+    SimpleGetter (TxBody l era) (Maybe (Set TxIn))
   referenceInputsTxBodyG = referenceInputsTxBodyL . to Just
 
-  totalCollateralTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe Coin))
+  totalCollateralTxBodyG :: SimpleGetter (TxBody TopTx era) (Maybe (Maybe Coin))
   default totalCollateralTxBodyG ::
     BabbageEraTxBody era =>
-    SimpleGetter (TxBody era) (Maybe (Maybe Coin))
+    SimpleGetter (TxBody TopTx era) (Maybe (Maybe Coin))
   totalCollateralTxBodyG = totalCollateralTxBodyL . to (Just . strictMaybeToMaybe)
 
-  collateralReturnTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe (TxOut era)))
+  collateralReturnTxBodyG :: SimpleGetter (TxBody TopTx era) (Maybe (Maybe (TxOut era)))
   default collateralReturnTxBodyG ::
     BabbageEraTxBody era =>
-    SimpleGetter (TxBody era) (Maybe (Maybe (TxOut era)))
+    SimpleGetter (TxBody TopTx era) (Maybe (Maybe (TxOut era)))
   collateralReturnTxBodyG = collateralReturnTxBodyL . to (Just . strictMaybeToMaybe)
 
-  sizedCollateralReturnTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe (Sized (TxOut era))))
+  sizedCollateralReturnTxBodyG :: SimpleGetter (TxBody TopTx era) (Maybe (Maybe (Sized (TxOut era))))
   default sizedCollateralReturnTxBodyG ::
     BabbageEraTxBody era =>
-    SimpleGetter (TxBody era) (Maybe (Maybe (Sized (TxOut era))))
+    SimpleGetter (TxBody TopTx era) (Maybe (Maybe (Sized (TxOut era))))
   sizedCollateralReturnTxBodyG = sizedCollateralReturnTxBodyL . to (Just . strictMaybeToMaybe)
 
-  currentTreasuryValueTxBodyG :: SimpleGetter (TxBody era) (Maybe (Maybe Coin))
+  currentTreasuryValueTxBodyG :: SimpleGetter (TxBody l era) (Maybe (Maybe Coin))
   default currentTreasuryValueTxBodyG ::
     ConwayEraTxBody era =>
-    SimpleGetter (TxBody era) (Maybe (Maybe Coin))
+    SimpleGetter (TxBody l era) (Maybe (Maybe Coin))
   currentTreasuryValueTxBodyG = currentTreasuryValueTxBodyL . to (Just . strictMaybeToMaybe)
 
-  votingProceduresTxBodyG :: SimpleGetter (TxBody era) (Maybe (VotingProcedures era))
+  votingProceduresTxBodyG :: SimpleGetter (TxBody l era) (Maybe (VotingProcedures era))
   default votingProceduresTxBodyG ::
     ConwayEraTxBody era =>
-    SimpleGetter (TxBody era) (Maybe (VotingProcedures era))
+    SimpleGetter (TxBody l era) (Maybe (VotingProcedures era))
   votingProceduresTxBodyG = votingProceduresTxBodyL . to Just
 
-  proposalProceduresTxBodyG :: SimpleGetter (TxBody era) (Maybe (OSet (ProposalProcedure era)))
+  proposalProceduresTxBodyG :: SimpleGetter (TxBody l era) (Maybe (OSet (ProposalProcedure era)))
   default proposalProceduresTxBodyG ::
     ConwayEraTxBody era =>
-    SimpleGetter (TxBody era) (Maybe (OSet (ProposalProcedure era)))
+    SimpleGetter (TxBody l era) (Maybe (OSet (ProposalProcedure era)))
   proposalProceduresTxBodyG = proposalProceduresTxBodyL . to Just
 
-  treasuryDonationTxBodyG :: SimpleGetter (TxBody era) (Maybe Coin)
-  default treasuryDonationTxBodyG :: ConwayEraTxBody era => SimpleGetter (TxBody era) (Maybe Coin)
+  treasuryDonationTxBodyG :: SimpleGetter (TxBody l era) (Maybe Coin)
+  default treasuryDonationTxBodyG :: ConwayEraTxBody era => SimpleGetter (TxBody l era) (Maybe Coin)
   treasuryDonationTxBodyG = treasuryDonationTxBodyL . to Just
 
-  guardsTxBodyG :: SimpleGetter (TxBody era) (Maybe (OSet (Credential Guard)))
+  guardsTxBodyG :: SimpleGetter (TxBody l era) (Maybe (OSet (Credential Guard)))
   default guardsTxBodyG ::
     DijkstraEraTxBody era =>
-    SimpleGetter (TxBody era) (Maybe (OSet (Credential Guard)))
+    SimpleGetter (TxBody l era) (Maybe (OSet (Credential Guard)))
   guardsTxBodyG = guardsTxBodyL . to Just
 
 instance AnyEraTxBody ShelleyEra where
@@ -333,7 +334,7 @@ evalBalanceTxBody ::
   -- | The UTxO relevant to the transaction.
   UTxO era ->
   -- | The transaction being evaluated for balance.
-  TxBody era ->
+  TxBody l era ->
   -- | The difference between what the transaction consumes and what it produces.
   Value era
 evalBalanceTxBody pp lookupKeyRefund lookupDRepRefund isRegPoolId utxo txBody =

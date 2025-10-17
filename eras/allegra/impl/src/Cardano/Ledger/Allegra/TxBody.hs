@@ -4,14 +4,18 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -31,6 +35,7 @@ module Cardano.Ledger.Allegra.TxBody (
     atbValidityInterval,
     atbWithdrawals
   ),
+  basicAllegraTxBody,
   emptyAllegraTxBodyRaw,
   AllegraTxBodyRaw (..),
   StrictMaybe (..),
@@ -72,71 +77,102 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (Set, empty)
+import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (InspectHeap (..), NoThunks (..))
 
 class EraTxBody era => AllegraEraTxBody era where
-  vldtTxBodyL :: Lens' (TxBody era) ValidityInterval
+  vldtTxBodyL :: Lens' (TxBody l era) ValidityInterval
 
 -- =======================================================
 
-data AllegraTxBodyRaw ma era = AllegraTxBodyRaw
-  { atbrInputs :: !(Set TxIn)
-  , atbrOutputs :: !(StrictSeq (TxOut era))
-  , atbrCerts :: !(StrictSeq (TxCert era))
-  , atbrWithdrawals :: !Withdrawals
-  , atbrFee :: !Coin
-  , atbrValidityInterval :: !ValidityInterval
-  , atbrUpdate :: !(StrictMaybe (Update era))
-  , atbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
-  , atbrMint :: !ma
-  }
-
-deriving instance
-  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era), NFData ma) =>
-  NFData (AllegraTxBodyRaw ma era)
+data AllegraTxBodyRaw ma l era where
+  AllegraTxBodyRaw ::
+    { atbrInputs :: !(Set TxIn)
+    , atbrOutputs :: !(StrictSeq (TxOut era))
+    , atbrCerts :: !(StrictSeq (TxCert era))
+    , atbrWithdrawals :: !Withdrawals
+    , atbrFee :: !Coin
+    , atbrValidityInterval :: !ValidityInterval
+    , atbrUpdate :: !(StrictMaybe (Update era))
+    , atbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
+    , atbrMint :: !ma
+    } ->
+    AllegraTxBodyRaw ma TopTx era
 
 deriving instance
   (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era), Eq ma) =>
-  Eq (AllegraTxBodyRaw ma era)
+  Eq (AllegraTxBodyRaw ma l era)
 
 deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era), Show ma) =>
-  Show (AllegraTxBodyRaw ma era)
+  Show (AllegraTxBodyRaw ma l era)
 
-deriving instance Generic (AllegraTxBodyRaw ma era)
+instance
+  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era), NFData ma) =>
+  NFData (AllegraTxBodyRaw ma l era)
+  where
+  rnf AllegraTxBodyRaw {..} =
+    atbrInputs `deepseq`
+      atbrOutputs `deepseq`
+        atbrCerts `deepseq`
+          atbrWithdrawals `deepseq`
+            atbrFee `deepseq`
+              atbrValidityInterval `deepseq`
+                atbrUpdate `deepseq`
+                  atbrAuxDataHash `deepseq`
+                    rnf atbrMint
 
-deriving instance
-  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era), NoThunks ma) =>
-  NoThunks (AllegraTxBodyRaw ma era)
+deriving via
+  InspectHeap (AllegraTxBodyRaw ma l era)
+  instance
+    (Typeable era, Typeable ma, Typeable l) => NoThunks (AllegraTxBodyRaw ma l era)
 
-instance (DecCBOR ma, Monoid ma, AllegraEraTxBody era) => DecCBOR (AllegraTxBodyRaw ma era) where
+instance
+  ( DecCBOR ma
+  , Monoid ma
+  , AllegraEraTxBody era
+  , HasEraTxLevel (AllegraTxBodyRaw ma) era
+  , STxLevel l era ~ STxTopLevel l era
+  , Typeable l
+  ) =>
+  DecCBOR (AllegraTxBodyRaw ma l era)
+  where
   decCBOR =
-    decode
-      ( SparseKeyed
+    mkSTxTopLevelM @l $
+      decode $
+        SparseKeyed
           "AllegraTxBodyRaw"
           emptyAllegraTxBodyRaw
           bodyFields
           [(0, "atbrInputs"), (1, "atbrOutputs"), (2, "atbrFee")]
-      )
 
 instance
-  (DecCBOR m, Monoid m, AllegraEraTxBody era) =>
-  DecCBOR (Annotator (AllegraTxBodyRaw m era))
+  ( DecCBOR ma
+  , Monoid ma
+  , AllegraEraTxBody era
+  , HasEraTxLevel (AllegraTxBodyRaw ma) era
+  , STxLevel l era ~ STxTopLevel l era
+  , Typeable l
+  ) =>
+  DecCBOR (Annotator (AllegraTxBodyRaw ma l era))
   where
   decCBOR = pure <$> decCBOR
+
+instance HasEraTxLevel (AllegraTxBodyRaw m) AllegraEra where
+  toSTxLevel AllegraTxBodyRaw {} = STopTxOnly @AllegraEra
 
 -- Sparse encodings of AllegraTxBodyRaw, the key values are fixed by backward compatibility
 -- concerns as we want the ShelleyTxBody to deserialise as AllegraTxBody.
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
 instance
   (EraTxOut era, EraTxCert era, Eq ma, EncCBOR ma, Monoid ma) =>
-  EncCBOR (AllegraTxBodyRaw ma era)
+  EncCBOR (AllegraTxBodyRaw ma l era)
   where
   encCBOR (AllegraTxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
     encode $
@@ -155,7 +191,8 @@ instance
         !> encodeKeyedStrictMaybe 8 bot
         !> Omit (== mempty) (Key 9 (To frge))
 
-bodyFields :: (DecCBOR ma, EraTxOut era, EraTxCert era) => Word -> Field (AllegraTxBodyRaw ma era)
+bodyFields ::
+  (DecCBOR ma, EraTxOut era, EraTxCert era) => Word -> Field (AllegraTxBodyRaw ma TopTx era)
 bodyFields 0 = field (\x tx -> tx {atbrInputs = x}) From
 bodyFields 1 = field (\x tx -> tx {atbrOutputs = x}) From
 bodyFields 2 = field (\x tx -> tx {atbrFee = x}) From
@@ -184,47 +221,57 @@ bodyFields 8 =
 bodyFields 9 = field (\x tx -> tx {atbrMint = x}) From
 bodyFields n = invalidField n
 
-emptyAllegraTxBodyRaw :: Monoid ma => AllegraTxBodyRaw ma era
+basicAllegraTxBody ::
+  forall era l ma.
+  ( EraTxBody era
+  , Memoized (TxBody l era)
+  , RawType (TxBody l era) ~ AllegraTxBodyRaw ma l era
+  , HasEraTxLevel (AllegraTxBodyRaw ma) era
+  , STxLevel l era ~ STxTopLevel l era
+  , Typeable l
+  , EncCBOR ma
+  , Monoid ma
+  , Eq ma
+  ) =>
+  TxBody l era
+basicAllegraTxBody =
+  mkMemoizedEra @era $ asSTxTopLevel (emptyAllegraTxBodyRaw @ma @era)
+
+emptyAllegraTxBodyRaw :: Monoid ma => AllegraTxBodyRaw ma TopTx era
 emptyAllegraTxBodyRaw =
   AllegraTxBodyRaw
-    empty
-    (fromList [])
-    (fromList [])
-    (Withdrawals Map.empty)
-    (Coin 0)
-    (ValidityInterval SNothing SNothing)
-    SNothing
-    SNothing
-    mempty
+    { atbrInputs = empty
+    , atbrOutputs = fromList []
+    , atbrCerts = fromList []
+    , atbrWithdrawals = Withdrawals Map.empty
+    , atbrFee = Coin 0
+    , atbrValidityInterval = ValidityInterval SNothing SNothing
+    , atbrUpdate = SNothing
+    , atbrAuxDataHash = SNothing
+    , atbrMint = mempty
+    }
 
--- ===========================================================================
--- Wrap it all up in a newtype, hiding the insides with a pattern construtor.
-
-instance Memoized (TxBody AllegraEra) where
-  type RawType (TxBody AllegraEra) = AllegraTxBodyRaw () AllegraEra
+instance Memoized (TxBody l AllegraEra) where
+  type RawType (TxBody l AllegraEra) = AllegraTxBodyRaw () l AllegraEra
 
 deriving via
-  Mem (AllegraTxBodyRaw () AllegraEra)
+  Mem (AllegraTxBodyRaw () l AllegraEra)
   instance
-    DecCBOR (Annotator (TxBody AllegraEra))
+    Typeable l => DecCBOR (Annotator (TxBody l AllegraEra))
 
-deriving instance Eq (TxBody AllegraEra)
+deriving instance Eq (TxBody l AllegraEra)
 
-deriving instance Show (TxBody AllegraEra)
+deriving instance Show (TxBody l AllegraEra)
 
-deriving instance Generic (TxBody AllegraEra)
+deriving instance Generic (TxBody l AllegraEra)
 
-deriving newtype instance NoThunks (TxBody AllegraEra)
+type instance MemoHashIndex (AllegraTxBodyRaw c l era) = EraIndependentTxBody
 
-deriving newtype instance NFData (TxBody AllegraEra)
-
--- | Encodes memoized bytes created upon construction.
-instance EncCBOR (TxBody AllegraEra)
-
-type instance MemoHashIndex (AllegraTxBodyRaw c era) = EraIndependentTxBody
-
-instance HashAnnotated (TxBody AllegraEra) EraIndependentTxBody where
+instance HashAnnotated (TxBody l AllegraEra) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
+
+instance HasEraTxLevel TxBody AllegraEra where
+  toSTxLevel = toSTxLevel . getMemoRawType
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern AllegraTxBody ::
@@ -237,7 +284,7 @@ pattern AllegraTxBody ::
   ValidityInterval ->
   StrictMaybe (Update AllegraEra) ->
   StrictMaybe TxAuxDataHash ->
-  TxBody AllegraEra
+  TxBody TopTx AllegraEra
 pattern AllegraTxBody
   { atbInputs
   , atbOutputs
@@ -286,19 +333,19 @@ pattern AllegraTxBody
 {-# COMPLETE AllegraTxBody #-}
 
 instance EraTxBody AllegraEra where
-  newtype TxBody AllegraEra = MkAllegraTxBody (MemoBytes (AllegraTxBodyRaw () AllegraEra))
-    deriving newtype (SafeToHash, ToCBOR)
+  newtype TxBody l AllegraEra = MkAllegraTxBody (MemoBytes (AllegraTxBodyRaw () l AllegraEra))
+    deriving newtype (SafeToHash, ToCBOR, EncCBOR, NoThunks, NFData)
 
-  mkBasicTxBody = mkMemoizedEra @AllegraEra emptyAllegraTxBodyRaw
+  mkBasicTxBody = basicAllegraTxBody @AllegraEra
 
   inputsTxBodyL =
-    lensMemoRawType @AllegraEra atbrInputs $
-      \txBodyRaw inputs -> txBodyRaw {atbrInputs = inputs}
+    lensMemoRawType @AllegraEra (\AllegraTxBodyRaw {atbrInputs} -> atbrInputs) $
+      \txBodyRaw@AllegraTxBodyRaw {} inputs -> txBodyRaw {atbrInputs = inputs}
   {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
-    lensMemoRawType @AllegraEra atbrOutputs $
-      \txBodyRaw outputs -> txBodyRaw {atbrOutputs = outputs}
+    lensMemoRawType @AllegraEra (\AllegraTxBodyRaw {atbrOutputs} -> atbrOutputs) $
+      \txBodyRaw@AllegraTxBodyRaw {} outputs -> txBodyRaw {atbrOutputs = outputs}
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
@@ -306,8 +353,8 @@ instance EraTxBody AllegraEra where
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
-    lensMemoRawType @AllegraEra atbrAuxDataHash $
-      \txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash}
+    lensMemoRawType @AllegraEra (\AllegraTxBodyRaw {atbrAuxDataHash} -> atbrAuxDataHash) $
+      \txBodyRaw@AllegraTxBodyRaw {} auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
   spendableInputsTxBodyF = inputsTxBodyL
@@ -317,13 +364,13 @@ instance EraTxBody AllegraEra where
   {-# INLINEABLE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL =
-    lensMemoRawType @AllegraEra atbrWithdrawals $
-      \txBodyRaw withdrawals -> txBodyRaw {atbrWithdrawals = withdrawals}
+    lensMemoRawType @AllegraEra (\AllegraTxBodyRaw {atbrWithdrawals} -> atbrWithdrawals) $
+      \txBodyRaw@AllegraTxBodyRaw {} withdrawals -> txBodyRaw {atbrWithdrawals = withdrawals}
   {-# INLINEABLE withdrawalsTxBodyL #-}
 
   certsTxBodyL =
-    lensMemoRawType @AllegraEra atbrCerts $
-      \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
+    lensMemoRawType @AllegraEra (\AllegraTxBodyRaw {atbrCerts} -> atbrCerts) $
+      \txBodyRaw@AllegraTxBodyRaw {} certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
@@ -339,8 +386,8 @@ instance ShelleyEraTxBody AllegraEra where
 
 instance AllegraEraTxBody AllegraEra where
   vldtTxBodyL =
-    lensMemoRawType @AllegraEra atbrValidityInterval $
-      \txBodyRaw vldt -> txBodyRaw {atbrValidityInterval = vldt}
+    lensMemoRawType @AllegraEra (\AllegraTxBodyRaw {atbrValidityInterval} -> atbrValidityInterval) $
+      \txBodyRaw@AllegraTxBodyRaw {} vldt -> txBodyRaw {atbrValidityInterval = vldt}
   {-# INLINEABLE vldtTxBodyL #-}
 
-instance EqRaw (TxBody AllegraEra)
+instance EqRaw (TxBody l AllegraEra)

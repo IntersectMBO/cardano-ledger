@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Dijkstra.UTxO (
@@ -17,6 +19,7 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
  )
+import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Conway.UTxO (
   conwayConsumed,
   conwayProducedValue,
@@ -25,14 +28,14 @@ import Cardano.Ledger.Conway.UTxO (
   getConwayWitsVKeyNeeded,
  )
 import Cardano.Ledger.Credential (credScriptHash)
-import Cardano.Ledger.Dijkstra.Core (AsIxItem (..), EraTxBody (..))
+import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript (..), pattern GuardingPurpose)
-import Cardano.Ledger.Dijkstra.State (EraUTxO (..), UTxO)
-import Cardano.Ledger.Dijkstra.State.CertState ()
+import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
-import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
+import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
+import Cardano.Ledger.Mary.Value (MaryValue)
 import Data.Maybe (catMaybes)
 import Lens.Micro ((^.))
 
@@ -43,7 +46,11 @@ instance EraUTxO DijkstraEra where
 
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue = conwayProducedValue
+  getProducedValue pp isRegPoolId txBody =
+    withBothTxLevels
+      txBody
+      (conwayProducedValue pp isRegPoolId)
+      (dijkstraSubTxProducedValue pp isRegPoolId)
 
   getScriptsProvided = getBabbageScriptsProvided
 
@@ -56,7 +63,8 @@ instance EraUTxO DijkstraEra where
   getMinFeeTxUtxo = getConwayMinFeeTxUtxo
 
 getDijkstraScriptsNeeded ::
-  (DijkstraEraTxBody era, DijkstraEraScript era) => UTxO era -> TxBody era -> AlonzoScriptsNeeded era
+  (DijkstraEraTxBody era, DijkstraEraScript era) =>
+  UTxO era -> TxBody l era -> AlonzoScriptsNeeded era
 getDijkstraScriptsNeeded utxo txb =
   getConwayScriptsNeeded utxo txb
     <> guardingScriptsNeeded
@@ -70,3 +78,14 @@ instance AlonzoEraUTxO DijkstraEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes
 
   getSpendingDatum = getBabbageSpendingDatum
+
+dijkstraSubTxProducedValue ::
+  (ConwayEraTxBody era, Value era ~ MaryValue) =>
+  PParams era ->
+  (KeyHash StakePool -> Bool) ->
+  TxBody SubTx era ->
+  Value era
+dijkstraSubTxProducedValue pp isRegPoolId txBody =
+  sumAllValue (txBody ^. outputsTxBodyL)
+    <> inject (getTotalDepositsTxBody pp isRegPoolId txBody <> txBody ^. treasuryDonationTxBodyL)
+    <> burnedMultiAssets txBody

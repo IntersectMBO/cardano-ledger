@@ -144,17 +144,13 @@ instance
   ( EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   ) =>
   STS (ShelleyBBODY era)
   where
-  type
-    State (ShelleyBBODY era) =
-      ShelleyBbodyState era
+  type State (ShelleyBBODY era) = ShelleyBbodyState era
 
-  type
-    Signal (ShelleyBBODY era) =
-      Block BHeaderView era
+  type Signal (ShelleyBBODY era) = Block BHeaderView era
 
   type Environment (ShelleyBBODY era) = BbodyEnv era
 
@@ -173,7 +169,7 @@ bbodyTransition ::
   , EraBlockBody era
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx TopTx era)
   ) =>
   TransitionRule (ShelleyBBODY era)
 bbodyTransition =

@@ -123,7 +123,7 @@ aliceAndBobOrCarlOrDaria =
 
 initTxBody ::
   [(Addr, Value ShelleyEra)] ->
-  TxBody ShelleyEra
+  TxBody TopTx ShelleyEra
 initTxBody addrs =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound, TxIn genesisId (mkTxIxPartial 1)])
@@ -139,7 +139,7 @@ makeTxBody ::
   [TxIn] ->
   [(Addr, Value ShelleyEra)] ->
   Withdrawals ->
-  TxBody ShelleyEra
+  TxBody TopTx ShelleyEra
 makeTxBody inp addrCs wdrl =
   ShelleyTxBody
     (Set.fromList inp)
@@ -152,11 +152,11 @@ makeTxBody inp addrCs wdrl =
     SNothing
 
 makeTx ::
-  TxBody ShelleyEra ->
+  TxBody TopTx ShelleyEra ->
   [KeyPair 'Witness] ->
   Map ScriptHash (MultiSig ShelleyEra) ->
   Maybe (ShelleyTxAuxData ShelleyEra) ->
-  Tx ShelleyEra
+  Tx TopTx ShelleyEra
 makeTx txBody keyPairs msigs auxData =
   mkBasicTx txBody
     & witsTxL .~ txWits

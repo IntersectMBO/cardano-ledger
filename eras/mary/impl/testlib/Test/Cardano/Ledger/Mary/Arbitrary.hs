@@ -53,7 +53,7 @@ instance Arbitrary AssetName where
         , (7, genShortByteString =<< choose (1, 32))
         ]
 
-instance Arbitrary (TxBody MaryEra) where
+instance Arbitrary (TxBody TopTx MaryEra) where
   arbitrary =
     MaryTxBody
       <$> arbitrary
@@ -244,4 +244,4 @@ hashOfDigitByteStrings = castHash . hashWith id <$> digitByteStrings
 
 deriving newtype instance Arbitrary (TransitionConfig MaryEra)
 
-deriving newtype instance Arbitrary (Tx MaryEra)
+deriving newtype instance Arbitrary (Tx TopTx MaryEra)

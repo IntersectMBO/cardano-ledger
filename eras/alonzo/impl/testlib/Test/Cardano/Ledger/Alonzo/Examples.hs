@@ -90,7 +90,7 @@ mkLedgerExamples ::
   AlonzoEraPParams era =>
   ApplyTxError era ->
   NewEpochState era ->
-  Tx era ->
+  Tx TopTx era ->
   TranslationContext era ->
   LedgerExamples era
 mkLedgerExamples
@@ -127,7 +127,7 @@ exampleAlonzoNewEpochState =
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOWordL .~ CoinPerWord (Coin 1))
 
-exampleTxAlonzo :: Tx AlonzoEra
+exampleTxAlonzo :: Tx TopTx AlonzoEra
 exampleTxAlonzo =
   exampleTx
     exampleTxBodyAlonzo
@@ -135,13 +135,13 @@ exampleTxAlonzo =
     (RequireAllOf @AlonzoEra mempty)
 
 exampleTx ::
-  forall era.
+  forall era l.
   ( AlonzoEraTx era
   , EraPlutusTxInfo 'PlutusV1 era
   , TxAuxData era ~ AlonzoTxAuxData era
   , Script era ~ AlonzoScript era
   ) =>
-  TxBody era -> PlutusPurpose AsIx era -> NativeScript era -> Tx era
+  TxBody l era -> PlutusPurpose AsIx era -> NativeScript era -> Tx l era
 exampleTx txBody scriptPurpose nativeScript =
   mkBasicTx @era txBody
     & witsTxL
@@ -164,7 +164,7 @@ exampleTx txBody scriptPurpose nativeScript =
             [alwaysFails @'PlutusV1 2, NativeScript nativeScript]
         )
 
-exampleTxBodyAlonzo :: TxBody AlonzoEra
+exampleTxBodyAlonzo :: TxBody TopTx AlonzoEra
 exampleTxBodyAlonzo =
   AlonzoTxBody
     (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 1)) 0]) -- inputs

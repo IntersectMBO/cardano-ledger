@@ -29,6 +29,7 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
+import Data.Typeable (Typeable)
 
 --------------------------------------------------------------------------------
 -- Translation from Alonzo to Babbage
@@ -58,8 +59,8 @@ instance TranslateEra BabbageEra NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-instance TranslateEra BabbageEra Tx where
-  type TranslationError BabbageEra Tx = DecoderError
+instance Typeable l => TranslateEra BabbageEra (Tx l) where
+  type TranslationError BabbageEra (Tx l) = DecoderError
   translateEra _ctxt tx = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are

@@ -136,7 +136,7 @@ validatingTx ::
   , EraModel era
   , EraPlutusTxInfo PlutusV1 era
   ) =>
-  Tx era
+  Tx TopTx era
 validatingTx =
   let script = alwaysSucceeds @PlutusV1 @era 3
    in mkBasicTx validatingBody
@@ -174,7 +174,7 @@ collectInputs ::
   EpochInfo (Either Text) ->
   SystemStart ->
   PParams era ->
-  Tx era ->
+  Tx TopTx era ->
   UTxO era ->
   Either [CollectError era] [PlutusWithContext]
 collectInputs = collectPlutusScriptsWithContext

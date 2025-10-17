@@ -431,7 +431,7 @@ getRewardProvenance globals newEpochState =
 -- Transaction helpers
 --------------------------------------------------------------------------------
 
-addKeyWitnesses :: EraTx era => Tx era -> Set (WitVKey 'Witness) -> Tx era
+addKeyWitnesses :: EraTx era => Tx t era -> Set (WitVKey 'Witness) -> Tx t era
 addKeyWitnesses tx newWits = tx & witsTxL . addrTxWitsL %~ Set.union newWits
 
 --------------------------------------------------------------------------------
