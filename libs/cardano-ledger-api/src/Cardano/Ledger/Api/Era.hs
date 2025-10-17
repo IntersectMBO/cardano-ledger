@@ -265,7 +265,7 @@ instance EraApi AllegraEra where
             , Allegra.atbOutputs = upgradeTxOut <$> (txBody ^. outputsTxBodyL)
             , Allegra.atbCerts = certs
             , Allegra.atbWithdrawals = txBody ^. withdrawalsTxBodyL
-            , Allegra.atbTxFee = txBody ^. feeTxBodyF
+            , Allegra.atbTxFee = txBody ^. feeTxBodyL
             , Allegra.atbValidityInterval = ttlToValidityInterval (txBody ^. ttlTxBodyL)
             , Allegra.atbUpdate = upgradeUpdate () <$> (txBody ^. updateTxBodyL)
             , Allegra.atbAuxDataHash = txBody ^. auxDataHashTxBodyL

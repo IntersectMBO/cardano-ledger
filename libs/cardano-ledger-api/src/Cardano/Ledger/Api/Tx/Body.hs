@@ -181,11 +181,11 @@ class (EraTxBody era, AnyEraTxOut era, AnyEraTxCert era) => AnyEraTxBody era whe
     SimpleGetter (TxBody TopTx era) (Maybe (Maybe Coin))
   totalCollateralTxBodyG = totalCollateralTxBodyL . to (Just . strictMaybeToMaybe)
 
-  collateralReturnTxBodyG :: SimpleGetter (TxBody l era) (Maybe (Maybe (TxOut era)))
+  collateralReturnTxBodyG :: SimpleGetter (TxBody TopTx era) (Maybe (Maybe (TxOut era)))
   default collateralReturnTxBodyG ::
     BabbageEraTxBody era =>
-    SimpleGetter (TxBody l era) (Maybe (Maybe (TxOut era)))
-  collateralReturnTxBodyG = collateralReturnTxBodyF . to (Just . strictMaybeToMaybe)
+    SimpleGetter (TxBody TopTx era) (Maybe (Maybe (TxOut era)))
+  collateralReturnTxBodyG = collateralReturnTxBodyL . to (Just . strictMaybeToMaybe)
 
   sizedCollateralReturnTxBodyG :: SimpleGetter (TxBody TopTx era) (Maybe (Maybe (Sized (TxOut era))))
   default sizedCollateralReturnTxBodyG ::

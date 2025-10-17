@@ -114,7 +114,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (..))
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import Data.Coerce (coerce)
 import Data.OSet.Strict (OSet, decodeOSet)
 import qualified Data.OSet.Strict as OSet
@@ -179,7 +179,42 @@ deriving via
     Typeable l => NoThunks (DijkstraTxBodyRaw l DijkstraEra)
 
 instance NFData (DijkstraTxBodyRaw l DijkstraEra) where
-  rnf = undefined
+  rnf DijkstraTxBodyRaw {..} =
+    dtbrSpendInputs `deepseq`
+      dtbrCollateralInputs `deepseq`
+        dtbrReferenceInputs `deepseq`
+          dtbrOutputs `deepseq`
+            dtbrCollateralReturn `deepseq`
+              dtbrTotalCollateral `deepseq`
+                dtbrCerts `deepseq`
+                  dtbrWithdrawals `deepseq`
+                    dtbrFee `deepseq`
+                      dtbrVldt `deepseq`
+                        dtbrGuards `deepseq`
+                          dtbrMint `deepseq`
+                            dtbrScriptIntegrityHash `deepseq`
+                              dtbrAuxDataHash `deepseq`
+                                dtbrNetworkId `deepseq`
+                                  dtbrVotingProcedures `deepseq`
+                                    dtbrProposalProcedures `deepseq`
+                                      dtbrCurrentTreasuryValue `deepseq`
+                                        rnf dtbrTreasuryDonation
+  rnf DijkstraSubTxBodyRaw {..} =
+    dstbrSpendInputs `deepseq`
+      dstbrReferenceInputs `deepseq`
+        dstbrOutputs `deepseq`
+          dstbrCerts `deepseq`
+            dstbrWithdrawals `deepseq`
+              dstbrVldt `deepseq`
+                dstbrGuards `deepseq`
+                  dstbrMint `deepseq`
+                    dstbrScriptIntegrityHash `deepseq`
+                      dstbrAuxDataHash `deepseq`
+                        dstbrNetworkId `deepseq`
+                          dstbrVotingProcedures `deepseq`
+                            dstbrProposalProcedures `deepseq`
+                              dstbrCurrentTreasuryValue `deepseq`
+                                rnf dstbrTreasuryDonation
 
 deriving instance Show (DijkstraTxBodyRaw l DijkstraEra)
 

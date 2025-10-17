@@ -77,7 +77,7 @@ evaluateTransactionBalance ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  TxBody l era ->
+  TxBody TopTx era ->
   Value era
 evaluateTransactionBalance pp dpstate utxo txBody =
   evaluateTransactionBalanceShelley pp dpstate utxo txBody <> (txBody ^. mintValueTxBodyF)
@@ -87,13 +87,13 @@ evaluateTransactionBalanceShelley ::
   PParams era ->
   CertState era ->
   UTxO era ->
-  TxBody l era ->
+  TxBody TopTx era ->
   Value era
 evaluateTransactionBalanceShelley pp dpstate utxo txBody = consumed <-> produced
   where
     produced =
       sumUTxO (txouts txBody)
-        <+> inject (txBody ^. feeTxBodyF <+> totalTxDeposits pp dpstate txBody)
+        <+> inject (txBody ^. feeTxBodyL <+> totalTxDeposits pp dpstate txBody)
     consumed =
       sumUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
         <> inject (refunds <> withdrawals)
