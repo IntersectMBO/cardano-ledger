@@ -1,7 +1,12 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.17.1.0
+## 1.18.0.0
 
+* Move withdrawals-draining from `DELEGS` to `LEDGER`
+  - Remove `WithdrawalsNotInRewardsDELEGS`
+  - Add to `ShelleyLedgerPredFailure`
+    + `ShelleyWithdrawalsMissingAccounts`
+    + `ShelleyIncompleteWithdrawals`
 * Added `Generic` instance to `ShelleyTxOut`
 
 ### `testlib`
