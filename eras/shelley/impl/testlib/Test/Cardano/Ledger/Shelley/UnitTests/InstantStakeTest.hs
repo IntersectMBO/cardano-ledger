@@ -20,7 +20,7 @@ import Data.MonoTuple (TupleN)
 import qualified Data.VMap as VMap
 import Lens.Micro
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary (genPoolParamsNoDefaultVote)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.ImpTest
@@ -36,7 +36,7 @@ arbitraryLens l b = (l .~ b) <$> arbitrary
 
 instantStakeIncludesRewards :: forall era. ShelleyEraImp era => Gen Property
 instantStakeIncludesRewards = do
-  (pool1, pool2) <- arbitrary @(TupleN 2 PoolParams)
+  (pool1, pool2) <- (,) <$> genPoolParamsNoDefaultVote <*> genPoolParamsNoDefaultVote
   let
     poolId1 = pool1 ^. ppIdL
     poolId2 = pool2 ^. ppIdL
