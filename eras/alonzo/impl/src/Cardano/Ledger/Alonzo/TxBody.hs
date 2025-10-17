@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -107,7 +108,7 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import qualified Data.Map.Strict as Map
 import Data.OSet.Strict (OSet)
 import qualified Data.OSet.Strict as OSet
@@ -179,8 +180,27 @@ deriving via
   instance
     Typeable l => NoThunks (AlonzoTxBodyRaw l AlonzoEra)
 
-instance NFData (AlonzoTxBodyRaw l era) where
-  rnf = undefined
+instance
+  ( NFData (TxOut era)
+  , NFData (TxCert era)
+  , NFData (PParamsHKD StrictMaybe era)
+  ) =>
+  NFData (AlonzoTxBodyRaw l era)
+  where
+  rnf AlonzoTxBodyRaw {..} =
+    atbrInputs `deepseq`
+      atbrCollateral `deepseq`
+        atbrOutputs `deepseq`
+          atbrCerts `deepseq`
+            atbrWithdrawals `deepseq`
+              atbrTxFee `deepseq`
+                atbrValidityInterval `deepseq`
+                  atbrUpdate `deepseq`
+                    atbrReqSignerHashes `deepseq`
+                      atbrMint `deepseq`
+                        atbrScriptIntegrityHash `deepseq`
+                          atbrAuxDataHash `deepseq`
+                            rnf atbrTxNetworkId
 
 deriving instance Show (AlonzoTxBodyRaw l AlonzoEra)
 

@@ -106,7 +106,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq)
@@ -151,7 +151,26 @@ deriving via
     Typeable l => NoThunks (ConwayTxBodyRaw l ConwayEra)
 
 instance NFData (ConwayTxBodyRaw l ConwayEra) where
-  rnf = undefined
+  rnf ConwayTxBodyRaw {..} =
+    ctbrSpendInputs `deepseq`
+      ctbrCollateralInputs `deepseq`
+        ctbrReferenceInputs `deepseq`
+          ctbrOutputs `deepseq`
+            ctbrCollateralReturn `deepseq`
+              ctbrTotalCollateral `deepseq`
+                ctbrCerts `deepseq`
+                  ctbrWithdrawals `deepseq`
+                    ctbrFee `deepseq`
+                      ctbrVldt `deepseq`
+                        ctbrReqSignerHashes `deepseq`
+                          ctbrMint `deepseq`
+                            ctbrScriptIntegrityHash `deepseq`
+                              ctbrAuxDataHash `deepseq`
+                                ctbrNetworkId `deepseq`
+                                  ctbrVotingProcedures `deepseq`
+                                    ctbrProposalProcedures `deepseq`
+                                      ctbrCurrentTreasuryValue `deepseq`
+                                        rnf ctbrTreasuryDonation
 
 deriving instance Show (ConwayTxBodyRaw l ConwayEra)
 

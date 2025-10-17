@@ -9,6 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -98,7 +99,7 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import Data.Foldable as F (foldl')
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -153,6 +154,25 @@ deriving instance Eq (BabbageTxBodyRaw l BabbageEra)
 
 deriving instance Show (BabbageTxBodyRaw l BabbageEra)
 
+instance NFData (BabbageTxBodyRaw l BabbageEra) where
+  rnf BabbageTxBodyRaw {..} =
+    btbrInputs `deepseq`
+      btbrCollateralInputs `deepseq`
+        btbrReferenceInputs `deepseq`
+          btbrOutputs `deepseq`
+            btbrCollateralReturn `deepseq`
+              btbrTotalCollateral `deepseq`
+                btbrCerts `deepseq`
+                  btbrWithdrawals `deepseq`
+                    btbrFee `deepseq`
+                      btbrValidityInterval `deepseq`
+                        btbrUpdate `deepseq`
+                          btbrReqSignerHashes `deepseq`
+                            btbrMint `deepseq`
+                              btbrScriptIntegrityHash `deepseq`
+                                btbrAuxDataHash `deepseq`
+                                  rnf btbrNetworkId
+
 -- We override this instance because the 'Sized' types also reference their
 -- serialisation and as such cannot be compared directly. An alternative would
 -- be to derive `EqRaw` for `Sized`.
@@ -192,9 +212,6 @@ deriving via
   InspectHeap (BabbageTxBodyRaw l BabbageEra)
   instance
     Typeable l => NoThunks (BabbageTxBodyRaw l BabbageEra)
-
-instance NFData (BabbageTxBodyRaw l BabbageEra) where
-  rnf = undefined
 
 deriving via
   Mem (BabbageTxBodyRaw l BabbageEra)

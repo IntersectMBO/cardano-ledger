@@ -90,7 +90,7 @@ import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Wits
 import Cardano.Ledger.Babbage.Collateral (mkCollateralTxIn)
-import Cardano.Ledger.Core (EraTx (..), binaryUpgradeTx, txIdTx)
+import Cardano.Ledger.Core (EraTx (..), TxLevel (..), binaryUpgradeTx, txIdTx)
 import Cardano.Ledger.State (UTxO (..), txouts)
 import Cardano.Ledger.Tools (calcMinFeeTx, estimateMinFeeTx, setMinFeeTx, setMinFeeTxUtxo)
 import Control.Monad (join)
@@ -120,7 +120,7 @@ instance AnyEraTx ConwayEra
 instance AnyEraTx DijkstraEra
 
 -- | Construct all of the unspent outputs that will be produced by this transaction
-producedTxOuts :: AnyEraTx era => Tx l era -> UTxO era
+producedTxOuts :: AnyEraTx era => Tx TopTx era -> UTxO era
 producedTxOuts tx =
   case tx ^. isValidTxG of
     Just (IsValid False) ->
