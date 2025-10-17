@@ -389,6 +389,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
               Set.empty
               StrictSeq.empty
               SNothing
+              SNothing
        in (pps, aikCold allPoolKeys)
 
 -- | Generate `RegPool` and the key witness.

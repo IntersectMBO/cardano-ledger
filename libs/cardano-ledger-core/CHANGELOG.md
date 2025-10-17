@@ -2,6 +2,11 @@
 
 ## 1.19.0.0
 
+* Add `ppDefaultVote` to `PoolParams`
+* Add `FromJSON` instance to `Vote`
+* Move `Vote` to `BaseTypes` module
+* Add `poolParamsCount`, `decCBORGroupPoolParams`, `encCBORGroupPoolParams` to `StakePool` module
+* Remove `DecCBORGroup` and `EncCBORGroup` instances for `PoolParams`
 * Remove the `UMap` module and the `umap` benchmarks cabal target.
 * Export `dRepToText`
 * Deprecated `bheader` and `bbody`

@@ -137,6 +137,7 @@ alicePoolParams =
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
             , pmHash = BS.pack "{}"
             }
+    , ppDefaultVote = SNothing
     }
 
 -- | Alice's VRF key hash
@@ -187,6 +188,7 @@ bobPoolParams =
     , ppOwners = Set.singleton $ hashKey (vKey bobStake)
     , ppRelays = StrictSeq.empty
     , ppMetadata = SNothing
+    , ppDefaultVote = SNothing
     }
 
 -- | Bob's VRF key hash

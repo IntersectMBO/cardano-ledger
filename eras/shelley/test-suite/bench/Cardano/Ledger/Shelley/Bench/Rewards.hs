@@ -149,6 +149,7 @@ genChainInEpoch epoch = do
                         , ppOwners = Set.singleton owner
                         , ppRelays = StrictSeq.empty
                         , ppMetadata = SNothing
+                        , ppDefaultVote = SNothing
                         }
               ]
         , sgsStake =

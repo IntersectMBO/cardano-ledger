@@ -956,6 +956,7 @@ genPoolParams ppId = do
   let ppOwners = mempty
   let ppRelays = mempty
   let ppMetadata = SNothing
+  let ppDefaultVote = SNothing
   pure PoolParams {..}
 
 -- | Generate a 'n' fresh credentials (ones not in the set 'old'). We get 'tries' chances,

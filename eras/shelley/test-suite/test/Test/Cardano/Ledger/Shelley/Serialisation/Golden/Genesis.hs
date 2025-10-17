@@ -265,6 +265,7 @@ exampleShelleyGenesis =
                 { L.pmUrl = fromJust $ textToUrl 64 "best.pool.com"
                 , L.pmHash = BS.pack "100ab{}100ab{}"
                 }
+        , L.ppDefaultVote = L.SNothing
         }
     staking =
       ShelleyGenesisStaking

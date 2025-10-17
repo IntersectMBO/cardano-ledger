@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genAddrBadPtr,
   genCompactAddrBadPtr,
   genBadPtr,
+  genPoolParamsNoDefaultVote,
   genericShrinkMemo,
 
   -- * Plutus
@@ -449,6 +450,21 @@ instance Arbitrary PoolParams where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
+
+genPoolParamsNoDefaultVote :: Gen PoolParams
+genPoolParamsNoDefaultVote =
+  PoolParams
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> pure BaseTypes.SNothing
 
 instance Arbitrary StakePoolState where
   arbitrary =
@@ -516,6 +532,10 @@ deriving instance (EraTxOut era, Arbitrary (TxOut era)) => Arbitrary (UTxO era)
 deriving instance (Era era, Arbitrary (PParamsHKD Identity era)) => Arbitrary (PParams era)
 
 deriving instance (Era era, Arbitrary (PParamsHKD StrictMaybe era)) => Arbitrary (PParamsUpdate era)
+
+instance Arbitrary BaseTypes.Vote where
+  arbitrary = arbitraryBoundedEnum
+  shrink = shrinkBoundedEnum
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.DRep -------------------------------------------------------------------
@@ -662,7 +682,17 @@ instance Arbitrary SnapShot where
     SnapShot
       <$> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> genPoolParamsVMap
+
+genPoolParamsVMap :: Gen (VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) PoolParams)
+genPoolParamsVMap =
+  VMap.fromMap . Map.fromList <$> listOf pair
+  where
+    pair :: Gen (KeyHash 'StakePool, PoolParams)
+    pair = do
+      k <- arbitrary
+      v <- genPoolParamsNoDefaultVote
+      pure (k, v)
 
 instance Arbitrary SnapShots where
   arbitrary = do
@@ -679,7 +709,7 @@ instance Arbitrary SnapShots where
 -- There will never be a real Stake in the system with that many Ada, because total Ada is constant.
 -- So using a restricted Arbitrary Generator is OK.
 instance Arbitrary Stake where
-  arbitrary = Stake <$> (VMap.fromMap <$> theMap)
+  arbitrary = Stake . VMap.fromMap <$> theMap
     where
       genWord64 :: Int -> Gen Word64
       genWord64 n =

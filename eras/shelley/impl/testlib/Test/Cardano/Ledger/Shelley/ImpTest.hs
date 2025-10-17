@@ -1679,6 +1679,7 @@ freshPoolParams khPool rewardAccount = do
   let minCost = pp ^. ppMinPoolCostL
   poolCostExtra <- uniformRM (Coin 0, Coin 100_000_000)
   pledge <- uniformRM (Coin 0, Coin 100_000_000)
+  defaultVote <- arbitrary
   pure
     PoolParams
       { ppVrf = vrfHash
@@ -1690,6 +1691,7 @@ freshPoolParams khPool rewardAccount = do
       , ppMargin = def
       , ppId = khPool
       , ppCost = minCost <> poolCostExtra
+      , ppDefaultVote = defaultVote
       }
 
 registerPool ::

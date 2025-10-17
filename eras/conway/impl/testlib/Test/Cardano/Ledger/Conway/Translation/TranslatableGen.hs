@@ -30,7 +30,7 @@ import qualified Test.Cardano.Ledger.Babbage.Translation.TranslatableGen as Babb
   utxoWithTx,
  )
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Arbitrary (genConwayTxCertPool)
 
 instance TranslatableGen ConwayEra where
   tgRedeemers = genRedeemers
@@ -65,7 +65,7 @@ genTxBody l@(SupportedLanguage slang) = do
         genOSet $
           frequency
             [ (33, ConwayTxCertDeleg <$> genDelegCert)
-            , (33, ConwayTxCertPool <$> arbitrary)
+            , (33, genConwayTxCertPool)
             , (offPrePlutusV3 33, ConwayTxCertGov <$> arbitrary)
             ]
       genForPlutusV3 :: Arbitrary a => a -> Gen a

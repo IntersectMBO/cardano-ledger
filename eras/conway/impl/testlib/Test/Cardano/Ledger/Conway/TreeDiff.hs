@@ -71,8 +71,6 @@ instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (GovActionState era)
 
 instance ToExpr Voter
 
-instance ToExpr Vote
-
 instance Era era => ToExpr (VotingProcedures era)
 
 instance ToExpr (VotingProcedure era)

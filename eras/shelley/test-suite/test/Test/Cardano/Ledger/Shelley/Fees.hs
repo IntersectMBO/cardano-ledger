@@ -126,6 +126,7 @@ alicePoolParams =
             { pmUrl = fromJust $ textToUrl 64 "alice.pool"
             , pmHash = BS.pack "{}"
             }
+    , ppDefaultVote = SNothing
     }
 
 aliceAddr :: Addr
