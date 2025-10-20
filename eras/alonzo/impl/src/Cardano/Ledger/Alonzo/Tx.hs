@@ -7,8 +7,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -118,7 +120,7 @@ import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
 import Cardano.Ledger.State (EraUTxO, ScriptsProvided (..))
 import qualified Cardano.Ledger.State as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
@@ -137,7 +139,7 @@ import Data.Word (Word32)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Lens.Micro hiding (set)
-import NoThunks.Class (NoThunks)
+import NoThunks.Class (InspectHeap (..), NoThunks)
 
 -- ===================================================
 
@@ -147,16 +149,17 @@ newtype IsValid = IsValid Bool
   deriving (Eq, Show, Generic)
   deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToJSON)
 
-data AlonzoTx l era = AlonzoTx
-  { atBody :: !(TxBody l era)
-  , atWits :: !(TxWits era)
-  , atIsValid :: !IsValid
-  , atAuxData :: !(StrictMaybe (TxAuxData era))
-  }
-  deriving (Generic)
+data AlonzoTx l era where
+  AlonzoTx ::
+    { atBody :: !(TxBody TopTx era)
+    , atWits :: !(TxWits era)
+    , atIsValid :: !IsValid
+    , atAuxData :: !(StrictMaybe (TxAuxData era))
+    } ->
+    AlonzoTx TopTx era
 
 instance HasEraTxLevel Tx AlonzoEra where
-  toSTxLevel = undefined
+  toSTxLevel (MkAlonzoTx AlonzoTx {}) = STopTxOnly @AlonzoEra
 
 instance EraTx AlonzoEra where
   newtype Tx l AlonzoEra = MkAlonzoTx {unAlonzoTx :: AlonzoTx l AlonzoEra}
@@ -206,22 +209,38 @@ instance AlonzoEraTx AlonzoEra where
   isValidTxL = alonzoTxL . isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-mkBasicAlonzoTx :: Monoid (TxWits era) => TxBody l era -> AlonzoTx l era
-mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing
+mkBasicAlonzoTx ::
+  ( EraTx era
+  , STxLevel l era ~ STxTopLevel l era
+  ) =>
+  TxBody l era -> AlonzoTx l era
+mkBasicAlonzoTx txBody =
+  case toSTxLevel txBody of
+    STopTxOnly ->
+      AlonzoTx txBody mempty (IsValid True) SNothing
 
 -- | `TxBody` setter and getter for `AlonzoTx`.
 bodyAlonzoTxL :: Lens' (AlonzoTx l era) (TxBody l era)
-bodyAlonzoTxL = lens atBody (\tx txBody -> tx {atBody = txBody})
+bodyAlonzoTxL =
+  lens (\AlonzoTx {atBody} -> atBody) $ \tx txBody ->
+    case tx of
+      AlonzoTx {} -> tx {atBody = txBody}
 {-# INLINEABLE bodyAlonzoTxL #-}
 
 -- | `TxWits` setter and getter for `AlonzoTx`.
 witsAlonzoTxL :: Lens' (AlonzoTx l era) (TxWits era)
-witsAlonzoTxL = lens atWits (\tx txWits -> tx {atWits = txWits})
+witsAlonzoTxL =
+  lens (\AlonzoTx {atWits} -> atWits) $ \tx txWits ->
+    case tx of
+      AlonzoTx {} -> tx {atWits = txWits}
 {-# INLINEABLE witsAlonzoTxL #-}
 
 -- | `TxAuxData` setter and getter for `AlonzoTx`.
 auxDataAlonzoTxL :: Lens' (AlonzoTx l era) (StrictMaybe (TxAuxData era))
-auxDataAlonzoTxL = lens atAuxData (\tx txTxAuxData -> tx {atAuxData = txTxAuxData})
+auxDataAlonzoTxL =
+  lens (\AlonzoTx {atAuxData} -> atAuxData) $ \tx txAuxData ->
+    case tx of
+      AlonzoTx {} -> tx {atAuxData = txAuxData}
 {-# INLINEABLE auxDataAlonzoTxL #-}
 
 -- | txsize computes the length of the serialised bytes (for estimations)
@@ -236,7 +255,10 @@ sizeAlonzoTxF =
 {-# INLINEABLE sizeAlonzoTxF #-}
 
 isValidAlonzoTxL :: Lens' (AlonzoTx l era) IsValid
-isValidAlonzoTxL = lens atIsValid (\tx valid -> tx {atIsValid = valid})
+isValidAlonzoTxL =
+  lens (\AlonzoTx {atIsValid} -> atIsValid) $ \tx txIsValid ->
+    case tx of
+      AlonzoTx {} -> tx {atIsValid = txIsValid}
 {-# INLINEABLE isValidAlonzoTxL #-}
 
 deriving instance
@@ -246,13 +268,10 @@ deriving instance
   (Era era, Show (TxBody l era), Show (TxAuxData era), Show (Script era), Show (TxWits era)) =>
   Show (AlonzoTx l era)
 
-instance
-  ( Era era
-  , NoThunks (TxWits era)
-  , NoThunks (TxAuxData era)
-  , NoThunks (TxBody l era)
-  ) =>
-  NoThunks (AlonzoTx l era)
+deriving via
+  InspectHeap (AlonzoTx l era)
+  instance
+    (Typeable era, Typeable l) => NoThunks (AlonzoTx l era)
 
 instance
   ( Era era
@@ -261,6 +280,12 @@ instance
   , NFData (TxBody l era)
   ) =>
   NFData (AlonzoTx l era)
+  where
+  rnf AlonzoTx {..} =
+    atBody `deepseq`
+      atWits `deepseq`
+        atAuxData `deepseq`
+          rnf atIsValid
 
 -- | A ScriptIntegrityHash is the hash of three things.  The first two come
 -- from the witnesses and the last comes from the Protocol Parameters.
@@ -418,7 +443,7 @@ instance
 
 instance
   ( Typeable l
-  , Typeable era
+  , Era era
   , Typeable (TxBody l era)
   , Typeable (TxWits era)
   , Typeable (TxAuxData era)
@@ -429,13 +454,15 @@ instance
   DecCBOR (Annotator (AlonzoTx l era))
   where
   decCBOR =
-    decode $
-      Ann (RecD AlonzoTx)
-        <*! From
-        <*! From
-        <*! Ann From
-        <*! D
-          ( sequence . maybeToStrictMaybe
-              <$> decodeNullMaybe decCBOR
-          )
+    withSTxTopLevelM @l @era $ \case
+      STopTxOnly ->
+        decode $
+          Ann (RecD AlonzoTx)
+            <*! From
+            <*! From
+            <*! Ann From
+            <*! D
+              ( sequence . maybeToStrictMaybe
+                  <$> decodeNullMaybe decCBOR
+              )
   {-# INLINE decCBOR #-}

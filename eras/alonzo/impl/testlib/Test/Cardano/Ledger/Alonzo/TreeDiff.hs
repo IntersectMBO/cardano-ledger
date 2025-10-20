@@ -112,6 +112,8 @@ instance ToExpr IsValid
 instance
   (ToExpr (TxBody TopTx era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
   ToExpr (AlonzoTx TopTx era)
+  where
+  toExpr = undefined
 
 -- Plutus/TxInfo
 instance ToExpr (AlonzoContextError era)

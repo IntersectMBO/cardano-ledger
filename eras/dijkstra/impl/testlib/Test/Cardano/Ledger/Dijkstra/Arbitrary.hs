@@ -22,7 +22,6 @@ import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
 import Cardano.Ledger.Dijkstra.PParams (DijkstraPParams, UpgradeDijkstraPParams)
 import Cardano.Ledger.Dijkstra.Scripts
 import Cardano.Ledger.Dijkstra.Transition (TransitionConfig (..))
-import Cardano.Ledger.Dijkstra.Tx (Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Shelley.Scripts (
@@ -95,7 +94,8 @@ sizedDijkstraNativeScript n =
          , RequireGuard <$> arbitrary
          ]
 
-deriving newtype instance Arbitrary (TxBody l DijkstraEra) => Arbitrary (Tx l DijkstraEra)
+instance Arbitrary (TxBody l DijkstraEra) => Arbitrary (Tx l DijkstraEra) where
+  arbitrary = undefined
 
 instance Era era => Arbitrary (DijkstraTxCert era) where
   arbitrary =

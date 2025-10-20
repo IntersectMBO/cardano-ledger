@@ -54,7 +54,7 @@ import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks)
 
 instance HasEraTxLevel Tx ConwayEra where
-  toSTxLevel = undefined
+  toSTxLevel (MkConwayTx AlonzoTx {}) = STopTxOnly @ConwayEra
 
 instance EraTx ConwayEra where
   newtype Tx l ConwayEra = MkConwayTx {unConwayTx :: AlonzoTx l ConwayEra}

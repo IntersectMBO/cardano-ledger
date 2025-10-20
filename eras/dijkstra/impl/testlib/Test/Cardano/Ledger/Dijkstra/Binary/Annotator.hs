@@ -37,4 +37,4 @@ instance Era era => DecCBOR (DijkstraNativeScriptRaw era) where
 instance Era era => DecCBOR (DijkstraNativeScript era) where
   decCBOR = MkDijkstraNativeScript <$> decodeMemoized decCBOR
 
-deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)
+deriving newtype instance DecCBOR (Tx TopTx DijkstraEra)

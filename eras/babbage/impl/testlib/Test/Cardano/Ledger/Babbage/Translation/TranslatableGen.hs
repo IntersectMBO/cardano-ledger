@@ -53,7 +53,7 @@ instance TranslatableGen BabbageEra where
   tgUtxo = utxoWithTx @BabbageEra
 
 utxoWithTx ::
-  forall era .
+  forall era.
   ( EraTx era
   , Arbitrary (Value era)
   , Arbitrary (Script era)
@@ -68,13 +68,13 @@ utxoWithTx l tx = do
   pure $ UTxO (Map.fromList $ Set.toList allIns `zip` outs)
 
 genTx ::
-  forall era l.
+  forall era.
   ( TranslatableGen era
   , Arbitrary (TxAuxData era)
   , AlonzoTxWits era ~ TxWits era
   ) =>
-  Gen (TxBody l era) ->
-  Gen (AlonzoTx l era)
+  Gen (TxBody TopTx era) ->
+  Gen (AlonzoTx TopTx era)
 genTx txbGen =
   AlonzoTx
     <$> txbGen

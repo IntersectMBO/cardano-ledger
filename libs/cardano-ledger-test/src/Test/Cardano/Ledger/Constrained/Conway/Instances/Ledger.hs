@@ -1496,6 +1496,13 @@ instance
 -- Unlike ShelleyTx, AlonzoTx is just a data type, and the generic instances work fine
 -- BUT, all the type families inside need constraints
 
+type AlonzoTxTypes era =
+  '[ TxBody TopTx era
+   , TxWits era
+   , IsValid
+   , Maybe (TxAuxData era)
+   ]
+
 instance
   ( Typeable (TxAuxData era)
   , Typeable (TxBody TopTx era)
@@ -1503,6 +1510,12 @@ instance
   , Era era
   ) =>
   HasSimpleRep (AlonzoTx TopTx era)
+  where
+  type
+    TheSop (AlonzoTx TopTx era) =
+      '["AlonzoTx" ::: AlonzoTxTypes era]
+  fromSimpleRep = undefined
+  toSimpleRep = undefined
 
 instance
   ( EraSpecPParams era

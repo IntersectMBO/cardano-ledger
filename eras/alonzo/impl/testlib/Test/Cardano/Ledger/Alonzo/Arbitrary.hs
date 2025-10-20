@@ -197,11 +197,11 @@ instance Arbitrary (TxBody TopTx AlonzoEra) where
 deriving newtype instance Arbitrary IsValid
 
 instance
-  ( Arbitrary (TxBody l era)
-  , Arbitrary (TxWits era)
+  ( Arbitrary (TxWits era)
   , Arbitrary (TxAuxData era)
+  , Arbitrary (TxBody TopTx era)
   ) =>
-  Arbitrary (AlonzoTx l era)
+  Arbitrary (AlonzoTx TopTx era)
   where
   arbitrary =
     AlonzoTx

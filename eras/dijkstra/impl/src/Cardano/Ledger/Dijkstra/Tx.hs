@@ -24,7 +24,6 @@ import Cardano.Ledger.Alonzo.Tx (
   auxDataAlonzoTxL,
   bodyAlonzoTxL,
   isValidAlonzoTxL,
-  mkBasicAlonzoTx,
   sizeAlonzoTxF,
   witsAlonzoTxL,
  )
@@ -52,12 +51,15 @@ import NoThunks.Class (NoThunks)
 instance HasEraTxLevel Tx DijkstraEra where
   toSTxLevel = undefined
 
+mkBasicDijkstraTx :: TxBody l DijkstraEra -> AlonzoTx l DijkstraEra
+mkBasicDijkstraTx = undefined
+
 instance EraTx DijkstraEra where
   newtype Tx l DijkstraEra = MkDijkstraTx {unDijkstraTx :: AlonzoTx l DijkstraEra}
     deriving newtype (Eq, Show, NFData, NoThunks, ToCBOR, EncCBOR)
     deriving (Generic)
 
-  mkBasicTx = MkDijkstraTx . mkBasicAlonzoTx
+  mkBasicTx = MkDijkstraTx . mkBasicDijkstraTx
 
   bodyTxL = dijkstraTxL . bodyAlonzoTxL
   {-# INLINE bodyTxL #-}
