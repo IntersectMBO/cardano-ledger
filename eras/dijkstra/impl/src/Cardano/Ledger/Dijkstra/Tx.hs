@@ -9,6 +9,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -41,7 +42,7 @@ import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
@@ -68,8 +69,22 @@ deriving instance EraTx era => Eq (DijkstraTx l era)
 
 deriving instance EraTx era => Show (DijkstraTx l era)
 
-instance NFData (DijkstraTx l era) where
-  rnf = undefined
+instance
+  ( EraTx era
+  , NFData (TxWits era)
+  , NFData (TxAuxData era)
+  ) =>
+  NFData (DijkstraTx l era)
+  where
+  rnf DijkstraTx {..} =
+    dtBody `deepseq`
+      dtWits `deepseq`
+        dtIsValid `deepseq`
+          rnf dtAuxData
+  rnf DijkstraSubTx {..} =
+    dstBody `deepseq`
+      dstWits `deepseq`
+        rnf dstAuxData
 
 deriving via
   InspectHeap (DijkstraTx l era)
