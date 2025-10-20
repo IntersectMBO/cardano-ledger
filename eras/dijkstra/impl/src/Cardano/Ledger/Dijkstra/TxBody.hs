@@ -521,8 +521,12 @@ deriving via
   instance
     Typeable l => DecCBOR (Annotator (TxBody l DijkstraEra))
 
+instance HasEraTxLevel DijkstraTxBodyRaw DijkstraEra where
+  toSTxLevel DijkstraTxBodyRaw {} = STopTx
+  toSTxLevel DijkstraSubTxBodyRaw {} = SSubTx
+
 instance HasEraTxLevel TxBody DijkstraEra where
-  toSTxLevel = undefined
+  toSTxLevel = toSTxLevel . getMemoRawType
 
 instance EraTxBody DijkstraEra where
   newtype TxBody l DijkstraEra = MkDijkstraTxBody (MemoBytes (DijkstraTxBodyRaw l DijkstraEra))

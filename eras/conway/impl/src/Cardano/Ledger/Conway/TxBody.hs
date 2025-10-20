@@ -314,7 +314,7 @@ basicConwayTxBodyRaw =
     mempty
 
 instance HasEraTxLevel TxBody ConwayEra where
-  toSTxLevel = undefined
+  toSTxLevel = toSTxLevel . getMemoRawType
 
 instance EraTxBody ConwayEra where
   newtype TxBody l ConwayEra = MkConwayTxBody (MemoBytes (ConwayTxBodyRaw l ConwayEra))

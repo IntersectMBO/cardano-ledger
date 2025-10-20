@@ -256,7 +256,7 @@ instance HasEraTxLevel BabbageTxBodyRaw BabbageEra where
   toSTxLevel = undefined
 
 instance HasEraTxLevel TxBody BabbageEra where
-  toSTxLevel = undefined
+  toSTxLevel = toSTxLevel . getMemoRawType
 
 basicBabbageTxBody :: Typeable l => TxBody l BabbageEra
 basicBabbageTxBody = mkMemoizedEra @BabbageEra $ asSTxTopLevel basicBabbageTxBodyRaw
