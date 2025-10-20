@@ -49,7 +49,7 @@ import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks)
 
 instance HasEraTxLevel Tx DijkstraEra where
-  toSTxLevel = undefined
+  toSTxLevel (MkDijkstraTx _) = undefined
 
 mkBasicDijkstraTx :: TxBody l DijkstraEra -> AlonzoTx l DijkstraEra
 mkBasicDijkstraTx = undefined

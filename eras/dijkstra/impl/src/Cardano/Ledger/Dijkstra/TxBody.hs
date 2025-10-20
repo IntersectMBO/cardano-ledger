@@ -250,85 +250,102 @@ instance Typeable l => DecCBOR (DijkstraTxBodyRaw l DijkstraEra) where
           basicDijkstraTxBodyRaw
           bodyFields
           requiredFields
-      where
-        bodyFields :: Word -> Field (DijkstraTxBodyRaw l DijkstraEra)
-        bodyFields 0 = field (\x tx -> tx {dtbrSpendInputs = x}) From
-        bodyFields 1 = field (\x tx -> tx {dtbrOutputs = x}) From
-        bodyFields 2 = field (\x tx -> tx {dtbrFee = x}) From
-        bodyFields 3 =
-          ofield
-            (\x tx -> tx {dtbrVldt = (dtbrVldt tx) {invalidHereafter = x}})
-            From
-        bodyFields 4 =
-          fieldGuarded
-            (emptyFailure "Certificates" "non-empty")
-            OSet.null
-            (\x tx -> tx {dtbrCerts = x})
-            From
-        bodyFields 5 =
-          fieldGuarded
-            (emptyFailure "Withdrawals" "non-empty")
-            (null . unWithdrawals)
-            (\x tx -> tx {dtbrWithdrawals = x})
-            From
-        bodyFields 7 = ofield (\x tx -> tx {dtbrAuxDataHash = x}) From
-        bodyFields 8 =
-          ofield
-            (\x tx -> tx {dtbrVldt = (dtbrVldt tx) {invalidBefore = x}})
-            From
-        bodyFields 9 =
-          fieldGuarded
-            (emptyFailure "Mint" "non-empty")
-            (== mempty)
-            (\x tx -> tx {dtbrMint = x})
-            From
-        bodyFields 11 = ofield (\x tx -> tx {dtbrScriptIntegrityHash = x}) From
-        bodyFields 13 =
-          fieldGuarded
-            (emptyFailure "Collateral Inputs" "non-empty")
-            null
-            (\x tx -> tx {dtbrCollateralInputs = x})
-            From
-        bodyFields 14 =
-          ofield
-            (\x tx -> tx {dtbrGuards = fromSMaybe mempty x})
-            (D decodeGuards)
-        bodyFields 15 = ofield (\x tx -> tx {dtbrNetworkId = x}) From
-        bodyFields 16 = ofield (\x tx -> tx {dtbrCollateralReturn = x}) From
-        bodyFields 17 = ofield (\x tx -> tx {dtbrTotalCollateral = x}) From
-        bodyFields 18 =
-          fieldGuarded
-            (emptyFailure "Reference Inputs" "non-empty")
-            null
-            (\x tx -> tx {dtbrReferenceInputs = x})
-            From
-        bodyFields 19 =
-          fieldGuarded
-            (emptyFailure "VotingProcedures" "non-empty")
-            (null . unVotingProcedures)
-            (\x tx -> tx {dtbrVotingProcedures = x})
-            From
-        bodyFields 20 =
-          fieldGuarded
-            (emptyFailure "ProposalProcedures" "non-empty")
-            OSet.null
-            (\x tx -> tx {dtbrProposalProcedures = x})
-            From
-        bodyFields 21 = ofield (\x tx -> tx {dtbrCurrentTreasuryValue = x}) From
-        bodyFields 22 =
-          ofield
-            (\x tx -> tx {dtbrTreasuryDonation = fromSMaybe zero x})
-            (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
-        bodyFields n = invalidField n
-        requiredFields :: [(Word, String)]
-        requiredFields =
-          [ (0, "inputs")
-          , (1, "outputs")
-          , (2, "fee")
-          ]
-        emptyFailure fieldName requirement =
-          "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
-    SSubTx -> undefined
+    SSubTx ->
+      decode $
+        SparseKeyed
+          "SubTxBodyRaw"
+          basicDijkstraSubTxBodyRaw
+          bodyFields
+          requiredFields
+    where
+      -- TODO WTH, why is this type checking?
+      bodyFields :: Word -> Field (DijkstraTxBodyRaw l DijkstraEra)
+      bodyFields 0 = field (\x tx -> tx {dtbrSpendInputs = x}) From
+      bodyFields 1 = field (\x tx -> tx {dtbrOutputs = x}) From
+      bodyFields n@2 =
+        withSTxBothLevels @l $ \case
+          STopTx -> field (\x tx -> tx {dtbrFee = x}) From
+          SSubTx -> invalidField n
+      bodyFields n@3 =
+        withSTxBothLevels @l $ \case
+          STopTx ->
+            ofield
+              (\x tx -> tx {dtbrVldt = (dtbrVldt tx) {invalidHereafter = x}})
+              From
+          SSubTx -> invalidField n
+      bodyFields 4 =
+        fieldGuarded
+          (emptyFailure "Certificates" "non-empty")
+          OSet.null
+          (\x tx -> tx {dtbrCerts = x})
+          From
+      bodyFields 5 =
+        fieldGuarded
+          (emptyFailure "Withdrawals" "non-empty")
+          (null . unWithdrawals)
+          (\x tx -> tx {dtbrWithdrawals = x})
+          From
+      bodyFields 7 = ofield (\x tx -> tx {dtbrAuxDataHash = x}) From
+      bodyFields n@8 =
+        withSTxBothLevels @l $ \case
+          STopTx ->
+            ofield
+              (\x tx -> tx {dtbrVldt = (dtbrVldt tx) {invalidBefore = x}})
+              From
+          SSubTx ->
+            invalidField n
+      bodyFields 9 =
+        fieldGuarded
+          (emptyFailure "Mint" "non-empty")
+          (== mempty)
+          (\x tx -> tx {dtbrMint = x})
+          From
+      bodyFields 11 = ofield (\x tx -> tx {dtbrScriptIntegrityHash = x}) From
+      bodyFields 13 =
+        fieldGuarded
+          (emptyFailure "Collateral Inputs" "non-empty")
+          null
+          (\x tx -> tx {dtbrCollateralInputs = x})
+          From
+      bodyFields 14 =
+        ofield
+          (\x tx -> tx {dtbrGuards = fromSMaybe mempty x})
+          (D decodeGuards)
+      bodyFields 15 = ofield (\x tx -> tx {dtbrNetworkId = x}) From
+      bodyFields 16 = ofield (\x tx -> tx {dtbrCollateralReturn = x}) From
+      bodyFields 17 = ofield (\x tx -> tx {dtbrTotalCollateral = x}) From
+      bodyFields 18 =
+        fieldGuarded
+          (emptyFailure "Reference Inputs" "non-empty")
+          null
+          (\x tx -> tx {dtbrReferenceInputs = x})
+          From
+      bodyFields 19 =
+        fieldGuarded
+          (emptyFailure "VotingProcedures" "non-empty")
+          (null . unVotingProcedures)
+          (\x tx -> tx {dtbrVotingProcedures = x})
+          From
+      bodyFields 20 =
+        fieldGuarded
+          (emptyFailure "ProposalProcedures" "non-empty")
+          OSet.null
+          (\x tx -> tx {dtbrProposalProcedures = x})
+          From
+      bodyFields 21 = ofield (\x tx -> tx {dtbrCurrentTreasuryValue = x}) From
+      bodyFields 22 =
+        ofield
+          (\x tx -> tx {dtbrTreasuryDonation = fromSMaybe zero x})
+          (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
+      bodyFields n = invalidField n
+      requiredFields :: [(Word, String)]
+      requiredFields =
+        [ (0, "inputs")
+        , (1, "outputs")
+        , (2, "fee")
+        ]
+      emptyFailure fieldName requirement =
+        "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
 
 encodeTxBodyRaw ::
   DijkstraTxBodyRaw l DijkstraEra ->
@@ -535,7 +552,7 @@ instance EraTxBody DijkstraEra where
   mkBasicTxBody =
     asSTxBothLevels
       (mkMemoizedEra @DijkstraEra basicDijkstraTxBodyRaw)
-      undefined
+      (mkMemoizedEra @DijkstraEra basicDijkstraSubTxBodyRaw)
 
   inputsTxBodyL =
     lensMemoRawType @DijkstraEra
@@ -611,6 +628,25 @@ instance EraTxBody DijkstraEra where
 
   getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
+
+basicDijkstraSubTxBodyRaw :: DijkstraTxBodyRaw SubTx DijkstraEra
+basicDijkstraSubTxBodyRaw =
+  DijkstraSubTxBodyRaw
+    mempty
+    mempty
+    mempty
+    mempty
+    (Withdrawals mempty)
+    (ValidityInterval SNothing SNothing)
+    mempty
+    mempty
+    SNothing
+    SNothing
+    SNothing
+    (VotingProcedures mempty)
+    mempty
+    mempty
+    mempty
 
 upgradeGovAction ::
   forall era.
