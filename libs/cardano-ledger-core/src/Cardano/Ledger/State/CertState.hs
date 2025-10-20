@@ -181,12 +181,13 @@ instance NoThunks (Accounts era) => NoThunks (DState era)
 instance NFData (Accounts era) => NFData (DState era)
 
 instance (Era era, EncCBOR (Accounts era)) => EncCBOR (DState era) where
-  encCBOR (DState unified fgs gs ir) =
-    encodeListLen 4
-      <> encCBOR unified
-      <> encCBOR fgs
-      <> encCBOR gs
-      <> encCBOR ir
+  encCBOR dState@(DState _ _ _ _) =
+    let DState {..} = dState
+     in encodeListLen 4
+          <> encCBOR dsAccounts
+          <> encCBOR dsFutureGenDelegs
+          <> encCBOR dsGenDelegs
+          <> encCBOR dsIRewards
 
 instance EraAccounts era => DecShareCBOR (DState era) where
   type
@@ -194,19 +195,20 @@ instance EraAccounts era => DecShareCBOR (DState era) where
       (Interns (Credential 'Staking), Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
   decSharePlusCBOR =
     decodeRecordNamedT "DState" (const 4) $ do
-      unified <- decSharePlusCBOR
-      fgs <- lift decCBOR
-      gs <- lift decCBOR
-      ir <- decSharePlusLensCBOR _1
-      pure $ DState unified fgs gs ir
+      dsAccounts <- decSharePlusCBOR
+      dsFutureGenDelegs <- lift decCBOR
+      dsGenDelegs <- lift decCBOR
+      dsIRewards <- decSharePlusLensCBOR _1
+      pure DState {..}
 
 instance ToJSON (Accounts era) => ToKeyValuePairs (DState era) where
-  toKeyValuePairs DState {..} =
-    [ "accounts" .= dsAccounts
-    , "fGenDelegs" .= Map.toList dsFutureGenDelegs
-    , "genDelegs" .= dsGenDelegs
-    , "irwd" .= dsIRewards
-    ]
+  toKeyValuePairs dState@(DState _ _ _ _) =
+    let DState {..} = dState
+     in [ "accounts" .= dsAccounts
+        , "fGenDelegs" .= Map.toList dsFutureGenDelegs
+        , "genDelegs" .= dsGenDelegs
+        , "irwd" .= dsIRewards
+        ]
 
 -- | Function that looks up the deposit for currently delegated staking credential
 lookupDepositDState :: EraAccounts era => DState era -> (StakeCredential -> Maybe Coin)
