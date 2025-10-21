@@ -17,6 +17,8 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
+import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
@@ -32,6 +34,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
 import Data.Default (def)
+import Data.Foldable (for_)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -79,112 +82,79 @@ datumAndReferenceInputsSpec ::
   ConwayEraImp era =>
   SpecWith (ImpInit (LedgerSpec era))
 datumAndReferenceInputsSpec = do
-  it "can use reference scripts" $ do
-    producingTx <- setupRefTx SPlutusV1
-    referringTx <-
-      submitTxAnn "Transaction that refers to the script" $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 1)
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
-    (referringTx ^. witsTxL . scriptTxWitsL) `shouldBe` mempty
-  it "can use regular inputs for reference" $ do
-    producingTx <- setupRefTx SPlutusV1
-    referringTx <-
-      submitTxAnn "Consuming transaction" $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL
-            .~ Set.fromList
-              [ mkTxInPartial producingTx 0
-              , mkTxInPartial producingTx 1
-              ]
-    (referringTx ^. witsTxL . scriptTxWitsL) `shouldBe` mempty
-  it "fails with same txIn in regular inputs and reference inputs (PlutusV1)" $ do
-    producingTx <- setupRefTx SPlutusV1
-    let
-      consumingTx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL
-            .~ Set.fromList
-              [ mkTxInPartial producingTx 0
-              , mkTxInPartial producingTx 1
-              ]
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
-    let badTxIns = mkTxInPartial producingTx 0 :| []
-
-    whenMajorVersionAtMost @10 $
-      submitFailingTx
-        consumingTx
-        (pure . injectFailure $ BabbageNonDisjointRefInputs badTxIns)
-
-    -- consumingTx uses PlutusV1 script, so it should be a success
-    whenMajorVersionAtLeast @11 $
-      submitTx_ consumingTx
-  it "fails when using inline datums for PlutusV1" $ do
-    let shSpending = hashPlutusScript $ redeemerSameAsDatum SPlutusV1
-    refTxOut <- mkRefTxOut shSpending
-    producingTxId <-
-      fmap txIdTx . submitTxAnn "Producing transaction" $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . outputsTxBodyL
-            .~ SSeq.fromList
-              [ refTxOut
-              , scriptLockedTxOut shSpending & dataTxOutL .~ SJust (Data spendDatum)
-              ]
-    let
-      lockedTxIn = mkTxInPartial producingTxId 1
-      consumingTx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL .~ Set.singleton lockedTxIn
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTxId 0)
-    impAnn "Consuming transaction" $
-      submitFailingTx
-        consumingTx
-        ( pure . injectFailure $
-            CollectErrors
-              [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
-        )
-  it "fails with same txIn in regular inputs and reference inputs (PlutusV3)" $ do
-    producingTx <- setupRefTx SPlutusV3
-    let
-      consumingTx =
-        mkBasicTx @era mkBasicTxBody
-          & bodyTxL . inputsTxBodyL
-            .~ Set.fromList
-              [ mkTxInPartial producingTx 0
-              , mkTxInPartial producingTx 1
-              ]
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
-    let badTxIns = mkTxInPartial producingTx 0 :| []
-    whenMajorVersionAtMost @10 $
-      submitFailingTx @era
-        consumingTx
-        (pure . injectFailure $ BabbageNonDisjointRefInputs badTxIns)
-    whenMajorVersionAtLeast @11 $
-      submitFailingTx @era
-        consumingTx
-        [ injectFailure $
-            CollectErrors [BadTranslation . inject $ ReferenceInputsNotDisjointFromInputs @era badTxIns]
-        ]
-  it "succeeds when using inline datums for PlutusV2" $ do
-    let shSpending = hashPlutusScript $ redeemerSameAsDatum SPlutusV2
-    refTxOut <- mkRefTxOut shSpending
-    producingTxId <-
-      fmap txIdTx . submitTxAnn "Producing transaction" $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . outputsTxBodyL
-            .~ SSeq.fromList
-              [ refTxOut
-              , scriptLockedTxOut shSpending & dataTxOutL .~ SJust (Data spendDatum)
-              ]
-    let
-      lockedTxIn = mkTxInPartial producingTxId 1
-      consumingTx =
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . inputsTxBodyL .~ Set.singleton lockedTxIn
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTxId 0)
-    impAnn "Consuming transaction" $
-      submitTx_
-        consumingTx
+  for_ (eraLanguages @era) $ \lang ->
+    withSLanguage lang $ \slang ->
+      describe (show lang) $ do
+        it "can use reference scripts" $ do
+          producingTx <- setupRefTx slang
+          referringTx <-
+            submitTxAnn "Transaction that refers to the script" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 1)
+                & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
+          (referringTx ^. witsTxL . scriptTxWitsL) `shouldBe` mempty
+        it "can use regular inputs for reference" $ do
+          producingTx <- setupRefTx slang
+          referringTx <-
+            submitTxAnn "Consuming transaction" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL
+                  .~ Set.fromList
+                    [ mkTxInPartial producingTx 0
+                    , mkTxInPartial producingTx 1
+                    ]
+          (referringTx ^. witsTxL . scriptTxWitsL) `shouldBe` mempty
+        it "fails with same txIn in regular inputs and reference inputs" $ do
+          -- Note: the success cases are tested in Babbage.Imp.UtxosSpec
+          producingTx <- setupRefTx slang
+          let
+            consumingTx =
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL
+                  .~ Set.fromList
+                    [ mkTxInPartial producingTx 0
+                    , mkTxInPartial producingTx 1
+                    ]
+                & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
+          let badTxIns = mkTxInPartial producingTx 0 :| []
+          whenMajorVersionAtMost @10 $
+            submitFailingTx
+              consumingTx
+              (pure . injectFailure $ BabbageNonDisjointRefInputs badTxIns)
+          whenMajorVersionAtLeast @11 $
+            when (lang > eraMaxLanguage @BabbageEra) $
+              submitFailingTx @era
+                consumingTx
+                [ injectFailure $
+                    CollectErrors [BadTranslation . inject $ ReferenceInputsNotDisjointFromInputs @era badTxIns]
+                ]
+        it "using inline datums" $ do
+          let shSpending = hashPlutusScript $ redeemerSameAsDatum slang
+          refTxOut <- mkRefTxOut shSpending
+          producingTxId <-
+            fmap txIdTx . submitTxAnn "Producing transaction" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . outputsTxBodyL
+                  .~ SSeq.fromList
+                    [ refTxOut
+                    , scriptLockedTxOut shSpending & dataTxOutL .~ SJust (Data spendDatum)
+                    ]
+          let
+            lockedTxIn = mkTxInPartial producingTxId 1
+            consumingTx =
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL .~ Set.singleton lockedTxIn
+                & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTxId 0)
+          if lang < PlutusV2
+            then
+              submitFailingTx
+                consumingTx
+                ( pure . injectFailure $
+                    CollectErrors
+                      [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
+                )
+            else
+              submitTxAnn_ "Consuming transaction" consumingTx
 
 conwayFeaturesPlutusV1V2FailureSpec ::
   forall era.
