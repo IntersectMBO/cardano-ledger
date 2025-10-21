@@ -168,7 +168,7 @@ spec = do
             .~ Withdrawals
               [(ra, balance)]
 
-  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/635
+  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
   -- TODO: Re-enable after issue is resolved, by removing this override
   disableInConformanceIt "Withdraw from a key delegated to a DRep that expired after delegation" $ do
     modifyPParams $ \pp ->
