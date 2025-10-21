@@ -253,7 +253,7 @@ allSizedOutputsBabbageTxBodyF =
 {-# INLINEABLE allSizedOutputsBabbageTxBodyF #-}
 
 instance HasEraTxLevel BabbageTxBodyRaw BabbageEra where
-  toSTxLevel = undefined
+  toSTxLevel BabbageTxBodyRaw {} = STopTxOnly
 
 instance HasEraTxLevel TxBody BabbageEra where
   toSTxLevel = toSTxLevel . getMemoRawType
@@ -533,14 +533,14 @@ instance EncCBOR (BabbageTxBodyRaw l BabbageEra) where
 
 instance Typeable l => DecCBOR (BabbageTxBodyRaw l BabbageEra) where
   decCBOR =
-    decode $
+    fmap asSTxTopLevel . decode $
       SparseKeyed
         "BabbageTxBodyRaw"
-        (undefined basicBabbageTxBodyRaw)
+        (asSTxTopLevel basicBabbageTxBodyRaw)
         bodyFields
         requiredFields
     where
-      bodyFields :: Word -> Field (BabbageTxBodyRaw l BabbageEra)
+      bodyFields :: Word -> Field (BabbageTxBodyRaw TopTx BabbageEra)
       bodyFields 0 = field (\x tx -> tx {btbrInputs = x}) From
       bodyFields 13 = field (\x tx -> tx {btbrCollateralInputs = x}) From
       bodyFields 18 = field (\x tx -> tx {btbrReferenceInputs = x}) From
@@ -550,7 +550,7 @@ instance Typeable l => DecCBOR (BabbageTxBodyRaw l BabbageEra) where
       bodyFields 2 = field (\x tx -> tx {btbrFee = x}) From
       bodyFields 3 =
         ofield
-          (\x tx -> tx {btbrValidityInterval = (btbrValidityInterval $ undefined tx) {invalidHereafter = x}})
+          (\x tx -> tx {btbrValidityInterval = (btbrValidityInterval tx) {invalidHereafter = x}})
           From
       bodyFields 4 = field (\x tx -> tx {btbrCerts = x}) From
       bodyFields 5 = field (\x tx -> tx {btbrWithdrawals = x}) From
@@ -558,7 +558,7 @@ instance Typeable l => DecCBOR (BabbageTxBodyRaw l BabbageEra) where
       bodyFields 7 = ofield (\x tx -> tx {btbrAuxDataHash = x}) From
       bodyFields 8 =
         ofield
-          (\x tx -> tx {btbrValidityInterval = (btbrValidityInterval $ undefined tx) {invalidBefore = x}})
+          (\x tx -> tx {btbrValidityInterval = (btbrValidityInterval tx) {invalidBefore = x}})
           From
       bodyFields 9 = field (\x tx -> tx {btbrMint = x}) From
       bodyFields 11 = ofield (\x tx -> tx {btbrScriptIntegrityHash = x}) From

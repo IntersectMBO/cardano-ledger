@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -32,7 +33,7 @@ import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
 
 instance HasEraTxLevel Tx BabbageEra where
-  toSTxLevel = undefined
+  toSTxLevel (MkBabbageTx AlonzoTx {}) = STopTxOnly @BabbageEra
 
 instance EraTx BabbageEra where
   newtype Tx l BabbageEra = MkBabbageTx {unBabbageTx :: AlonzoTx l BabbageEra}
