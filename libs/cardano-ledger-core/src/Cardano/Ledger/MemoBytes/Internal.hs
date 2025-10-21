@@ -57,6 +57,7 @@ module Cardano.Ledger.MemoBytes.Internal (
   eqRawType,
   getMemoRawBytes,
   lensMemoRawType,
+  rawTypeL,
 
   -- * MemoBytes MemPack instance definitions
   byteCountMemoBytes,
@@ -334,6 +335,15 @@ lensMemoRawType ::
 lensMemoRawType getter setter =
   lens (getter . getMemoRawType) (\t b -> mkMemoizedEra @era $ setter (getMemoRawType t) b)
 {-# INLINEABLE lensMemoRawType #-}
+
+rawTypeL ::
+  forall era t.
+  ( Era era
+  , EncCBOR (RawType t)
+  , Memoized t
+  ) =>
+  Lens' t (RawType t)
+rawTypeL = lensMemoRawType @era id (\_ x -> x)
 
 -- | Type class that implements equality on the Haskell type, ignoring any of the
 -- potentially memoized binary representation of the type.
