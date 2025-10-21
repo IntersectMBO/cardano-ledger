@@ -186,9 +186,15 @@ instance EraTx AlonzoEra where
   getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
   {-# INLINE getMinFeeTx #-}
 
-alonzoTxEqRaw :: AlonzoEraTx era => Tx l era -> Tx l era -> Bool
+alonzoTxEqRaw ::
+  ( AlonzoEraTx era
+  , STxLevel l era ~ STxTopLevel l era
+  ) =>
+  Tx l era -> Tx l era -> Bool
 alonzoTxEqRaw tx1 tx2 =
-  shelleyTxEqRaw tx1 tx2 && (tx1 ^. isValidTxL == tx2 ^. isValidTxL)
+  withTopTxLevelOnly tx1 $ \tx1' ->
+    withTopTxLevelOnly tx2 $ \tx2' ->
+      shelleyTxEqRaw tx1 tx2 && (tx1' ^. isValidTxL == tx2' ^. isValidTxL)
 
 instance EqRaw (Tx l AlonzoEra) where
   eqRaw = alonzoTxEqRaw
@@ -200,7 +206,7 @@ class
   (EraTx era, AlonzoEraTxBody era, AlonzoEraTxWits era, AlonzoEraScript era) =>
   AlonzoEraTx era
   where
-  isValidTxL :: Lens' (Tx l era) IsValid
+  isValidTxL :: Lens' (Tx TopTx era) IsValid
 
 instance Typeable l => DecCBOR (Annotator (Tx l AlonzoEra)) where
   decCBOR = fmap MkAlonzoTx <$> decCBOR

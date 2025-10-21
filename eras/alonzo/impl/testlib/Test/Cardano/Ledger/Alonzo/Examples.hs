@@ -135,13 +135,13 @@ exampleTxAlonzo =
     (RequireAllOf @AlonzoEra mempty)
 
 exampleTx ::
-  forall era l.
+  forall era.
   ( AlonzoEraTx era
   , EraPlutusTxInfo 'PlutusV1 era
   , TxAuxData era ~ AlonzoTxAuxData era
   , Script era ~ AlonzoScript era
   ) =>
-  TxBody l era -> PlutusPurpose AsIx era -> NativeScript era -> Tx l era
+  TxBody TopTx era -> PlutusPurpose AsIx era -> NativeScript era -> Tx TopTx era
 exampleTx txBody scriptPurpose nativeScript =
   mkBasicTx @era txBody
     & witsTxL

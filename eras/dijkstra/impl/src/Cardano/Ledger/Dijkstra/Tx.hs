@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,9 +7,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -26,9 +28,18 @@ import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
   IsValid,
-  alonzoTxEqRaw,
  )
-import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
+import Cardano.Ledger.BaseTypes (integralToBounded, strictMaybeToMaybe)
+import Cardano.Ledger.Binary (
+  Annotator,
+  DecCBOR (..),
+  EncCBOR (..),
+  Encoding,
+  ToCBOR (..),
+  encodeListLen,
+  encodeNullMaybe,
+  serialize,
+ )
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), Tx (..), getConwayMinFeeTx)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
@@ -42,12 +53,16 @@ import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.Shelley.Tx (shelleyTxEqRaw)
 import Control.DeepSeq (NFData (..), deepseq)
+import Control.Monad.Trans.Fail.String (errorFail)
+import qualified Data.ByteString.Lazy as LBS
+import Data.Int (Int64)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (^.))
+import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
 import NoThunks.Class (InspectHeap (..), NoThunks)
 
 data DijkstraTx l era where
@@ -134,25 +149,96 @@ instance EraTx DijkstraEra where
   getMinFeeTx = getConwayMinFeeTx
 
 bodyDijkstraTxL :: Lens' (DijkstraTx l era) (TxBody l era)
-bodyDijkstraTxL = undefined
+bodyDijkstraTxL =
+  lens
+    ( \case
+        DijkstraTx {dtBody} -> dtBody
+        DijkstraSubTx {dstBody} -> dstBody
+    )
+    ( \case
+        tx@DijkstraTx {} -> \x -> tx {dtBody = x}
+        tx@DijkstraSubTx {} -> \x -> tx {dstBody = x}
+    )
 
 witsDijkstraTxL :: Lens' (DijkstraTx l era) (TxWits era)
-witsDijkstraTxL = undefined
+witsDijkstraTxL =
+  lens
+    ( \case
+        DijkstraTx {dtWits} -> dtWits
+        DijkstraSubTx {dstWits} -> dstWits
+    )
+    ( \case
+        tx@DijkstraTx {} -> \x -> tx {dtWits = x}
+        tx@DijkstraSubTx {} -> \x -> tx {dstWits = x}
+    )
+
+isValidDijkstraTxL :: Lens' (DijkstraTx TopTx era) IsValid
+isValidDijkstraTxL = undefined
 
 auxDataDijkstraTxL :: Lens' (DijkstraTx l era) (StrictMaybe (TxAuxData era))
-auxDataDijkstraTxL = undefined
+auxDataDijkstraTxL =
+  lens
+    ( \case
+        DijkstraTx {dtAuxData} -> dtAuxData
+        DijkstraSubTx {dstAuxData} -> dstAuxData
+    )
+    ( \case
+        tx@DijkstraTx {} -> \x -> tx {dtAuxData = x}
+        tx@DijkstraSubTx {} -> \x -> tx {dstAuxData = x}
+    )
 
-sizeDijkstraTxF :: Lens' (DijkstraTx l era) Word32
-sizeDijkstraTxF = undefined
+toCBORForSizeComputation ::
+  ( EncCBOR (TxBody l era)
+  , EncCBOR (TxWits era)
+  , EncCBOR (TxAuxData era)
+  ) =>
+  DijkstraTx l era ->
+  Encoding
+toCBORForSizeComputation tx =
+  encodeListLen 3
+    <> encCBOR (tx ^. bodyDijkstraTxL)
+    <> encCBOR (tx ^. witsDijkstraTxL)
+    <> encodeNullMaybe encCBOR (strictMaybeToMaybe (tx ^. auxDataDijkstraTxL))
+
+sizeDijkstraTxF ::
+  forall era l.
+  EraTx era =>
+  SimpleGetter (DijkstraTx l era) Word32
+sizeDijkstraTxF =
+  to $
+    errorFail
+      . integralToBounded @Int64 @Word32
+      . LBS.length
+      . serialize (eraProtVerLow @era)
+      . toCBORForSizeComputation
+
+dijkstraTxEqRaw ::
+  ( STxLevel l era ~ STxBothLevels l era
+  , AlonzoEraTx era
+  ) =>
+  Tx l era ->
+  Tx l era ->
+  Bool
+dijkstraTxEqRaw tx1 tx2 =
+  shelleyTxEqRaw tx1 tx2
+    && withBothTxLevels
+      tx1
+      ( \tx1' ->
+          withBothTxLevels
+            tx2
+            (\tx2' -> tx1' ^. isValidTxL == tx2' ^. isValidTxL)
+            (const True)
+      )
+      (const True)
 
 instance EqRaw (Tx l DijkstraEra) where
-  eqRaw = alonzoTxEqRaw
+  eqRaw = dijkstraTxEqRaw
 
 dijkstraTxL :: Lens' (Tx l DijkstraEra) (DijkstraTx l DijkstraEra)
 dijkstraTxL = lens unDijkstraTx (\x y -> x {unDijkstraTx = y})
 
 instance AlonzoEraTx DijkstraEra where
-  isValidTxL = undefined -- dijkstraTxL . isValidAlonzoTxL
+  isValidTxL = dijkstraTxL . isValidDijkstraTxL
   {-# INLINE isValidTxL #-}
 
 instance Typeable l => DecCBOR (Annotator (Tx l DijkstraEra)) where

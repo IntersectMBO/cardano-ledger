@@ -98,8 +98,8 @@ import qualified Data.Map as Map
 import Lens.Micro
 
 class (EraTx era, AnyEraTxBody era, AnyEraTxWits era, AnyEraTxAuxData era) => AnyEraTx era where
-  isValidTxG :: SimpleGetter (Tx l era) (Maybe IsValid)
-  default isValidTxG :: AlonzoEraTx era => SimpleGetter (Tx l era) (Maybe IsValid)
+  isValidTxG :: SimpleGetter (Tx TopTx era) (Maybe IsValid)
+  default isValidTxG :: AlonzoEraTx era => SimpleGetter (Tx TopTx era) (Maybe IsValid)
   isValidTxG = isValidTxL . to Just
 
 instance AnyEraTx ShelleyEra where

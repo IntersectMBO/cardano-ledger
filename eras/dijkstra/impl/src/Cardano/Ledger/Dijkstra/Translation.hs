@@ -50,26 +50,27 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
-import Lens.Micro ((&), (.~), (^.))
 import Data.Typeable (Typeable)
+import Lens.Micro ((&), (.~), (^.))
 
 type instance TranslationContext DijkstraEra = DijkstraGenesis
 
 instance Typeable l => TranslateEra DijkstraEra (Tx l) where
   type TranslationError DijkstraEra (Tx l) = DecoderError
-  translateEra _ctxt tx = do
-    -- Note that this does not preserve the hidden bytes field of the transaction.
-    -- This is under the premise that this is irrelevant for TxInBlocks, which are
-    -- not transmitted as contiguous chunks.
-    txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
-    txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
-    auxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
-    let isValidTx = tx ^. isValidTxL
-    pure $
-      mkBasicTx txBody
-        & witsTxL .~ txWits
-        & isValidTxL .~ isValidTx
-        & auxDataTxL .~ auxData
+  translateEra _ctxt tx = case toSTxLevel tx of
+    STopTxOnly -> do
+      -- Note that this does not preserve the hidden bytes field of the transaction.
+      -- This is under the premise that this is irrelevant for TxInBlocks, which are
+      -- not transmitted as contiguous chunks.
+      txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
+      txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
+      auxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
+      let isValidTx = tx ^. isValidTxL
+      pure $
+        mkBasicTx txBody
+          & witsTxL .~ txWits
+          & isValidTxL .~ isValidTx
+          & auxDataTxL .~ auxData
 
 instance TranslateEra DijkstraEra NewEpochState where
   translateEra ctxt nes = do
