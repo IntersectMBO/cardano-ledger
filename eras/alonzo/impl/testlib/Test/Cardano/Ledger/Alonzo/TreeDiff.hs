@@ -102,7 +102,23 @@ instance ToExpr (CompactForm (Value era)) => ToExpr (AlonzoTxOut era)
 
 -- TxBody
 instance ToExpr (AlonzoTxBodyRaw TopTx AlonzoEra) where
-  toExpr = undefined
+  toExpr AlonzoTxBodyRaw {..} =
+    Rec "AlonzoTxBodyRaw" $
+      OMap.fromList
+        [ ("atbrInputs", toExpr atbrInputs)
+        , ("atbrCollateral", toExpr atbrCollateral)
+        , ("atbrOutputs", toExpr atbrOutputs)
+        , ("atbrCerts", toExpr atbrCerts)
+        , ("atbrWithdrawals", toExpr atbrWithdrawals)
+        , ("atbrTxFee", toExpr atbrTxFee)
+        , ("atbrValidityInterval", toExpr atbrValidityInterval)
+        , ("atbrUpdate", toExpr atbrUpdate)
+        , ("atbrReqSignerHashes", toExpr atbrReqSignerHashes)
+        , ("atbrMint", toExpr atbrMint)
+        , ("atbrScriptIntegrityHash", toExpr atbrScriptIntegrityHash)
+        , ("atbrAuxDataHash", toExpr atbrAuxDataHash)
+        , ("atbrTxNetworkId", toExpr atbrTxNetworkId)
+        ]
 
 instance ToExpr (TxBody TopTx AlonzoEra)
 
@@ -113,7 +129,14 @@ instance
   (ToExpr (TxBody TopTx era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
   ToExpr (AlonzoTx TopTx era)
   where
-  toExpr = undefined
+  toExpr AlonzoTx {..} =
+    Rec "AlonzoTx" $
+      OMap.fromList
+        [ ("atBody", toExpr atBody)
+        , ("atWits", toExpr atWits)
+        , ("atIsValid", toExpr atIsValid)
+        , ("atAuxData", toExpr atAuxData)
+        ]
 
 -- Plutus/TxInfo
 instance ToExpr (AlonzoContextError era)

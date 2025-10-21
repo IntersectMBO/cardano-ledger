@@ -454,11 +454,11 @@ instance
   DecCBOR (AlonzoTxBodyRaw l AlonzoEra)
   where
   decCBOR =
-    decode $
+    fmap asSTxTopLevel . decode $
       SparseKeyed
         "AlonzoTxBodyRaw"
         (asSTxTopLevel emptyAlonzoTxBodyRaw)
-        (undefined bodyFields)
+        bodyFields
         requiredFields
     where
       bodyFields :: Word -> Field (AlonzoTxBodyRaw TopTx AlonzoEra)
