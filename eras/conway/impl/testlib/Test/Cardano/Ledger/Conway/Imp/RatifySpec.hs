@@ -835,9 +835,7 @@ votingSpec =
           -- AlwaysNoConfidence vote acts like 'Yes' for NoConfidence actions
           calculateDRepAcceptedRatio noConfidenceGovId `shouldReturn` 2 % 2
 
-        -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/926
-        -- TODO: Re-enable after issue is resolved, by removing this override
-        disableInConformanceIt "AlwaysNoConfidence" $ whenPostBootstrap $ do
+        it "AlwaysNoConfidence" $ whenPostBootstrap $ do
           (drep1, _, committeeGovId) <- electBasicCommittee
           initialMembers <- getCommitteeMembers
 
