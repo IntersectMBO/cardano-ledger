@@ -1,9 +1,12 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Dijkstra.Binary.Annotator (
@@ -15,7 +18,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts
-import Cardano.Ledger.Dijkstra.Tx (DijkstraTx, Tx (..))
+import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.MemoBytes (decodeMemoized)
 import Data.Typeable (Typeable)
@@ -38,6 +41,21 @@ instance Era era => DecCBOR (DijkstraNativeScript era) where
   decCBOR = MkDijkstraNativeScript <$> decodeMemoized decCBOR
 
 instance Typeable l => DecCBOR (DijkstraTx l DijkstraEra) where
-  decCBOR = undefined
+  decCBOR =
+    withSTxBothLevels @l $ \case
+      STopTx ->
+        decode $
+          RecD DijkstraTx
+            <! From
+            <! From
+            <! From
+            <! D (decodeNullStrictMaybe decCBOR)
+      SSubTx ->
+        decode $
+          RecD DijkstraSubTx
+            <! From
+            <! From
+            <! D (decodeNullStrictMaybe decCBOR)
+  {-# INLINE decCBOR #-}
 
 deriving newtype instance Typeable l => DecCBOR (Tx l DijkstraEra)

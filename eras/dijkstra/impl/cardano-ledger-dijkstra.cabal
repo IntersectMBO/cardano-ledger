@@ -152,6 +152,7 @@ library testlib
     heredoc,
     microlens,
     small-steps,
+    tree-diff,
 
 executable huddle-cddl
   main-is: Main.hs

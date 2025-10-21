@@ -27,19 +27,26 @@ module Cardano.Ledger.Dijkstra.Tx (
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..), StrictMaybe)
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoEraTx,
-  IsValid,
+  IsValid (..),
  )
-import Cardano.Ledger.BaseTypes (integralToBounded, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (
+  StrictMaybe (..),
+  integralToBounded,
+  maybeToStrictMaybe,
+  strictMaybeToMaybe,
+ )
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
   EncCBOR (..),
   Encoding,
   ToCBOR (..),
+  decodeNullMaybe,
   encodeListLen,
   encodeNullMaybe,
   serialize,
  )
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<*!))
 import Cardano.Ledger.Conway.Tx (AlonzoEraTx (..), Tx (..), getConwayMinFeeTx)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
@@ -49,7 +56,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   evalDijkstraNativeScript,
  )
 import Cardano.Ledger.Dijkstra.TxAuxData ()
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..), TxBody (..))
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
@@ -110,23 +117,54 @@ deriving via
     NoThunks (DijkstraTx l era)
 
 instance (EraTx era, Typeable l) => ToCBOR (DijkstraTx l era) where
-  toCBOR = undefined
+  toCBOR = toEraCBOR @era
 
-instance EncCBOR (DijkstraTx l era) where
-  encCBOR = undefined
+instance EraTx era => EncCBOR (DijkstraTx l era) where
+  encCBOR = toCBORForMempoolSubmission
 
 instance (EraTx era, Typeable l) => DecCBOR (Annotator (DijkstraTx l era)) where
-  decCBOR = undefined
+  decCBOR = withSTxBothLevels @l $ \case
+    STopTx ->
+      decode $
+        Ann (RecD DijkstraTx)
+          <*! From
+          <*! From
+          <*! Ann From
+          <*! D
+            ( sequence . maybeToStrictMaybe
+                <$> decodeNullMaybe decCBOR
+            )
+    SSubTx ->
+      decode $
+        Ann (RecD DijkstraSubTx)
+          <*! From
+          <*! From
+          <*! D
+            ( sequence . maybeToStrictMaybe
+                <$> decodeNullMaybe decCBOR
+            )
+
+instance HasEraTxLevel DijkstraTx DijkstraEra where
+  toSTxLevel DijkstraTx {} = STopTx
+  toSTxLevel DijkstraSubTx {} = SSubTx
 
 instance HasEraTxLevel Tx DijkstraEra where
-  toSTxLevel (MkDijkstraTx _) = undefined
+  toSTxLevel = toSTxLevel . unDijkstraTx
 
 mkBasicDijkstraTx :: TxBody l DijkstraEra -> DijkstraTx l DijkstraEra
 mkBasicDijkstraTx txBody =
-  withBothTxLevels
-    txBody
-    (\DijkstraTxBody {} -> undefined)
-    (\DijkstraSubTxBody {} -> undefined)
+  case toSTxLevel txBody of
+    STopTx ->
+      DijkstraTx
+        txBody
+        mempty
+        (IsValid True)
+        SNothing
+    SSubTx ->
+      DijkstraSubTx
+        txBody
+        mempty
+        SNothing
 
 instance EraTx DijkstraEra where
   newtype Tx l DijkstraEra = MkDijkstraTx {unDijkstraTx :: DijkstraTx l DijkstraEra}
@@ -177,7 +215,10 @@ witsDijkstraTxL =
     )
 
 isValidDijkstraTxL :: Lens' (DijkstraTx TopTx era) IsValid
-isValidDijkstraTxL = undefined
+isValidDijkstraTxL =
+  lens (\DijkstraTx {dtIsValid} -> dtIsValid) $ \tx txIsValid ->
+    case tx of
+      DijkstraTx {} -> tx {dtIsValid = txIsValid}
 
 auxDataDijkstraTxL :: Lens' (DijkstraTx l era) (StrictMaybe (TxAuxData era))
 auxDataDijkstraTxL =
@@ -260,3 +301,44 @@ validateDijkstraNativeScript tx =
   where
     vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
 {-# INLINEABLE validateDijkstraNativeScript #-}
+
+--------------------------------------------------------------------------------
+-- Mempool Serialisation
+--
+-- We do not store the Tx bytes for the following reasons:
+-- - A Tx serialised in this way never forms part of any hashed structure, hence
+--   we do not worry about the serialisation changing and thus seeing a new
+--   hash.
+-- - The three principal components of this Tx already store their own bytes;
+--   here we simply concatenate them. The final component, `IsValid`, is
+--   just a flag and very cheap to serialise.
+--------------------------------------------------------------------------------
+
+-- | Encode to CBOR for the purposes of transmission from node to node, or from
+-- wallet to node.
+--
+-- Note that this serialisation is neither the serialisation used on-chain
+-- (where Txs are deconstructed using segwit), nor the serialisation used for
+-- computing the transaction size (which omits the `IsValid` field for
+-- compatibility with Mary - see 'toCBORForSizeComputation').
+toCBORForMempoolSubmission ::
+  ( EncCBOR (TxBody l era)
+  , EncCBOR (TxWits era)
+  , EncCBOR (TxAuxData era)
+  ) =>
+  DijkstraTx l era ->
+  Encoding
+toCBORForMempoolSubmission = \case
+  DijkstraTx {dtBody, dtWits, dtAuxData, dtIsValid} ->
+    encode $
+      Rec DijkstraTx
+        !> To dtBody
+        !> To dtWits
+        !> To dtIsValid
+        !> E (encodeNullMaybe encCBOR . strictMaybeToMaybe) dtAuxData
+  DijkstraSubTx {dstBody, dstWits, dstAuxData} ->
+    encode $
+      Rec DijkstraSubTx
+        !> To dstBody
+        !> To dstWits
+        !> E (encodeNullMaybe encCBOR . strictMaybeToMaybe) dstAuxData
