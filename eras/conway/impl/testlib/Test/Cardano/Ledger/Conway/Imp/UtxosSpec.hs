@@ -120,17 +120,16 @@ datumAndReferenceInputsSpec = do
     whenMajorVersionAtLeast @11 $
       submitTx_ consumingTx
   it "fails when using inline datums for PlutusV1" $ do
-    let shSpending = hashPlutusScript (redeemerSameAsDatum SPlutusV1)
+    let shSpending = hashPlutusScript $ redeemerSameAsDatum SPlutusV1
     refTxOut <- mkRefTxOut shSpending
-    let producingTx =
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . outputsTxBodyL
-              .~ SSeq.fromList
-                [ refTxOut
-                , scriptLockedTxOut shSpending & dataTxOutL .~ SJust (Data spendDatum)
-                ]
-    logToExpr producingTx
-    producingTxId <- txIdTx <$> submitTxAnn "Producing transaction" producingTx
+    producingTxId <-
+      fmap txIdTx . submitTxAnn "Producing transaction" $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . outputsTxBodyL
+            .~ SSeq.fromList
+              [ refTxOut
+              , scriptLockedTxOut shSpending & dataTxOutL .~ SJust (Data spendDatum)
+              ]
     let
       lockedTxIn = mkTxInPartial producingTxId 1
       consumingTx =
@@ -166,10 +165,10 @@ datumAndReferenceInputsSpec = do
         [ injectFailure $
             CollectErrors [BadTranslation . inject $ ReferenceInputsNotDisjointFromInputs @era badTxIns]
         ]
-  it "fails when using inline datums for PlutusV1" $ do
-    let shSpending = hashPlutusScript $ redeemerSameAsDatum SPlutusV1
+  it "succeeds when using inline datums for PlutusV2" $ do
+    let shSpending = hashPlutusScript $ redeemerSameAsDatum SPlutusV2
     refTxOut <- mkRefTxOut shSpending
-    producingTx <-
+    producingTxId <-
       fmap txIdTx . submitTxAnn "Producing transaction" $
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL
@@ -178,18 +177,14 @@ datumAndReferenceInputsSpec = do
               , scriptLockedTxOut shSpending & dataTxOutL .~ SJust (Data spendDatum)
               ]
     let
-      lockedTxIn = mkTxInPartial producingTx 1
+      lockedTxIn = mkTxInPartial producingTxId 1
       consumingTx =
         mkBasicTx mkBasicTxBody
           & bodyTxL . inputsTxBodyL .~ Set.singleton lockedTxIn
-          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
+          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTxId 0)
     impAnn "Consuming transaction" $
-      submitFailingTx
+      submitTx_
         consumingTx
-        ( pure . injectFailure $
-            CollectErrors
-              [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
-        )
 
 conwayFeaturesPlutusV1V2FailureSpec ::
   forall era.
