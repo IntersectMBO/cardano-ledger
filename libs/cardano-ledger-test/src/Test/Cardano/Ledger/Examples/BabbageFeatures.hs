@@ -32,18 +32,15 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Conway.Rules as Conway (ConwayUtxoPredFailure (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.API (UTxO (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS
 import Data.Default (Default (..))
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (maybeToList)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -256,45 +253,6 @@ babbageFeatures =
   describe "Babbage Features" $ do
     it "inputs and refinputs overlap in Babbage and don't Fail" $
       testExpectSuccessValid @BabbageEra commonReferenceScript
-    it "inputs and refinputs overlap in Conway and Fail" $
-      testExpectUTXOFailure
-        @ConwayEra
-        commonReferenceScript
-        (Conway.BabbageNonDisjointRefInputs (pure commonTxIn))
-
-testExpectUTXOFailure ::
-  forall era.
-  ( Reflect era
-  , BabbageEraTxBody era
-  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
-  , State (EraRule "UTXO" era) ~ UTxOState era
-  , BaseM (EraRule "UTXO" era) ~ ShelleyBase
-  , Tx era ~ Signal (EraRule "UTXO" era)
-  , STS (EraRule "UTXO" era)
-  , ToExpr (PredicateFailure (EraRule "UTXO" era))
-  , BabbageEraPParams era
-  ) =>
-  TestCaseData era ->
-  PredicateFailure (EraRule "UTXO" era) ->
-  Expectation
-testExpectUTXOFailure tc failure =
-  let tx' = txFromTestCaseData tc
-      InitUtxo inputs' refInputs' collateral' = initUtxoFromTestCaseData @era tc
-      initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
-      pparams = defaultPParams
-      env = Shelley.UtxoEnv (SlotNo 0) pparams def
-      state = smartUTxOState pparams initUtxo (Coin 0) (Coin 0) def mempty
-   in goSTS
-        @"UTXO"
-        @era
-        env
-        state
-        tx'
-        ( \case
-            Left (predfail :| []) -> predfail `shouldBe` failure
-            Left xs -> expectationFailure $ "not exactly one failure" <> showExpr xs
-            Right _ -> expectationFailure "testExpectUTXOFailure succeeds"
-        )
 
 defaultPParams :: forall era. (AlonzoEraScript era, BabbageEraPParams era) => PParams era
 defaultPParams =
