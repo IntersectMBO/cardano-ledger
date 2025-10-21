@@ -97,9 +97,7 @@ spec = do
             .~ Withdrawals
               [(ra, if hardforkConwayBootstrapPhase pv then mempty else balance)]
 
-  -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/635
-  -- TODO: Re-enable after issue is resolved, by removing this override
-  disableInConformanceIt "Withdraw from a key delegated to an unregistered DRep" $ do
+  it "Withdraw from a key delegated to an unregistered DRep" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
     kh <- freshKeyHash
     let cred = KeyHashObj kh
