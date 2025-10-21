@@ -12,6 +12,7 @@ import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.PParams
 import Cardano.Ledger.Api.Tx
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Core (TxLevel (..))
 import Cardano.Ledger.Hashes (extractHash, hashAnnotated, hashKey)
 import Cardano.Ledger.Keys (makeBootstrapWitness)
 import Cardano.Ledger.Val (Val ((<×>)))
@@ -23,7 +24,6 @@ import Numeric.Natural
 import Test.Cardano.Ledger.Api.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..), KeyPair (..), mkWitnessVKey)
-import Cardano.Ledger.Core (TxLevel(..))
 
 txSpec ::
   forall era.

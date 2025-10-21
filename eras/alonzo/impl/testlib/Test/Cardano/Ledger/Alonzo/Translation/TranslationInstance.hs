@@ -65,7 +65,8 @@ deriving instance
   (Era era, Eq (PParams era), Eq (UTxO era), Eq (Core.Tx TopTx era)) => Eq (TranslationInstance era)
 
 deriving instance
-  (Era era, Show (PParams era), Show (UTxO era), Show (Core.Tx TopTx era)) => Show (TranslationInstance era)
+  (Era era, Show (PParams era), Show (UTxO era), Show (Core.Tx TopTx era)) =>
+  Show (TranslationInstance era)
 
 instance Cborg.Serialise PV1.DCert
 

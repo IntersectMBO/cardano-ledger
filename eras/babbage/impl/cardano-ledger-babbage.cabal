@@ -145,7 +145,6 @@ library testlib
     cardano-slotting,
     cardano-strict-containers,
     containers,
-    tree-diff,
     cuddle >=0.4,
     generic-random,
     heredoc,
@@ -154,6 +153,7 @@ library testlib
     plutus-ledger-api,
     small-steps >=1.1,
     time,
+    tree-diff,
 
 executable huddle-cddl
   main-is: Main.hs

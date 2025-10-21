@@ -145,7 +145,8 @@ timeToLive (ValidityInterval _ SNothing) = SlotNo maxBound
 shelleySetValidity :: ValidityInterval -> TxBody TopTx ShelleyEra -> TxBody TopTx ShelleyEra
 shelleySetValidity vi = ttlTxBodyL .~ timeToLive vi
 
-allegraSetValidity :: AllegraEraTxBody era => ValidityInterval -> TxBody TopTx era -> TxBody TopTx era
+allegraSetValidity ::
+  AllegraEraTxBody era => ValidityInterval -> TxBody TopTx era -> TxBody TopTx era
 allegraSetValidity vi = vldtTxBodyL .~ vi
 
 allegraValidTxOut :: EraTxOut era => Map ScriptHash (Script era) -> TxOut era -> Bool

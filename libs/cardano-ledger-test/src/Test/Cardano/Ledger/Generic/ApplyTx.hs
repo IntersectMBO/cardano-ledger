@@ -65,7 +65,8 @@ applyTxSimple :: forall era. EraModel era => Int -> Model era -> Tx TopTx era ->
 applyTxSimple count model tx = applyTxBody count model $ tx ^. bodyTxL
 
 applyTxFail ::
-  (Reflect era, AlonzoEraTxBody era, EraModel era) => Int -> TxIx -> Model era -> Tx TopTx era -> Model era
+  (Reflect era, AlonzoEraTxBody era, EraModel era) =>
+  Int -> TxIx -> Model era -> Tx TopTx era -> Model era
 applyTxFail count nextTxIx model tx = updateInfo info model
   where
     info = collInfo count nextTxIx model emptyCollInfo $ tx ^. bodyTxL

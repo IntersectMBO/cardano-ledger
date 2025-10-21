@@ -43,12 +43,12 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys, extractKeysSmallSet)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
 import System.Environment (getEnv)
 import System.Exit (die)
 import System.Random.Stateful
-import Data.Typeable (Typeable)
 
 main :: IO ()
 main = do
