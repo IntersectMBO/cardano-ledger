@@ -7,7 +7,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -24,6 +23,7 @@ module Cardano.Ledger.Dijkstra.TxBody (
   TxBody (
     MkDijkstraTxBody,
     DijkstraTxBody,
+    DijkstraSubTxBody,
     dtbSpendInputs,
     dtbCollateralInputs,
     dtbReferenceInputs,
@@ -42,7 +42,22 @@ module Cardano.Ledger.Dijkstra.TxBody (
     dtbProposalProcedures,
     dtbCurrentTreasuryValue,
     dtbTreasuryDonation,
-    dtbGuards
+    dtbGuards,
+    dstbSpendInputs,
+    dstbReferenceInputs,
+    dstbOutputs,
+    dstbCerts,
+    dstbWithdrawals,
+    dstbVldt,
+    dstbMint,
+    dstbScriptIntegrityHash,
+    dstbAdHash,
+    dstbTxNetworkId,
+    dstbVotingProcedures,
+    dstbProposalProcedures,
+    dstbCurrentTreasuryValue,
+    dstbTreasuryDonation,
+    dstbGuards
   ),
   upgradeProposals,
   upgradeGovAction,
@@ -518,7 +533,95 @@ pattern DijkstraTxBody
             currentTreasuryValue
             treasuryDonation
 
-{-# COMPLETE DijkstraTxBody #-}
+pattern DijkstraSubTxBody ::
+  Set TxIn ->
+  Set TxIn ->
+  StrictSeq (Sized (TxOut DijkstraEra)) ->
+  OSet.OSet (TxCert DijkstraEra) ->
+  Withdrawals ->
+  ValidityInterval ->
+  OSet (Credential Guard) ->
+  MultiAsset ->
+  StrictMaybe ScriptIntegrityHash ->
+  StrictMaybe TxAuxDataHash ->
+  StrictMaybe Network ->
+  VotingProcedures DijkstraEra ->
+  OSet.OSet (ProposalProcedure DijkstraEra) ->
+  StrictMaybe Coin ->
+  Coin ->
+  TxBody SubTx DijkstraEra
+pattern DijkstraSubTxBody
+  { dstbSpendInputs
+  , dstbReferenceInputs
+  , dstbOutputs
+  , dstbCerts
+  , dstbWithdrawals
+  , dstbVldt
+  , dstbGuards
+  , dstbMint
+  , dstbScriptIntegrityHash
+  , dstbAdHash
+  , dstbTxNetworkId
+  , dstbVotingProcedures
+  , dstbProposalProcedures
+  , dstbCurrentTreasuryValue
+  , dstbTreasuryDonation
+  } <-
+  ( getMemoRawType ->
+      DijkstraSubTxBodyRaw
+        { dstbrSpendInputs = dstbSpendInputs
+        , dstbrReferenceInputs = dstbReferenceInputs
+        , dstbrOutputs = dstbOutputs
+        , dstbrCerts = dstbCerts
+        , dstbrWithdrawals = dstbWithdrawals
+        , dstbrVldt = dstbVldt
+        , dstbrGuards = dstbGuards
+        , dstbrMint = dstbMint
+        , dstbrScriptIntegrityHash = dstbScriptIntegrityHash
+        , dstbrAuxDataHash = dstbAdHash
+        , dstbrNetworkId = dstbTxNetworkId
+        , dstbrVotingProcedures = dstbVotingProcedures
+        , dstbrProposalProcedures = dstbProposalProcedures
+        , dstbrCurrentTreasuryValue = dstbCurrentTreasuryValue
+        , dstbrTreasuryDonation = dstbTreasuryDonation
+        }
+    )
+  where
+    DijkstraSubTxBody
+      inputsX
+      referenceInputsX
+      outputsX
+      certsX
+      withdrawalsX
+      vldtX
+      guards
+      mintX
+      scriptIntegrityHashX
+      adHashX
+      txnetworkidX
+      votingProcedures
+      proposalProcedures
+      currentTreasuryValue
+      treasuryDonation =
+        mkMemoizedEra @DijkstraEra $
+          DijkstraSubTxBodyRaw
+            inputsX
+            referenceInputsX
+            outputsX
+            certsX
+            withdrawalsX
+            vldtX
+            guards
+            mintX
+            scriptIntegrityHashX
+            adHashX
+            txnetworkidX
+            votingProcedures
+            proposalProcedures
+            currentTreasuryValue
+            treasuryDonation
+
+{-# COMPLETE DijkstraTxBody, DijkstraSubTxBody #-}
 
 instance Memoized (TxBody l DijkstraEra) where
   type RawType (TxBody l DijkstraEra) = DijkstraTxBodyRaw l DijkstraEra

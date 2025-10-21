@@ -49,7 +49,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   evalDijkstraNativeScript,
  )
 import Cardano.Ledger.Dijkstra.TxAuxData ()
-import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..), TxBody (..))
 import Cardano.Ledger.Dijkstra.TxWits ()
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
@@ -122,7 +122,11 @@ instance HasEraTxLevel Tx DijkstraEra where
   toSTxLevel (MkDijkstraTx _) = undefined
 
 mkBasicDijkstraTx :: TxBody l DijkstraEra -> DijkstraTx l DijkstraEra
-mkBasicDijkstraTx = undefined
+mkBasicDijkstraTx txBody =
+  withBothTxLevels
+    txBody
+    (\DijkstraTxBody {} -> undefined)
+    (\DijkstraSubTxBody {} -> undefined)
 
 instance EraTx DijkstraEra where
   newtype Tx l DijkstraEra = MkDijkstraTx {unDijkstraTx :: DijkstraTx l DijkstraEra}
