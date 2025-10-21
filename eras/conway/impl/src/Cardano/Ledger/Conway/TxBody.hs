@@ -175,24 +175,24 @@ instance NFData (ConwayTxBodyRaw l ConwayEra) where
 deriving instance Show (ConwayTxBodyRaw l ConwayEra)
 
 instance HasEraTxLevel ConwayTxBodyRaw ConwayEra where
-  toSTxLevel = undefined
+  toSTxLevel ConwayTxBodyRaw {} = STopTxOnly
 
 instance Typeable l => DecCBOR (ConwayTxBodyRaw l ConwayEra) where
   decCBOR =
-    decode $
+    fmap asSTxTopLevel . decode $
       SparseKeyed
         "TxBodyRaw"
         (asSTxTopLevel basicConwayTxBodyRaw)
         bodyFields
         requiredFields
     where
-      bodyFields :: Word -> Field (ConwayTxBodyRaw l ConwayEra)
+      bodyFields :: Word -> Field (ConwayTxBodyRaw TopTx ConwayEra)
       bodyFields 0 = field (\x tx -> tx {ctbrSpendInputs = x}) From
       bodyFields 1 = field (\x tx -> tx {ctbrOutputs = x}) From
       bodyFields 2 = field (\x tx -> tx {ctbrFee = x}) From
       bodyFields 3 =
         ofield
-          (\x tx -> tx {ctbrVldt = (ctbrVldt $ undefined tx) {invalidHereafter = x}})
+          (\x tx -> tx {ctbrVldt = (ctbrVldt tx) {invalidHereafter = x}})
           From
       bodyFields 4 =
         fieldGuarded
@@ -209,7 +209,7 @@ instance Typeable l => DecCBOR (ConwayTxBodyRaw l ConwayEra) where
       bodyFields 7 = ofield (\x tx -> tx {ctbrAuxDataHash = x}) From
       bodyFields 8 =
         ofield
-          (\x tx -> tx {ctbrVldt = (ctbrVldt $ undefined tx) {invalidBefore = x}})
+          (\x tx -> tx {ctbrVldt = (ctbrVldt tx) {invalidBefore = x}})
           From
       bodyFields 9 =
         fieldGuarded

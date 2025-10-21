@@ -1514,8 +1514,18 @@ instance
   type
     TheSop (AlonzoTx TopTx era) =
       '["AlonzoTx" ::: AlonzoTxTypes era]
-  fromSimpleRep = undefined
-  toSimpleRep = undefined
+  toSimpleRep AlonzoTx {..} =
+    inject @"AlonzoTx" @'["AlonzoTx" ::: AlonzoTxTypes era]
+      atBody
+      atWits
+      atIsValid
+      (strictMaybeToMaybe atAuxData)
+  fromSimpleRep rep =
+    algebra @'["AlonzoTx" ::: AlonzoTxTypes era]
+      rep
+      ( \body wits isValid auxData ->
+          AlonzoTx body wits isValid (maybeToStrictMaybe auxData)
+      )
 
 instance
   ( EraSpecPParams era

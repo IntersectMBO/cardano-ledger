@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -26,6 +27,7 @@ import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.HKD
 import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity
+import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Data.TreeDiff ()
 import Test.Cardano.Ledger.Babbage.TreeDiff
 
@@ -195,7 +197,29 @@ instance
 
 -- TxBody
 instance ToExpr (ConwayTxBodyRaw TopTx ConwayEra) where
-  toExpr = undefined
+  toExpr ConwayTxBodyRaw {..} =
+    Rec "ConwayTxBodyRaw" $
+      OMap.fromList
+        [ ("ctbrSpendInputs", toExpr ctbrSpendInputs)
+        , ("ctbrCollateralInputs", toExpr ctbrCollateralInputs)
+        , ("ctbrReferenceInputs", toExpr ctbrReferenceInputs)
+        , ("ctbrOutputs", toExpr ctbrOutputs)
+        , ("ctbrCollateralReturn", toExpr ctbrCollateralReturn)
+        , ("ctbrTotalCollateral", toExpr ctbrTotalCollateral)
+        , ("ctbrCerts", toExpr ctbrCerts)
+        , ("ctbrWithdrawals", toExpr ctbrWithdrawals)
+        , ("ctbrFee", toExpr ctbrFee)
+        , ("ctbrVldt", toExpr ctbrVldt)
+        , ("ctbrReqSignerHashes", toExpr ctbrReqSignerHashes)
+        , ("ctbrMint", toExpr ctbrMint)
+        , ("ctbrScriptIntegrityHash", toExpr ctbrScriptIntegrityHash)
+        , ("ctbrAuxDataHash", toExpr ctbrAuxDataHash)
+        , ("ctbrNetworkId", toExpr ctbrNetworkId)
+        , ("ctbrVotingProcedures", toExpr ctbrVotingProcedures)
+        , ("ctbrProposalProcedures", toExpr ctbrProposalProcedures)
+        , ("ctbrCurrentTreasuryValue", toExpr ctbrCurrentTreasuryValue)
+        , ("ctbrTreasuryDonation", toExpr ctbrTreasuryDonation)
+        ]
 
 instance ToExpr (TxBody TopTx ConwayEra)
 
