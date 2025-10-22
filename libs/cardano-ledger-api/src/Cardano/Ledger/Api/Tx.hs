@@ -11,6 +11,7 @@
 --
 -- Let's start by defining the GHC extensions and imports.
 --
+-- >>> :set -XTypeApplications
 -- >>> :set -XScopedTypeVariables
 -- >>> import Test.QuickCheck
 -- >>> import qualified Data.Sequence.Strict as StrictSeq
@@ -25,7 +26,7 @@
 -- quickCheck $ \(txOut :: TxOut BabbageEra) ->
 --     let
 --         -- Defining a Babbage era transaction body with a single random transaction output
---         txBody = mkBasicTxBody
+--         txBody = mkBasicTxBody @_ @TopTx
 --                & outputsTxBodyL <>~ StrictSeq.singleton txOut
 --         -- Defining a basic transaction with our transaction body
 --         tx = mkBasicTx txBody
