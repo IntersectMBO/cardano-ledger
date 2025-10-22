@@ -9,7 +9,6 @@ module Main where
 
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
-import Test.Cardano.Ledger.Common (hspec)
 import qualified Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests as LedgerTypes
 import qualified Test.Cardano.Ledger.Constrained.Conway.MiniTrace as MiniTrace
 import qualified Test.Cardano.Ledger.Examples.AlonzoAPI as AlonzoAPI (tests)
@@ -23,17 +22,19 @@ import qualified Test.Cardano.Ledger.NoThunks as NoThunks
 import qualified Test.Cardano.Ledger.STS as ConstraintSTS
 import Test.Cardano.Ledger.Tickf (calcPoolDistOldEqualsNew)
 import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty.Hspec (testSpec)
 
 main :: IO ()
 main = do
   hSetEncoding stdout utf8
   nightly <- lookupEnv "NIGHTLY"
-  hspec MiniTrace.spec
+  minitrace <- testSpec "MiniTrace" MiniTrace.spec
   case nightly of
-    Nothing -> defaultMain $ testGroup "cardano-core" defaultTests
+    Nothing -> do
+      defaultMain $ testGroup "cardano-core" $ minitrace : defaultTests
     Just _ -> do
-      hspec LedgerTypes.spec
-      defaultMain $ testGroup "cardano-core - nightly" nightlyTests
+      ledgerTypesSpec <- testSpec "LedgerTypes" LedgerTypes.spec
+      defaultMain $ testGroup "cardano-core - nightly" $ ledgerTypesSpec : nightlyTests
 
 defaultTests :: [TestTree]
 defaultTests =

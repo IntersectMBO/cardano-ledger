@@ -141,9 +141,9 @@ test-suite cardano-ledger-test
 
   build-depends:
     base,
-    cardano-ledger-core:testlib,
     cardano-ledger-test,
     tasty,
+    tasty-hspec,
 
 benchmark bench
   type: exitcode-stdio-1.0
