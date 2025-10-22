@@ -113,7 +113,7 @@ library
     cardano-ledger-byron,
     cardano-ledger-core:{cardano-ledger-core, internal} ^>=1.19,
     cardano-slotting,
-    cardano-strict-containers,
+    cardano-strict-containers >=0.1.5,
     containers,
     data-default,
     deepseq,
